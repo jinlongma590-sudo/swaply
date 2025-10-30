@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 纯色背景，和 Flutter 启动页一致 -->
+    <item android:drawable="@color/swaply_blue"/>
+</layer-list>

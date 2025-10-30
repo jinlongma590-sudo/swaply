@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+  <meta name="description" content="Swaply second-hand trading platform">
+
+  <!-- 关键：不要再用 device-width，交给容器控制宽度 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+
+  <meta name="theme-color" content="#319AFF">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="swaply">
+
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <link rel="icon" type="image/png" href="favicon-512.png">
+  <link rel="manifest" href="manifest.json">
+
+  <title>swaply</title>
+
+  <style>
+    :root {
+      /* 你设计的“手机宽度”，需要更改就改这里（常见 375 / 390 / 414 / 430） */
+      --app-max-width: 430px;
+      --splash-bg: #319AFF;
+    }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: #fff;
+      /* 桌面时让容器居中 */
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+    }
+    /* Flutter 画布外层框架：限制最大宽度，在手机上占满 */
+    .app-frame {
+      width: min(var(--app-max-width), 100vw);
+      height: 100svh;           /* 更好地适配移动端地址栏 */
+      position: relative;
+      overflow: hidden;
+      background: #fff;
+      box-sizing: border-box;
+    }
+
+    /* 自定义启动页：跟随容器尺寸，而不是全屏 */
+    #splash {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--splash-bg);
+      z-index: 9999;
+    }
+    #splash img {
+      width: min(55vmin, 360px);
+      height: auto;
+      image-rendering: -webkit-optimize-contrast;
+    }
+
+    /* 让 flutter-view/画布完全铺满容器（不是铺满窗口） */
+    .app-frame flutter-view,
+    .app-frame flt-glass-pane,
+    .app-frame canvas {
+      position: absolute !important;
+      inset: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+      margin: 0 !important;
+    }
+  </style>
+
+  <script>
+    function removeSplashFromWeb() {
+      document.getElementById('splash')?.remove();
+    }
+    window.addEventListener('flutter-first-frame', removeSplashFromWeb);
+  </script>
+</head>
+<body>
+<!-- 固定宽度的“手机容器” -->
+<div class="app-frame">
+  <!-- 启动页图片放在 web/splash/app_splash_stacked.png -->
+  <div id="splash" aria-hidden="true">
+    <img src="splash/app_splash_stacked.png" alt="Swaply">
+  </div>
+
+  <!-- 关键：把 Flutter 画布嵌入到容器里 -->
+  <flutter-view></flutter-view>
+</div>
+
+<!-- Flutter Web 引导脚本 -->
+<script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

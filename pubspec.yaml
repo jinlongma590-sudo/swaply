@@ -1,0 +1,99 @@
+name: swaply
+description: A marketplace app for Zimbabwe
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # 核心依赖
+  intl: any
+  provider: ^6.1.1
+  shared_preferences: ^2.2.3
+  flutter_screenutil: ^5.9.3
+  uuid: ^3.0.7
+
+  # Supabase
+  supabase_flutter: 2.7.0
+  google_sign_in: ^6.2.1
+  # 图片相关
+  image_picker: ^1.0.7
+  photo_view: ^0.14.0
+  file_picker: ^10.3.3
+
+  # 网络和认证
+  http: ^1.1.0
+  url_launcher: 6.3.0
+
+  # 分享功能
+  share_plus: ^12.0.0
+
+  # 其他
+  cupertino_icons: ^1.0.6
+  path_provider: ^2.1.5
+  path: ^1.9.1
+  sign_in_with_apple: ^7.0.1
+  crypto: ^3.0.6
+  supabase: ^2.4.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1   # ← 图标生成工具
+
+# flutter_launcher_icons 配置
+# 你的三张源图需要放在：
+# assets/app_icons/app_icon.png       （1024x1024，iOS/基准）
+# assets/app_icons/app_icon_fg.png    （1080x1080，透明前景，Android）
+# assets/app_icons/app_icon_bg.png    （1080x1080，实色/渐变背景，Android）
+flutter_launcher_icons:
+  ios: true
+  android: true
+  remove_alpha_ios: true
+  image_path: assets/app_icons/app_icon.png
+  adaptive_icon_foreground: assets/app_icons/app_icon_fg.png
+  adaptive_icon_background: assets/app_icons/app_icon_bg.png
+  # 可选：Android 13+ 单色图标（提供一张纯色单色版前景）
+  # adaptive_icon_monochrome: assets/app_icons/app_icon_fg_mono.png
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+  assets:
+    - assets/icons/
+    - assets/icons/trending.png
+    - assets/icons/vehicles.png
+    - assets/icons/property.png
+    - assets/icons/beauty_personal_care.png
+    - assets/icons/jobs.png
+    - assets/icons/babies_kids.png
+    - assets/icons/services.png
+    - assets/icons/leisure_activities.png
+    - assets/icons/repair_construction.png
+    - assets/icons/home_furniture_appliances.png
+    - assets/icons/pets.png
+    - assets/icons/electronics.png
+    - assets/icons/phones_tablets.png
+    - assets/icons/seeking_work_cvs.png
+    - assets/icons/fashion.png
+    - assets/icons/food_agriculture_drinks.png
+
+    - assets/images/
+    - assets/images/trending_items/
+    - assets/images/trending_items/item1/
+    - assets/images/trending_items/item1/1.jpg
+    - assets/images/trending_items/item2/
+    - assets/images/trending_items/item2/1.jpg
+    - assets/images/trending_items/item3/
+    - assets/images/trending_items/item3/1.jpg
+
+flutter_intl:
+  enabled: false

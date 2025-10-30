@@ -1,0 +1,34 @@
+// firestore.rules
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isOwner(field) {
+      return isSignedIn() && resource.data[field] == request.auth.uid;
+    }
+    function isOwnerNew(field) {
+      return isSignedIn() && request.resource.data[field] == request.auth.uid;
+    }
+
+    // 用户信息
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow update, delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    // 商品
+    match /listings/{id} {
+      allow read: if true;
+      allow create: if isOwnerNew('userId');
+      allow update, delete: if isOwner('userId');
+    }
+
+    // 收藏
+    match /users/{uid}/favorites/{listingId} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+    }
+  }
+}

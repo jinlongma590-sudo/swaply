@@ -1,0 +1,19 @@
+// storage.rules
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() { return request.auth != null; }
+
+    match /listings/{listingId}/{fileName} {
+      allow read: if true;
+      allow write: if isSignedIn() && request.resource.contentType.matches('image/.*');
+    }
+
+    match /users/{uid}/{fileName} {
+      allow read: if true;
+      allow write: if isSignedIn() &&
+                   request.auth.uid == uid &&
+                   request.resource.contentType.matches('image/.*');
+    }
+  }
+}

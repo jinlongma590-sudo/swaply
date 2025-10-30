@@ -1,0 +1,76 @@
+﻿=== PATTERN: email_verified ===
+C:\Apps\swaply\lib\pages\product_detail_page.dart:204:           'id, full_name, avatar_url, created_at, verification_type, is_verified, email_verified')
+C:\Apps\swaply\lib\pages\seller_profile_page.dart:62:             'id, full_name, avatar_url, created_at, verification_type, is_verified, email_verified')
+C:\Apps\swaply\lib\pages\verification_page.dart:80:           .select('id, verification_type, email_verified, is_verified')
+C:\Apps\swaply\lib\services\auth_service.dart:4: // 2.1：前端任何地方都不更新 profiles 的认证字段（email_verified / is_verified / verification_type）
+C:\Apps\swaply\lib\services\auth_service.dart:158:         // ⚠️ 不写 email_verified / is_verified / verification_type（交给 DB 默认）
+C:\Apps\swaply\lib\services\auth_service.dart:227:   /// （已改为 NO-OP，不再写 profiles 的 email_verified）
+C:\Apps\swaply\lib\services\auth_service.dart:236:             'auth.emailConfirmedAt=${u?.emailConfirmedAt}, meta.email_verified=${u?.appMetadata['email_verified']}');
+C:\Apps\swaply\lib\services\email_verification_service.dart:36:   /// 这个函数内部会把 auth.users.app_metadata.email_verified 设为 true
+C:\Apps\swaply\lib\services\profile_service.dart:2: // 以 profiles.verification_type 为唯一可信来源；不再用 email_verified 推断“已认证”
+C:\Apps\swaply\lib\services\profile_service.dart:3: // ✅ 不再写 verification_type / email_verified / is_verified（连初始化也不手写，交给 DB 默认）
+C:\Apps\swaply\lib\services\profile_service.dart:43:       // 2) upsert 同步资料（⚠️ 不写 verification_type / email_verified / is_verified）
+C:\Apps\swaply\lib\services\profile_service.dart:54:         // verification_type / email_verified / is_verified 交给 DB 默认
+C:\Apps\swaply\lib\services\profile_service.dart:179:           .select('*, verification_type, email_verified, is_verified')
+C:\Apps\swaply\lib\services\profile_service.dart:263:           .select('email_verified')
+C:\Apps\swaply\lib\services\profile_service.dart:266:       return row?['email_verified'] == true;
+C:\Apps\swaply\lib\services\profile_service.dart:349:           .select('*, verification_type, is_official, email_verified, is_verified')
+C:\Apps\swaply\lib\services\profile_service.dart:360:         // 不再用 email_verified / is_verified 推断
+C:\Apps\swaply\lib\services\verification_guard.dart:39:     final any = meta['email_verified'] ??
+C:\Apps\swaply\lib\services\verification_guard.dart:58:           .select('verification_type, is_verified, email_verified')
+C:\Apps\swaply\lib\services\verification_guard.dart:73:             (row['email_verified'] == true) || (row['is_verified'] == true);
+C:\Apps\swaply\lib\services\verification_guard.dart:75:             '[VerificationGuard] vtType=$vtType (non-none = verified=$ok), flags(email_verified/is_verified)=$byFlags (ignored)');
+C:\Apps\swaply\lib\utils\verification_utils.dart:9:   if (appMeta['email_verified'] == true) return true;
+C:\Apps\swaply\lib\utils\verification_utils.dart:23:   if (appMeta['email_verified'] == true) return VerificationBadgeType.verified;
+C:\Apps\swaply\lib\widgets\verification_badge.dart:163:         // ✅ 注意：不再读取 email_verified 或 is_verified
+C:\Apps\swaply\supabase\functions\verify-email-code\index.ts:47:         .update({ email_verified: true, email_verified_at: new Date().toISOString() })
+
+=== PATTERN: appMeta ===
+C:\Apps\swaply\lib\pages\verification_page.dart:157:       final before = auth.currentUser?.appMetadata;
+C:\Apps\swaply\lib\pages\verification_page.dart:161:         debugPrint('[Verify] appMeta before=$before  after=${afterUser?.appMetadata}');
+C:\Apps\swaply\lib\services\auth_service.dart:236:             'auth.emailConfirmedAt=${u?.emailConfirmedAt}, meta.email_verified=${u?.appMetadata['email_verified']}');
+C:\Apps\swaply\lib\utils\verification_utils.dart:8:   final appMeta = (user?.appMetadata ?? const {}) as Map;
+C:\Apps\swaply\lib\utils\verification_utils.dart:9:   if (appMeta['email_verified'] == true) return true;
+C:\Apps\swaply\lib\utils\verification_utils.dart:22:   final appMeta = (user?.appMetadata ?? const {}) as Map;
+C:\Apps\swaply\lib\utils\verification_utils.dart:23:   if (appMeta['email_verified'] == true) return VerificationBadgeType.verified;
+C:\Apps\swaply\lib\widgets\verification_badge.dart:149:         final am = user?.appMetadata;
+
+=== PATTERN: app_metadata ===
+C:\Apps\swaply\lib\pages\verification_page.dart:155:       // 1) 刷新会话，拿到新 token（包含新的 app_metadata）
+C:\Apps\swaply\lib\services\auth_service.dart:220:   /// 2.2：验证码通过后的回调：只刷新会话（拿到最新 app_metadata），不写 DB / 不改 auth metadata
+C:\Apps\swaply\lib\services\email_verification_service.dart:36:   /// 这个函数内部会把 auth.users.app_metadata.email_verified 设为 true
+C:\Apps\swaply\lib\widgets\verification_badge.dart:126:       // 如果有 user_metadata 或 app_metadata，将其内容合并到顶层
+C:\Apps\swaply\lib\widgets\verification_badge.dart:132:       } else if (user['app_metadata'] is Map<String, dynamic>) {
+C:\Apps\swaply\lib\widgets\verification_badge.dart:135:           ...(user['app_metadata'] as Map<String, dynamic>),
+
+=== PATTERN: emailConfirmedAt ===
+C:\Apps\swaply\lib\services\auth_service.dart:17:   bool get isEmailVerified => supabase.auth.currentUser?.emailConfirmedAt != null;
+C:\Apps\swaply\lib\services\auth_service.dart:236:             'auth.emailConfirmedAt=${u?.emailConfirmedAt}, meta.email_verified=${u?.appMetadata['email_verified']}');
+C:\Apps\swaply\lib\services\verification_guard.dart:37:     if (u.emailConfirmedAt != null) return true;
+
+=== PATTERN: email_confirmed ===
+C:\Apps\swaply\lib\services\verification_guard.dart:41:         meta['email_confirmed'] ??
+C:\Apps\swaply\lib\services\verification_guard.dart:43:         meta['email_confirmed_at'];
+
+=== PATTERN: profiles.verification ===
+C:\Apps\swaply\lib\services\profile_service.dart:2: // 以 profiles.verification_type 为唯一可信来源；不再用 email_verified 推断“已认证”
+C:\Apps\swaply\lib\services\profile_service.dart:312:   /// 仅返回 profiles.verification_type；做统一规整
+C:\Apps\swaply\lib\services\verification_guard.dart:53:   /// Server-side check: ONLY trust profiles.verification_type (non-`none` means verified)
+
+=== PATTERN: raw_app_meta_data ===
+
+=== PATTERN: auth.admin.updateUser ===
+
+=== PATTERN: updateUserById ===
+
+=== PATTERN: auth.updateUser ===
+C:\Apps\swaply\lib\services\auth_service.dart:265:       await supabase.auth.updateUser(UserAttributes(password: newPassword));
+C:\Apps\swaply\lib\services\auth_service.dart:285:         await supabase.auth.updateUser(UserAttributes(
+C:\Apps\swaply\lib\services\profile_service.dart:278:         await _sb.auth.updateUser(UserAttributes(email: email));
+
+=== PATTERN: update auth.users ===
+
+=== PATTERN: set raw_app_meta_data ===
+
+=== PATTERN: rpc('set_auth_app_metadata' ===
+
