@@ -51,6 +51,22 @@ bool _authHookWired = false;
 StreamSubscription<AuthState>? _globalAuthSub;
 final GlobalKey<NavigatorState> appNavKey = GlobalKey<NavigatorState>();
 
+// === 路由保险：只允许第一次进主壳，统一导航口 ===
+class RouteGate {
+  static bool _wentToMain = false;
+
+  static void toMainOnce() {
+    if (_wentToMain) return;
+    _wentToMain = true;
+    appNavKey.currentState?.pushNamedAndRemoveUntil('/home', (route) => false);
+  }
+
+  static void toSignIn() {
+    _wentToMain = false;
+    appNavKey.currentState?.pushNamedAndRemoveUntil('/welcome', (route) => false);
+  }
+}
+
 class AppLocalizations {
   final Locale locale;
   AppLocalizations(this.locale);
@@ -255,11 +271,9 @@ void wireAuthHook() {
           debugPrint('[Auth] ensureWelcomeForCurrentUser error: $e');
         }
 
-        final ctx = appNavKey.currentContext;
-        if (ctx != null) {
-          // 导航到主页
-          Navigator.of(ctx).pushNamedAndRemoveUntil('/home', (route) => false);
-          // ✅ 不在这里直接弹窗，让主页面统一检查 SharedPreferences 决定是否弹
+        // ⚠️ 关键：initialSession 不做导航，避免与 initialRoute 双触发
+        if (event == AuthChangeEvent.signedIn) {
+          RouteGate.toMainOnce(); // 仅真正登录成功时导航到主壳
         }
       }
     }
@@ -270,13 +284,7 @@ void wireAuthHook() {
       DualFavoritesService.clearCache();
       RewardService.clearCache();
 
-      final ctx = appNavKey.currentContext;
-      if (ctx != null) {
-        Navigator.of(ctx).pushNamedAndRemoveUntil(
-          '/welcome',
-              (route) => false,
-        );
-      }
+      RouteGate.toSignIn(); // 统一回登录页并重置“只进一次主壳”的标记
     }
   });
 }
@@ -449,7 +457,6 @@ Future<void> main() async {
     ),
   );
 
-
   // ✅ 在 Supabase 初始化后，runApp 之前调用全局监听器
   wireAuthHook();
 
@@ -562,7 +569,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               routes: {
                 '/welcome': (_) => const WelcomeScreen(),
                 '/login': (_) => const LoginScreen(),
-                '/home': (_) => const swaply.HomePage(),
+                // ✅ 改为带 5 个底栏的主壳
+                '/home': (_) => const MainNavigationPage(),
                 '/coupons': (_) => CouponManagementPage(),
               },
             );
@@ -573,9 +581,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 }
 
-// ç»§ç»­æ·»åŠ  MainNavigationPage å’Œå…¶ä»–ç±»...
-// [ä¸ºäº†èŠ‚çœç©ºé—´ï¼Œè¿™é‡Œä¿æŒå…¶ä½™ä»£ç ä¸å˜]
-// ç»§ç»­æ·»åŠ  MainNavigationPage å’Œå…¶ä»–ç±»...
+// 继续添加 MainNavigationPage 和其他类...
+// [为了节省空间，这里保持其余代码不变]
+// 继续添加 MainNavigationPage 和其他类...
 class MainNavigationPage extends StatefulWidget {
   final bool isGuest;
   const MainNavigationPage({Key? key, this.isGuest = false}) : super(key: key);
@@ -588,7 +596,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
   int _notificationCount = 0;
   late AnimationController _sellButtonController;
   late Animation<double> _sellButtonAnimation;
-  // â‘¤ åˆ æŽ‰ç¬¬äºŒå¥—ç›‘å¬å™¨ç›¸å…³å˜é‡ï¼ˆå·²åˆ é™¤ _authSubscriptionï¼‰
+  // ④ 删掉第二套监听器相关变量（已删除 _authSubscription）
 
   final _homeKey = GlobalKey<NavigatorState>();
   final _savedKey = GlobalKey<NavigatorState>();
@@ -600,7 +608,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
     _homeKey, _savedKey, _sellKey, _notifKey, _profileKey,
   ];
 
-  // âœ… æ–°å¢žï¼šç±»çº§åˆ«çš„é™æ€æ ‡è®°
+  // ✅ 新增：类级别的静态标记
   static bool _welcomeGiftChecked = false;
 
   @override
@@ -608,9 +616,9 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
     super.initState();
     _loadNotificationCount();
 
-    // â‘¤ åˆ æŽ‰ MainNavigationPage é‡Œçš„ç¬¬äºŒå¥—ç›‘å¬å™¨ï¼ˆæ•´æ®µåˆ é™¤ï¼‰
+    // ⑤ 删除 MainNavigationPage 里的第二套监听（整段已删除）
 
-    // SellæŒ‰é’®åŠ¨ç”»
+    // Sell按钮动画
     _sellButtonController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
@@ -619,7 +627,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
       CurvedAnimation(parent: _sellButtonController, curve: Curves.easeInOut),
     );
 
-    // âœ… æ–°å¢žï¼šå»¶è¿Ÿæ£€æŸ¥æ¬¢è¿Žåˆ¸ï¼ˆå…œåº•æœºåˆ¶ï¼‰
+    // ✅ 新增：延迟检查欢迎券（幂底机制）
     if (!widget.isGuest) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Future.delayed(const Duration(milliseconds: 1500), () {
@@ -634,11 +642,11 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
   @override
   void dispose() {
     _sellButtonController.dispose();
-    // â‘¤ åˆ æŽ‰å–æ¶ˆè®¢é˜…ä»£ç ï¼ˆå·²åˆ é™¤ï¼‰
+    // ⑥ 取消取订阅代吗（已删除）
     super.dispose();
   }
 
-  // âœ… æ–°å¢žï¼šæ£€æŸ¥å¹¶æ˜¾ç¤ºæ¬¢è¿Žåˆ¸çš„æ–¹æ³•
+  // ✅ 新增：检查并显示欢迎券的方法
   Future<void> _checkAndShowWelcomeGift() async {
     // 避免重复检查
     if (_welcomeGiftChecked) return;
@@ -767,7 +775,6 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
     );
   }
 
-
   Future<void> _loadNotificationCount() async {
     if (!widget.isGuest) {
       try {
@@ -838,16 +845,17 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
     );
   }
 
-  // æ–°å¢žï¼šåˆ‡æ¢åˆ°é¦–é¡µçš„æ–¹æ³•
+  // 新增：切换到首页的方法
   void _navigateToHome() {
     setState(() => _selectedIndex = 0);
   }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final languageProvider = Provider.of<LanguageProvider>(context);
 
-    // å®šä¹‰5ä¸ªæ ‡ç­¾é¡µ
+    // 定义5个标签页
     final List<Widget> _pages = [
       _buildTabNavigator(_homeKey, const _HomeRoot(), languageProvider),
       _buildTabNavigator(_savedKey, _SavedRoot(
@@ -933,6 +941,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
       ),
     );
   }
+
   Widget _buildCompactNavItem({
     required IconData icon,
     required IconData activeIcon,
@@ -952,7 +961,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
         setState(() => _selectedIndex = index);
       },
       child: Container(
-        width: 60.w, // å¢žåŠ å®½åº¦ä»¥æ˜¾ç¤ºå®Œæ•´æ–‡å­—
+        width: 60.w, // 增加宽度以显示完整文字
         height: 52.h,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -984,14 +993,14 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
                   color: isSelected
                       ? const Color(0xFF2196F3)
                       : Colors.grey[600],
-                  fontSize: 8.5.sp, // ç¨å¾®è°ƒæ•´å­—ä½“å¤§å°
+                  fontSize: 8.5.sp, // 稍微调字体大小
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
                 child: Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center, // å±…ä¸­å¯¹é½
+                  textAlign: TextAlign.center, // 居中对齐
                 ),
               ),
             ],
@@ -1024,7 +1033,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
         });
       },
       child: Container(
-        width: 60.w, // å¢žåŠ å®½åº¦ä»¥æ˜¾ç¤ºå®Œæ•´æ–‡å­—
+        width: 60.w, // 增加宽度以显示完整文字
         height: 52.h,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -1104,14 +1113,14 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
                   color: isSelected
                       ? const Color(0xFF2196F3)
                       : Colors.grey[600],
-                  fontSize: 8.5.sp, // ç¨å¾®è°ƒæ•´å­—ä½“å¤§å°
+                  fontSize: 8.5.sp, // 稍微调字体大小
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
                 child: Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center, // å±…ä¸­å¯¹é½
+                  textAlign: TextAlign.center, // 居中对齐
                 ),
               ),
             ],
