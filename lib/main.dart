@@ -1,7 +1,7 @@
 // lib/main.dart - 修复版本：移除导致自动登出的refreshSession调用 + 启用 PKCE OAuth
 import 'dart:async';
 import 'dart:io';
-
+import 'package:swaply/widgets/ios_insets_guard.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/foundation.dart' show SynchronousFuture;
 import 'package:flutter/material.dart';
@@ -14,7 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-// ====== 本项目内的依赖 ======
+// ====== 本项目内的依�?======
 import 'package:swaply/auth/login_screen.dart';
 import 'package:swaply/auth/welcome_screen.dart';
 import 'package:swaply/models/coupon.dart';
@@ -51,7 +51,7 @@ bool _authHookWired = false;
 StreamSubscription<AuthState>? _globalAuthSub;
 final GlobalKey<NavigatorState> appNavKey = GlobalKey<NavigatorState>();
 
-// === 路由保险：只允许第一次进主壳，统一导航口 ===
+// === 路由保险：只允许第一次进主壳，统一导航�?===
 class RouteGate {
   static bool _wentToMain = false;
 
@@ -260,7 +260,7 @@ void wireAuthHook() {
       if (u != null) {
         await NotificationService.subscribeUser(u.id);
 
-        // ✅ 新逻辑：由服务端幂等 RPC 决定是否需要弹一次欢迎券
+        // �?新逻辑：由服务端幂�?RPC 决定是否需要弹一次欢迎券
         try {
           final res = await RewardService.ensureWelcomeForCurrentUser();
           if (res.shouldPopup) {
@@ -271,9 +271,9 @@ void wireAuthHook() {
           debugPrint('[Auth] ensureWelcomeForCurrentUser error: $e');
         }
 
-        // ⚠️ 关键：initialSession 不做导航，避免与 initialRoute 双触发
+        // ⚠️ 关键：initialSession 不做导航，避免与 initialRoute 双触�?
         if (event == AuthChangeEvent.signedIn) {
-          RouteGate.toMainOnce(); // 仅真正登录成功时导航到主壳
+          RouteGate.toMainOnce(); // 仅真正登录成功时导航到主�?
         }
       }
     }
@@ -289,34 +289,34 @@ void wireAuthHook() {
   });
 }
 
-// —— 仅供本文件使用的 UTF-8 乱码修复（把“ðŸ… / Ã / â …”类还原），不依赖 dart:convert ——
-// （避免你在 main.dart 顶部忘记 import 导致的报错）
+// —�?仅供本文件使用的 UTF-8 乱码修复（把“ðŸ�?/ Ã / â …”类还原），不依�?dart:convert —�?
+// （避免你�?main.dart 顶部忘记 import 导致的报错）
 String _fixUtf8Mojibake(String? raw) {
   if (raw == null || raw.isEmpty) return raw ?? '';
   var s = raw;
 
-  // 若不存在典型乱码痕迹，直接返回
+  // 若不存在典型乱码痕迹，直接返�?
   if (!s.contains('ð') && !s.contains('Ã') && !s.contains('â')) return s;
 
   const map = <String, String>{
-    'ðŸŽ‰': '🎉', // party popper
+    'ðŸŽ�?: '🎉', // party popper
     'ðŸŽ': '🎁', // gift
-    'â†’': '→',
-    'â€”': '—',
-    'â€“': '–',
-    'â€œ': '“',
-    'â€': '”',
-    'â€˜': '‘',
-    'â€™': '’',
-    'â€¢': '•',
-    'â€¦': '…',
-    'Ã—': '×',
+    'â†�?: '�?,
+    'â€�?: '�?,
+    'â€�?: '�?,
+    'â€�?: '�?,
+    'â€�?: '�?,
+    'â€�?: '�?,
+    'â€™': '�?,
+    'â€�?: '�?,
+    'â€�?: '�?,
+    'Ã�?: '×',
     'Ã·': '÷',
     'Â®': '®',
     'Â©': '©',
     'Â°': '°',
     'Â·': '·',
-    'Â':  '',  // 孤立的 Â
+    'Â':  '',  // 孤立�?Â
   };
 
   map.forEach((k, v) => s = s.replaceAll(k, v));
@@ -353,7 +353,7 @@ void _showWelcomeGiftDialog() {
           Text(
             _fixUtf8Mojibake(
               'A Welcome Coupon has been added to your account.\n'
-                  'You can find it in My Coupons or My Rewards → Coupons tab.',
+                  'You can find it in My Coupons or My Rewards �?Coupons tab.',
             ),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13.sp, color: Colors.black87),
@@ -397,7 +397,7 @@ void _showWelcomeGiftDialog() {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // === 静音 Supabase 的 refresh session 噪音（仅开发期） ===
+  // === 静音 Supabase �?refresh session 噪音（仅开发期�?===
       {
     final _orig = debugPrint;
     debugPrint = (String? message, {int? wrapWidth}) {
@@ -447,7 +447,7 @@ Future<void> main() async {
     );
   };
 
-  // ✅ 启用 PKCE OAuth（移动端必须）
+  // �?启用 PKCE OAuth（移动端必须�?
   await Supabase.initialize(
     url: 'https://rhckybselarzglkmlyqs.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoY2t5YnNlbGFyemdsa21seXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTM0NTgsImV4cCI6MjA3MDU4OTQ1OH0.3I0T2DidiF-q9l2tWeHOjB31QogXHDqRtEjDn0RfVbU',
@@ -457,7 +457,7 @@ Future<void> main() async {
     ),
   );
 
-  // ✅ 在 Supabase 初始化后，runApp 之前调用全局监听器
+  // �?�?Supabase 初始化后，runApp 之前调用全局监听�?
   wireAuthHook();
 
   runApp(
@@ -494,7 +494,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     switch (state) {
       case AppLifecycleState.resumed:
         debugPrint('App resumed - clearing notifications if needed');
-        // 不再主动 refreshSession，避免自动登出
+        // 不再主动 refreshSession，避免自动登�?
         // AuthService().refreshSession(minInterval: const Duration(minutes: 15));
         break;
       case AppLifecycleState.paused:
@@ -564,12 +564,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   ),
                 ),
               ),
-              // ✅ 仅使用 initialRoute，避免同时设置 home 造成路由冲突
+              // �?仅使�?initialRoute，避免同时设�?home 造成路由冲突
               initialRoute: hasSession ? '/home' : '/welcome',
               routes: {
                 '/welcome': (_) => const WelcomeScreen(),
                 '/login': (_) => const LoginScreen(),
-                // ✅ 改为带 5 个底栏的主壳
+                // �?改为�?5 个底栏的主壳
                 '/home': (_) => const MainNavigationPage(),
                 '/coupons': (_) => CouponManagementPage(),
               },
@@ -596,7 +596,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
   int _notificationCount = 0;
   late AnimationController _sellButtonController;
   late Animation<double> _sellButtonAnimation;
-  // ④ 删掉第二套监听器相关变量（已删除 _authSubscription）
+  // �?删掉第二套监听器相关变量（已删除 _authSubscription�?
 
   final _homeKey = GlobalKey<NavigatorState>();
   final _savedKey = GlobalKey<NavigatorState>();
@@ -608,7 +608,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
     _homeKey, _savedKey, _sellKey, _notifKey, _profileKey,
   ];
 
-  // ✅ 新增：类级别的静态标记
+  // �?新增：类级别的静态标�?
   static bool _welcomeGiftChecked = false;
 
   @override
@@ -616,7 +616,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
     super.initState();
     _loadNotificationCount();
 
-    // ⑤ 删除 MainNavigationPage 里的第二套监听（整段已删除）
+    // �?删除 MainNavigationPage 里的第二套监听（整段已删除）
 
     // Sell按钮动画
     _sellButtonController = AnimationController(
@@ -627,7 +627,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
       CurvedAnimation(parent: _sellButtonController, curve: Curves.easeInOut),
     );
 
-    // ✅ 新增：延迟检查欢迎券（幂底机制）
+    // �?新增：延迟检查欢迎券（幂底机制）
     if (!widget.isGuest) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Future.delayed(const Duration(milliseconds: 1500), () {
@@ -642,13 +642,13 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
   @override
   void dispose() {
     _sellButtonController.dispose();
-    // ⑥ 取消取订阅代吗（已删除）
+    // �?取消取订阅代吗（已删除）
     super.dispose();
   }
 
-  // ✅ 新增：检查并显示欢迎券的方法
+  // �?新增：检查并显示欢迎券的方法
   Future<void> _checkAndShowWelcomeGift() async {
-    // 避免重复检查
+    // 避免重复检�?
     if (_welcomeGiftChecked) return;
 
     final user = Supabase.instance.client.auth.currentUser;
@@ -659,14 +659,14 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
       final pendingKey = 'new_user_welcome_pending_${user.id}';
       final shownKey   = 'welcome_gift_shown_${user.id}';
 
-      // 只在“刚创建了欢迎券”的情况下弹窗（该标记在 wireAuthHook 中被置为 true）
+      // 只在“刚创建了欢迎券”的情况下弹窗（该标记在 wireAuthHook 中被置为 true�?
       final pending = prefs.getBool(pendingKey) ?? false;
       if (!pending) {
-        _welcomeGiftChecked = true; // 没有待弹窗标记：认为已检查过，避免反复查询
+        _welcomeGiftChecked = true; // 没有待弹窗标记：认为已检查过，避免反复查�?
         return;
       }
 
-      // 尝试取出最新 welcome 券以展示码值（失败也不影响弹窗）
+      // 尝试取出最�?welcome 券以展示码值（失败也不影响弹窗�?
       Map<String, dynamic>? row;
       try {
         final rows = await Supabase.instance.client
@@ -682,7 +682,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
         }
       } catch (_) {}
 
-      // 标记已处理，并清掉 pending
+      // 标记已处理，并清�?pending
       _welcomeGiftChecked = true;
       await prefs.setBool(shownKey, true);
       await prefs.remove(pendingKey);
@@ -845,7 +845,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
     );
   }
 
-  // 新增：切换到首页的方法
+  // 新增：切换到首页的方�?
   void _navigateToHome() {
     setState(() => _selectedIndex = 0);
   }
@@ -857,7 +857,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
 
     // 定义5个标签页
     final List<Widget> _pages = [
-      _buildTabNavigator(_homeKey, const _HomeRoot(), languageProvider),
+      _buildTabNavigator(_homeKey, IosInsetsGuard(child: const _HomeRoot()), languageProvider),
       _buildTabNavigator(_savedKey, _SavedRoot(
         isGuest: widget.isGuest,
         onNavigateToHome: _navigateToHome,
@@ -961,7 +961,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
         setState(() => _selectedIndex = index);
       },
       child: Container(
-        width: 60.w, // 增加宽度以显示完整文字
+        width: 60.w, // 增加宽度以显示完整文�?
         height: 52.h,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -993,7 +993,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
                   color: isSelected
                       ? const Color(0xFF2196F3)
                       : Colors.grey[600],
-                  fontSize: 8.5.sp, // 稍微调字体大小
+                  fontSize: 8.5.sp, // 稍微调字体大�?
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
                 child: Text(
@@ -1033,7 +1033,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
         });
       },
       child: Container(
-        width: 60.w, // 增加宽度以显示完整文字
+        width: 60.w, // 增加宽度以显示完整文�?
         height: 52.h,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -1113,7 +1113,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
                   color: isSelected
                       ? const Color(0xFF2196F3)
                       : Colors.grey[600],
-                  fontSize: 8.5.sp, // 稍微调字体大小
+                  fontSize: 8.5.sp, // 稍微调字体大�?
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
                 child: Text(
@@ -1152,7 +1152,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
             scale: _sellButtonAnimation.value,
             child: Container(
               width: 56.w, // 稍微增大悬浮按钮
-              height: 46.h, // ↓ 降低高度以避免底部 3~4px 溢出
+              height: 46.h, // �?降低高度以避免底�?3~4px 溢出
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -1177,7 +1177,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
                     offset: Offset(0, isSelected ? 4.h : 3.h),
                     spreadRadius: isSelected ? 2.w : 1.w,
                   ),
-                  // 添加额外的阴影增强悬浮效果
+                  // 添加额外的阴影增强悬浮效�?
                   BoxShadow(
                     color: const Color(0xFF2196F3).withOpacity(0.2),
                     blurRadius: 6.h,
@@ -1199,10 +1199,10 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
                     child: Icon(
                       Icons.add_rounded,
                       color: Colors.white,
-                      size: 22.h, // ↓ 减小图标以配合整体高度
+                      size: 22.h, // �?减小图标以配合整体高�?
                     ),
                   ),
-                  SizedBox(height: 0.5.h), // ↓ 减少上下留白
+                  SizedBox(height: 0.5.h), // �?减少上下留白
                   Text(
                     l10n.sell,
                     textHeightBehavior: const TextHeightBehavior(
@@ -1211,8 +1211,8 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
                     ),
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 7.5.sp,  // ↓ 再小一点避免文字行高撑开
-                      height: 1.0,       // ↓ 紧凑行高，消除 1~2px 视觉溢出
+                      fontSize: 7.5.sp,  // �?再小一点避免文字行高撑开
+                      height: 1.0,       // �?紧凑行高，消�?1~2px 视觉溢出
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.2,
                       shadows: [
@@ -1234,8 +1234,8 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
   }
 }
 
-// ... ç»§ç»­æ·»åŠ å‰©ä½™çš„ä»£ç ï¼ˆåŒ…æ‹¬æ‰€æœ‰å…¶ä»–é¡µé¢ç»„ä»¶ï¼‰...
-// ç”±äºŽä»£ç å¤ªé•¿ï¼Œæˆ‘åªå±•ç¤ºäº†ä¿®æ”¹çš„æ ¸å¿ƒéƒ¨åˆ†ã€‚å…¶ä½™éƒ¨åˆ†ä¿æŒä¸å˜.
+// ... ç»§ç»­æ·»åŠ å‰©ä½™çš„ä»£�?ï¼ˆåŒ…æ‹¬æ‰€æœ‰å…¶ä»–é¡µé¢ç»„ä»¶ï¼�?..
+// ç”±äºŽä»£�?å¤ªé•¿ï¼Œæˆ‘åªå±•ç¤ºäº†ä¿®æ”¹çš„�?¸å¿ƒéƒ¨åˆ†ã€‚å…¶ä½™éƒ¨åˆ†ä¿æŒä¸å�?
 /* ---------------- Tab æ ¹é¡µ ---------------- */
 
 class _HomeRoot extends StatelessWidget {
@@ -1244,7 +1244,7 @@ class _HomeRoot extends StatelessWidget {
   Widget build(BuildContext context) => const swaply.HomePage();
 }
 
-// ä¿®æ”¹ï¼šæ·»åŠ å¯¼èˆªå›žè°ƒå‚æ•°
+// ä¿®æ”¹ï¼šæ·»å�?å¯¼èˆªå›žè°ƒå‚æ•�?
 class _SavedRoot extends StatelessWidget {
   final bool isGuest;
   final VoidCallback? onNavigateToHome;
@@ -1312,9 +1312,9 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
 
     if (!widget.isGuest) {
       _loadFavorites();
-      // å¯åŠ¨è‡ªåŠ¨åˆ·æ–°å®šæ—¶å™¨ï¼ˆæ¯30ç§’æ£€æŸ¥ä¸€æ¬¡ï¼‰
+      // å¯åŠ¨è‡ªåŠ¨åˆ·æ–°å®šæ—¶å™¨ï¼ˆæ¯30ç§’æ£€æŸ¥ä¸€æ¬¡ï¼�?
       _startAutoRefresh();
-      // è®¾ç½®æ”¶è—æ›´æ–°ç›‘å¬
+      // è®¾ç½®æ”¶è—æ›´æ–°ç›‘å�?
       _setupFavoritesListener();
     } else {
       setState(() => _isLoading = false);
@@ -1329,16 +1329,16 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  // âœ… ä¿®å¤ï¼šè¿™é‡Œåº”è¯¥æ˜¯ç”Ÿå‘½å‘¨æœŸå›žè°ƒï¼Œè€Œä¸æ˜¯è·¯ç”±æ¡ç›®
+  // âœ�?ä¿®å¤ï¼šè¿™é‡Œåº”è¯¥æ˜¯ç”Ÿå‘½å‘¨æœŸå›žè°ƒï¼Œè€Œä¸æ˜¯è·¯ç”±æ¡ç›�?
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && !widget.isGuest) {
-      // åº”ç”¨é‡æ–°æ¿€æ´»æ—¶åˆ·æ–°æ•°æ®
+      // åº”ç”¨é‡æ–°æ¿€æ´»æ—¶åˆ·æ–°æ•°æ�?
       _loadFavorites();
     }
   }
 
-  /// è®¾ç½®æ”¶è—æ›´æ–°ç›‘å¬
+  /// è®¾ç½®æ”¶è—æ›´æ–°ç›‘å�?
   void _setupFavoritesListener() {
     _favoritesSubscription = FavoritesUpdateService().favoritesStream.listen(
           (event) {
@@ -1349,7 +1349,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         }
 
         if (event.isAdded && event.listingData != null) {
-          // æ·»åŠ åˆ°æ”¶è—ï¼šç«‹å³æ·»åŠ åˆ°æœ¬åœ°åˆ—è¡¨
+          // æ·»åŠ åˆ°æ”¶è—ï¼šç«‹å³æ·»å�?åˆ°æœ¬åœ°åˆ—è¡�?
           _addToLocalFavorites(event.listingData!);
         } else if (!event.isAdded) {
           // ä»Žæ”¶è—ç§»é™¤ï¼šç«‹å³ä»Žæœ¬åœ°åˆ—è¡¨ç§»é™¤
@@ -1362,10 +1362,10 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  /// ç«‹å³æ·»åŠ åˆ°æœ¬åœ°æ”¶è—åˆ—è¡¨
+  /// ç«‹å³æ·»å�?åˆ°æœ¬åœ°æ”¶è—åˆ—è¡�?
   void _addToLocalFavorites(Map<String, dynamic> listingData) {
     try {
-      // æ£€æŸ¥æ˜¯å¦å·²å­˜åœ¨
+      // æ£€æŸ¥æ˜¯å¦å·²å­˜åœ�?
       final listingId = listingData['id']?.toString();
       if (listingId == null) return;
 
@@ -1375,7 +1375,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       );
 
       if (!exists) {
-        // æž„é€ ç¬¦åˆæ”¶è—æ ¼å¼çš„æ•°æ®
+        // æž„é€ ç¬¦åˆæ”¶è—�?¼å¼çš„æ•°æ�?
         final favoriteItem = {
           'listing_id': listingId,
           'listing': _safeMapConvert(listingData),
@@ -1422,13 +1422,13 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     _autoRefreshTimer?.cancel();
     _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       if (!widget.isGuest && mounted && !_isRefreshing) {
-        if (kDebugMode) print('è‡ªåŠ¨åˆ·æ–°æ”¶è—åˆ—è¡¨...');
+        if (kDebugMode) print('è‡ªåŠ¨åˆ·æ–°æ”¶è—åˆ—è¡�?..');
         _loadFavorites();
       }
     });
   }
 
-  /// å®‰å…¨çš„ç±»åž‹è½¬æ¢æ–¹æ³•
+  /// å®‰å…¨çš„ç±»åž‹è½¬æ¢æ–¹æ³�?
   Map<String, dynamic> _safeMapConvert(dynamic input) {
     if (input == null) return <String, dynamic>{};
 
@@ -1438,7 +1438,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       try {
         return Map<String, dynamic>.from(input);
       } catch (e) {
-        if (kDebugMode) print('ç±»åž‹è½¬æ¢å¤±è´¥: $e');
+        if (kDebugMode) print('ç±»åž‹è½¬æ¢å¤±è´�? $e');
         return <String, dynamic>{};
       }
     }
@@ -1456,7 +1456,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  /// åŠ è½½æ”¶è—åˆ—è¡¨ - ä¿®å¤ï¼šä½¿ç”¨ DualFavoritesService
+  /// åŠ è½½æ”¶è—åˆ—è¡�?- ä¿®å¤ï¼šä½¿ç”�?DualFavoritesService
   Future<void> _loadFavorites() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
@@ -1477,19 +1477,19 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         print('Loading favorites for user: ${user.id}');
       }
 
-      // ä¿®å¤ï¼šä½¿ç”¨ DualFavoritesService èŽ·å–æ”¶è—åˆ—è¡¨ï¼ˆä»Ž favorites è¡¨ï¼‰
+      // ä¿®å¤ï¼šä½¿ç”�?DualFavoritesService èŽ·å–æ”¶è—åˆ—è¡¨ï¼ˆä»�?favorites è¡¨ï¼�?
       final rawItems = await DualFavoritesService.getUserFavorites(
         userId: user.id,
         limit: 100,
       );
 
       if (mounted) {
-        // å®‰å…¨è½¬æ¢æ•°æ®
+        // å®‰å…¨è½¬æ¢æ•°æ�?
         final safeItems = <Map<String, dynamic>>[];
         for (final item in rawItems) {
           final safeItem = _safeMapConvert(item);
           if (safeItem.isNotEmpty) {
-            // ç¡®ä¿ listing æ•°æ®ä¹Ÿæ˜¯å®‰å…¨è½¬æ¢çš„
+            // ç¡®ä¿ listing æ•°æ®ä¹Ÿæ˜¯å®‰å…¨è½¬æ¢çš�?
             if (safeItem.containsKey('listing')) {
               safeItem['listing'] = _safeMapConvert(safeItem['listing']);
             }
@@ -1520,20 +1520,20 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  /// åˆ·æ–°æ”¶è—åˆ—è¡¨
+  /// åˆ·æ–°æ”¶è—åˆ—è¡�?
   Future<void> _refreshFavorites() async {
     setState(() => _isRefreshing = true);
     await _loadFavorites();
     setState(() => _isRefreshing = false);
   }
 
-  /// ä»Žæ”¶è—å¤¹ç§»é™¤å•†å“ - ä¿®å¤ï¼šä½¿ç”¨ DualFavoritesService
+  /// ä»Žæ”¶è—å¤¹ç§»é™¤å•†å“�?- ä¿®å¤ï¼šä½¿ç”�?DualFavoritesService
   Future<void> _removeFromFavorites(String listingId, int index) async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
     try {
-      // ä¿®å¤ï¼šä½¿ç”¨ DualFavoritesService åŒæ­¥ç§»é™¤
+      // ä¿®å¤ï¼šä½¿ç”�?DualFavoritesService åŒæ­¥ç§»é™�?
       final success = await DualFavoritesService.removeFromFavorites(
         userId: user.id,
         listingId: listingId,
@@ -1591,7 +1591,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  /// èŽ·å–å•†å“å›¾ç‰‡ - å®‰å…¨ç‰ˆæœ¬
+  /// èŽ·å–å•†å“å›¾ç‰�?- å®‰å…¨ç‰ˆæœ�?
   String _getListingImage(Map<String, dynamic> listing) {
     try {
       final images = listing['images'] ?? listing['image_urls'];
@@ -1604,7 +1604,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     return 'assets/images/placeholder.jpg';
   }
 
-  /// æ ¼å¼åŒ–ä»·æ ¼ - å®‰å…¨ç‰ˆæœ¬
+  /// æ ¼å¼åŒ–ä»·�?¼ - å®‰å…¨ç‰ˆæœ�?
   String _formatPrice(dynamic price) {
     if (price == null) return 'Price not available';
 
@@ -1624,10 +1624,10 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  /// æž„å»ºå•†å“å¡ç‰‡ - ä¿®å¤ç‰ˆæœ¬
+  /// æž„å»ºå•†å“å¡ç‰�?- ä¿®å¤ç‰ˆæœ�?
   Widget _buildFavoriteCard(Map<String, dynamic> item, int index) {
     try {
-      // å®‰å…¨çš„ç±»åž‹è½¬æ¢ - ç»Ÿä¸€ä½¿ç”¨ 'listing' é”®
+      // å®‰å…¨çš„ç±»åž‹è½¬æ�?- ç»Ÿä¸€ä½¿ç”�?'listing' é”�?
       final safeListing = _safeMapConvert(item['listing'] ?? {});
       final safeItem = _safeMapConvert(item);
 
@@ -1643,7 +1643,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       final imageUrl = _getListingImage(safeListing);
       final createdAt = _safeGetString(safeItem, 'created_at');
 
-      // æ ¼å¼åŒ–æ”¶è—æ—¶é—´
+      // æ ¼å¼åŒ–æ”¶è—æ—¶é—�?
       final timeAdded = DualFavoritesService.formatSavedTime(createdAt);
 
       return Card(
@@ -1663,7 +1663,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                   ),
                 ),
               ).then((_) {
-                // ä»Žå•†å“è¯¦æƒ…é¡µè¿”å›žåŽåˆ·æ–°åˆ—è¡¨
+                // ä»Žå•†å“è¯¦æƒ…é¡µè¿”å›žåŽåˆ·æ–°åˆ—è¡�?
                 _loadFavorites();
               });
             }
@@ -1685,7 +1685,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // å•†å“å›¾ç‰‡ - ç¼©å°
+                  // å•†å“å›¾ç‰�?- ç¼©å°
                   Hero(
                     tag: 'favorite_image_$listingId',
                     child: ClipRRect(
@@ -1747,7 +1747,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                   ),
                   SizedBox(width: 8.w),
 
-                  // å•†å“ä¿¡æ¯ - ç¼©å°å­—ä½“å’Œé—´è·
+                  // å•†å“ä¿¡æ�?- ç¼©å°å­—ä½“å’Œé—´è·�?
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1824,7 +1824,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                     ),
                   ),
 
-                  // ç§»é™¤æŒ‰é’® - ç¼©å°
+                  // ç§»é™¤æŒ‰é’�?- ç¼©å°
                   Container(
                     margin: EdgeInsets.only(left: 4.w),
                     decoration: BoxDecoration(
@@ -1887,7 +1887,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  /// æ˜¾ç¤ºç§»é™¤ç¡®è®¤å¯¹è¯æ¡†
+  /// æ˜¾ç¤ºç§»é™¤ç¡®è®¤å¯¹è¯æ¡�?
   void _showRemoveDialog(String listingId, String title, int index) {
     showDialog(
       context: context,
@@ -1948,7 +1948,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  /// æž„å»ºç©ºçŠ¶æ€ - ç´§å‡‘ç‰ˆ
+  /// æž„å»ºç©ºçŠ¶æ€ - ç´§å‡‘ç‰�?
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -2022,11 +2022,11 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
               ),
               child: ElevatedButton.icon(
                 onPressed: () {
-                  // ä¿®å¤ï¼šä½¿ç”¨å›žè°ƒå‡½æ•°å¯¼èˆªåˆ°é¦–é¡µ
+                  // ä¿®å¤ï¼šä½¿ç”¨å›žè°ƒå‡½æ•°å¯¼èˆªåˆ°é¦–é¡�?
                   if (widget.onNavigateToHome != null) {
                     widget.onNavigateToHome!();
                   } else {
-                    // å¤‡ç”¨æ–¹æ¡ˆï¼šå¼¹å‡ºåˆ°é¡¶å±‚
+                    // å¤‡ç”¨æ–¹æ¡ˆï¼šå¼¹å‡ºåˆ°é¡¶å±�?
                     Navigator.of(context).popUntil((route) => route.isFirst);
                   }
                 },
@@ -2055,7 +2055,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  /// æž„å»ºé”™è¯¯çŠ¶æ€
+  /// æž„å»ºé”™è¯¯çŠ¶æ€�?
   Widget _buildErrorState() {
     return Center(
       child: Padding(
@@ -2128,7 +2128,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    // å®‰å…¨èŽ·å–æœ¬åœ°åŒ–ï¼Œé¿å…ä¸ºç©º
+    // å®‰å…¨èŽ·å–æœ¬åœ°åŒ–ï¼Œé¿å…ä¸ºç©�?
     AppLocalizations? l10n;
     try {
       l10n = AppLocalizations.of(context);
@@ -2138,7 +2138,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       }
     }
 
-    // è®¿å®¢çŠ¶æ€
+    // è®¿å®¢çŠ¶æ€�?
     if (widget.isGuest) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
@@ -2321,7 +2321,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  /// æ˜¾ç¤ºæ¸…ç©ºæ‰€æœ‰ç¡®è®¤å¯¹è¯æ¡†
+  /// æ˜¾ç¤ºæ¸…ç©ºæ‰€æœ‰ç¡®è®¤å¯¹è¯æ¡�?
   void _showClearAllDialog() {
     showDialog(
       context: context,
@@ -2382,16 +2382,16 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  /// æ¸…ç©ºæ‰€æœ‰æ”¶è— - ä¿®å¤ï¼šä½¿ç”¨ DualFavoritesService åŒæ­¥æ¸…ç©º
+  /// æ¸…ç©ºæ‰€æœ‰æ”¶è—�?- ä¿®å¤ï¼šä½¿ç”�?DualFavoritesService åŒæ­¥æ¸…ç©�?
   Future<void> _clearAllFavorites() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
     try {
-      // å…ˆä¿å­˜å½“å‰åˆ—è¡¨é¡¹ï¼Œç”¨äºŽå‘é€é€šçŸ¥
+      // å…ˆä¿å­˜å½“å‰åˆ—è¡¨é¡¹ï¼Œç”¨äºŽå‘é€é€šçŸ�?
       final currentItems = List<Map<String, dynamic>>.from(_favoriteItems);
 
-      // ä¿®å¤ï¼šä½¿ç”¨ DualFavoritesService åŒæ­¥æ¸…ç©º
+      // ä¿®å¤ï¼šä½¿ç”�?DualFavoritesService åŒæ­¥æ¸…ç©�?
       final success = await DualFavoritesService.clearUserFavorites(userId: user.id);
 
       if (success && mounted) {
@@ -2451,7 +2451,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 }
-/* ---------------- Wishlist Page å¿ƒæ„¿å•é¡µé¢ - æ–°å¢ž ---------------- */
+/* ---------------- Wishlist Page å¿ƒæ„¿å•é¡µé�?- æ–°å¢�?---------------- */
 
 class WishlistPage extends StatefulWidget {
   const WishlistPage({Key? key}) : super(key: key);
@@ -2472,7 +2472,7 @@ class _WishlistPageState extends State<WishlistPage> {
     _loadWishlist();
   }
 
-  /// åŠ è½½å¿ƒæ„¿å•åˆ—è¡¨
+  /// åŠ è½½å¿ƒæ„¿å•åˆ—è¡�?
   Future<void> _loadWishlist() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
@@ -2493,7 +2493,7 @@ class _WishlistPageState extends State<WishlistPage> {
         print('Loading wishlist for user: ${user.id}');
       }
 
-      // ä½¿ç”¨ DualFavoritesService èŽ·å–å¿ƒæ„¿å•åˆ—è¡¨ï¼ˆä»Ž wishlists è¡¨ï¼‰
+      // ä½¿ç”�?DualFavoritesService èŽ·å–å¿ƒæ„¿å•åˆ—è¡¨ï¼ˆä»�?wishlists è¡¨ï¼�?
       final items = await DualFavoritesService.getUserWishlist(
         userId: user.id,
         limit: 100,
@@ -2523,20 +2523,20 @@ class _WishlistPageState extends State<WishlistPage> {
     }
   }
 
-  /// åˆ·æ–°å¿ƒæ„¿å•åˆ—è¡¨
+  /// åˆ·æ–°å¿ƒæ„¿å•åˆ—è¡�?
   Future<void> _refreshWishlist() async {
     setState(() => _isRefreshing = true);
     await _loadWishlist();
     setState(() => _isRefreshing = false);
   }
 
-  /// ä»Žå¿ƒæ„¿å•ç§»é™¤å•†å“
+  /// ä»Žå¿ƒæ„¿å•ç§»é™¤å•†å“�?
   Future<void> _removeFromWishlist(String listingId, int index) async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
     try {
-      // ä½¿ç”¨ DualFavoritesService åŒæ­¥ç§»é™¤
+      // ä½¿ç”�?DualFavoritesService åŒæ­¥ç§»é™�?
       final success = await DualFavoritesService.removeFromFavorites(
         userId: user.id,
         listingId: listingId,
@@ -2588,7 +2588,7 @@ class _WishlistPageState extends State<WishlistPage> {
     }
   }
 
-  /// èŽ·å–å•†å“å›¾ç‰‡
+  /// èŽ·å–å•†å“å›¾ç‰�?
   String _getListingImage(Map<String, dynamic> listing) {
     final images = listing['images'] ?? listing['image_urls'];
     if (images is List && images.isNotEmpty) {
@@ -2597,7 +2597,7 @@ class _WishlistPageState extends State<WishlistPage> {
     return 'assets/images/placeholder.jpg';
   }
 
-  /// æ ¼å¼åŒ–ä»·æ ¼
+  /// æ ¼å¼åŒ–ä»·�?¼
   String _formatPrice(dynamic price) {
     if (price == null) return 'Price not available';
 
@@ -2612,7 +2612,7 @@ class _WishlistPageState extends State<WishlistPage> {
     return priceStr;
   }
 
-  /// æž„å»ºå¿ƒæ„¿å•å¡ç‰‡
+  /// æž„å»ºå¿ƒæ„¿å•å¡ç‰�?
   Widget _buildWishlistCard(Map<String, dynamic> item, int index) {
     final listing = item['listing'] ?? {};
     final listingId = item['listing_id']?.toString() ?? listing['id']?.toString() ?? '';
@@ -2622,7 +2622,7 @@ class _WishlistPageState extends State<WishlistPage> {
     final imageUrl = _getListingImage(listing);
     final createdAt = item['created_at']?.toString() ?? '';
 
-    // æ ¼å¼åŒ–æ·»åŠ æ—¶é—´
+    // æ ¼å¼åŒ–æ·»å�?æ—¶é—�?
     final timeAdded = DualFavoritesService.formatSavedTime(createdAt);
 
     return Card(
@@ -2642,7 +2642,7 @@ class _WishlistPageState extends State<WishlistPage> {
                 ),
               ),
             ).then((_) {
-              // ä»Žå•†å“è¯¦æƒ…é¡µè¿”å›žåŽåˆ·æ–°åˆ—è¡¨
+              // ä»Žå•†å“è¯¦æƒ…é¡µè¿”å›žåŽåˆ·æ–°åˆ—è¡�?
               _loadWishlist();
             });
           }
@@ -2664,7 +2664,7 @@ class _WishlistPageState extends State<WishlistPage> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // å•†å“å›¾ç‰‡
+                // å•†å“å›¾ç‰�?
                 Hero(
                   tag: 'wishlist_image_$listingId',
                   child: ClipRRect(
@@ -2726,7 +2726,7 @@ class _WishlistPageState extends State<WishlistPage> {
                 ),
                 SizedBox(width: 12.w),
 
-                // å•†å“ä¿¡æ¯
+                // å•†å“ä¿¡æ�?
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2803,7 +2803,7 @@ class _WishlistPageState extends State<WishlistPage> {
                   ),
                 ),
 
-                // ç§»é™¤æŒ‰é’®
+                // ç§»é™¤æŒ‰é’�?
                 Container(
                   margin: EdgeInsets.only(left: 6.w),
                   decoration: BoxDecoration(
@@ -2834,7 +2834,7 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  /// æ˜¾ç¤ºç§»é™¤ç¡®è®¤å¯¹è¯æ¡†
+  /// æ˜¾ç¤ºç§»é™¤ç¡®è®¤å¯¹è¯æ¡�?
   void _showRemoveDialog(String listingId, String title, int index) {
     showDialog(
       context: context,
@@ -2994,7 +2994,7 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  /// æž„å»ºé”™è¯¯çŠ¶æ€
+  /// æž„å»ºé”™è¯¯çŠ¶æ€�?
   Widget _buildErrorState() {
     return Center(
       child: Padding(
@@ -3150,7 +3150,7 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  /// æ˜¾ç¤ºæ¸…ç©ºæ‰€æœ‰ç¡®è®¤å¯¹è¯æ¡†
+  /// æ˜¾ç¤ºæ¸…ç©ºæ‰€æœ‰ç¡®è®¤å¯¹è¯æ¡�?
   void _showClearAllDialog() {
     showDialog(
       context: context,
@@ -3211,13 +3211,13 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  /// æ¸…ç©ºæ‰€æœ‰å¿ƒæ„¿å•
+  /// æ¸…ç©ºæ‰€æœ‰å¿ƒæ„¿å�?
   Future<void> _clearAllWishlist() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
     try {
-      // ä½¿ç”¨ DualFavoritesService åŒæ­¥æ¸…ç©º
+      // ä½¿ç”�?DualFavoritesService åŒæ­¥æ¸…ç©�?
       final success = await DualFavoritesService.clearUserFavorites(userId: user.id);
 
       if (success && mounted) {
@@ -3266,9 +3266,9 @@ class _WishlistPageState extends State<WishlistPage> {
     }
   }
 }
-// ç¬¬å››éƒ¨åˆ†ï¼šSellPage å‡ºå”®é¡µ (æ¢å¤å®Œæ•´åŠŸèƒ½) å’Œ NotificationPage é€šçŸ¥é¡µ (ä½¿ç”¨ç¬¬äºŒä¸ªç‰ˆæœ¬çš„Serviceé›†æˆ)
+// ç¬¬å››éƒ¨åˆ†ï¼šSellPage å‡ºå”®é¡�?(æ¢å¤å®Œæ•´åŠŸèƒ�? å’�?NotificationPage é€šçŸ¥é¡�?(ä½¿ç”¨ç¬¬äºŒä¸ªç‰ˆæœ¬çš„Serviceé›†æˆ�?
 
-/* ---------------- Sell Page å‡ºå”®é¡µ (ç¾ŽåŒ–ç‰ˆæœ¬) ---------------- */
+/* ---------------- Sell Page å‡ºå”®é¡�?(ç¾ŽåŒ–ç‰ˆæœ�? ---------------- */
 
 class SellPage extends StatefulWidget {
   final bool isGuest;
@@ -3860,7 +3860,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
             padding: EdgeInsets.all(16.w),
             child: Row(
               children: [
-                // å•†å“å›¾ç‰‡
+                // å•†å“å›¾ç‰�?
                 Hero(
                   tag: 'listing_${item['id']}',
                   child: Container(
@@ -3894,7 +3894,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                 ),
                 SizedBox(width: 16.w),
 
-                // å•†å“ä¿¡æ¯
+                // å•†å“ä¿¡æ�?
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -3948,7 +3948,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                   ),
                 ),
 
-                // èœå•æŒ‰é’®
+                // èœå•æŒ‰é’�?
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
@@ -4158,7 +4158,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   }
 }
 
-/* ---------------- Notification Page é€šçŸ¥é¡µ (ç´§å‡‘ç¾ŽåŒ–ç‰ˆæœ¬) ---------------- */
+/* ---------------- Notification Page é€šçŸ¥é¡�?(ç´§å‡‘ç¾ŽåŒ–ç‰ˆæœ�? ---------------- */
 
 class NotificationPage extends StatefulWidget {
   final VoidCallback? onClearBadge;
@@ -4227,14 +4227,14 @@ class _NotificationPageState extends State<NotificationPage> {
     }
   }
 
-  // âœ… ä¿®æ­£ï¼šä½¿ç”¨æ­£ç¡®çš„å‚æ•°è°ƒç”¨
+  // âœ�?ä¿®æ­£ï¼šä½¿ç”¨æ­£ç¡®çš„å‚æ•°è°ƒç”�?
   Future<void> _subscribeToNotifications() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
     await NotificationService.subscribeUser(
-      user.id,  // ä½ç½®å‚æ•°
-      onEvent: (Map<String, dynamic> notification) {  // å‘½åå‚æ•°
+      user.id,  // ä½ç½®å‚æ•�?
+      onEvent: (Map<String, dynamic> notification) {  // å‘½åå‚æ•�?
         if (!mounted) return;
         setState(() {
           _notifications.insert(0, notification);
@@ -4422,7 +4422,7 @@ class _NotificationPageState extends State<NotificationPage> {
       _markAsRead(index);
     }
 
-    // æ·»åŠ è°ƒè¯•æ—¥å¿—
+    // æ·»åŠ è°ƒè¯•æ—¥å¿�?
     print('[NotificationPage] ç‚¹å‡»é€šçŸ¥: ${notification.toString()}');
 
     final type = notification['type']?.toString() ?? '';
@@ -4431,7 +4431,7 @@ class _NotificationPageState extends State<NotificationPage> {
     String? listingId = notification['listing_id']?.toString();
     String? offerId = notification['offer_id']?.toString();
 
-    // å¦‚æžœç›´æŽ¥å­—æ®µä¸ºç©ºï¼Œå°è¯•ä»Žpayloadä¸­èŽ·å–
+    // å¦‚æžœç›´æŽ¥å­—æ®µä¸ºç©ºï¼Œå°è¯•ä»Žpayloadä¸­èŽ·å�?
     final payload = notification['payload'] as Map<String, dynamic>? ?? {};
     if ((listingId == null || listingId.isEmpty) && payload.isNotEmpty) {
       listingId = payload['listing_id']?.toString();
@@ -4440,7 +4440,7 @@ class _NotificationPageState extends State<NotificationPage> {
       offerId = payload['offer_id']?.toString();
     }
 
-    // ä¹Ÿå°è¯•ä»Žmetadataä¸­èŽ·å–
+    // ä¹Ÿå°è¯•ä»Žmetadataä¸­èŽ·å�?
     final metadata = notification['metadata'] as Map<String, dynamic>? ?? {};
     if ((listingId == null || listingId.isEmpty) && metadata.isNotEmpty) {
       listingId = metadata['listing_id']?.toString();
@@ -4451,13 +4451,13 @@ class _NotificationPageState extends State<NotificationPage> {
 
     final notificationId = notification['id']?.toString();
 
-    print('[NotificationPage] è§£æžç»“æžœ - Type: $type, ListingId: $listingId, OfferId: $offerId, NotificationId: $notificationId');
-    print('[NotificationPage] Payloadæ•°æ®: $payload');
-    print('[NotificationPage] Metadataæ•°æ®: $metadata');
+    print('[NotificationPage] è§£æžç»“æž�?- Type: $type, ListingId: $listingId, OfferId: $offerId, NotificationId: $notificationId');
+    print('[NotificationPage] Payloadæ•°æ�? $payload');
+    print('[NotificationPage] Metadataæ•°æ�? $metadata');
 
     // æ£€æŸ¥æ•°æ®å®Œæ•´æ€§
     if (type.isEmpty) {
-      print('[NotificationPage] é”™è¯¯ï¼šé€šçŸ¥ç±»åž‹ä¸ºç©º');
+      print('[NotificationPage] é”™è¯¯ï¼šé€šçŸ¥ç±»åž‹ä¸ºç©�?);
       _showSnack('Notification data is incomplete', isError: true);
       return;
     }
@@ -4466,7 +4466,7 @@ class _NotificationPageState extends State<NotificationPage> {
       case 'message':
         print('[NotificationPage] å¤„ç†æ¶ˆæ¯ç±»åž‹é€šçŸ¥');
         if (offerId != null && offerId.isNotEmpty) {
-          print('[NotificationPage] è·³è½¬åˆ°æŠ¥ä»·è¯¦æƒ…é¡µ: $offerId');
+          print('[NotificationPage] è·³è½¬åˆ°æŠ¥ä»·è¯¦æƒ…é¡�? $offerId');
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -4484,9 +4484,9 @@ class _NotificationPageState extends State<NotificationPage> {
 
       case 'offer':
       case 'system':
-        print('[NotificationPage] å¤„ç†æŠ¥ä»·/ç³»ç»Ÿç±»åž‹é€šçŸ¥');
+        print('[NotificationPage] å¤„ç†æŠ¥ä»�?ç³»ç»Ÿç±»åž‹é€šçŸ¥');
         if (offerId != null && offerId.isNotEmpty) {
-          print('[NotificationPage] è·³è½¬åˆ°æŠ¥ä»·è¯¦æƒ…é¡µ: $offerId');
+          print('[NotificationPage] è·³è½¬åˆ°æŠ¥ä»·è¯¦æƒ…é¡�? $offerId');
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -4497,7 +4497,7 @@ class _NotificationPageState extends State<NotificationPage> {
             ),
           );
         } else if (listingId != null && listingId.isNotEmpty) {
-          print('[NotificationPage] è·³è½¬åˆ°å•†å“è¯¦æƒ…é¡µ: $listingId');
+          print('[NotificationPage] è·³è½¬åˆ°å•†å“è¯¦æƒ…é¡�? $listingId');
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -4506,7 +4506,7 @@ class _NotificationPageState extends State<NotificationPage> {
           );
         } else {
           print('[NotificationPage] æŠ¥ä»·ç±»åž‹é€šçŸ¥ç¼ºå°‘å¿…è¦çš„IDä¿¡æ¯');
-          print('[NotificationPage] åŽŸå§‹é€šçŸ¥æ•°æ®: ${notification.toString()}');
+          print('[NotificationPage] åŽŸå§‹é€šçŸ¥æ•°æ�? ${notification.toString()}');
           _showSnack('Cannot open notification: missing required IDs', isError: true);
         }
         break;
@@ -4516,7 +4516,7 @@ class _NotificationPageState extends State<NotificationPage> {
       default:
         print('[NotificationPage] å¤„ç†å…¶ä»–ç±»åž‹é€šçŸ¥: $type');
         if (listingId != null && listingId.isNotEmpty) {
-          print('[NotificationPage] è·³è½¬åˆ°å•†å“è¯¦æƒ…é¡µ: $listingId');
+          print('[NotificationPage] è·³è½¬åˆ°å•†å“è¯¦æƒ…é¡�? $listingId');
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -4955,7 +4955,7 @@ class NoGlowScrollBehavior extends ScrollBehavior {
 }
 const _kPrivacyUrl = 'https://www.swaply.cc/privacy';
 const _kDeleteUrl  = 'https://www.swaply.cc/delete-account';
-/* ---------------- Profile Page 个人资料页 ---------------- */
+/* ---------------- Profile Page 个人资料�?---------------- */
 class ProfilePage extends StatefulWidget {
   final bool isGuest;
   const ProfilePage({Key? key, this.isGuest = false}) : super(key: key);
@@ -4971,12 +4971,12 @@ class _ProfilePageState extends State<ProfilePage>
   /// 基础资料（显示名/头像/时间等）
   Map<String, dynamic>? _profile;
 
-  /// 只读的 profiles 行（仅含 verification_type 等）
+  /// 只读�?profiles 行（仅含 verification_type 等）
   Map<String, dynamic>? _profileRow;
 
   final _svc = ProfileService();
 
-  // ✅ 新增：认证服务与状态（仅看 user_verifications）
+  // �?新增：认证服务与状态（仅看 user_verifications�?
   final _verifySvc = EmailVerificationService();
   bool _verified = false;
   vt.VerificationBadgeType _badge = vt.VerificationBadgeType.none;
@@ -5003,7 +5003,7 @@ class _ProfilePageState extends State<ProfilePage>
       _animationController.forward();
     }
 
-    // ✅ 首次进入拉取认证状态 & 监听登录态变化自动刷新
+    // �?首次进入拉取认证状�?& 监听登录态变化自动刷�?
     _reloadUserVerificationStatus();
     Supabase.instance.client.auth.onAuthStateChange.listen((event) {
       _reloadUserVerificationStatus();
@@ -5016,10 +5016,10 @@ class _ProfilePageState extends State<ProfilePage>
     super.dispose();
   }
 
-  /// ✅ 只读加载：仅加载资料（用于显示），不再用 profiles/appMetadata 计算认证
+  /// �?只读加载：仅加载资料（用于显示），不再用 profiles/appMetadata 计算认证
   Future<void> _load() async {
     try {
-      // 基础资料用于页面显示（名字/头像/时间等）
+      // 基础资料用于页面显示（名�?头像/时间等）
       final base = await _svc.getUserProfile();
       final map =
       base == null ? <String, dynamic>{} : Map<String, dynamic>.from(base);
@@ -5042,7 +5042,7 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
-  // ✅ 仅查 user_verifications，一次性计算 _verified/_badge，并更新到状态
+  // �?仅查 user_verifications，一次性计�?_verified/_badge，并更新到状�?
   Future<void> _reloadUserVerificationStatus() async {
     setState(() => _verifyLoading = true);
 
@@ -5443,7 +5443,7 @@ class _ProfilePageState extends State<ProfilePage>
                           ? avatarUrl
                           : null,
                       memberSince: memberSinceText,
-                      // ✅ 头像叠加徽章：仅在 verified 时传入，否则传 none（未验证就不显示）
+                      // �?头像叠加徽章：仅�?verified 时传入，否则�?none（未验证就不显示�?
                       verificationType:
                       _verified ? _badge : vt.VerificationBadgeType.none,
                     ),
@@ -5471,16 +5471,16 @@ class _ProfilePageState extends State<ProfilePage>
                             ),
                             const SizedBox(height: 14),
 
-                            // ✅ 认证入口：图标/文案绑定 _verified；点击进入验证并返回后【总是】刷新
+                            // �?认证入口：图�?文案绑定 _verified；点击进入验证并返回后【总是】刷�?
                             _VerificationTileCard(
                               isVerified: _verified,
-                              isLoading: _verifyLoading, // ✅ 新增：刷新时给出反馈
+                              isLoading: _verifyLoading, // �?新增：刷新时给出反馈
                               onTap: () async {
                                 await Navigator.of(context).push<bool>(
                                   MaterialPageRoute(
                                       builder: (_) => const VerificationPage()),
                                 );
-                                // ✅ 无条件刷新（避免验证页未 pop(true) 的情况）
+                                // �?无条件刷新（避免验证页未 pop(true) 的情况）
                                 await _reloadUserVerificationStatus();
                               },
                             ),
@@ -5565,7 +5565,7 @@ class _ProfilePageState extends State<ProfilePage>
                                     letterSpacing: 0.5)),
                             const SizedBox(height: 14),
 
-                            // ✅ 新增：Account 入口（先到账户设置页，再含删除账号等）
+                            // �?新增：Account 入口（先到账户设置页，再含删除账号等�?
                             _ProfileOptionEnhanced(
                               icon: Icons.manage_accounts,
                               title: 'Account',
@@ -5580,7 +5580,7 @@ class _ProfilePageState extends State<ProfilePage>
                             ),
                             const SizedBox(height: 14),
 
-                            // ✅ 新增：隐私政策外链
+                            // �?新增：隐私政策外�?
                             _ProfileOptionEnhanced(
                               icon: Icons.privacy_tip_outlined,
                               title: 'Privacy Policy',
@@ -5591,7 +5591,7 @@ class _ProfilePageState extends State<ProfilePage>
                             ),
                             const SizedBox(height: 14),
 
-                            // ✅ 新增：数据删除说明外链
+                            // �?新增：数据删除说明外�?
                             _ProfileOptionEnhanced(
                               icon: Icons.delete_outline,
                               title: 'Data Deletion / How to delete my account',
@@ -5808,7 +5808,7 @@ class _ProfilePageState extends State<ProfilePage>
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      // VerifiedAvatar 内部会根据 verificationType==none 决定是否展示角标
+                      // VerifiedAvatar 内部会根�?verificationType==none 决定是否展示角标
                       VerifiedAvatar(
                         avatarUrl: avatarUrl,
                         radius: 45,
@@ -5895,15 +5895,15 @@ class _ProfilePageState extends State<ProfilePage>
   }
 }
 
-/* ---------------- Verification Tile（精简版：灰/绿 + chevron） ---------------- */
+/* ---------------- Verification Tile（精简版：�?�?+ chevron�?---------------- */
 class _VerificationTileCard extends StatelessWidget {
   final bool isVerified;
-  final bool isLoading; // ✅ 新增：刷新中的可视反馈
+  final bool isLoading; // �?新增：刷新中的可视反�?
   final VoidCallback? onTap;
 
   const _VerificationTileCard({
     required this.isVerified,
-    required this.isLoading, // ✅ 新增
+    required this.isLoading, // �?新增
     this.onTap,
   });
 
@@ -5932,7 +5932,7 @@ class _VerificationTileCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // ✅ 左侧与其它项完全一致的“彩色圆角方块”
+              // �?左侧与其它项完全一致的“彩色圆角方块�?
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -5958,7 +5958,7 @@ class _VerificationTileCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              // 右侧与其它项统一：加载圈/小三角
+              // 右侧与其它项统一：加载圈/小三�?
               isLoading
                   ? const SizedBox(
                 width: 18,
@@ -6291,3 +6291,4 @@ class AboutPage extends StatelessWidget {
     );
   }
 }
+

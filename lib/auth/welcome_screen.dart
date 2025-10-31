@@ -4,7 +4,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // 添加这行
 import 'login_screen.dart';
 import 'register_screen.dart';
-import '../main.dart';
 import '../widgets/custom_s_logo.dart';
 
 class WelcomeScreen extends StatefulWidget {
@@ -33,7 +32,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       vsync: this,
     );
 
-    // 浮动动画控制器
+    // 浮动动画控制�?
     _floatController = AnimationController(
       duration: const Duration(seconds: 3),
       vsync: this,
@@ -207,12 +206,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         child: TextButton(
                           onPressed: () {
                             Navigator.of(context).pop();
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const MainNavigationPage(isGuest: true),
-                              ),
-                            );
+                            Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
                           },
                           style: TextButton.styleFrom(
                             padding: EdgeInsets.symmetric(vertical: 12.h),
@@ -309,7 +303,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               ),
             ),
 
-            // 主内容
+            // 主内�?
             SafeArea(
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -327,7 +321,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                               // 顶部间距
                               SizedBox(height: constraints.maxHeight * 0.08),
 
-                              // Logo 和标题部分
+                              // Logo 和标题部�?
                               AnimatedBuilder(
                                 animation: _floatAnimation,
                                 builder: (context, child) {
@@ -416,7 +410,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
                                         SizedBox(height: 8.h),
 
-                                        // 副标题
+                                        // 副标�?
                                         Text(
                                           'Buy. Sell. Swap. Locally.',
                                           style: TextStyle(
@@ -432,7 +426,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                 ),
                               ),
 
-                              // 特性部分
+                              // 特性部�?
                               SizedBox(height: constraints.maxHeight * 0.06),
 
                               SlideTransition(
@@ -450,10 +444,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                 ),
                               ),
 
-                              // 弹性空间
+                              // 弹性空�?
                               const Spacer(),
 
-                              // 按钮组
+                              // 按钮�?
                               SlideTransition(
                                 position: _slideAnimation,
                                 child: FadeTransition(
@@ -672,3 +666,4 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     );
   }
 }
+

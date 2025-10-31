@@ -3,14 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
-import '../main.dart';
 import 'package:swaply/services/auth_service.dart';
-import 'package:swaply/services/oauth_service.dart'; // ✅ Facebook 仍用此服务
+import 'package:swaply/services/oauth_service.dart'; // �?Facebook 仍用此服�?
 
-// ✅ Google 登录改为使用我们封装的 helper（PKCE + 深链回调）
+// �?Google 登录改为使用我们封装�?helper（PKCE + 深链回调�?
 import 'package:swaply/auth/google_signin.dart' as gauth;
 
-// ✅ Apple 登录相关
+// �?Apple 登录相关
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -33,7 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   final _auth = AuthService();
 
-  // ✅ 仅 iOS 显示 Apple 按钮
+  // �?�?iOS 显示 Apple 按钮
   bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
   @override
@@ -55,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (!mounted) return;
-      // 认证监听器会自动处理导航与奖励
+      // 认证监听器会自动处理导航与奖�?
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -73,16 +72,16 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ✅ Google 登录：改为走 helper 中的 signInWithGoogle(context)
+  // �?Google 登录：改为走 helper 中的 signInWithGoogle(context)
   Future<void> _handleGoogleLogin() async {
     setState(() => _isLoading = true);
     try {
-      await gauth.signInWithGoogle(context); // 交给认证监听器处理后续跳转
+      await gauth.signInWithGoogle(context); // 交给认证监听器处理后续跳�?
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Google 登录失败：$e'),
+          content: Text('Google 登录失败�?e'),
           backgroundColor: Colors.red[400],
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -98,12 +97,12 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleFacebookLogin() async {
     setState(() => _isLoading = true);
     try {
-      await OAuthService.signInWithFacebook(); // 交给认证监听器
+      await OAuthService.signInWithFacebook(); // 交给认证监听�?
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Facebook 登录失败：$e'),
+          content: Text('Facebook 登录失败�?e'),
           backgroundColor: Colors.red[400],
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -116,7 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ✅ Apple 登录（与 Google/Facebook 同一风格：依赖认证监听器，不手动导航）
+  // �?Apple 登录（与 Google/Facebook 同一风格：依赖认证监听器，不手动导航�?
   Future<void> _handleAppleLogin() async {
     setState(() => _isLoading = true);
     try {
@@ -127,12 +126,12 @@ class _LoginScreenState extends State<LoginScreen> {
           const SnackBar(content: Text('Apple 登录被取消或失败')),
         );
       }
-      // 成功则由认证监听器处理后续跳转/奖励
+      // 成功则由认证监听器处理后续跳�?奖励
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Apple 登录失败：$e'),
+          content: Text('Apple 登录失败�?e'),
           backgroundColor: Colors.red[400],
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -411,7 +410,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
 
-                // ✅ Apple 官方按钮（仅 iOS 展示，整行宽度）
+                // �?Apple 官方按钮（仅 iOS 展示，整行宽度）
                 if (_isIOS) ...[
                   SizedBox(height: 12.h),
                   SizedBox(
@@ -627,3 +626,5 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+
+
