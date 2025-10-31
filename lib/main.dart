@@ -62,7 +62,7 @@ class AppLocalizations {
   }
 
   static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  _AppLocalizationsDelegate();
 
   // ---------- Generic / Auth ----------
   String get appTitle => 'Swaply';
@@ -266,9 +266,15 @@ void wireAuthHook() {
 
         final ctx = appNavKey.currentContext;
         if (ctx != null) {
-          // 瀵艰埅鍒颁富椤?
-          Navigator.of(ctx).pushNamedAndRemoveUntil('/home', (route) => false);
-          // 鉁?涓嶅湪杩欓噷鐩存帴寮圭獥锛岃涓婚〉闈㈢粺涓€妫€鏌?SharedPreferences 鍐冲畾鏄惁寮?
+          // ✅ 修复：冷启动(initialSession)不再导航，避免二次 push；
+          // 仅在真正登录(signedIn)且当前不在 /home 时导航到首页
+          if (event == AuthChangeEvent.signedIn) {
+            final current = ModalRoute.of(ctx)?.settings.name;
+            if (current != '/home') {
+              Navigator.of(ctx)
+                  .pushNamedAndRemoveUntil('/home', (route) => false);
+            }
+          }
         }
       }
     }
@@ -283,7 +289,7 @@ void wireAuthHook() {
       if (ctx != null) {
         Navigator.of(ctx).pushNamedAndRemoveUntil(
           '/welcome',
-          (route) => false,
+              (route) => false,
         );
       }
     }
@@ -336,7 +342,7 @@ void _showWelcomeGiftDialog() {
           Text(
             _fixUtf8Mojibake(
               'A Welcome Coupon has been added to your account.\n'
-              'You can find it in My Coupons or My Rewards 鈫?Coupons tab.',
+                  'You can find it in My Coupons or My Rewards 鈫?Coupons tab.',
             ),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13.sp, color: Colors.black87),
@@ -383,7 +389,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // === 闈欓煶 Supabase 鐨?refresh session 鍣煶锛堜粎寮€鍙戞湡锛?===
-  {
+      {
     final _orig = debugPrint;
     debugPrint = (String? message, {int? wrapWidth}) {
       if (message != null &&
@@ -438,7 +444,7 @@ Future<void> main() async {
   await Supabase.initialize(
     url: 'https://rhckybselarzglkmlyqs.supabase.co',
     anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoY2t5YnNlbGFyemdsa21seXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTM0NTgsImV4cCI6MjA3MDU4OTQ1OH0.3I0T2DidiF-q9l2tWeHOjB31QogXHDqRtEjDn0RfVbU',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoY2t5YnNlbGFyemdsa21seXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTM0NTgsImV4cCI6MjA3MDU4OTQ1OH0.3I0T2DidiF-q9l2tWeHOjB31QogXHDqRtEjDn0RfVbU',
     authOptions: const FlutterAuthClientOptions(
       authFlowType: AuthFlowType.pkce, // 馃憟 鍏抽敭锛屽埆鍐欐垚 flowType
       autoRefreshToken: true,
@@ -558,8 +564,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 // 鉁?Welcome 鈫?Startup
                 '/welcome': (_) => const StartupScreen(),
                 '/login': (_) => const LoginScreen(),
-                // 鉁?Home 鍖呬竴灞?IosInsetsGuard
-                '/home': (_) => IosInsetsGuard(child: const swaply.HomePage()),
+                // ✅ 修改：/home 指向带五栏的 MainNavigationPage
+                '/home': (_) => MainNavigationPage(
+                  isGuest: Supabase
+                      .instance.client.auth.currentSession ==
+                      null,
+                ),
                 '/coupons': (_) => CouponManagementPage(),
               },
             );
@@ -698,7 +708,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
       barrierDismissible: true,
       builder: (dCtx) => AlertDialog(
         shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
         contentPadding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 12.h),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -722,7 +732,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
             Text(
               _fixUtf8Mojibake(
                 "Coupon Code: ${couponData['code']?.toString() ?? ''}\n\n"
-                "${couponData['description'] ?? 'Welcome to Swaply! Pin your item for free in any category.'}",
+                    "${couponData['description'] ?? 'Welcome to Swaply! Pin your item for free in any category.'}",
               ),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13.sp, color: Colors.black87),
@@ -800,7 +810,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
       builder: (BuildContext context) {
         return AlertDialog(
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
           title: Text(l10n.loginRequired,
               style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600)),
           content: Text(l10n.loginRequiredMessage(feature),
@@ -810,7 +820,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                 onPressed: () => Navigator.of(context).pop(),
                 child: Text(l10n.cancel,
                     style:
-                        TextStyle(fontSize: 13.sp, color: Colors.grey[600]))),
+                    TextStyle(fontSize: 13.sp, color: Colors.grey[600]))),
             Container(
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
@@ -994,7 +1004,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                   isSelected ? activeIcon : icon,
                   key: ValueKey('${index}_${isSelected}'),
                   color:
-                      isSelected ? const Color(0xFF2196F3) : Colors.grey[600],
+                  isSelected ? const Color(0xFF2196F3) : Colors.grey[600],
                   size: 22.w,
                 ),
               ),
@@ -1003,7 +1013,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                 duration: const Duration(milliseconds: 150),
                 style: TextStyle(
                   color:
-                      isSelected ? const Color(0xFF2196F3) : Colors.grey[600],
+                  isSelected ? const Color(0xFF2196F3) : Colors.grey[600],
                   fontSize: 8.5.sp,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
@@ -1122,7 +1132,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                 duration: const Duration(milliseconds: 150),
                 style: TextStyle(
                   color:
-                      isSelected ? const Color(0xFF2196F3) : Colors.grey[600],
+                  isSelected ? const Color(0xFF2196F3) : Colors.grey[600],
                   fontSize: 8.5.sp,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
@@ -1169,15 +1179,15 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                   end: Alignment.bottomRight,
                   colors: isSelected
                       ? [
-                          const Color(0xFF1565C0),
-                          const Color(0xFF2196F3),
-                          const Color(0xFF42A5F5),
-                        ]
+                    const Color(0xFF1565C0),
+                    const Color(0xFF2196F3),
+                    const Color(0xFF42A5F5),
+                  ]
                       : [
-                          const Color(0xFF2196F3),
-                          const Color(0xFF1E88E5),
-                          const Color(0xFF1976D2),
-                        ],
+                    const Color(0xFF2196F3),
+                    const Color(0xFF1E88E5),
+                    const Color(0xFF1976D2),
+                  ],
                 ),
                 borderRadius: BorderRadius.circular(28.w),
                 boxShadow: [
