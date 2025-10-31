@@ -1,7 +1,7 @@
 name: swaply
 description: A marketplace app for Zimbabwe
 publish_to: 'none'
-version: 1.0.0+4
+version: 1.0.0+3
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -12,7 +12,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-  # 闁哄秶顭堢缓鐐瑹濠靛﹦顩?
+  # 核心依赖
   intl: any
   provider: ^6.1.1
   shared_preferences: ^2.2.3
@@ -22,19 +22,19 @@ dependencies:
   # Supabase
   supabase_flutter: 2.7.0
   google_sign_in: ^6.2.1
-  # 闁搞儱澧芥晶鏍儎缁嬪灝褰?
+  # 图片相关
   image_picker: ^1.0.7
   photo_view: ^0.14.0
   file_picker: ^10.3.3
 
-  # 缂傚啯鍨圭划鍫曞椽瀹€鍐惧悋閻?
+  # 网络和认�?
   http: ^1.1.0
   url_launcher: 6.3.0
 
-  # 闁告帒妫旈棅鈺呭礉閻旇鍘?
+  # 分享功能
   share_plus: ^12.0.0
 
-  # 闁稿繑婀圭划?
+  # 其他
   cupertino_icons: ^1.0.6
   path_provider: ^2.1.5
   path: ^1.9.1
@@ -46,13 +46,13 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
-  flutter_launcher_icons: ^0.13.1   # 闁?闁搞儳鍋撻悥锝夋偨閻旂鐏囩€规悶鍎遍崣?
+  flutter_launcher_icons: ^0.13.1   # �?图标生成工具
 
-# flutter_launcher_icons 闂佹澘绉堕悿?
-# 濞达絿濮峰▓鎴炵▔婢跺﹦鐐婃繝褎鍔曞ù姗€妫侀埀顒傛啺娴ｈ鏉归柛锔荤厜缁?
-# assets/app_icons/app_icon.png       闁?024x1024闁挎稑顓縊S/闁糕晛鎼崳顖炴晬?
-# assets/app_icons/app_icon_fg.png    闁?080x1080闁挎稑鐭傞埀顒€绻戝Σ鎴﹀礈瀹ュ棙鐝柨娑樼搼ndroid闁?
-# assets/app_icons/app_icon_bg.png    闁?080x1080闁挎稑鑻悿鍕嚌?婵炴挻鍔曡ぐ澶愭嚄鐏炵偓鐝柨娑樼搼ndroid闁?
+# flutter_launcher_icons 配置
+# 你的三张源图需要放在：
+# assets/app_icons/app_icon.png       �?024x1024，iOS/基准�?
+# assets/app_icons/app_icon_fg.png    �?080x1080，透明前景，Android�?
+# assets/app_icons/app_icon_bg.png    �?080x1080，实�?渐变背景，Android�?
 flutter_launcher_icons:
   ios: true
   android: true
@@ -60,7 +60,7 @@ flutter_launcher_icons:
   image_path: assets/app_icons/app_icon.png
   adaptive_icon_foreground: assets/app_icons/app_icon_fg.png
   adaptive_icon_background: assets/app_icons/app_icon_bg.png
-  # 闁告瑯鍨堕埀顒€顧€缁辩檰ndroid 13+ 闁告娲濇竟濠囧炊閻愵剛鍨奸柨娑樼墛瑜颁焦绗熷☉妤冾伇鐎殿喚濮烽崙浠嬫嚌閹绘帒绀嬮柤纭呭皺婢ф宕滃鍡樼彲闁?
+  # 可选：Android 13+ 单色图标（提供一张纯色单色版前景�?
   # adaptive_icon_monochrome: assets/app_icons/app_icon_fg_mono.png
 
 flutter:
