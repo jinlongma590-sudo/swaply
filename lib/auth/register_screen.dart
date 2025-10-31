@@ -1,16 +1,16 @@
-// lib/auth/register_screen.dart  — Updated: add Sign in with Apple (iOS only) + Google helper (PKCE)
+// lib/auth/register_screen.dart  �?Updated: add Sign in with Apple (iOS only) + Google helper (PKCE)
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'login_screen.dart';
+import 'package:swaply/auth/login_screen.dart';
 import 'package:swaply/services/auth_service.dart';
 import 'package:swaply/services/oauth_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/reward_service.dart';
 
-// ✅ Google 登录改为使用我们封装的 helper（PKCE + 深链回调）
+// �?Google 登录改为使用我们封装�?helper（PKCE + 深链回调�?
 import 'package:swaply/auth/google_signin.dart' as gauth;
 
-// ✅ Apple 登录相关
+// �?Apple 登录相关
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -23,7 +23,7 @@ class RegisterScreen extends StatefulWidget {
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
 
-  /// 登录后由全局监听器读取并处理（社交登录也适用）
+  /// 登录后由全局监听器读取并处理（社交登录也适用�?
   static String? pendingInvitationCode;
   static void clearPendingCode() => pendingInvitationCode = null;
 }
@@ -45,7 +45,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   final _auth = AuthService();
 
-  // ✅ 仅在 iOS 显示 Apple 按钮
+  // �?仅在 iOS 显示 Apple 按钮
   bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
   @override
@@ -77,7 +77,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     // 兜底保存：无论是否已登录
     RegisterScreen.pendingInvitationCode = normalized;
 
-    // 如果此时已经有会话，就直接调用 RPC 绑定（submitInviteCode 返回 void，不能当表达式使用）
+    // 如果此时已经有会话，就直接调�?RPC 绑定（submitInviteCode 返回 void，不能当表达式使用）
     final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
       try {
@@ -85,7 +85,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         // 绑定调用完成后清空兜底（RPC 内部应保证幂等）
         RegisterScreen.clearPendingCode();
       } catch (_) {
-        // 保留 pending，交给全局监听器在后续 signedIn 时再试一次
+        // 保留 pending，交给全局监听器在后续 signedIn 时再试一�?
       }
     }
   }
@@ -122,7 +122,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       final code = _pickCodeFromUI();
 
-      // 先把邀请码写到 pending，避免注册/会话建立的时间差丢失
+      // 先把邀请码写到 pending，避免注�?会话建立的时间差丢失
       await _maybeBindInviteCode(code);
 
       await _auth.signUpWithEmailPassword(
@@ -131,14 +131,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         fullName: _nameController.text.trim(),
       );
 
-      // 再尝试一次立即绑定（这时通常已 signed in）
+      // 再尝试一次立即绑定（这时通常�?signed in�?
       await _maybeBindInviteCode(code);
 
       if (!mounted) return;
       _showSuccessDialog();
       await Future.delayed(const Duration(milliseconds: 1200));
-      if (mounted) Navigator.pop(context); // 关弹窗
-      // 其它：创建 profile / 欢迎券 / 导航，由你的全局 Auth 监听器做
+      if (mounted) Navigator.pop(context); // 关弹�?
+      // 其它：创�?profile / 欢迎�?/ 导航，由你的全局 Auth 监听器做
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -155,7 +155,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // ✅ Google 注册：改为使用 helper（与登录页一致）
+  // �?Google 注册：改为使�?helper（与登录页一致）
   Future<void> _googleRegister() async {
     setState(() => _isLoading = true);
     try {
@@ -169,7 +169,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Google 注册失败：$e'),
+          content: Text('Google 注册失败�?e'),
           backgroundColor: Colors.red[400],
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -194,7 +194,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Facebook 注册失败：$e'),
+          content: Text('Facebook 注册失败�?e'),
           backgroundColor: Colors.red[400],
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -206,7 +206,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // ✅ Apple 注册：与其它社交逻辑一致，支持邀请码兜底
+  // �?Apple 注册：与其它社交逻辑一致，支持邀请码兜底
   Future<void> _appleRegister() async {
     setState(() => _isLoading = true);
     try {
@@ -223,12 +223,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
 
       await _maybeBindInviteCode(code);
-      // 成功后的导航/奖励仍由你的全局 Auth 监听器处理
+      // 成功后的导航/奖励仍由你的全局 Auth 监听器处�?
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Apple 注册失败：$e'),
+          content: Text('Apple 注册失败�?e'),
           backgroundColor: Colors.red[400],
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -561,7 +561,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ],
                 ),
 
-                // ✅ Apple 官方按钮（仅 iOS 展示，整行宽度）
+                // �?Apple 官方按钮（仅 iOS 展示，整行宽度）
                 if (_isIOS) ...[
                   SizedBox(height: 12.h),
                   SizedBox(
@@ -607,30 +607,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         style: TextStyle(
                             color: Colors.grey[600], fontSize: 12.sp)),
                     GestureDetector(
-                      onTap: () => Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const LoginScreen(),
-                        ),
-                      ),
-                      child: Text(
-                        'Sign In',
-                        style: TextStyle(
-                          color: const Color(0xFF2196F3),
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12.sp,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 12.h),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+                      onTap: () => Navigator.of(context).pushNamed('/login');
   }
 
   // ===== UI =====
@@ -829,3 +806,5 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
+
+
