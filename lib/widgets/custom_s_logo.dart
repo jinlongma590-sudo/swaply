@@ -34,12 +34,12 @@ class CustomSLogo extends StatelessWidget {
         borderRadius: borderRadius,
         boxShadow: showShadow
             ? [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.12),
-            blurRadius: size * 0.16,
-            offset: Offset(0, size * 0.08),
-          ),
-        ]
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.12),
+                  blurRadius: size * 0.16,
+                  offset: Offset(0, size * 0.08),
+                ),
+              ]
             : null,
       ),
       clipBehavior: Clip.antiAlias,
@@ -71,7 +71,7 @@ class CustomSLogo extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: letterColor,
-                fontSize: size * 0.64,     // 字母相对尺寸
+                fontSize: size * 0.64, // 字母相对尺寸
                 fontWeight: FontWeight.w900,
                 height: 1.0,
                 letterSpacing: 0,

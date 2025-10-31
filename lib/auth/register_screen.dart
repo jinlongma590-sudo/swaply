@@ -1,4 +1,4 @@
-// lib/auth/register_screen.dart  — Updated: add Sign in with Apple (iOS only) + Google helper (PKCE)
+// lib/auth/register_screen.dart  鈥?Updated: add Sign in with Apple (iOS only) + Google helper (PKCE)
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'login_screen.dart';
@@ -7,10 +7,10 @@ import 'package:swaply/services/oauth_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/reward_service.dart';
 
-// ✅ Google 登录改为使用我们封装的 helper（PKCE + 深链回调）
+// 鉁?Google 鐧诲綍鏀逛负浣跨敤鎴戜滑灏佽鐨?helper锛圥KCE + 娣遍摼鍥炶皟锛?
 import 'package:swaply/auth/google_signin.dart' as gauth;
 
-// ✅ Apple 登录相关
+// 鉁?Apple 鐧诲綍鐩稿叧
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -23,7 +23,7 @@ class RegisterScreen extends StatefulWidget {
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
 
-  /// 登录后由全局监听器读取并处理（社交登录也适用）
+  /// 鐧诲綍鍚庣敱鍏ㄥ眬鐩戝惉鍣ㄨ鍙栧苟澶勭悊锛堢ぞ浜ょ櫥褰曚篃閫傜敤锛?
   static String? pendingInvitationCode;
   static void clearPendingCode() => pendingInvitationCode = null;
 }
@@ -45,7 +45,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   final _auth = AuthService();
 
-  // ✅ 仅在 iOS 显示 Apple 按钮
+  // 鉁?浠呭湪 iOS 鏄剧ず Apple 鎸夐挳
   bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
   @override
@@ -69,23 +69,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  /// 统一处理：保存邀请码给全局监听器，并在已登录时立即绑定
+  /// 缁熶竴澶勭悊锛氫繚瀛橀個璇风爜缁欏叏灞€鐩戝惉鍣紝骞跺湪宸茬櫥褰曟椂绔嬪嵆缁戝畾
   Future<void> _maybeBindInviteCode(String? code) async {
     if (code == null || code.trim().isEmpty) return;
     final normalized = code.trim().toUpperCase();
 
-    // 兜底保存：无论是否已登录
+    // 鍏滃簳淇濆瓨锛氭棤璁烘槸鍚﹀凡鐧诲綍
     RegisterScreen.pendingInvitationCode = normalized;
 
-    // 如果此时已经有会话，就直接调用 RPC 绑定（submitInviteCode 返回 void，不能当表达式使用）
+    // 濡傛灉姝ゆ椂宸茬粡鏈変細璇濓紝灏辩洿鎺ヨ皟鐢?RPC 缁戝畾锛坰ubmitInviteCode 杩斿洖 void锛屼笉鑳藉綋琛ㄨ揪寮忎娇鐢級
     final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
       try {
         await RewardService.submitInviteCode(normalized);
-        // 绑定调用完成后清空兜底（RPC 内部应保证幂等）
+        // 缁戝畾璋冪敤瀹屾垚鍚庢竻绌哄厹搴曪紙RPC 鍐呴儴搴斾繚璇佸箓绛夛級
         RegisterScreen.clearPendingCode();
       } catch (_) {
-        // 保留 pending，交给全局监听器在后续 signedIn 时再试一次
+        // 淇濈暀 pending锛屼氦缁欏叏灞€鐩戝惉鍣ㄥ湪鍚庣画 signedIn 鏃跺啀璇曚竴娆?
       }
     }
   }
@@ -106,8 +106,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!_agreeToTerms) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-            const Text('Please agree to Terms of Service and Privacy Policy'),
+            content: const Text(
+                'Please agree to Terms of Service and Privacy Policy'),
             backgroundColor: Colors.red[400],
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -122,7 +122,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       final code = _pickCodeFromUI();
 
-      // 先把邀请码写到 pending，避免注册/会话建立的时间差丢失
+      // 鍏堟妸閭€璇风爜鍐欏埌 pending锛岄伩鍏嶆敞鍐?浼氳瘽寤虹珛鐨勬椂闂村樊涓㈠け
       await _maybeBindInviteCode(code);
 
       await _auth.signUpWithEmailPassword(
@@ -131,14 +131,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         fullName: _nameController.text.trim(),
       );
 
-      // 再尝试一次立即绑定（这时通常已 signed in）
+      // 鍐嶅皾璇曚竴娆＄珛鍗崇粦瀹氾紙杩欐椂閫氬父宸?signed in锛?
       await _maybeBindInviteCode(code);
 
       if (!mounted) return;
       _showSuccessDialog();
       await Future.delayed(const Duration(milliseconds: 1200));
-      if (mounted) Navigator.pop(context); // 关弹窗
-      // 其它：创建 profile / 欢迎券 / 导航，由你的全局 Auth 监听器做
+      if (mounted) Navigator.pop(context); // 鍏冲脊绐?
+      // 鍏跺畠锛氬垱寤?profile / 娆㈣繋鍒?/ 瀵艰埅锛岀敱浣犵殑鍏ㄥ眬 Auth 鐩戝惉鍣ㄥ仛
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -146,8 +146,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           content: Text(e.toString()),
           backgroundColor: Colors.red[400],
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.r)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
         ),
       );
     } finally {
@@ -155,7 +155,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // ✅ Google 注册：改为使用 helper（与登录页一致）
+  // 鉁?Google 娉ㄥ唽锛氭敼涓轰娇鐢?helper锛堜笌鐧诲綍椤典竴鑷达級
   Future<void> _googleRegister() async {
     setState(() => _isLoading = true);
     try {
@@ -169,11 +169,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Google 注册失败：$e'),
+          content: Text('Google 娉ㄥ唽澶辫触锛?e'),
           backgroundColor: Colors.red[400],
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.r)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
         ),
       );
     } finally {
@@ -194,11 +194,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Facebook 注册失败：$e'),
+          content: Text('Facebook 娉ㄥ唽澶辫触锛?e'),
           backgroundColor: Colors.red[400],
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.r)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
         ),
       );
     } finally {
@@ -206,7 +206,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // ✅ Apple 注册：与其它社交逻辑一致，支持邀请码兜底
+  // 鉁?Apple 娉ㄥ唽锛氫笌鍏跺畠绀句氦閫昏緫涓€鑷达紝鏀寔閭€璇风爜鍏滃簳
   Future<void> _appleRegister() async {
     setState(() => _isLoading = true);
     try {
@@ -218,21 +218,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (!ok) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Apple 登录被取消或失败')),
+          const SnackBar(content: Text('Apple 鐧诲綍琚彇娑堟垨澶辫触')),
         );
       }
 
       await _maybeBindInviteCode(code);
-      // 成功后的导航/奖励仍由你的全局 Auth 监听器处理
+      // 鎴愬姛鍚庣殑瀵艰埅/濂栧姳浠嶇敱浣犵殑鍏ㄥ眬 Auth 鐩戝惉鍣ㄥ鐞?
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Apple 注册失败：$e'),
+          content: Text('Apple 娉ㄥ唽澶辫触锛?e'),
           backgroundColor: Colors.red[400],
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.r)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
         ),
       );
     } finally {
@@ -395,8 +395,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   icon: Icons.lock_outline,
                   obscureText: !_isPasswordVisible,
                   suffixIcon: IconButton(
-                    onPressed: () =>
-                        setState(() => _isPasswordVisible = !_isPasswordVisible),
+                    onPressed: () => setState(
+                        () => _isPasswordVisible = !_isPasswordVisible),
                     icon: Icon(
                       _isPasswordVisible
                           ? Icons.visibility_off_outlined
@@ -425,7 +425,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   obscureText: !_isConfirmPasswordVisible,
                   suffixIcon: IconButton(
                     onPressed: () => setState(() =>
-                    _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
+                        _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
                     icon: Icon(
                       _isConfirmPasswordVisible
                           ? Icons.visibility_off_outlined
@@ -506,20 +506,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     child: _isLoading
                         ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 20.r,
-                          height: 20.r,
-                          child: const CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        ),
-                        SizedBox(width: 10.w),
-                        const Text('Creating Account...'),
-                      ],
-                    )
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(
+                                width: 20.r,
+                                height: 20.r,
+                                child: const CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                              SizedBox(width: 10.w),
+                              const Text('Creating Account...'),
+                            ],
+                          )
                         : const Text('Create Account'),
                   ),
                 ),
@@ -561,7 +561,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ],
                 ),
 
-                // ✅ Apple 官方按钮（仅 iOS 展示，整行宽度）
+                // 鉁?Apple 瀹樻柟鎸夐挳锛堜粎 iOS 灞曠ず锛屾暣琛屽搴︼級
                 if (_isIOS) ...[
                   SizedBox(height: 12.h),
                   SizedBox(
@@ -575,7 +575,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             onPressed: _appleRegister,
                             style: SignInWithAppleButtonStyle.black,
                             borderRadius:
-                            const BorderRadius.all(Radius.circular(12)),
+                                const BorderRadius.all(Radius.circular(12)),
                           ),
                         ),
                         if (_isLoading)
@@ -687,9 +687,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   Icon(
-                    _showInvitationCode
-                        ? Icons.expand_less
-                        : Icons.expand_more,
+                    _showInvitationCode ? Icons.expand_less : Icons.expand_more,
                     color: Colors.grey[600],
                     size: 20.r,
                   ),
@@ -714,7 +712,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     decoration: InputDecoration(
                       hintText: 'Enter invitation code',
                       hintStyle:
-                      TextStyle(fontSize: 12.sp, color: Colors.grey[400]),
+                          TextStyle(fontSize: 12.sp, color: Colors.grey[400]),
                       prefixIcon: Icon(Icons.vpn_key,
                           size: 18.r, color: const Color(0xFF2196F3)),
                       filled: true,
@@ -784,8 +782,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               borderSide: BorderSide(color: Colors.grey[200]!, width: 1)),
           focusedBorder: const OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(12)),
-              borderSide:
-              BorderSide(color: Color(0xFF2196F3), width: 1.5)),
+              borderSide: BorderSide(color: Color(0xFF2196F3), width: 1.5)),
           errorBorder: const OutlineInputBorder(
               borderRadius: BorderRadius.all(Radius.circular(12)),
               borderSide: BorderSide(color: Colors.red, width: 1)),
@@ -793,7 +790,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               borderRadius: BorderRadius.all(Radius.circular(12)),
               borderSide: BorderSide(color: Colors.red, width: 1.5)),
           contentPadding:
-          EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+              EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
         ),
       ),
     );
@@ -808,8 +805,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: Colors.grey[200]!),
           backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.r)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

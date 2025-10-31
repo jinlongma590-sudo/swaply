@@ -34,8 +34,13 @@ class ModernSliverHeader extends StatelessWidget {
           child: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                begin: Alignment.topLeft, end: Alignment.bottomRight,
-                colors: [const Color(0xFF2563EB), const Color(0xFF3B82F6), const Color(0xFF60A5FA)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  const Color(0xFF2563EB),
+                  const Color(0xFF3B82F6),
+                  const Color(0xFF60A5FA)
+                ],
                 stops: [0.0, 0.5, 1.0],
               ),
             ),
@@ -47,10 +52,17 @@ class ModernSliverHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Spacer(),
-                    Text(title, style: TextStyle(color: Colors.white, fontSize: 18.sp, fontWeight: FontWeight.w700)),
+                    Text(title,
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w700)),
                     if (subtitle != null) ...[
                       SizedBox(height: 4.h),
-                      Text(subtitle!, style: TextStyle(color: Colors.white.withOpacity(0.95), fontSize: 11.5.sp)),
+                      Text(subtitle!,
+                          style: TextStyle(
+                              color: Colors.white.withOpacity(0.95),
+                              fontSize: 11.5.sp)),
                     ],
                     const Spacer(),
                   ],
@@ -103,8 +115,10 @@ class _HeaderClipper extends CustomClipper<Path> {
         bottomRight: Radius.circular(radius),
       ));
   }
+
   @override
-  bool shouldReclip(covariant _HeaderClipper oldClipper) => oldClipper.radius != radius;
+  bool shouldReclip(covariant _HeaderClipper oldClipper) =>
+      oldClipper.radius != radius;
 }
 
 // 徽章类型：绿色=用户认证；蓝色=邮箱官方认证
@@ -138,7 +152,8 @@ class ModernBadge extends StatelessWidget {
     }
 
     return Container(
-      width: size, height: size,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: LinearGradient(colors: colors),
@@ -155,7 +170,8 @@ class ModernBadge extends StatelessWidget {
           if (withRing)
             Center(
               child: Container(
-                width: size * 0.86, height: size * 0.86,
+                width: size * 0.86,
+                height: size * 0.86,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: size * 0.12),
@@ -178,10 +194,14 @@ class EmailVerifiedChip extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [const Color(0xFF3B82F6), const Color(0xFF2563EB)]),
+        gradient: LinearGradient(
+            colors: [const Color(0xFF3B82F6), const Color(0xFF2563EB)]),
         borderRadius: BorderRadius.circular(20.r),
         boxShadow: [
-          BoxShadow(color: const Color(0xFF2563EB).withOpacity(0.25), blurRadius: 6.r, offset: Offset(0, 2.h)),
+          BoxShadow(
+              color: const Color(0xFF2563EB).withOpacity(0.25),
+              blurRadius: 6.r,
+              offset: Offset(0, 2.h)),
         ],
       ),
       child: Row(
@@ -189,7 +209,11 @@ class EmailVerifiedChip extends StatelessWidget {
         children: [
           Icon(Icons.mark_email_read_rounded, size: size, color: Colors.white),
           SizedBox(width: 4.w),
-          Text('Email OK', style: TextStyle(color: Colors.white, fontSize: 9.5.sp, fontWeight: FontWeight.w600)),
+          Text('Email OK',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 9.5.sp,
+                  fontWeight: FontWeight.w600)),
         ],
       ),
     );

@@ -66,11 +66,13 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
           .limit(20);
 
       setState(() {
-        _recentUsers = response.map<Map<String, dynamic>>((user) => {
-          'id': user['id'],
-          'email': user['email'] ?? 'No email',
-          'created_at': user['created_at'],
-        }).toList();
+        _recentUsers = response
+            .map<Map<String, dynamic>>((user) => {
+                  'id': user['id'],
+                  'email': user['email'] ?? 'No email',
+                  'created_at': user['created_at'],
+                })
+            .toList();
       });
     } catch (e) {
       debugPrint('Error loading users: $e');
@@ -102,35 +104,48 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
 
   Future<void> _loadSystemStats() async {
     try {
-      final couponsResponse = await Supabase.instance.client
-          .from('coupons')
-          .select('type, status');
+      final couponsResponse =
+          await Supabase.instance.client.from('coupons').select('type, status');
 
-      final pinnedResponse = await Supabase.instance.client
-          .from('pinned_ads')
-          .select('status');
+      final pinnedResponse =
+          await Supabase.instance.client.from('pinned_ads').select('status');
 
-      final usersResponse = await Supabase.instance.client
-          .from('profiles')
-          .select('id');
+      final usersResponse =
+          await Supabase.instance.client.from('profiles').select('id');
 
-      final coupons = couponsResponse.map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e)).toList();
-      final pinnedAds = pinnedResponse.map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e)).toList();
+      final coupons = couponsResponse
+          .map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e))
+          .toList();
+      final pinnedAds = pinnedResponse
+          .map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e))
+          .toList();
 
       setState(() {
         _systemStats = {
           'total_users': usersResponse.length,
           'total_coupons': coupons.length,
-          'active_coupons': coupons.where((c) => c['status'] == 'active').length,
+          'active_coupons':
+              coupons.where((c) => c['status'] == 'active').length,
           'used_coupons': coupons.where((c) => c['status'] == 'used').length,
-          'category_coupons': coupons.where((c) => ['category', 'pinned', 'featured', 'premium'].contains(c['type'])).length,
-          'trending_coupons': coupons.where((c) => ['trending', 'trending_pin'].contains(c['type'])).length,
+          'category_coupons': coupons
+              .where((c) => ['category', 'pinned', 'featured', 'premium']
+                  .contains(c['type']))
+              .length,
+          'trending_coupons': coupons
+              .where((c) => ['trending', 'trending_pin'].contains(c['type']))
+              .length,
           'boost_coupons': coupons.where((c) => c['type'] == 'boost').length,
-          'reward_coupons': coupons.where((c) =>
-              ['register_bonus', 'activity_bonus', 'referral_bonus', 'welcome'].contains(c['type'])
-          ).length,
+          'reward_coupons': coupons
+              .where((c) => [
+                    'register_bonus',
+                    'activity_bonus',
+                    'referral_bonus',
+                    'welcome'
+                  ].contains(c['type']))
+              .length,
           'total_pinned_ads': pinnedAds.length,
-          'active_pinned_ads': pinnedAds.where((p) => p['status'] == 'active').length,
+          'active_pinned_ads':
+              pinnedAds.where((p) => p['status'] == 'active').length,
         };
       });
     } catch (e) {
@@ -230,10 +245,9 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
                   onPressed: _processing ? null : _sendToAllUsers,
                   icon: _processing
                       ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2)
-                  )
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2))
                       : const Icon(Icons.send),
                   label: Text(_processing ? 'Sending...' : 'Send to All'),
                   style: ElevatedButton.styleFrom(
@@ -277,10 +291,9 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
                 onPressed: _processing ? null : _sendToBatchUsers,
                 icon: _processing
                     ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2)
-                )
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2))
                     : const Icon(Icons.send),
                 label: const Text('Send to Selected Users'),
                 style: ElevatedButton.styleFrom(
@@ -403,9 +416,10 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
                   final user = _recentUsers[index];
                   return ListTile(
                     leading: CircleAvatar(
-                      child: Text(
-                          (user['email'] ?? '?').toString().substring(0, 1).toUpperCase()
-                      ),
+                      child: Text((user['email'] ?? '?')
+                          .toString()
+                          .substring(0, 1)
+                          .toUpperCase()),
                     ),
                     title: Text(user['email'] ?? 'No email'),
                     subtitle: Text(user['id'] ?? ''),
@@ -429,35 +443,35 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
       child: _allCoupons.isEmpty
           ? const Center(child: Text('No coupons found'))
           : ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: _allCoupons.length,
-        itemBuilder: (context, index) {
-          final coupon = _allCoupons[index];
-          return Card(
-            margin: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              leading: _getCouponIcon(coupon.type),
-              title: Text(coupon.title),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Code: ${coupon.code}'),
-                  Text('Status: ${coupon.statusDescription}'),
-                  Text('User: ${coupon.userId}'),
-                  Text('Type: ${coupon.type.displayNameEn}'),
-                  Text('Expires: ${coupon.formattedExpiryDate}'),
-                ],
-              ),
-              trailing: coupon.status == CouponStatus.active
-                  ? IconButton(
-                icon: const Icon(Icons.block, color: Colors.red),
-                onPressed: () => _revokeCoupon(coupon),
-              )
-                  : null,
+              padding: const EdgeInsets.all(16),
+              itemCount: _allCoupons.length,
+              itemBuilder: (context, index) {
+                final coupon = _allCoupons[index];
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: _getCouponIcon(coupon.type),
+                    title: Text(coupon.title),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Code: ${coupon.code}'),
+                        Text('Status: ${coupon.statusDescription}'),
+                        Text('User: ${coupon.userId}'),
+                        Text('Type: ${coupon.type.displayNameEn}'),
+                        Text('Expires: ${coupon.formattedExpiryDate}'),
+                      ],
+                    ),
+                    trailing: coupon.status == CouponStatus.active
+                        ? IconButton(
+                            icon: const Icon(Icons.block, color: Colors.red),
+                            onPressed: () => _revokeCoupon(coupon),
+                          )
+                        : null,
+                  ),
+                );
+              },
             ),
-          );
-        },
-      ),
     );
   }
 
@@ -476,19 +490,30 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
                   children: [
                     const Text(
                       'System Statistics',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
-                    _buildStatRow('Total Users', _systemStats['total_users'] ?? 0),
-                    _buildStatRow('Total Coupons', _systemStats['total_coupons'] ?? 0),
-                    _buildStatRow('Active Coupons', _systemStats['active_coupons'] ?? 0),
-                    _buildStatRow('Used Coupons', _systemStats['used_coupons'] ?? 0),
-                    _buildStatRow('Category Coupons', _systemStats['category_coupons'] ?? 0),
-                    _buildStatRow('Trending Coupons', _systemStats['trending_coupons'] ?? 0),
-                    _buildStatRow('Boost Coupons', _systemStats['boost_coupons'] ?? 0),
-                    _buildStatRow('Reward Coupons', _systemStats['reward_coupons'] ?? 0),
-                    _buildStatRow('Total Pinned Ads', _systemStats['total_pinned_ads'] ?? 0),
-                    _buildStatRow('Active Pinned Ads', _systemStats['active_pinned_ads'] ?? 0),
+                    _buildStatRow(
+                        'Total Users', _systemStats['total_users'] ?? 0),
+                    _buildStatRow(
+                        'Total Coupons', _systemStats['total_coupons'] ?? 0),
+                    _buildStatRow(
+                        'Active Coupons', _systemStats['active_coupons'] ?? 0),
+                    _buildStatRow(
+                        'Used Coupons', _systemStats['used_coupons'] ?? 0),
+                    _buildStatRow('Category Coupons',
+                        _systemStats['category_coupons'] ?? 0),
+                    _buildStatRow('Trending Coupons',
+                        _systemStats['trending_coupons'] ?? 0),
+                    _buildStatRow(
+                        'Boost Coupons', _systemStats['boost_coupons'] ?? 0),
+                    _buildStatRow(
+                        'Reward Coupons', _systemStats['reward_coupons'] ?? 0),
+                    _buildStatRow('Total Pinned Ads',
+                        _systemStats['total_pinned_ads'] ?? 0),
+                    _buildStatRow('Active Pinned Ads',
+                        _systemStats['active_pinned_ads'] ?? 0),
                   ],
                 ),
               ),
@@ -501,7 +526,8 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
                   children: [
                     const Text(
                       'Quick Actions',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
                     SizedBox(
@@ -601,11 +627,11 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
 
     setState(() => _processing = true);
     try {
-      final usersResponse = await Supabase.instance.client
-          .from('profiles')
-          .select('id');
+      final usersResponse =
+          await Supabase.instance.client.from('profiles').select('id');
 
-      final userIds = usersResponse.map<String>((u) => u['id'] as String).toList();
+      final userIds =
+          usersResponse.map<String>((u) => u['id'] as String).toList();
 
       if (userIds.isEmpty) {
         _showError('No users found');
@@ -620,7 +646,8 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
             userId: userId,
             type: CouponType.category,
             title: 'Admin Bulk Reward',
-            description: 'Special reward from admin - Pin your item in category page',
+            description:
+                'Special reward from admin - Pin your item in category page',
             durationDays: _selectedDuration,
           );
           if (coupon != null) {
@@ -631,7 +658,8 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
         }
       }
 
-      _showSuccess('Sent ${results.length} coupons to ${userIds.length} users!');
+      _showSuccess(
+          'Sent ${results.length} coupons to ${userIds.length} users!');
       await _loadAllCoupons();
       await _loadSystemStats();
     } catch (e) {
@@ -648,7 +676,11 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
       return;
     }
 
-    final emails = input.split('\n').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    final emails = input
+        .split('\n')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
 
     setState(() => _processing = true);
     try {
@@ -678,7 +710,8 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
             userId: userId,
             type: CouponType.category,
             title: 'Admin Batch Reward',
-            description: 'Special reward from admin - Pin your item in category page',
+            description:
+                'Special reward from admin - Pin your item in category page',
             durationDays: _selectedDuration,
           );
           if (coupon != null) {
@@ -689,7 +722,8 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
         }
       }
 
-      _showSuccess('Sent ${results.length} coupons to ${userIds.length} users!');
+      _showSuccess(
+          'Sent ${results.length} coupons to ${userIds.length} users!');
       _batchUserController.clear();
       await _loadAllCoupons();
       await _loadSystemStats();
@@ -706,7 +740,8 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
         userId: userId,
         type: CouponType.category,
         title: 'Admin Single Reward',
-        description: 'Special reward from admin - Pin your item in category page',
+        description:
+            'Special reward from admin - Pin your item in category page',
         durationDays: _selectedDuration,
       );
 
@@ -806,7 +841,9 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
           .eq('status', 'active')
           .select('id');
 
-      final expiredCount = expiredCoupons is List ? expiredCoupons.length : (expiredCoupons != null ? 1 : 0);
+      final expiredCount = expiredCoupons is List
+          ? expiredCoupons.length
+          : (expiredCoupons != null ? 1 : 0);
 
       _showSuccess('Cleaned up $expiredCount expired coupons');
       await _loadSystemStats();
@@ -826,21 +863,22 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
           child: _recentUsers.isEmpty
               ? const Center(child: Text('No users found'))
               : ListView.builder(
-            itemCount: _recentUsers.length,
-            itemBuilder: (context, index) {
-              final user = _recentUsers[index];
-              return ListTile(
-                leading: CircleAvatar(
-                  child: Text(
-                      (user['email'] ?? '?').toString().substring(0, 1).toUpperCase()
-                  ),
+                  itemCount: _recentUsers.length,
+                  itemBuilder: (context, index) {
+                    final user = _recentUsers[index];
+                    return ListTile(
+                      leading: CircleAvatar(
+                        child: Text((user['email'] ?? '?')
+                            .toString()
+                            .substring(0, 1)
+                            .toUpperCase()),
+                      ),
+                      title: Text(user['email'] ?? 'No email'),
+                      subtitle: Text(user['id'] ?? ''),
+                      onTap: () => Navigator.of(ctx).pop(user['id']),
+                    );
+                  },
                 ),
-                title: Text(user['email'] ?? 'No email'),
-                subtitle: Text(user['id'] ?? ''),
-                onTap: () => Navigator.of(ctx).pop(user['id']),
-              );
-            },
-          ),
         ),
         actions: [
           TextButton(

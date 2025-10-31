@@ -4,15 +4,15 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class OAuthService {
-  static const _deepLink = 'swaply://login-callback'; // 和 Supabase Redirect URLs 保持一致
+  static const _deepLink =
+      'swaply://login-callback'; // 和 Supabase Redirect URLs 保持一致
 
   static Future<void> signInWithFacebook() async {
     await Supabase.instance.client.auth.signInWithOAuth(
       OAuthProvider.facebook,
       redirectTo: kIsWeb ? null : _deepLink,
-      authScreenLaunchMode: kIsWeb
-          ? LaunchMode.platformDefault
-          : LaunchMode.externalApplication,
+      authScreenLaunchMode:
+          kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
     );
   }
 
@@ -20,9 +20,8 @@ class OAuthService {
     await Supabase.instance.client.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: kIsWeb ? null : _deepLink,
-      authScreenLaunchMode: kIsWeb
-          ? LaunchMode.platformDefault
-          : LaunchMode.externalApplication,
+      authScreenLaunchMode:
+          kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
     );
   }
 }

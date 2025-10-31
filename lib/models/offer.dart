@@ -17,7 +17,7 @@ enum OfferStatus {
 
   static OfferStatus fromString(String value) {
     return OfferStatus.values.firstWhere(
-          (status) => status.value == value,
+      (status) => status.value == value,
       orElse: () => OfferStatus.pending,
     );
   }
@@ -101,15 +101,21 @@ class OfferModel {
         buyerPhone: map['buyer_phone']?.toString(),
         buyerName: map['buyer_name']?.toString() ?? 'Unknown',
         status: OfferStatus.fromString(map['status']?.toString() ?? 'pending'),
-        createdAt: DateTime.tryParse(map['created_at']?.toString() ?? '') ?? DateTime.now(),
-        updatedAt: map['updated_at'] != null ? DateTime.tryParse(map['updated_at'].toString()) : null,
-        expiresAt: map['expires_at'] != null ? DateTime.tryParse(map['expires_at'].toString()) : null,
+        createdAt: DateTime.tryParse(map['created_at']?.toString() ?? '') ??
+            DateTime.now(),
+        updatedAt: map['updated_at'] != null
+            ? DateTime.tryParse(map['updated_at'].toString())
+            : null,
+        expiresAt: map['expires_at'] != null
+            ? DateTime.tryParse(map['expires_at'].toString())
+            : null,
         listingTitle: listingsData?['title']?.toString(),
         listingPrice: listingsData?['price']?.toString(),
         listingImages: images,
         listingCity: listingsData?['city']?.toString(),
         buyerAvatar: buyerProfileData?['avatar_url']?.toString(),
-        contactPhone: buyerProfileData?['phone']?.toString() ?? map['buyer_phone']?.toString(),
+        contactPhone: buyerProfileData?['phone']?.toString() ??
+            map['buyer_phone']?.toString(),
       );
     } catch (e) {
       if (kDebugMode) {
@@ -190,7 +196,8 @@ class OfferModel {
   // 便捷的getter方法
 
   /// 买家显示名称
-  String get buyerDisplayName => buyerName.isEmpty ? 'Unknown Buyer' : buyerName;
+  String get buyerDisplayName =>
+      buyerName.isEmpty ? 'Unknown Buyer' : buyerName;
 
   /// 格式化的报价金额
   String get formattedOfferAmount {
@@ -315,11 +322,11 @@ class OfferModel {
   @override
   int get hashCode {
     return id.hashCode ^
-    listingId.hashCode ^
-    buyerId.hashCode ^
-    sellerId.hashCode ^
-    offerAmount.hashCode ^
-    status.hashCode;
+        listingId.hashCode ^
+        buyerId.hashCode ^
+        sellerId.hashCode ^
+        offerAmount.hashCode ^
+        status.hashCode;
   }
 }
 

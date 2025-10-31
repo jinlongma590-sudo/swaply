@@ -45,7 +45,8 @@ class Product {
       seller: Seller.fromMap(map['seller'] ?? {}),
       phoneNumber: map['phoneNumber'] ?? '',
       whatsappNumber: map['whatsappNumber'] ?? '',
-      postedAt: DateTime.parse(map['postedAt'] ?? DateTime.now().toIso8601String()),
+      postedAt:
+          DateTime.parse(map['postedAt'] ?? DateTime.now().toIso8601String()),
     );
   }
 
@@ -90,7 +91,8 @@ class Seller {
       name: map['name'] ?? '',
       avatar: map['avatar'],
       activeAds: map['activeAds'] ?? 0,
-      memberSince: DateTime.parse(map['memberSince'] ?? DateTime.now().toIso8601String()),
+      memberSince: DateTime.parse(
+          map['memberSince'] ?? DateTime.now().toIso8601String()),
     );
   }
 

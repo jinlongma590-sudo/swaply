@@ -35,8 +35,8 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
   RealtimeChannel? _messageChannel;
 
   // ====== 新增：屏蔽状态 ======
-  bool _iBlockedOther = false;     // 我屏蔽了对方
-  bool _otherBlockedMe = false;    // 对方屏蔽了我
+  bool _iBlockedOther = false; // 我屏蔽了对方
+  bool _otherBlockedMe = false; // 对方屏蔽了我
   bool get _blockedEitherWay => _iBlockedOther || _otherBlockedMe;
 
   @override
@@ -275,7 +275,8 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
         ),
         backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
         margin: EdgeInsets.all(12.w),
       ),
     );
@@ -414,7 +415,8 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                             ),
                             SizedBox(width: 8.w),
                             Container(
-                              padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 6.w, vertical: 2.h),
                               decoration: BoxDecoration(
                                 color: Colors.orange.shade100,
                                 borderRadius: BorderRadius.circular(10.r),
@@ -501,7 +503,8 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16.r))),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16.r))),
       builder: (ctx) {
         return Padding(
           padding: EdgeInsets.only(
@@ -525,14 +528,17 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                 ),
               ),
               SizedBox(height: 12.h),
-              Text('Report user', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w700)),
+              Text('Report user',
+                  style:
+                      TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w700)),
               SizedBox(height: 12.h),
               DropdownButtonFormField<String>(
                 value: type,
                 items: const [
                   DropdownMenuItem(value: 'Spam', child: Text('Spam')),
                   DropdownMenuItem(value: 'Scam', child: Text('Scam/Fraud')),
-                  DropdownMenuItem(value: 'Harassment', child: Text('Harassment/Abuse')),
+                  DropdownMenuItem(
+                      value: 'Harassment', child: Text('Harassment/Abuse')),
                   DropdownMenuItem(value: 'Other', child: Text('Other')),
                 ],
                 onChanged: (v) => type = v ?? 'Spam',
@@ -556,13 +562,16 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                     final ok = await OfferService.submitReport(
                       reportedId: peerId,
                       type: type,
-                      description: descCtrl.text.trim().isEmpty ? null : descCtrl.text.trim(),
+                      description: descCtrl.text.trim().isEmpty
+                          ? null
+                          : descCtrl.text.trim(),
                       offerId: widget.offerId,
                       listingId: _offerDetails?['listing_id'] as String?,
                     );
                     Navigator.of(ctx).pop();
                     if (ok) {
-                      _showSnackBar('Report submitted. Thank you for keeping the community safe.');
+                      _showSnackBar(
+                          'Report submitted. Thank you for keeping the community safe.');
                     } else {
                       _showSnackBar('Failed to submit report', isError: true);
                     }
@@ -570,7 +579,8 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF667EEA),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r)),
                   ),
                   child: const Text('Submit'),
                 ),
@@ -662,16 +672,24 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
       child: Container(
         margin: EdgeInsets.symmetric(vertical: 4.h),
         child: Column(
-          crossAxisAlignment: isMyMessage ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          crossAxisAlignment:
+              isMyMessage ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             Container(
-              constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
+              constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.75),
               padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
               decoration: BoxDecoration(
-                color: isMyMessage ? const Color(0xFF667EEA) : Colors.grey.shade100,
+                color: isMyMessage
+                    ? const Color(0xFF667EEA)
+                    : Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(18.r).copyWith(
-                  bottomRight: isMyMessage ? Radius.circular(4.r) : Radius.circular(18.r),
-                  bottomLeft: isMyMessage ? Radius.circular(18.r) : Radius.circular(4.r),
+                  bottomRight: isMyMessage
+                      ? Radius.circular(4.r)
+                      : Radius.circular(18.r),
+                  bottomLeft: isMyMessage
+                      ? Radius.circular(18.r)
+                      : Radius.circular(4.r),
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -819,7 +837,8 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
     final disabled = _blockedEitherWay;
 
     return Container(
-      padding: EdgeInsets.fromLTRB(12.w, 8.h, 12.w, 8.h + MediaQuery.of(context).viewInsets.bottom),
+      padding: EdgeInsets.fromLTRB(
+          12.w, 8.h, 12.w, 8.h + MediaQuery.of(context).viewInsets.bottom),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -850,15 +869,16 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                   decoration: InputDecoration(
                     hintText: disabled
                         ? (_otherBlockedMe
-                        ? 'You are blocked by this user'
-                        : 'You blocked this user')
+                            ? 'You are blocked by this user'
+                            : 'You blocked this user')
                         : 'Type a message...',
                     hintStyle: TextStyle(
                       color: Colors.grey.shade500,
                       fontSize: 14.sp,
                     ),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
                   ),
                 ),
               ),
@@ -885,17 +905,19 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                         height: 50.h,
                         child: _isSendingMessage
                             ? Padding(
-                          padding: EdgeInsets.all(12.w),
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.w,
-                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
+                                padding: EdgeInsets.all(12.w),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.w,
+                                  valueColor:
+                                      const AlwaysStoppedAnimation<Color>(
+                                          Colors.white),
+                                ),
+                              )
                             : Icon(
-                          Icons.send_rounded,
-                          color: Colors.white,
-                          size: 24.w,
-                        ),
+                                Icons.send_rounded,
+                                color: Colors.white,
+                                size: 24.w,
+                              ),
                       ),
                     ),
                   ),

@@ -421,7 +421,8 @@ class NotificationBuilder {
         .setType(NotificationType.offer)
         .setListing(listingId)
         .setTitle('New Offer Received')
-        .setMessage('$displayName made an offer of \$$offerAmount for your $listingTitle')
+        .setMessage(
+            '$displayName made an offer of \$$offerAmount for your $listingTitle')
         .addMetadata('offer_amount', offerAmount)
         .addMetadata('buyer_name', displayName)
         .addMetadata('buyer_phone', buyerPhone)

@@ -54,7 +54,8 @@ class FavoritesService {
     required String listingId,
   }) async {
     try {
-      _debugPrint('Removing from favorites: userId=$userId, listingId=$listingId');
+      _debugPrint(
+          'Removing from favorites: userId=$userId, listingId=$listingId');
 
       await _client
           .from(_tableName)
@@ -76,7 +77,8 @@ class FavoritesService {
     required String listingId,
   }) async {
     try {
-      _debugPrint('Checking favorites status: userId=$userId, listingId=$listingId');
+      _debugPrint(
+          'Checking favorites status: userId=$userId, listingId=$listingId');
 
       final result = await _client
           .from(_tableName)
@@ -99,10 +101,8 @@ class FavoritesService {
     try {
       _debugPrint('Getting favorites count for user: $userId');
 
-      final data = await _client
-          .from(_tableName)
-          .select('id')
-          .eq('user_id', userId);
+      final data =
+          await _client.from(_tableName).select('id').eq('user_id', userId);
 
       final count = (data as List).length;
       _debugPrint('Favorites count: $count');
@@ -120,7 +120,8 @@ class FavoritesService {
     int offset = 0,
   }) async {
     try {
-      _debugPrint('Getting user favorites: userId=$userId, limit=$limit, offset=$offset');
+      _debugPrint(
+          'Getting user favorites: userId=$userId, limit=$limit, offset=$offset');
 
       // 先获取收藏记录
       final favoritesData = await _client
@@ -145,7 +146,8 @@ class FavoritesService {
           try {
             final listing = await _client
                 .from('listings')
-                .select('id, title, price, city, images, image_urls, status, is_active, seller_name, category, description, created_at')
+                .select(
+                    'id, title, price, city, images, image_urls, status, is_active, seller_name, category, description, created_at')
                 .eq('id', listingId)
                 .eq('is_active', true)
                 .maybeSingle();
@@ -157,7 +159,8 @@ class FavoritesService {
                 'listing_id': listingId,
                 'listing': listing,
               });
-              _debugPrint('Successfully loaded listing data for item $listingId');
+              _debugPrint(
+                  'Successfully loaded listing data for item $listingId');
             }
           } catch (e) {
             _debugPrint('Error fetching listing $listingId: $e');
@@ -219,10 +222,7 @@ class FavoritesService {
     try {
       _debugPrint('Clearing favorites for user: $userId');
 
-      await _client
-          .from(_tableName)
-          .delete()
-          .eq('user_id', userId);
+      await _client.from(_tableName).delete().eq('user_id', userId);
 
       _debugPrint('Successfully cleared favorites');
       return true;

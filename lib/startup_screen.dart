@@ -9,7 +9,8 @@ class StartupScreen extends StatefulWidget {
   State<StartupScreen> createState() => _StartupScreenState();
 }
 
-class _StartupScreenState extends State<StartupScreen> with SingleTickerProviderStateMixin {
+class _StartupScreenState extends State<StartupScreen>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   bool _isCheckingAuth = true;
 
@@ -45,13 +46,13 @@ class _StartupScreenState extends State<StartupScreen> with SingleTickerProvider
         // 用户已登录，跳转到主页
         Navigator.of(context).pushNamedAndRemoveUntil(
           '/home',
-              (route) => false,
+          (route) => false,
         );
       } else {
         // 用户未登录，跳转到欢迎页
         Navigator.of(context).pushNamedAndRemoveUntil(
           '/welcome',
-              (route) => false,
+          (route) => false,
         );
       }
     } catch (e) {
@@ -59,7 +60,7 @@ class _StartupScreenState extends State<StartupScreen> with SingleTickerProvider
       if (mounted) {
         Navigator.of(context).pushNamedAndRemoveUntil(
           '/welcome',
-              (route) => false,
+          (route) => false,
         );
       }
     } finally {
@@ -73,7 +74,8 @@ class _StartupScreenState extends State<StartupScreen> with SingleTickerProvider
   Widget _dot(double begin, double end) {
     return ScaleTransition(
       scale: Tween<double>(begin: 0.75, end: 1.0)
-          .chain(CurveTween(curve: Interval(begin, end, curve: Curves.easeInOut)))
+          .chain(
+              CurveTween(curve: Interval(begin, end, curve: Curves.easeInOut)))
           .animate(_controller),
       child: Container(
         width: 10,
@@ -114,8 +116,7 @@ class _StartupScreenState extends State<StartupScreen> with SingleTickerProvider
                   style: TextStyle(
                       color: Colors.white,
                       fontSize: 22,
-                      fontWeight: FontWeight.bold
-                  ),
+                      fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(height: 20),

@@ -89,13 +89,13 @@ class VerifiedAvatar extends StatelessWidget {
   }
 
   Widget _fallback() => Container(
-    width: radius * 2,
-    height: radius * 2,
-    color: const Color(0xFFE5E7EB),
-    child: Icon(
-      defaultIcon,
-      size: radius * 1.2,
-      color: const Color(0xFF6B7280),
-    ),
-  );
+        width: radius * 2,
+        height: radius * 2,
+        color: const Color(0xFFE5E7EB),
+        child: Icon(
+          defaultIcon,
+          size: radius * 1.2,
+          color: const Color(0xFF6B7280),
+        ),
+      );
 }

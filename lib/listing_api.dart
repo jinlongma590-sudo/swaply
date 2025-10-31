@@ -43,9 +43,8 @@ class ListingApi {
       final objectPath = '$userId/$objectName';
 
       try {
-        await _sb.storage
-            .from(kListingBucket)
-            .upload(objectPath, f, fileOptions: const FileOptions(upsert: false));
+        await _sb.storage.from(kListingBucket).upload(objectPath, f,
+            fileOptions: const FileOptions(upsert: false));
 
         // public 桶：
         final url = _sb.storage.from(kListingBucket).getPublicUrl(objectPath);
@@ -60,7 +59,7 @@ class ListingApi {
       } on StorageException catch (e) {
         throw Exception(
           'Upload failed: ${e.message} '
-              '(status=${e.statusCode}, bucket=$kListingBucket, path=$objectPath)',
+          '(status=${e.statusCode}, bucket=$kListingBucket, path=$objectPath)',
         );
       }
     }
@@ -99,11 +98,11 @@ class ListingApi {
       'region': region,
       'city': city,
       'category': category,
-      'images': imageUrls,    // jsonb / text[] 均可
+      'images': imageUrls, // jsonb / text[] 均可
       'status': status,
       'attributes': attributes,
       'seller_name': sellerName, // 若表里没有该列可以删掉
-      'phone': finalPhone,       // 若你的列名不同，改成对应字段
+      'phone': finalPhone, // 若你的列名不同，改成对应字段
     }..removeWhere((k, v) => v == null);
 
     final data = await _sb.from('listings').insert(payload).select().single();
@@ -169,9 +168,9 @@ class ListingApi {
     }
 
     query = query.order(orderBy, ascending: ascending).range(
-      offset,
-      offset + limit - 1,
-    );
+          offset,
+          offset + limit - 1,
+        );
 
     final resp = await query as List;
     return resp
@@ -203,9 +202,9 @@ class ListingApi {
 
     query = query.or('title.ilike.%$keyword%,description.ilike.%$keyword%');
     query = query.order(orderBy, ascending: ascending).range(
-      offset,
-      offset + limit - 1,
-    );
+          offset,
+          offset + limit - 1,
+        );
 
     final resp = await query as List;
     return resp
@@ -236,7 +235,8 @@ class ListingApi {
 
     final resp = await query;
     if (resp is List) return resp.length;
-    if (resp is Map && resp['data'] is List) return (resp['data'] as List).length;
+    if (resp is Map && resp['data'] is List)
+      return (resp['data'] as List).length;
     return 0;
   }
 
@@ -244,7 +244,7 @@ class ListingApi {
 
   static Future<List<String>> getRegions({String status = 'active'}) async {
     final resp =
-    await _sb.from('listings').select('region').eq('status', status);
+        await _sb.from('listings').select('region').eq('status', status);
     final set = <String>{};
     for (final row in (resp as List? ?? const [])) {
       final v = (row as Map)['region'];
@@ -255,8 +255,7 @@ class ListingApi {
   }
 
   static Future<List<String>> getCities({String status = 'active'}) async {
-    final resp =
-    await _sb.from('listings').select('city').eq('status', status);
+    final resp = await _sb.from('listings').select('city').eq('status', status);
     final set = <String>{};
     for (final row in (resp as List? ?? const [])) {
       final v = (row as Map)['city'];

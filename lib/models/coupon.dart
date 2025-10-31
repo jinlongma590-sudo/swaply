@@ -4,19 +4,24 @@ import 'package:flutter/foundation.dart';
 /// Coupon Type Enum - Compatible version with core types + legacy aliases + welcome
 enum CouponType {
   // === Core Coupon Types (New) ===
-  trending('trending', 'Trending (Homepage)', 'Trending (Homepage)'), // Homepage trending section
-  category('category', 'Category Pin', 'Category Pin'),               // Category page pinned display
-  featured('featured', 'Search/Popular Pin', 'Search/Popular Pin'),   // Search top & appear in Popular
+  trending('trending', 'Trending (Homepage)',
+      'Trending (Homepage)'), // Homepage trending section
+  category('category', 'Category Pin',
+      'Category Pin'), // Category page pinned display
+  featured('featured', 'Search/Popular Pin',
+      'Search/Popular Pin'), // Search top & appear in Popular
 
   // === Legacy Types for Compatibility (Deprecated / Aliases) ===
   @Deprecated('Use trending instead')
-  trendingPin('trending', 'Trending (Homepage)', 'Trending (Homepage)'), // Maps to trending
+  trendingPin('trending', 'Trending (Homepage)',
+      'Trending (Homepage)'), // Maps to trending
   @Deprecated('Use category instead')
-  pinned('category', 'Category Pin', 'Category Pin'),                     // Maps to category
+  pinned('category', 'Category Pin', 'Category Pin'), // Maps to category
   @Deprecated('Use featured instead')
-  premium('category', 'Category Pin', 'Category Pin'),                    // Maps to category
+  premium('category', 'Category Pin', 'Category Pin'), // Maps to category
   @Deprecated('Use featured instead')
-  boost('boost', 'Search/Popular Pin', 'Search/Popular Pin'),             // Alias; actual -> featured
+  boost('boost', 'Search/Popular Pin',
+      'Search/Popular Pin'), // Alias; actual -> featured
 
   // === Reward Source Identifiers (actual grant is one of core types) ===
   registerBonus('register_bonus', 'Welcome Bonus', 'Welcome Bonus'),
@@ -66,7 +71,7 @@ enum CouponType {
         case 'welcome':
           return CouponType.welcome;
 
-      // Reward identifiers
+        // Reward identifiers
         case 'register_bonus':
           return CouponType.registerBonus;
         case 'activity_bonus':
@@ -130,18 +135,20 @@ enum CouponType {
       case CouponType.featured:
         return this; // Already core type
       case CouponType.welcome:
-        return CouponType.category; // Welcome behaves like category pin by default
+        return CouponType
+            .category; // Welcome behaves like category pin by default
       case CouponType.registerBonus:
       case CouponType.activityBonus:
       case CouponType.referralBonus:
-        return CouponType.category; // rewards map by business logic when granted
+        return CouponType
+            .category; // rewards map by business logic when granted
     }
   }
 
   /// Get coupon color theme
   int get colorValue {
     switch (this) {
-    // Core types
+      // Core types
       case CouponType.trending:
         return 0xFFFF6B35; // Orange-red - Trending
       case CouponType.category:
@@ -149,7 +156,7 @@ enum CouponType {
       case CouponType.featured:
         return 0xFF9C27B0; // Purple - Search/Popular
 
-    // Legacy types (mapped to core type colors)
+      // Legacy types (mapped to core type colors)
       case CouponType.trendingPin:
         return 0xFFFF6B35;
       case CouponType.pinned:
@@ -158,7 +165,7 @@ enum CouponType {
       case CouponType.boost:
         return 0xFF9C27B0;
 
-    // Reward identifiers
+      // Reward identifiers
       case CouponType.registerBonus:
         return 0xFF4CAF50; // Green
       case CouponType.activityBonus:
@@ -173,7 +180,7 @@ enum CouponType {
   /// Get coupon icon name
   String get iconName {
     switch (this) {
-    // Core types
+      // Core types
       case CouponType.trending:
         return 'local_fire_department';
       case CouponType.category:
@@ -181,7 +188,7 @@ enum CouponType {
       case CouponType.featured:
         return 'rocket_launch';
 
-    // Legacy types
+      // Legacy types
       case CouponType.trendingPin:
         return 'local_fire_department';
       case CouponType.pinned:
@@ -190,7 +197,7 @@ enum CouponType {
       case CouponType.boost:
         return 'rocket_launch';
 
-    // Reward identifiers
+      // Reward identifiers
       case CouponType.registerBonus:
         return 'card_giftcard';
       case CouponType.activityBonus:
@@ -205,7 +212,7 @@ enum CouponType {
   /// Get coupon function description
   String get functionDescription {
     switch (this) {
-    // Core types
+      // Core types
       case CouponType.trending:
         return 'Pinned on the homepage Trending section';
       case CouponType.category:
@@ -213,7 +220,7 @@ enum CouponType {
       case CouponType.featured:
         return 'Top in search results and appear in Popular';
 
-    // Legacy types (mapped)
+      // Legacy types (mapped)
       case CouponType.trendingPin:
         return 'Pinned on the homepage Trending section';
       case CouponType.pinned:
@@ -222,7 +229,7 @@ enum CouponType {
       case CouponType.boost:
         return 'Top in search results and appear in Popular';
 
-    // Reward identifiers
+      // Reward identifiers
       case CouponType.registerBonus:
         return 'New user exclusive reward';
       case CouponType.activityBonus:
@@ -329,8 +336,8 @@ class CouponModel {
 
   // New fields
   final String? category; // 'reward', 'pinning', 'boost', etc.
-  final String? source;   // 'signup', 'purchase', 'task', etc.
-  final int? pinDays;     // pin days
+  final String? source; // 'signup', 'purchase', 'task', etc.
+  final int? pinDays; // pin days
   final String? pinScope; // 'category', 'home', 'search', etc.
 
   CouponModel({
@@ -406,14 +413,17 @@ class CouponModel {
         maxUses: _safeInt(map['max_uses'], 1),
         usedCount: _safeInt(map['used_count'], 0),
         createdAt: _safeDateTime(map['created_at'], now),
-        expiresAt: _safeDateTime(map['expires_at'], now.add(const Duration(days: 7))),
+        expiresAt:
+            _safeDateTime(map['expires_at'], now.add(const Duration(days: 7))),
         usedAt: _safeNullableDateTime(map['used_at']),
         listingId: map['listing_id']?.toString(),
         metadata: map['metadata'] as Map<String, dynamic>?,
         // new fields
         category: _safeString(map['category']),
         source: _safeString(map['source']),
-        pinDays: _safeInt(map['pin_days'], 0) == 0 ? null : _safeInt(map['pin_days'], 0),
+        pinDays: _safeInt(map['pin_days'], 0) == 0
+            ? null
+            : _safeInt(map['pin_days'], 0),
         pinScope: _safeString(map['pin_scope']),
       );
     } catch (e) {
@@ -513,7 +523,8 @@ class CouponModel {
 
   // ========== Convenient getters ==========
 
-  bool get isUsable => status == CouponStatus.active && !isExpired && usedCount < maxUses;
+  bool get isUsable =>
+      status == CouponStatus.active && !isExpired && usedCount < maxUses;
 
   bool get isExpired => DateTime.now().isAfter(expiresAt);
 
@@ -568,7 +579,8 @@ class CouponModel {
     if (daysUntilExpiry == 1) return 'Expires tomorrow';
     if (daysUntilExpiry <= 3) return 'Expires in ${daysUntilExpiry}d';
     if (daysUntilExpiry <= 7) return 'Expires in 1w';
-    if (daysUntilExpiry <= 30) return 'Expires in ${(daysUntilExpiry / 7).ceil()}w';
+    if (daysUntilExpiry <= 30)
+      return 'Expires in ${(daysUntilExpiry / 7).ceil()}w';
     return 'Expires in ${(daysUntilExpiry / 30).ceil()}mo';
   }
 
@@ -604,7 +616,7 @@ class CouponModel {
     if (!isUsable) return 0;
 
     switch (type) {
-    // Core type priority
+      // Core type priority
       case CouponType.trending:
       case CouponType.trendingPin:
         return 100; // Highest
@@ -616,7 +628,7 @@ class CouponModel {
       case CouponType.boost:
         return 70;
 
-    // Reward identifiers
+      // Reward identifiers
       case CouponType.registerBonus:
         return 50;
       case CouponType.activityBonus:
@@ -646,7 +658,12 @@ class CouponModel {
   }
 
   @override
-  int get hashCode => id.hashCode ^ code.hashCode ^ userId.hashCode ^ type.hashCode ^ status.hashCode;
+  int get hashCode =>
+      id.hashCode ^
+      code.hashCode ^
+      userId.hashCode ^
+      type.hashCode ^
+      status.hashCode;
 }
 
 // Keep original other class definitions to ensure interface compatibility

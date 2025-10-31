@@ -1,4 +1,4 @@
-﻿// lib/services/verification_guard.dart
+// lib/services/verification_guard.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -120,9 +120,9 @@ class VerificationGuard {
 
   /// Main guard: block if not verified; push VerificationPage
   static Future<bool> ensureVerifiedOrPrompt(
-      BuildContext context, {
-        Object? feature, // AppFeature or String
-      }) async {
+    BuildContext context, {
+    Object? feature, // AppFeature or String
+  }) async {
     final loggedIn = _isLoggedIn();
     final verified = await isVerified();
 
@@ -140,15 +140,15 @@ class VerificationGuard {
 
       final content = loggedIn
           ? _t(
-        context,
-        'For account security, please complete email verification before you can $actionName.',
-        '为了账号安全，需要先完成邮箱验证后才能$actionName。',
-      )
+              context,
+              'For account security, please complete email verification before you can $actionName.',
+              '为了账号安全，需要先完成邮箱验证后才能$actionName。',
+            )
           : _t(
-        context,
-        'For account security, please sign in and complete email verification before you can $actionName.',
-        '为了账号安全，需要先登录并完成邮箱验证后才能$actionName。',
-      );
+              context,
+              'For account security, please sign in and complete email verification before you can $actionName.',
+              '为了账号安全，需要先登录并完成邮箱验证后才能$actionName。',
+            );
 
       final laterText = _t(context, 'Later', '稍后');
       final goText = loggedIn

@@ -59,19 +59,43 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     {"id": "trending", "icon": "trending", "label": "Trending"},
     {"id": "vehicles", "icon": "vehicles", "label": "Vehicles"},
     {"id": "property", "icon": "property", "label": "Property"},
-    {"id": "beauty_personal_care", "icon": "beauty_personal_care", "label": "Beauty & Care"},
+    {
+      "id": "beauty_personal_care",
+      "icon": "beauty_personal_care",
+      "label": "Beauty & Care"
+    },
     {"id": "jobs", "icon": "jobs", "label": "Jobs"},
     {"id": "babies_kids", "icon": "babies_kids", "label": "Baby & Kids"},
     {"id": "services", "icon": "services", "label": "Services"},
-    {"id": "leisure_activities", "icon": "leisure_activities", "label": "Leisure"},
-    {"id": "repair_construction", "icon": "repair_construction", "label": "Repair"},
-    {"id": "home_furniture_appliances", "icon": "home_furniture_appliances", "label": "Home & Furniture"},
+    {
+      "id": "leisure_activities",
+      "icon": "leisure_activities",
+      "label": "Leisure"
+    },
+    {
+      "id": "repair_construction",
+      "icon": "repair_construction",
+      "label": "Repair"
+    },
+    {
+      "id": "home_furniture_appliances",
+      "icon": "home_furniture_appliances",
+      "label": "Home & Furniture"
+    },
     {"id": "pets", "icon": "pets", "label": "Pets"},
     {"id": "electronics", "icon": "electronics", "label": "Electronics"},
     {"id": "phones_tablets", "icon": "phones_tablets", "label": "Phones"},
-    {"id": "seeking_work_cvs", "icon": "seeking_work_cvs", "label": "Jobs Seeking"},
+    {
+      "id": "seeking_work_cvs",
+      "icon": "seeking_work_cvs",
+      "label": "Jobs Seeking"
+    },
     {"id": "fashion", "icon": "fashion", "label": "Fashion"},
-    {"id": "food_agriculture_drinks", "icon": "food_agriculture_drinks", "label": "Food & Drinks"},
+    {
+      "id": "food_agriculture_drinks",
+      "icon": "food_agriculture_drinks",
+      "label": "Food & Drinks"
+    },
   ];
 
   @override
@@ -108,7 +132,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
 
     if (priceData is String) {
-      if (priceData.toLowerCase().contains('free') || priceData == '0') return 'Free';
+      if (priceData.toLowerCase().contains('free') || priceData == '0')
+        return 'Free';
 
       final cleanPrice = priceData.replaceAll(RegExp(r'[^\d.]'), '');
       final parsedPrice = num.tryParse(cleanPrice);
@@ -145,7 +170,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     for (final e in pinnedAds) {
       final l = (e['listings'] as Map<String, dynamic>? ?? {});
       if (l.isEmpty) continue;
-      final imgs = (l['images'] as List?) ?? (l['image_urls'] as List?) ?? const [];
+      final imgs =
+          (l['images'] as List?) ?? (l['image_urls'] as List?) ?? const [];
       list.add({
         'id': l['id'],
         'title': l['title'],
@@ -173,7 +199,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       final id = r['id']?.toString();
       if (id == null || seen.contains(id)) continue;
       seen.add(id);
-      final imgs = (r['images'] as List?) ?? (r['image_urls'] as List?) ?? const [];
+      final imgs =
+          (r['images'] as List?) ?? (r['image_urls'] as List?) ?? const [];
       list.add({
         'id': r['id'],
         'title': r['title'],
@@ -191,7 +218,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Future<void> _loadTrending() async {
     setState(() => _loadingTrending = true);
     try {
-      final city = _selectedLocation == 'All Zimbabwe' ? null : _selectedLocation;
+      final city =
+          _selectedLocation == 'All Zimbabwe' ? null : _selectedLocation;
       final rows = await _fetchTrendingMixed(
         city: city,
         pinnedLimit: 6,
@@ -228,7 +256,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   void _navigateToProductDetail(String productId) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ProductDetailPage(productId: productId)),
+      MaterialPageRoute(
+          builder: (_) => ProductDetailPage(productId: productId)),
     );
   }
 
@@ -248,7 +277,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     if (keyword.isEmpty) return;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => SearchResultsPage(keyword: keyword, location: _selectedLocation),
+        builder: (_) =>
+            SearchResultsPage(keyword: keyword, location: _selectedLocation),
       ),
     );
   }
@@ -259,18 +289,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       final goLogin = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
           title: const Text('Login Required'),
           content: const Text('Please login to post listings.'),
           actions: [
             TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Cancel')
-            ),
+                child: const Text('Cancel')),
             FilledButton(
                 onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Login')
-            ),
+                child: const Text('Login')),
           ],
         ),
       );
@@ -280,7 +309,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       if (Supabase.instance.client.auth.currentUser == null) return;
     }
     if (!mounted) return;
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SellFormPage()));
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const SellFormPage()));
   }
 
   /* ===================== UI构建 ===================== */
@@ -398,7 +428,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
-                    padding: EdgeInsets.only(left: 16.w, top: 12.h, bottom: 10.h),
+                    padding:
+                        EdgeInsets.only(left: 16.w, top: 12.h, bottom: 10.h),
                     child: Text(
                       'What are you looking for?',
                       style: TextStyle(
@@ -441,17 +472,22 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   padding: EdgeInsets.symmetric(horizontal: 8.w),
                   child: DropdownButton<String>(
                     value: _selectedLocation,
-                    icon: Icon(Icons.arrow_drop_down, color: Colors.grey[600], size: 18.sp),
+                    icon: Icon(Icons.arrow_drop_down,
+                        color: Colors.grey[600], size: 18.sp),
                     isExpanded: true,
                     style: TextStyle(fontSize: 11.sp, color: Colors.grey[800]),
                     onChanged: (v) {
                       setState(() => _selectedLocation = v!);
                       _loadTrending();
                     },
-                    items: _locations.map((loc) => DropdownMenuItem(
-                      value: loc,
-                      child: Text(loc, style: TextStyle(fontSize: 11.sp), overflow: TextOverflow.ellipsis),
-                    )).toList(),
+                    items: _locations
+                        .map((loc) => DropdownMenuItem(
+                              value: loc,
+                              child: Text(loc,
+                                  style: TextStyle(fontSize: 11.sp),
+                                  overflow: TextOverflow.ellipsis),
+                            ))
+                        .toList(),
                   ),
                 ),
               ),
@@ -477,7 +513,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         style: TextStyle(fontSize: 12.sp),
                         decoration: InputDecoration(
                           hintText: 'Search products...',
-                          hintStyle: TextStyle(color: Colors.grey[500], fontSize: 11.sp),
+                          hintStyle: TextStyle(
+                              color: Colors.grey[500], fontSize: 11.sp),
                           border: InputBorder.none,
                           isCollapsed: true,
                         ),
@@ -489,7 +526,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     onTap: _performSearch,
                     child: Container(
                       padding: EdgeInsets.all(6.w),
-                      child: Icon(Icons.search, size: 18.sp, color: _primaryBlue),
+                      child:
+                          Icon(Icons.search, size: 18.sp, color: _primaryBlue),
                     ),
                   ),
                 ],
@@ -525,7 +563,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 color: isTrending ? Colors.orange.shade50 : Colors.grey[50],
                 borderRadius: BorderRadius.circular(10.r),
                 border: Border.all(
-                  color: isTrending ? Colors.orange.shade200 : Colors.transparent,
+                  color:
+                      isTrending ? Colors.orange.shade200 : Colors.transparent,
                   width: 1,
                 ),
                 boxShadow: [
@@ -565,7 +604,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               'assets/icons/${cat['icon']}.jpg',
                               fit: BoxFit.contain,
                               errorBuilder: (_, __, ___) => Icon(
-                                isTrending ? Icons.local_fire_department : Icons.category,
+                                isTrending
+                                    ? Icons.local_fire_department
+                                    : Icons.category,
                                 size: 26.sp,
                                 color: isTrending ? Colors.orange : Colors.grey,
                               ),
@@ -631,7 +672,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         // 趋势内容
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 12.w),
-          child: _loadingTrending ? _buildTrendingLoading() : _buildTrendingGrid(),
+          child:
+              _loadingTrending ? _buildTrendingLoading() : _buildTrendingGrid(),
         ),
       ],
     );
@@ -666,10 +708,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.grey[300],
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(10.r)),
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(10.r)),
                 ),
                 child: Center(
-                  child: CircularProgressIndicator(strokeWidth: 2, color: _primaryBlue),
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: _primaryBlue),
                 ),
               ),
             ),
@@ -769,7 +813,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildFeaturedTrendingSection() {
-    final pinnedItems = _trendingRemote.where((r) => r['pinned'] == true).toList();
+    final pinnedItems =
+        _trendingRemote.where((r) => r['pinned'] == true).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -840,7 +885,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           height: 1.h,
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.transparent, Colors.orange[300]!, Colors.transparent],
+              colors: [
+                Colors.transparent,
+                Colors.orange[300]!,
+                Colors.transparent
+              ],
             ),
           ),
         ),
@@ -849,7 +898,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildRegularTrendingGrid() {
-    final regularItems = _trendingRemote.where((r) => r['pinned'] != true).toList();
+    final regularItems =
+        _trendingRemote.where((r) => r['pinned'] != true).toList();
 
     return GridView.builder(
       physics: const NeverScrollableScrollPhysics(),
@@ -901,7 +951,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     top: 6.h,
                     left: 6.w,
                     child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
                       decoration: BoxDecoration(
                         color: Colors.orange[600],
                         borderRadius: BorderRadius.circular(8.r),
@@ -937,11 +988,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 children: [
                   if (priceText.isNotEmpty)
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
                       decoration: BoxDecoration(
                         color: _successGreen.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(4.r),
-                        border: Border.all(color: _successGreen.withOpacity(0.3)),
+                        border:
+                            Border.all(color: _successGreen.withOpacity(0.3)),
                       ),
                       child: Text(
                         priceText,
@@ -967,14 +1020,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   SizedBox(height: 3.h),
                   Row(
                     children: [
-                      Icon(Icons.location_on, size: 8.sp, color: Colors.grey[500]),
+                      Icon(Icons.location_on,
+                          size: 8.sp, color: Colors.grey[500]),
                       SizedBox(width: 2.w),
                       Expanded(
                         child: Text(
                           r['city']?.toString() ?? '',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 8.sp, color: Colors.grey[600]),
+                          style: TextStyle(
+                              fontSize: 8.sp, color: Colors.grey[600]),
                         ),
                       ),
                     ],
@@ -1026,7 +1081,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     Text(
                       priceText,
                       style: TextStyle(
-                        color: priceText == 'Free' ? _successGreen : _successGreen,
+                        color:
+                            priceText == 'Free' ? _successGreen : _successGreen,
                         fontWeight: FontWeight.bold,
                         fontSize: 12.sp,
                       ),
@@ -1046,14 +1102,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   SizedBox(height: 2.h),
                   Row(
                     children: [
-                      Icon(Icons.location_on, size: 8.sp, color: Colors.grey[500]),
+                      Icon(Icons.location_on,
+                          size: 8.sp, color: Colors.grey[500]),
                       SizedBox(width: 1.w),
                       Expanded(
                         child: Text(
                           r['city']?.toString() ?? '',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 8.sp, color: Colors.grey[600]),
+                          style: TextStyle(
+                              fontSize: 8.sp, color: Colors.grey[600]),
                         ),
                       ),
                     ],
@@ -1085,83 +1143,87 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     // Jiji风格的自动图片调整 - 完全填充容器
     final imgWidget = src.startsWith('http')
         ? Image.network(
-      src,
-      width: double.infinity,
-      height: double.infinity,
-      fit: BoxFit.cover, // 完全覆盖容器
-      alignment: Alignment.center,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: BoxDecoration(
-            color: Colors.grey[200],
-            borderRadius: BorderRadius.vertical(top: Radius.circular(10.r)),
-          ),
-          child: Center(
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: _primaryBlue,
-              value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                  : null,
+            src,
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover, // 完全覆盖容器
+            alignment: Alignment.center,
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                width: double.infinity,
+                height: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(10.r)),
+                ),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: _primaryBlue,
+                    value: loadingProgress.expectedTotalBytes != null
+                        ? loadingProgress.cumulativeBytesLoaded /
+                            loadingProgress.expectedTotalBytes!
+                        : null,
+                  ),
+                ),
+              );
+            },
+            errorBuilder: (_, __, ___) => Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.vertical(top: Radius.circular(10.r)),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.broken_image,
+                        size: 20.sp, color: Colors.grey[400]),
+                    SizedBox(height: 2.h),
+                    Text(
+                      'Image failed to load',
+                      style: TextStyle(fontSize: 8.sp, color: Colors.grey[500]),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
-        );
-      },
-      errorBuilder: (_, __, ___) => Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-          borderRadius: BorderRadius.vertical(top: Radius.circular(10.r)),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.broken_image, size: 20.sp, color: Colors.grey[400]),
-              SizedBox(height: 2.h),
-              Text(
-                'Image failed to load',
-                style: TextStyle(fontSize: 8.sp, color: Colors.grey[500]),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    )
+          )
         : Image.asset(
-      src,
-      width: double.infinity,
-      height: double.infinity,
-      fit: BoxFit.cover,
-      alignment: Alignment.center,
-      errorBuilder: (_, __, ___) => Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          color: Colors.grey[200],
-          borderRadius: BorderRadius.vertical(top: Radius.circular(10.r)),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.broken_image, size: 20.sp, color: Colors.grey[400]),
-              SizedBox(height: 2.h),
-              Text(
-                'Image not found',
-                style: TextStyle(fontSize: 8.sp, color: Colors.grey[500]),
-                textAlign: TextAlign.center,
+            src,
+            width: double.infinity,
+            height: double.infinity,
+            fit: BoxFit.cover,
+            alignment: Alignment.center,
+            errorBuilder: (_, __, ___) => Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.grey[200],
+                borderRadius: BorderRadius.vertical(top: Radius.circular(10.r)),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.broken_image,
+                        size: 20.sp, color: Colors.grey[400]),
+                    SizedBox(height: 2.h),
+                    Text(
+                      'Image not found',
+                      style: TextStyle(fontSize: 8.sp, color: Colors.grey[500]),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
 
     return ClipRRect(
       borderRadius: BorderRadius.vertical(top: Radius.circular(10.r)),

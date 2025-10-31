@@ -1,4 +1,4 @@
-// lib/main.dart - 淇鐗堟湰锛氱Щ闄ゅ鑷磋嚜鍔ㄧ櫥鍑虹殑refreshSession璋冪敤 + 鍚敤 PKCE OAuth
+﻿// lib/main.dart - 淇鐗堟湰锛氱Щ闄ゅ鑷磋嚜鍔ㄧ櫥鍑虹殑refreshSession璋冪敤 + 鍚敤 PKCE OAuth
 import 'dart:async';
 import 'dart:io';
 
@@ -61,14 +61,12 @@ class AppLocalizations {
     return AppLocalizations(const Locale('en'));
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   // ---------- Generic / Auth ----------
   String get appTitle => 'Swaply';
   String get loginRequired => 'Login required';
-  String loginRequiredMessage(String feature) =>
-      'Please login to use $feature.';
+  String loginRequiredMessage(String feature) => 'Please login to use $feature.';
   String get cancel => 'Cancel';
   String get login => 'Login';
   String get logout => 'Logout';
@@ -118,14 +116,12 @@ class AppLocalizations {
 
   // ---------- Saved ----------
   String get myFavorites => 'My Favorites';
-  String get loginToSaveFavorites =>
-      'Login to save your favorite items and searches.';
+  String get loginToSaveFavorites => 'Login to save your favorite items and searches.';
   String get loginNow => 'Login now';
   String get ads => 'Ads';
   String get searches => 'Searches';
   String get noFavoriteAdsYet => 'No favorite ads yet';
-  String get favoritesHelp =>
-      'Tap the bookmark icon on a listing to add it to Favorites.';
+  String get favoritesHelp => 'Tap the bookmark icon on a listing to add it to Favorites.';
   String get browseItems => 'Browse items';
   String get removedFromFavorites => 'Removed from favorites';
   String get alertsEnabled => 'Alerts enabled';
@@ -166,8 +162,7 @@ class AppLocalizations {
   String get markAllAsRead => 'Mark all as read';
   String get clearAll => 'Clear all';
   String get noNotifications => 'No notifications';
-  String get notificationsWillAppearHere =>
-      'Your notifications will appear here.';
+  String get notificationsWillAppearHere => 'Your notifications will appear here.';
   String get receiveNotifications => 'Login to receive notifications.';
 
   // ---------- Profile ----------
@@ -199,8 +194,7 @@ class AppLocalizations {
   dynamic noSuchMethod(Invocation invocation) => '';
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -222,7 +216,6 @@ class LanguageProvider extends ChangeNotifier {
     _current = const Locale('en');
     notifyListeners();
   }
-
   void toggleLanguage() {
     _current = const Locale('en');
     notifyListeners();
@@ -283,7 +276,7 @@ void wireAuthHook() {
       if (ctx != null) {
         Navigator.of(ctx).pushNamedAndRemoveUntil(
           '/welcome',
-          (route) => false,
+              (route) => false,
         );
       }
     }
@@ -299,7 +292,26 @@ String _fixUtf8Mojibake(String? raw) {
   // 鑻ヤ笉瀛樺湪鍏稿瀷涔辩爜鐥曡抗锛岀洿鎺ヨ繑鍥?
   if (!s.contains('冒') && !s.contains('脙') && !s.contains('芒')) return s;
 
-  const map = <String, String>{};
+  const map = <String, String>{
+    '冒鸥沤鈥?: '馃帀', // party popper
+    '冒鸥沤聛': '馃巵', // gift
+    '芒鈥犫€?: '鈫?,
+    '芒鈧€?: '鈥?,
+    '芒鈧€?: '鈥?,
+    '芒鈧?: '鈥?,
+    '芒鈧?: '鈥?,
+    '芒鈧?: '鈥?,
+    '芒鈧劉': '鈥?,
+    '芒鈧?: '鈥?,
+    '芒鈧?: '鈥?,
+    '脙鈥?: '脳',
+    '脙路': '梅',
+    '脗庐': '庐',
+    '脗漏': '漏',
+    '脗掳': '掳',
+    '脗路': '路',
+    '脗':  '',  // 瀛ょ珛鐨?脗
+  };
 
   map.forEach((k, v) => s = s.replaceAll(k, v));
   return s;
@@ -326,8 +338,7 @@ void _showWelcomeGiftDialog() {
               color: const Color(0xFF2196F3).withOpacity(0.12),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.card_giftcard,
-                size: 30.w, color: const Color(0xFF2196F3)),
+            child: Icon(Icons.card_giftcard, size: 30.w, color: const Color(0xFF2196F3)),
           ),
           SizedBox(height: 12.h),
           Text(_fixUtf8Mojibake('Welcome gift 馃巵'),
@@ -336,7 +347,7 @@ void _showWelcomeGiftDialog() {
           Text(
             _fixUtf8Mojibake(
               'A Welcome Coupon has been added to your account.\n'
-              'You can find it in My Coupons or My Rewards 鈫?Coupons tab.',
+                  'You can find it in My Coupons or My Rewards 鈫?Coupons tab.',
             ),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13.sp, color: Colors.black87),
@@ -349,8 +360,7 @@ void _showWelcomeGiftDialog() {
                   icon: const Icon(Icons.emoji_events_outlined),
                   onPressed: () {
                     Navigator.of(dCtx).pop();
-                    appNavKey.currentState?.push(MaterialPageRoute(
-                        builder: (_) => TaskManagementPage()));
+                    appNavKey.currentState?.push(MaterialPageRoute(builder: (_) => TaskManagementPage()));
                   },
                   label: Text(_fixUtf8Mojibake('My Rewards')),
                 ),
@@ -361,8 +371,7 @@ void _showWelcomeGiftDialog() {
                   icon: const Icon(Icons.card_giftcard),
                   onPressed: () {
                     Navigator.of(dCtx).pop();
-                    appNavKey.currentState?.push(MaterialPageRoute(
-                        builder: (_) => CouponManagementPage()));
+                    appNavKey.currentState?.push(MaterialPageRoute(builder: (_) => CouponManagementPage()));
                   },
                   label: Text(_fixUtf8Mojibake('My Coupons')),
                 ),
@@ -383,7 +392,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // === 闈欓煶 Supabase 鐨?refresh session 鍣煶锛堜粎寮€鍙戞湡锛?===
-  {
+      {
     final _orig = debugPrint;
     debugPrint = (String? message, {int? wrapWidth}) {
       if (message != null &&
@@ -417,9 +426,7 @@ Future<void> main() async {
               children: [
                 Icon(Icons.error_outline, color: Colors.red, size: 28.w),
                 SizedBox(height: 6.h),
-                Text('Something went wrong',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 14.sp)),
+                Text('Something went wrong', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
                 SizedBox(height: 4.h),
                 Text(
                   details.exceptionAsString(),
@@ -437,8 +444,7 @@ Future<void> main() async {
   // 鉁?鍚敤 PKCE OAuth锛堢Щ鍔ㄧ蹇呴』锛?
   await Supabase.initialize(
     url: 'https://rhckybselarzglkmlyqs.supabase.co',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoY2t5YnNlbGFyemdsa21seXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTM0NTgsImV4cCI6MjA3MDU4OTQ1OH0.3I0T2DidiF-q9l2tWeHOjB31QogXHDqRtEjDn0RfVbU',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoY2t5YnNlbGFyemdsa21seXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTM0NTgsImV4cCI6MjA3MDU4OTQ1OH0.3I0T2DidiF-q9l2tWeHOjB31QogXHDqRtEjDn0RfVbU',
     authOptions: const FlutterAuthClientOptions(
       authFlowType: AuthFlowType.pkce, // 馃憟 鍏抽敭锛屽埆鍐欐垚 flowType
       autoRefreshToken: true,
@@ -580,8 +586,7 @@ class MainNavigationPage extends StatefulWidget {
   State<MainNavigationPage> createState() => _MainNavigationPageState();
 }
 
-class _MainNavigationPageState extends State<MainNavigationPage>
-    with TickerProviderStateMixin {
+class _MainNavigationPageState extends State<MainNavigationPage> with TickerProviderStateMixin {
   int _selectedIndex = 0;
   int _notificationCount = 0;
   late AnimationController _sellButtonController;
@@ -595,11 +600,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
   final _profileKey = GlobalKey<NavigatorState>();
 
   late final List<GlobalKey<NavigatorState>> _navigatorKeys = [
-    _homeKey,
-    _savedKey,
-    _sellKey,
-    _notifKey,
-    _profileKey,
+    _homeKey, _savedKey, _sellKey, _notifKey, _profileKey,
   ];
 
   // 芒艙鈥?忙鈥撀懊ヂ⑴久寂∶甭幻郝ニ喡♀€灻┞濃劉忙鈧伱?鈥∶?
@@ -651,7 +652,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     try {
       final prefs = await SharedPreferences.getInstance();
       final pendingKey = 'new_user_welcome_pending_${user.id}';
-      final shownKey = 'welcome_gift_shown_${user.id}';
+      final shownKey   = 'welcome_gift_shown_${user.id}';
 
       // 鍙湪鈥滃垰鍒涘缓浜嗘杩庡埜鈥濈殑鎯呭喌涓嬪脊绐楋紙璇ユ爣璁板湪 wireAuthHook 涓缃负 true锛?
       final pending = prefs.getBool(pendingKey) ?? false;
@@ -683,12 +684,14 @@ class _MainNavigationPageState extends State<MainNavigationPage>
 
       if (!mounted) return;
       if (row != null) {
-        _showLocalWelcomeDialog(row); // 甯︾爜鍊肩殑寮圭獥
+        _showLocalWelcomeDialog(row);   // 甯︾爜鍊肩殑寮圭獥
       } else {
-        _showWelcomeGiftDialog(); // 鍏滃簳寮圭獥锛堟棤鐮佸€间篃鍙級
+        _showWelcomeGiftDialog();       // 鍏滃簳寮圭獥锛堟棤鐮佸€间篃鍙級
       }
     } catch (e) {
-      if (kDebugMode) {}
+      if (kDebugMode) {
+        print('[MainNavigation] Error checking welcome gift: $e');
+      }
     }
   }
 
@@ -697,8 +700,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
       context: context,
       barrierDismissible: true,
       builder: (dCtx) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
         contentPadding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 12.h),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -710,8 +712,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                 color: const Color(0xFF2196F3).withOpacity(0.12),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.card_giftcard,
-                  size: 30.w, color: const Color(0xFF2196F3)),
+              child: Icon(Icons.card_giftcard, size: 30.w, color: const Color(0xFF2196F3)),
             ),
             SizedBox(height: 12.h),
             Text(
@@ -722,7 +723,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
             Text(
               _fixUtf8Mojibake(
                 "Coupon Code: ${couponData['code']?.toString() ?? ''}\n\n"
-                "${couponData['description'] ?? 'Welcome to Swaply! Pin your item for free in any category.'}",
+                    "${couponData['description'] ?? 'Welcome to Swaply! Pin your item for free in any category.'}",
               ),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13.sp, color: Colors.black87),
@@ -751,8 +752,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                       Navigator.of(dCtx).pop();
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                            builder: (_) => CouponManagementPage()),
+                        MaterialPageRoute(builder: (_) => CouponManagementPage()),
                       );
                     },
                     label: Text(_fixUtf8Mojibake('My Coupons')),
@@ -778,7 +778,9 @@ class _MainNavigationPageState extends State<MainNavigationPage>
           setState(() => _notificationCount = count);
         }
       } catch (e) {
-        if (kDebugMode) {}
+        if (kDebugMode) {
+          print('Error loading notification count: $e');
+        }
       }
     }
   }
@@ -799,35 +801,25 @@ class _MainNavigationPageState extends State<MainNavigationPage>
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
-          title: Text(l10n.loginRequired,
-              style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600)),
-          content: Text(l10n.loginRequiredMessage(feature),
-              style: TextStyle(fontSize: 13.sp, height: 1.4)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
+          title: Text(l10n.loginRequired, style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600)),
+          content: Text(l10n.loginRequiredMessage(feature), style: TextStyle(fontSize: 13.sp, height: 1.4)),
           actions: [
             TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: Text(l10n.cancel,
-                    style:
-                        TextStyle(fontSize: 13.sp, color: Colors.grey[600]))),
+                child: Text(l10n.cancel, style: TextStyle(fontSize: 13.sp, color: Colors.grey[600]))
+            ),
             Container(
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                    colors: [Color(0xFF2196F3), Color(0xFF1E88E5)]),
+                gradient: const LinearGradient(colors: [Color(0xFF2196F3), Color(0xFF1E88E5)]),
                 borderRadius: BorderRadius.circular(6.w),
               ),
               child: TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  Navigator.of(context)
-                      .pushNamedAndRemoveUntil('/welcome', (route) => false);
+                  Navigator.of(context).pushNamedAndRemoveUntil('/welcome', (route) => false);
                 },
-                child: Text(l10n.login,
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w600)),
+                child: Text(l10n.login, style: TextStyle(color: Colors.white, fontSize: 13.sp, fontWeight: FontWeight.w600)),
               ),
             ),
           ],
@@ -836,8 +828,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     );
   }
 
-  Widget _buildTabNavigator(GlobalKey<NavigatorState> key, Widget root,
-      LanguageProvider languageProvider) {
+  Widget _buildTabNavigator(GlobalKey<NavigatorState> key, Widget root, LanguageProvider languageProvider) {
     return Navigator(
       key: key,
       onGenerateRoute: (_) => MaterialPageRoute(
@@ -861,31 +852,22 @@ class _MainNavigationPageState extends State<MainNavigationPage>
 
     // 鉁?棣栭〉鏍瑰寘涓€灞?IosInsetsGuard
     final List<Widget> _pages = [
-      _buildTabNavigator(
-          _homeKey, IosInsetsGuard(child: const _HomeRoot()), languageProvider),
-      _buildTabNavigator(
-          _savedKey,
-          _SavedRoot(
-            isGuest: widget.isGuest,
-            onNavigateToHome: _navigateToHome,
-          ),
-          languageProvider),
-      _buildTabNavigator(
-          _sellKey, _SellRoot(isGuest: widget.isGuest), languageProvider),
-      _buildTabNavigator(
-          _notifKey,
-          _NotifRoot(
-            onClearBadge: _clearNotifications,
-            isGuest: widget.isGuest,
-            onNotificationCountChanged: (count) {
-              if (mounted) {
-                setState(() => _notificationCount = count);
-              }
-            },
-          ),
-          languageProvider),
-      _buildTabNavigator(
-          _profileKey, _ProfileRoot(isGuest: widget.isGuest), languageProvider),
+      _buildTabNavigator(_homeKey, IosInsetsGuard(child: const _HomeRoot()), languageProvider),
+      _buildTabNavigator(_savedKey, _SavedRoot(
+        isGuest: widget.isGuest,
+        onNavigateToHome: _navigateToHome,
+      ), languageProvider),
+      _buildTabNavigator(_sellKey, _SellRoot(isGuest: widget.isGuest), languageProvider),
+      _buildTabNavigator(_notifKey, _NotifRoot(
+        onClearBadge: _clearNotifications,
+        isGuest: widget.isGuest,
+        onNotificationCountChanged: (count) {
+          if (mounted) {
+            setState(() => _notificationCount = count);
+          }
+        },
+      ), languageProvider),
+      _buildTabNavigator(_profileKey, _ProfileRoot(isGuest: widget.isGuest), languageProvider),
     ];
 
     return PopScope(
@@ -993,8 +975,9 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                 child: Icon(
                   isSelected ? activeIcon : icon,
                   key: ValueKey('${index}_${isSelected}'),
-                  color:
-                      isSelected ? const Color(0xFF2196F3) : Colors.grey[600],
+                  color: isSelected
+                      ? const Color(0xFF2196F3)
+                      : Colors.grey[600],
                   size: 22.w,
                 ),
               ),
@@ -1002,8 +985,9 @@ class _MainNavigationPageState extends State<MainNavigationPage>
               AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 150),
                 style: TextStyle(
-                  color:
-                      isSelected ? const Color(0xFF2196F3) : Colors.grey[600],
+                  color: isSelected
+                      ? const Color(0xFF2196F3)
+                      : Colors.grey[600],
                   fontSize: 8.5.sp,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
@@ -1121,8 +1105,9 @@ class _MainNavigationPageState extends State<MainNavigationPage>
               AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 150),
                 style: TextStyle(
-                  color:
-                      isSelected ? const Color(0xFF2196F3) : Colors.grey[600],
+                  color: isSelected
+                      ? const Color(0xFF2196F3)
+                      : Colors.grey[600],
                   fontSize: 8.5.sp,
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
@@ -1169,15 +1154,15 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                   end: Alignment.bottomRight,
                   colors: isSelected
                       ? [
-                          const Color(0xFF1565C0),
-                          const Color(0xFF2196F3),
-                          const Color(0xFF42A5F5),
-                        ]
+                    const Color(0xFF1565C0),
+                    const Color(0xFF2196F3),
+                    const Color(0xFF42A5F5),
+                  ]
                       : [
-                          const Color(0xFF2196F3),
-                          const Color(0xFF1E88E5),
-                          const Color(0xFF1976D2),
-                        ],
+                    const Color(0xFF2196F3),
+                    const Color(0xFF1E88E5),
+                    const Color(0xFF1976D2),
+                  ],
                 ),
                 borderRadius: BorderRadius.circular(28.w),
                 boxShadow: [
@@ -1260,9 +1245,9 @@ class _SavedRoot extends StatelessWidget {
   const _SavedRoot({this.isGuest = false, this.onNavigateToHome});
   @override
   Widget build(BuildContext context) => SavedPage(
-        isGuest: isGuest,
-        onNavigateToHome: onNavigateToHome,
-      );
+    isGuest: isGuest,
+    onNavigateToHome: onNavigateToHome,
+  );
 }
 
 class _SellRoot extends StatelessWidget {
@@ -1285,10 +1270,10 @@ class _NotifRoot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => NotificationPage(
-        onClearBadge: onClearBadge,
-        isGuest: isGuest,
-        onNotificationCountChanged: onNotificationCountChanged,
-      );
+    onClearBadge: onClearBadge,
+    isGuest: isGuest,
+    onNotificationCountChanged: onNotificationCountChanged,
+  );
 }
 
 class _ProfileRoot extends StatelessWidget {
@@ -1297,12 +1282,10 @@ class _ProfileRoot extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ProfilePage(isGuest: isGuest);
 }
-
 class SavedPage extends StatefulWidget {
   final bool isGuest;
   final VoidCallback? onNavigateToHome;
-  const SavedPage({Key? key, this.isGuest = false, this.onNavigateToHome})
-      : super(key: key);
+  const SavedPage({Key? key, this.isGuest = false, this.onNavigateToHome}) : super(key: key);
 
   @override
   State<SavedPage> createState() => _SavedPageState();
@@ -1352,10 +1335,12 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   /// 猫庐戮莽陆庐忙鈥澛睹ㄢ€斅徝︹€郝疵︹€撀懊р€衡€樏ヂ惵?
   void _setupFavoritesListener() {
     _favoritesSubscription = FavoritesUpdateService().favoritesStream.listen(
-      (event) {
+          (event) {
         if (!mounted || widget.isGuest) return;
 
-        if (kDebugMode) {}
+        if (kDebugMode) {
+          print('SavedPage received favorite update: ${event.listingId}, added: ${event.isAdded}');
+        }
 
         if (event.isAdded && event.listingData != null) {
           // 忙路禄氓艩 氓藛掳忙鈥澛睹ㄢ€斅徝寂∶€姑ヂ嵚趁β仿幻ヅ?氓藛掳忙艙卢氓艙掳氓藛鈥斆÷?
@@ -1379,8 +1364,9 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       if (listingId == null) return;
 
       final exists = _favoriteItems.any((item) =>
-          item['listing_id']?.toString() == listingId ||
-          item['listing']?['id']?.toString() == listingId);
+      item['listing_id']?.toString() == listingId ||
+          item['listing']?['id']?.toString() == listingId
+      );
 
       if (!exists) {
         // 忙啪鈥灻┾偓 莽卢娄氓聬藛忙鈥澛睹ㄢ€斅徝?录氓录聫莽拧鈥灻︹€⒙懊β嵚?
@@ -1394,7 +1380,9 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           _favoriteItems.insert(0, favoriteItem); // 忙聫鈥櫭モ€βッニ喡懊ニ嗏€斆÷ヂ尖偓氓陇麓
         });
 
-        if (kDebugMode) {}
+        if (kDebugMode) {
+          print('Added item to local favorites: $listingId');
+        }
       }
     } catch (e) {
       if (kDebugMode) print('Error adding to local favorites: $e');
@@ -1408,12 +1396,15 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
 
       setState(() {
         _favoriteItems.removeWhere((item) =>
-            item['listing_id']?.toString() == listingId ||
-            item['listing']?['id']?.toString() == listingId);
+        item['listing_id']?.toString() == listingId ||
+            item['listing']?['id']?.toString() == listingId
+        );
       });
 
       if (_favoriteItems.length < initialLength) {
-        if (kDebugMode) {}
+        if (kDebugMode) {
+          print('Removed item from local favorites: $listingId');
+        }
       }
     } catch (e) {
       if (kDebugMode) print('Error removing from local favorites: $e');
@@ -1450,8 +1441,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   }
 
   /// 氓庐鈥懊モ€βㄅ铰访ヂ忊€撁ヂ€斆γぢ嘎裁モ偓录
-  String _safeGetString(Map<String, dynamic> map, String key,
-      {String defaultValue = ''}) {
+  String _safeGetString(Map<String, dynamic> map, String key, {String defaultValue = ''}) {
     try {
       return map[key]?.toString() ?? defaultValue;
     } catch (e) {
@@ -1477,7 +1467,9 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         _errorMessage = null;
       });
 
-      if (kDebugMode) {}
+      if (kDebugMode) {
+        print('Loading favorites for user: ${user.id}');
+      }
 
       // 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService 猫沤路氓聫鈥撁︹€澛睹ㄢ€斅徝ニ嗏€斆÷妓喢ぢ慌?favorites 猫隆篓茂录鈥?
       final rawItems = await DualFavoritesService.getUserFavorites(
@@ -1504,10 +1496,14 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           _isLoading = false;
         });
 
-        if (kDebugMode) {}
+        if (kDebugMode) {
+          print('Loaded ${_favoriteItems.length} favorite items');
+        }
       }
     } catch (e) {
-      if (kDebugMode) {}
+      if (kDebugMode) {
+        print('Error loading favorites: $e');
+      }
 
       if (mounted) {
         setState(() {
@@ -1552,16 +1548,14 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.check_circle_rounded,
-                    color: Colors.white, size: 12.w),
+                Icon(Icons.check_circle_rounded, color: Colors.white, size: 12.w),
                 SizedBox(width: 4.w),
                 const Text('Removed from favorites and wishlist'),
               ],
             ),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6.w)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.w)),
             margin: EdgeInsets.all(8.w),
           ),
         );
@@ -1569,22 +1563,22 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         throw Exception('Failed to remove from favorites');
       }
     } catch (e) {
-      if (kDebugMode) {}
+      if (kDebugMode) {
+        print('Error removing from favorites: $e');
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
-              Icon(Icons.error_outline_rounded,
-                  color: Colors.white, size: 12.w),
+              Icon(Icons.error_outline_rounded, color: Colors.white, size: 12.w),
               SizedBox(width: 4.w),
               const Text('Failed to remove item. Please try again.'),
             ],
           ),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.w)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.w)),
           margin: EdgeInsets.all(8.w),
         ),
       );
@@ -1633,13 +1627,11 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
 
       final listingId = _safeGetString(safeItem, 'listing_id');
       if (listingId.isEmpty) {
-        if (kDebugMode)
-          print('Warning: Empty listing ID for item at index $index');
+        if (kDebugMode) print('Warning: Empty listing ID for item at index $index');
         return const SizedBox.shrink();
       }
 
-      final title =
-          _safeGetString(safeListing, 'title', defaultValue: 'Unknown Item');
+      final title = _safeGetString(safeListing, 'title', defaultValue: 'Unknown Item');
       final price = _formatPrice(safeListing['price']);
       final city = _safeGetString(safeListing, 'city');
       final imageUrl = _getListingImage(safeListing);
@@ -1701,57 +1693,49 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                         ),
                         child: imageUrl.startsWith('http')
                             ? Image.network(
-                                imageUrl,
-                                fit: BoxFit.cover,
-                                loadingBuilder:
-                                    (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return Center(
-                                    child: SizedBox(
-                                      width: 12.w,
-                                      height: 12.w,
-                                      child: CircularProgressIndicator(
-                                        value: loadingProgress
-                                                    .expectedTotalBytes !=
-                                                null
-                                            ? loadingProgress
-                                                    .cumulativeBytesLoaded /
-                                                loadingProgress
-                                                    .expectedTotalBytes!
-                                            : null,
-                                        strokeWidth: 1.w,
-                                        valueColor:
-                                            const AlwaysStoppedAnimation<Color>(
-                                                Color(0xFF2196F3)),
-                                      ),
-                                    ),
-                                  );
-                                },
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[100],
-                                      borderRadius: BorderRadius.circular(6.w),
-                                    ),
-                                    child: Icon(
-                                      Icons.image_not_supported_rounded,
-                                      color: Colors.grey[400],
-                                      size: 18.w,
-                                    ),
-                                  );
-                                },
-                              )
-                            : Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(6.w),
-                                ),
-                                child: Icon(
-                                  Icons.image_not_supported_rounded,
-                                  color: Colors.grey[400],
-                                  size: 18.w,
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Center(
+                              child: SizedBox(
+                                width: 12.w,
+                                height: 12.w,
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                      : null,
+                                  strokeWidth: 1.w,
+                                  valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2196F3)),
                                 ),
                               ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                borderRadius: BorderRadius.circular(6.w),
+                              ),
+                              child: Icon(
+                                Icons.image_not_supported_rounded,
+                                color: Colors.grey[400],
+                                size: 18.w,
+                              ),
+                            );
+                          },
+                        )
+                            : Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(6.w),
+                          ),
+                          child: Icon(
+                            Icons.image_not_supported_rounded,
+                            color: Colors.grey[400],
+                            size: 18.w,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -1775,8 +1759,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                         ),
                         SizedBox(height: 2.h),
                         Container(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 4.w, vertical: 1.h),
+                          padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
                           decoration: BoxDecoration(
                             color: const Color(0xFF2196F3).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(4.w),
@@ -1865,7 +1848,11 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         ),
       );
     } catch (e, stackTrace) {
-      if (kDebugMode) {}
+      if (kDebugMode) {
+        print('Error building favorite card at index $index: $e');
+        print('Stack trace: $stackTrace');
+        print('Item data: $item');
+      }
       // 猫驴鈥澝モ€号久┾€濃劉猫炉炉氓聧隆莽鈥扳€∶ㄢ偓艗盲赂聧忙藴炉氓麓漏忙潞茠
       return Container(
         margin: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
@@ -1900,8 +1887,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.w)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.w)),
           title: Row(
             children: [
               Container(
@@ -1910,15 +1896,13 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                   color: Colors.red.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(4.w),
                 ),
-                child: Icon(Icons.delete_outline_rounded,
-                    color: Colors.red, size: 14.w),
+                child: Icon(Icons.delete_outline_rounded, color: Colors.red, size: 14.w),
               ),
               SizedBox(width: 8.w),
               Expanded(
                 child: Text(
                   'Remove from Favorites',
-                  style:
-                      TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -1930,8 +1914,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel',
-                  style: TextStyle(fontSize: 11.sp, color: Colors.grey[600])),
+              child: Text('Cancel', style: TextStyle(fontSize: 11.sp, color: Colors.grey[600])),
             ),
             Container(
               decoration: BoxDecoration(
@@ -2044,14 +2027,12 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8.w),
                   ),
                 ),
-                icon: Icon(Icons.explore_rounded,
-                    size: 12.w, color: Colors.white),
+                icon: Icon(Icons.explore_rounded, size: 12.w, color: Colors.white),
                 label: Text(
                   'Browse Items',
                   style: TextStyle(
@@ -2121,8 +2102,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8.w),
                   ),
@@ -2130,8 +2110,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                 icon: Icon(Icons.refresh_rounded, size: 12.w),
                 label: Text(
                   'Try Again',
-                  style:
-                      TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -2148,7 +2127,9 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     try {
       l10n = AppLocalizations.of(context);
     } catch (e) {
-      if (kDebugMode) {}
+      if (kDebugMode) {
+        print('AppLocalizations not available: $e');
+      }
     }
 
     // 猫庐驴氓庐垄莽艩露忙鈧?
@@ -2197,8 +2178,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 24.w),
                 child: Text(
-                  l10n?.loginToSaveFavorites ??
-                      'Please login to view and save your favorite items.',
+                  l10n?.loginToSaveFavorites ?? 'Please login to view and save your favorite items.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.grey[600],
@@ -2224,20 +2204,17 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                 ),
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    Navigator.of(context)
-                        .pushNamedAndRemoveUntil('/welcome', (route) => false);
+                    Navigator.of(context).pushNamedAndRemoveUntil('/welcome', (route) => false);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                    padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8.w),
                     ),
                   ),
-                  icon: Icon(Icons.login_rounded,
-                      size: 12.w, color: Colors.white),
+                  icon: Icon(Icons.login_rounded, size: 12.w, color: Colors.white),
                   label: Text(
                     l10n?.loginNow ?? 'Login Now',
                     style: TextStyle(
@@ -2271,10 +2248,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         actions: [
           if (_favoriteItems.isNotEmpty && !_isLoading)
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert_rounded,
-                  color: Colors.white, size: 16.w),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.w)),
+              icon: Icon(Icons.more_vert_rounded, color: Colors.white, size: 16.w),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.w)),
               onSelected: (value) {
                 if (value == 'clear_all') {
                   _showClearAllDialog();
@@ -2285,8 +2260,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                   value: 'clear_all',
                   child: Row(
                     children: [
-                      Icon(Icons.clear_all_rounded,
-                          color: Colors.red, size: 12.w),
+                      Icon(Icons.clear_all_rounded, color: Colors.red, size: 12.w),
                       SizedBox(width: 8.w),
                       Text('Clear All', style: TextStyle(fontSize: 11.sp)),
                     ],
@@ -2298,48 +2272,46 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       ),
       body: _isLoading
           ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 24.w,
-                    height: 24.w,
-                    child: CircularProgressIndicator(
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                          Color(0xFF2196F3)),
-                      strokeWidth: 2.w,
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Text(
-                    'Loading favorites...',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 11.sp,
-                    ),
-                  ),
-                ],
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 24.w,
+              height: 24.w,
+              child: CircularProgressIndicator(
+                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2196F3)),
+                strokeWidth: 2.w,
               ),
-            )
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              'Loading favorites...',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 11.sp,
+              ),
+            ),
+          ],
+        ),
+      )
           : _errorMessage != null
-              ? _buildErrorState()
-              : _favoriteItems.isEmpty
-                  ? _buildEmptyState()
-                  : RefreshIndicator(
-                      onRefresh: _refreshFavorites,
-                      color: const Color(0xFF2196F3),
-                      backgroundColor: Colors.white,
-                      strokeWidth: 2.w,
-                      child: ListView.builder(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.symmetric(vertical: 6.h),
-                        itemCount: _favoriteItems.length,
-                        itemBuilder: (context, index) {
-                          return _buildFavoriteCard(
-                              _favoriteItems[index], index);
-                        },
-                      ),
-                    ),
+          ? _buildErrorState()
+          : _favoriteItems.isEmpty
+          ? _buildEmptyState()
+          : RefreshIndicator(
+        onRefresh: _refreshFavorites,
+        color: const Color(0xFF2196F3),
+        backgroundColor: Colors.white,
+        strokeWidth: 2.w,
+        child: ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.symmetric(vertical: 6.h),
+          itemCount: _favoriteItems.length,
+          itemBuilder: (context, index) {
+            return _buildFavoriteCard(_favoriteItems[index], index);
+          },
+        ),
+      ),
     );
   }
 
@@ -2349,8 +2321,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.w)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.w)),
           title: Row(
             children: [
               Container(
@@ -2359,15 +2330,13 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                   color: Colors.red.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(4.w),
                 ),
-                child:
-                    Icon(Icons.warning_outlined, color: Colors.red, size: 14.w),
+                child: Icon(Icons.warning_outlined, color: Colors.red, size: 14.w),
               ),
               SizedBox(width: 8.w),
               Expanded(
                 child: Text(
                   'Clear All Favorites',
-                  style:
-                      TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -2379,8 +2348,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel',
-                  style: TextStyle(fontSize: 11.sp, color: Colors.grey[600])),
+              child: Text('Cancel', style: TextStyle(fontSize: 11.sp, color: Colors.grey[600])),
             ),
             Container(
               decoration: BoxDecoration(
@@ -2418,8 +2386,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       final currentItems = List<Map<String, dynamic>>.from(_favoriteItems);
 
       // 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼忙赂鈥γ┞?
-      final success =
-          await DualFavoritesService.clearUserFavorites(userId: user.id);
+      final success = await DualFavoritesService.clearUserFavorites(userId: user.id);
 
       if (success && mounted) {
         setState(() {
@@ -2441,16 +2408,14 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.check_circle_rounded,
-                    color: Colors.white, size: 12.w),
+                Icon(Icons.check_circle_rounded, color: Colors.white, size: 12.w),
                 SizedBox(width: 4.w),
                 const Text('All favorites and wishlist cleared successfully'),
               ],
             ),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6.w)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.w)),
             margin: EdgeInsets.all(8.w),
           ),
         );
@@ -2458,22 +2423,22 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         throw Exception('Failed to clear favorites');
       }
     } catch (e) {
-      if (kDebugMode) {}
+      if (kDebugMode) {
+        print('Error clearing favorites: $e');
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
-              Icon(Icons.error_outline_rounded,
-                  color: Colors.white, size: 12.w),
+              Icon(Icons.error_outline_rounded, color: Colors.white, size: 12.w),
               SizedBox(width: 4.w),
               const Text('Failed to clear favorites. Please try again.'),
             ],
           ),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.w)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.w)),
           margin: EdgeInsets.all(8.w),
         ),
       );
@@ -2518,7 +2483,9 @@ class _WishlistPageState extends State<WishlistPage> {
         _errorMessage = null;
       });
 
-      if (kDebugMode) {}
+      if (kDebugMode) {
+        print('Loading wishlist for user: ${user.id}');
+      }
 
       // 盲陆驴莽鈥澛?DualFavoritesService 猫沤路氓聫鈥撁ヂ科捗︹€灺棵ヂ嶁€⒚ニ嗏€斆÷妓喢ぢ慌?wishlists 猫隆篓茂录鈥?
       final items = await DualFavoritesService.getUserWishlist(
@@ -2532,10 +2499,14 @@ class _WishlistPageState extends State<WishlistPage> {
           _isLoading = false;
         });
 
-        if (kDebugMode) {}
+        if (kDebugMode) {
+          print('Loaded ${items.length} wishlist items');
+        }
       }
     } catch (e) {
-      if (kDebugMode) {}
+      if (kDebugMode) {
+        print('Error loading wishlist: $e');
+      }
 
       if (mounted) {
         setState(() {
@@ -2574,16 +2545,14 @@ class _WishlistPageState extends State<WishlistPage> {
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.check_circle_rounded,
-                    color: Colors.white, size: 16.w),
+                Icon(Icons.check_circle_rounded, color: Colors.white, size: 16.w),
                 SizedBox(width: 6.w),
                 const Text('Removed from wishlist and favorites'),
               ],
             ),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.w)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.w)),
             margin: EdgeInsets.all(12.w),
           ),
         );
@@ -2591,22 +2560,22 @@ class _WishlistPageState extends State<WishlistPage> {
         throw Exception('Failed to remove from wishlist');
       }
     } catch (e) {
-      if (kDebugMode) {}
+      if (kDebugMode) {
+        print('Error removing from wishlist: $e');
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
-              Icon(Icons.error_outline_rounded,
-                  color: Colors.white, size: 16.w),
+              Icon(Icons.error_outline_rounded, color: Colors.white, size: 16.w),
               SizedBox(width: 6.w),
               const Text('Failed to remove item. Please try again.'),
             ],
           ),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.w)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.w)),
           margin: EdgeInsets.all(12.w),
         ),
       );
@@ -2640,8 +2609,7 @@ class _WishlistPageState extends State<WishlistPage> {
   /// 忙啪鈥灻ヂ宦好ヂ科捗︹€灺棵ヂ嶁€⒚ヂ嵚∶р€扳€?
   Widget _buildWishlistCard(Map<String, dynamic> item, int index) {
     final listing = item['listing'] ?? {};
-    final listingId =
-        item['listing_id']?.toString() ?? listing['id']?.toString() ?? '';
+    final listingId = item['listing_id']?.toString() ?? listing['id']?.toString() ?? '';
     final title = listing['title']?.toString() ?? 'Unknown Item';
     final price = _formatPrice(listing['price']);
     final city = listing['city']?.toString() ?? '';
@@ -2704,57 +2672,49 @@ class _WishlistPageState extends State<WishlistPage> {
                       ),
                       child: imageUrl.startsWith('http')
                           ? Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              loadingBuilder:
-                                  (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Center(
-                                  child: SizedBox(
-                                    width: 15.w,
-                                    height: 15.w,
-                                    child: CircularProgressIndicator(
-                                      value:
-                                          loadingProgress.expectedTotalBytes !=
-                                                  null
-                                              ? loadingProgress
-                                                      .cumulativeBytesLoaded /
-                                                  loadingProgress
-                                                      .expectedTotalBytes!
-                                              : null,
-                                      strokeWidth: 1.5.w,
-                                      valueColor:
-                                          const AlwaysStoppedAnimation<Color>(
-                                              Colors.pink),
-                                    ),
-                                  ),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.pink[50],
-                                    borderRadius: BorderRadius.circular(8.w),
-                                  ),
-                                  child: Icon(
-                                    Icons.image_not_supported_rounded,
-                                    color: Colors.pink[300],
-                                    size: 24.w,
-                                  ),
-                                );
-                              },
-                            )
-                          : Container(
-                              decoration: BoxDecoration(
-                                color: Colors.pink[50],
-                                borderRadius: BorderRadius.circular(8.w),
-                              ),
-                              child: Icon(
-                                Icons.image_not_supported_rounded,
-                                color: Colors.pink[300],
-                                size: 24.w,
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: SizedBox(
+                              width: 15.w,
+                              height: 15.w,
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                    : null,
+                                strokeWidth: 1.5.w,
+                                valueColor: const AlwaysStoppedAnimation<Color>(Colors.pink),
                               ),
                             ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: Colors.pink[50],
+                              borderRadius: BorderRadius.circular(8.w),
+                            ),
+                            child: Icon(
+                              Icons.image_not_supported_rounded,
+                              color: Colors.pink[300],
+                              size: 24.w,
+                            ),
+                          );
+                        },
+                      )
+                          : Container(
+                        decoration: BoxDecoration(
+                          color: Colors.pink[50],
+                          borderRadius: BorderRadius.circular(8.w),
+                        ),
+                        child: Icon(
+                          Icons.image_not_supported_rounded,
+                          color: Colors.pink[300],
+                          size: 24.w,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -2778,8 +2738,7 @@ class _WishlistPageState extends State<WishlistPage> {
                       ),
                       SizedBox(height: 4.h),
                       Container(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 6.w, vertical: 2.h),
+                        padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
                         decoration: BoxDecoration(
                           color: Colors.pink.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(6.w),
@@ -2875,8 +2834,7 @@ class _WishlistPageState extends State<WishlistPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
           title: Row(
             children: [
               Container(
@@ -2885,15 +2843,13 @@ class _WishlistPageState extends State<WishlistPage> {
                   color: Colors.red.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6.w),
                 ),
-                child: Icon(Icons.delete_outline_rounded,
-                    color: Colors.red, size: 16.w),
+                child: Icon(Icons.delete_outline_rounded, color: Colors.red, size: 16.w),
               ),
               SizedBox(width: 10.w),
               Expanded(
                 child: Text(
                   'Remove from Wishlist',
-                  style:
-                      TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -2905,8 +2861,7 @@ class _WishlistPageState extends State<WishlistPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel',
-                  style: TextStyle(fontSize: 13.sp, color: Colors.grey[600])),
+              child: Text('Cancel', style: TextStyle(fontSize: 13.sp, color: Colors.grey[600])),
             ),
             Container(
               decoration: BoxDecoration(
@@ -3011,14 +2966,12 @@ class _WishlistPageState extends State<WishlistPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+                  padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12.w),
                   ),
                 ),
-                icon: Icon(Icons.explore_rounded,
-                    size: 16.w, color: Colors.white),
+                icon: Icon(Icons.explore_rounded, size: 16.w, color: Colors.white),
                 label: Text(
                   'Browse Items',
                   style: TextStyle(
@@ -3088,8 +3041,7 @@ class _WishlistPageState extends State<WishlistPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                  padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10.w),
                   ),
@@ -3097,8 +3049,7 @@ class _WishlistPageState extends State<WishlistPage> {
                 icon: Icon(Icons.refresh_rounded, size: 16.w),
                 label: Text(
                   'Try Again',
-                  style:
-                      TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -3126,10 +3077,8 @@ class _WishlistPageState extends State<WishlistPage> {
         actions: [
           if (_wishlistItems.isNotEmpty && !_isLoading)
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert_rounded,
-                  color: Colors.white, size: 20.w),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.w)),
+              icon: Icon(Icons.more_vert_rounded, color: Colors.white, size: 20.w),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.w)),
               onSelected: (value) {
                 if (value == 'clear_all') {
                   _showClearAllDialog();
@@ -3140,8 +3089,7 @@ class _WishlistPageState extends State<WishlistPage> {
                   value: 'clear_all',
                   child: Row(
                     children: [
-                      Icon(Icons.clear_all_rounded,
-                          color: Colors.red, size: 16.w),
+                      Icon(Icons.clear_all_rounded, color: Colors.red, size: 16.w),
                       SizedBox(width: 10.w),
                       Text('Clear All', style: TextStyle(fontSize: 13.sp)),
                     ],
@@ -3153,48 +3101,46 @@ class _WishlistPageState extends State<WishlistPage> {
       ),
       body: _isLoading
           ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 30.w,
-                    height: 30.w,
-                    child: CircularProgressIndicator(
-                      valueColor:
-                          const AlwaysStoppedAnimation<Color>(Colors.pink),
-                      strokeWidth: 2.5.w,
-                    ),
-                  ),
-                  SizedBox(height: 12.h),
-                  Text(
-                    'Loading wishlist...',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 13.sp,
-                    ),
-                  ),
-                ],
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 30.w,
+              height: 30.w,
+              child: CircularProgressIndicator(
+                valueColor: const AlwaysStoppedAnimation<Color>(Colors.pink),
+                strokeWidth: 2.5.w,
               ),
-            )
+            ),
+            SizedBox(height: 12.h),
+            Text(
+              'Loading wishlist...',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 13.sp,
+              ),
+            ),
+          ],
+        ),
+      )
           : _errorMessage != null
-              ? _buildErrorState()
-              : _wishlistItems.isEmpty
-                  ? _buildEmptyState()
-                  : RefreshIndicator(
-                      onRefresh: _refreshWishlist,
-                      color: Colors.pink,
-                      backgroundColor: Colors.white,
-                      strokeWidth: 2.w,
-                      child: ListView.builder(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.symmetric(vertical: 8.h),
-                        itemCount: _wishlistItems.length,
-                        itemBuilder: (context, index) {
-                          return _buildWishlistCard(
-                              _wishlistItems[index], index);
-                        },
-                      ),
-                    ),
+          ? _buildErrorState()
+          : _wishlistItems.isEmpty
+          ? _buildEmptyState()
+          : RefreshIndicator(
+        onRefresh: _refreshWishlist,
+        color: Colors.pink,
+        backgroundColor: Colors.white,
+        strokeWidth: 2.w,
+        child: ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.symmetric(vertical: 8.h),
+          itemCount: _wishlistItems.length,
+          itemBuilder: (context, index) {
+            return _buildWishlistCard(_wishlistItems[index], index);
+          },
+        ),
+      ),
     );
   }
 
@@ -3204,8 +3150,7 @@ class _WishlistPageState extends State<WishlistPage> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
           title: Row(
             children: [
               Container(
@@ -3214,15 +3159,13 @@ class _WishlistPageState extends State<WishlistPage> {
                   color: Colors.red.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6.w),
                 ),
-                child:
-                    Icon(Icons.warning_outlined, color: Colors.red, size: 16.w),
+                child: Icon(Icons.warning_outlined, color: Colors.red, size: 16.w),
               ),
               SizedBox(width: 10.w),
               Expanded(
                 child: Text(
                   'Clear All Wishlist',
-                  style:
-                      TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -3234,8 +3177,7 @@ class _WishlistPageState extends State<WishlistPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel',
-                  style: TextStyle(fontSize: 13.sp, color: Colors.grey[600])),
+              child: Text('Cancel', style: TextStyle(fontSize: 13.sp, color: Colors.grey[600])),
             ),
             Container(
               decoration: BoxDecoration(
@@ -3270,8 +3212,7 @@ class _WishlistPageState extends State<WishlistPage> {
 
     try {
       // 盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼忙赂鈥γ┞?
-      final success =
-          await DualFavoritesService.clearUserFavorites(userId: user.id);
+      final success = await DualFavoritesService.clearUserFavorites(userId: user.id);
 
       if (success && mounted) {
         setState(() {
@@ -3282,16 +3223,14 @@ class _WishlistPageState extends State<WishlistPage> {
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.check_circle_rounded,
-                    color: Colors.white, size: 16.w),
+                Icon(Icons.check_circle_rounded, color: Colors.white, size: 16.w),
                 SizedBox(width: 6.w),
                 const Text('All wishlist and favorites cleared successfully'),
               ],
             ),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.w)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.w)),
             margin: EdgeInsets.all(12.w),
           ),
         );
@@ -3299,22 +3238,22 @@ class _WishlistPageState extends State<WishlistPage> {
         throw Exception('Failed to clear wishlist');
       }
     } catch (e) {
-      if (kDebugMode) {}
+      if (kDebugMode) {
+        print('Error clearing wishlist: $e');
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
-              Icon(Icons.error_outline_rounded,
-                  color: Colors.white, size: 16.w),
+              Icon(Icons.error_outline_rounded, color: Colors.white, size: 16.w),
               SizedBox(width: 6.w),
               const Text('Failed to clear wishlist. Please try again.'),
             ],
           ),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.w)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.w)),
           margin: EdgeInsets.all(12.w),
         ),
       );
@@ -3374,9 +3313,8 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     }
 
     final raw = ListingStore.i.getAll();
-    final List<Map<String, dynamic>> myListings = (raw is List)
-        ? List<Map<String, dynamic>>.from(raw)
-        : const <Map<String, dynamic>>[];
+    final List<Map<String, dynamic>> myListings =
+    (raw is List) ? List<Map<String, dynamic>>.from(raw) : const <Map<String, dynamic>>[];
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -3484,8 +3422,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                     ),
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        Navigator.of(context).pushNamedAndRemoveUntil(
-                            '/welcome', (route) => false);
+                        Navigator.of(context).pushNamedAndRemoveUntil('/welcome', (route) => false);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
@@ -3494,8 +3431,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                           borderRadius: BorderRadius.circular(16.r),
                         ),
                       ),
-                      icon: Icon(Icons.login_rounded,
-                          size: 20.r, color: Colors.white),
+                      icon: Icon(Icons.login_rounded, size: 20.r, color: Colors.white),
                       label: Text(
                         l10n.loginNow,
                         style: TextStyle(
@@ -3629,8 +3565,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                   ),
                   SizedBox(height: 24.h),
                   Container(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+                    padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
                     decoration: BoxDecoration(
                       color: const Color(0xFF2196F3).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16.r),
@@ -3646,9 +3581,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                                 color: const Color(0xFF2196F3), size: 20.r),
                             SizedBox(width: 8.w),
                             Text('Take quality photos',
-                                style: TextStyle(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w600)),
+                                style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600)),
                           ],
                         ),
                         SizedBox(height: 8.h),
@@ -3658,9 +3591,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                                 color: const Color(0xFF2196F3), size: 20.r),
                             SizedBox(width: 8.w),
                             Text('Write detailed description',
-                                style: TextStyle(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w600)),
+                                style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600)),
                           ],
                         ),
                         SizedBox(height: 8.h),
@@ -3670,9 +3601,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                                 color: const Color(0xFF2196F3), size: 20.r),
                             SizedBox(width: 8.w),
                             Text('Set competitive price',
-                                style: TextStyle(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w600)),
+                                style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600)),
                           ],
                         ),
                       ],
@@ -3706,8 +3635,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                       onPressed: () => Navigator.of(context).push(
                         MaterialPageRoute(builder: (_) => const SellFormPage()),
                       ),
-                      icon: Icon(Icons.add_rounded,
-                          color: Colors.white, size: 24.r),
+                      icon: Icon(Icons.add_rounded, color: Colors.white, size: 24.r),
                       label: Text(
                         l10n.postNewAd,
                         style: TextStyle(
@@ -3727,11 +3655,10 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildListingsContent(
-      List<Map<String, dynamic>> myListings, AppLocalizations l10n) {
+  Widget _buildListingsContent(List<Map<String, dynamic>> myListings, AppLocalizations l10n) {
     return SliverList(
       delegate: SliverChildBuilderDelegate(
-        (context, index) {
+            (context, index) {
           if (index == 0) {
             return _buildStatsHeader(myListings, l10n);
           }
@@ -3755,12 +3682,9 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildStatsHeader(
-      List<Map<String, dynamic>> myListings, AppLocalizations l10n) {
-    final totalViews =
-        myListings.fold<int>(0, (sum, item) => sum + 234); // Mock data
-    final totalLikes =
-        myListings.fold<int>(0, (sum, item) => sum + 12); // Mock data
+  Widget _buildStatsHeader(List<Map<String, dynamic>> myListings, AppLocalizations l10n) {
+    final totalViews = myListings.fold<int>(0, (sum, item) => sum + 234); // Mock data
+    final totalLikes = myListings.fold<int>(0, (sum, item) => sum + 12); // Mock data
 
     return Container(
       margin: EdgeInsets.all(16.w),
@@ -3851,26 +3775,11 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
           SizedBox(height: 20.h),
           Row(
             children: [
-              Expanded(
-                  child: _buildStatCard(
-                      Icons.visibility_rounded,
-                      totalViews.toString(),
-                      'Total Views',
-                      const Color(0xFF2196F3))),
+              Expanded(child: _buildStatCard(Icons.visibility_rounded, totalViews.toString(), 'Total Views', const Color(0xFF2196F3))),
               SizedBox(width: 12.w),
-              Expanded(
-                  child: _buildStatCard(
-                      Icons.favorite_rounded,
-                      totalLikes.toString(),
-                      'Total Likes',
-                      Colors.red.shade400)),
+              Expanded(child: _buildStatCard(Icons.favorite_rounded, totalLikes.toString(), 'Total Likes', Colors.red.shade400)),
               SizedBox(width: 12.w),
-              Expanded(
-                  child: _buildStatCard(
-                      Icons.trending_up_rounded,
-                      '${(totalViews * 0.15).toInt()}',
-                      'Engagement',
-                      Colors.green.shade400)),
+              Expanded(child: _buildStatCard(Icons.trending_up_rounded, '${(totalViews * 0.15).toInt()}', 'Engagement', Colors.green.shade400)),
             ],
           ),
         ],
@@ -3878,8 +3787,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildStatCard(
-      IconData icon, String value, String label, Color color) {
+  Widget _buildStatCard(IconData icon, String value, String label, Color color) {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
@@ -3962,20 +3870,19 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                       borderRadius: BorderRadius.circular(16.r),
                       child: item['images'] != null && item['images'].isNotEmpty
                           ? Image.asset(
-                              item['images'][0],
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Icon(
-                                Icons.image_rounded,
-                                color: Colors.grey.shade400,
-                                size: 32.r,
-                              ),
-                            )
+                        item['images'][0],
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Icon(
+                          Icons.image_rounded,
+                          color: Colors.grey.shade400,
+                          size: 32.r,
+                        ),
+                      )
                           : Icon(
-                              Icons.image_rounded,
-                              color: Colors.grey.shade400,
-                              size: 32.r,
-                            ),
+                        Icons.image_rounded,
+                        color: Colors.grey.shade400,
+                        size: 32.r,
+                      ),
                     ),
                   ),
                 ),
@@ -3999,8 +3906,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                       ),
                       SizedBox(height: 8.h),
                       Container(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 12.w, vertical: 6.h),
+                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
@@ -4025,14 +3931,11 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                       SizedBox(height: 12.h),
                       Row(
                         children: [
-                          _buildEnhancedStatItem(Icons.visibility_rounded,
-                              '234', Colors.blue.shade400),
+                          _buildEnhancedStatItem(Icons.visibility_rounded, '234', Colors.blue.shade400),
                           SizedBox(width: 16.w),
-                          _buildEnhancedStatItem(Icons.favorite_rounded, '12',
-                              Colors.red.shade400),
+                          _buildEnhancedStatItem(Icons.favorite_rounded, '12', Colors.red.shade400),
                           SizedBox(width: 16.w),
-                          _buildEnhancedStatItem(Icons.chat_bubble_rounded, '3',
-                              Colors.green.shade400),
+                          _buildEnhancedStatItem(Icons.chat_bubble_rounded, '3', Colors.green.shade400),
                         ],
                       ),
                     ],
@@ -4057,12 +3960,9 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                     ),
                     onSelected: (value) => _handleMenuAction(value, item, l10n),
                     itemBuilder: (BuildContext context) => [
-                      _buildMenuItem('view', Icons.visibility_rounded, 'View',
-                          Colors.blue.shade600),
-                      _buildMenuItem('edit', Icons.edit_rounded, 'Edit',
-                          Colors.orange.shade600),
-                      _buildMenuItem('delete', Icons.delete_outline_rounded,
-                          'Delete', Colors.red.shade600),
+                      _buildMenuItem('view', Icons.visibility_rounded, 'View', Colors.blue.shade600),
+                      _buildMenuItem('edit', Icons.edit_rounded, 'Edit', Colors.orange.shade600),
+                      _buildMenuItem('delete', Icons.delete_outline_rounded, 'Delete', Colors.red.shade600),
                     ],
                   ),
                 ),
@@ -4074,8 +3974,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     );
   }
 
-  PopupMenuItem<String> _buildMenuItem(
-      String value, IconData icon, String text, Color color) {
+  PopupMenuItem<String> _buildMenuItem(String value, IconData icon, String text, Color color) {
     return PopupMenuItem(
       value: value,
       child: Row(
@@ -4089,8 +3988,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
             child: Icon(icon, size: 16.r, color: color),
           ),
           SizedBox(width: 12.w),
-          Text(text,
-              style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500)),
+          Text(text, style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500)),
         ],
       ),
     );
@@ -4121,8 +4019,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     );
   }
 
-  void _handleMenuAction(
-      String action, Map<String, dynamic> item, AppLocalizations l10n) async {
+  void _handleMenuAction(String action, Map<String, dynamic> item, AppLocalizations l10n) async {
     switch (action) {
       case 'view':
         Navigator.push(
@@ -4153,8 +4050,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
         title: Row(
           children: [
             Container(
@@ -4163,8 +4059,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                 color: Colors.red.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12.r),
               ),
-              child: Icon(Icons.delete_outline_rounded,
-                  color: Colors.red, size: 24.r),
+              child: Icon(Icons.delete_outline_rounded, color: Colors.red, size: 24.r),
             ),
             SizedBox(width: 12.w),
             Expanded(
@@ -4182,13 +4077,11 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel',
-                style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600)),
+            child: Text('Cancel', style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade600)),
           ),
           Container(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                  colors: [Colors.red.shade400, Colors.red.shade600]),
+              gradient: LinearGradient(colors: [Colors.red.shade400, Colors.red.shade600]),
               borderRadius: BorderRadius.circular(12.r),
             ),
             child: TextButton(
@@ -4198,10 +4091,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
               },
               child: Text(
                 'Delete',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600),
+                style: TextStyle(color: Colors.white, fontSize: 14.sp, fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -4212,8 +4102,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
 
   void _deleteListing(Map<String, dynamic> item, AppLocalizations l10n) async {
     try {
-      final urls =
-          (item['images'] as List?)?.cast<String>() ?? const <String>[];
+      final urls = (item['images'] as List?)?.cast<String>() ?? const <String>[];
       final paths = urls
           .map(ListingService.publicUrlToObjectPath)
           .whereType<String>()
@@ -4229,16 +4118,14 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.check_circle_rounded,
-                    color: Colors.white, size: 18.r),
+                Icon(Icons.check_circle_rounded, color: Colors.white, size: 18.r),
                 SizedBox(width: 8.w),
                 Text(l10n.listingDeleted),
               ],
             ),
             backgroundColor: Colors.green.shade600,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
             margin: EdgeInsets.all(16.w),
           ),
         );
@@ -4249,16 +4136,14 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.error_outline_rounded,
-                    color: Colors.white, size: 18.r),
+                Icon(Icons.error_outline_rounded, color: Colors.white, size: 18.r),
                 SizedBox(width: 8.w),
                 Expanded(child: Text('Delete failed: $e')),
               ],
             ),
             backgroundColor: Colors.red.shade600,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
             margin: EdgeInsets.all(16.w),
           ),
         );
@@ -4300,8 +4185,7 @@ class _NotificationPageState extends State<NotificationPage> {
     }
 
     if (widget.onClearBadge != null) {
-      WidgetsBinding.instance
-          .addPostFrameCallback((_) => widget.onClearBadge!());
+      WidgetsBinding.instance.addPostFrameCallback((_) => widget.onClearBadge!());
     }
   }
 
@@ -4328,7 +4212,9 @@ class _NotificationPageState extends State<NotificationPage> {
         _updateUnreadCount();
       }
     } catch (e) {
-      if (kDebugMode) {}
+      if (kDebugMode) {
+        print('Error loading notifications: $e');
+      }
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -4341,9 +4227,8 @@ class _NotificationPageState extends State<NotificationPage> {
     if (user == null) return;
 
     await NotificationService.subscribeUser(
-      user.id, // 盲陆聧莽陆庐氓聫鈥毭︹€⒙?
-      onEvent: (Map<String, dynamic> notification) {
-        // 氓鈥樎矫ヂ惵嵜ヂ忊€毭︹€⒙?
+      user.id,  // 盲陆聧莽陆庐氓聫鈥毭︹€⒙?
+      onEvent: (Map<String, dynamic> notification) {  // 氓鈥樎矫ヂ惵嵜ヂ忊€毭︹€⒙?
         if (!mounted) return;
         setState(() {
           _notifications.insert(0, notification);
@@ -4358,8 +4243,7 @@ class _NotificationPageState extends State<NotificationPage> {
   }
 
   void _updateUnreadCount() {
-    final unreadCount =
-        _notifications.where((n) => n['is_read'] != true).length;
+    final unreadCount = _notifications.where((n) => n['is_read'] != true).length;
     if (widget.onNotificationCountChanged != null) {
       widget.onNotificationCountChanged!(unreadCount);
     }
@@ -4382,7 +4266,9 @@ class _NotificationPageState extends State<NotificationPage> {
         _updateUnreadCount();
       }
     } catch (e) {
-      if (kDebugMode) {}
+      if (kDebugMode) {
+        print('Error marking notification as read: $e');
+      }
     }
   }
 
@@ -4402,39 +4288,35 @@ class _NotificationPageState extends State<NotificationPage> {
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.check_circle_rounded,
-                    color: Colors.white, size: 14.sp),
+                Icon(Icons.check_circle_rounded, color: Colors.white, size: 14.sp),
                 SizedBox(width: 6.w),
-                Text(l10n.notificationDeleted,
-                    style: TextStyle(fontSize: 12.sp)),
+                Text(l10n.notificationDeleted, style: TextStyle(fontSize: 12.sp)),
               ],
             ),
             backgroundColor: Colors.green.shade600,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6.r)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.r)),
             margin: EdgeInsets.all(8.w),
             duration: Duration(seconds: 2),
           ),
         );
       }
     } catch (e) {
-      if (kDebugMode) {}
+      if (kDebugMode) {
+        print('Error deleting notification: $e');
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
-              Icon(Icons.error_outline_rounded,
-                  color: Colors.white, size: 14.sp),
+              Icon(Icons.error_outline_rounded, color: Colors.white, size: 14.sp),
               SizedBox(width: 6.w),
-              Text('Failed to delete notification',
-                  style: TextStyle(fontSize: 12.sp)),
+              Text('Failed to delete notification', style: TextStyle(fontSize: 12.sp)),
             ],
           ),
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.r)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.r)),
           margin: EdgeInsets.all(8.w),
           duration: Duration(seconds: 2),
         ),
@@ -4456,7 +4338,9 @@ class _NotificationPageState extends State<NotificationPage> {
         _updateUnreadCount();
       }
     } catch (e) {
-      if (kDebugMode) {}
+      if (kDebugMode) {
+        print('Error marking all as read: $e');
+      }
     }
   }
 
@@ -4469,7 +4353,9 @@ class _NotificationPageState extends State<NotificationPage> {
         _updateUnreadCount();
       }
     } catch (e) {
-      if (kDebugMode) {}
+      if (kDebugMode) {
+        print('Error clearing all notifications: $e');
+      }
     }
   }
 
@@ -4515,8 +4401,7 @@ class _NotificationPageState extends State<NotificationPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg, style: TextStyle(fontSize: 12.sp)),
-        backgroundColor:
-            isError ? Colors.red.shade600 : const Color(0xFF4CAF50),
+        backgroundColor: isError ? Colors.red.shade600 : const Color(0xFF4CAF50),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.r)),
         margin: EdgeInsets.all(8.w),
@@ -4532,6 +4417,7 @@ class _NotificationPageState extends State<NotificationPage> {
     }
 
     // 忙路禄氓艩 猫掳茠猫炉鈥⒚︹€斅ッヂ库€?
+    print('[NotificationPage] 莽鈥毬姑モ€÷幻┾偓拧莽鸥楼: ${notification.toString()}');
 
     final type = notification['type']?.toString() ?? '';
 
@@ -4559,15 +4445,22 @@ class _NotificationPageState extends State<NotificationPage> {
 
     final notificationId = notification['id']?.toString();
 
+    print('[NotificationPage] 猫搂拢忙啪聬莽禄鈥溍ε九?- Type: $type, ListingId: $listingId, OfferId: $offerId, NotificationId: $notificationId');
+    print('[NotificationPage] Payload忙鈥⒙懊β嵚? $payload');
+    print('[NotificationPage] Metadata忙鈥⒙懊β嵚? $metadata');
+
     // 忙拢鈧ε嘎ッ︹€⒙懊β嵚ヂ捗︹€⒙疵︹偓搂
     if (type.isEmpty) {
+      print('[NotificationPage] 茅鈥濃劉猫炉炉茂录拧茅鈧∶嘎ッ甭幻ヅ锯€姑ぢ嘎好┞?);
       _showSnack('Notification data is incomplete', isError: true);
       return;
     }
 
     switch (type) {
       case 'message':
+        print('[NotificationPage] 氓陇鈥灻愨€犆β端喢β伮甭幻ヅ锯€姑┾偓拧莽鸥楼');
         if (offerId != null && offerId.isNotEmpty) {
+          print('[NotificationPage] 猫路鲁猫陆卢氓藛掳忙艩楼盲禄路猫炉娄忙茠鈥γ┞÷? $offerId');
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -4578,13 +4471,16 @@ class _NotificationPageState extends State<NotificationPage> {
             ),
           );
         } else {
+          print('[NotificationPage] 忙露藛忙聛炉莽卤禄氓啪鈥姑┾偓拧莽鸥楼莽录潞氓掳鈥榦ffer_id');
           _showSnack('Cannot open message: missing offer ID', isError: true);
         }
         break;
 
       case 'offer':
       case 'system':
+        print('[NotificationPage] 氓陇鈥灻愨€犆ε犅ッぢ宦?莽鲁禄莽禄鸥莽卤禄氓啪鈥姑┾偓拧莽鸥楼');
         if (offerId != null && offerId.isNotEmpty) {
+          print('[NotificationPage] 猫路鲁猫陆卢氓藛掳忙艩楼盲禄路猫炉娄忙茠鈥γ┞÷? $offerId');
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -4595,6 +4491,7 @@ class _NotificationPageState extends State<NotificationPage> {
             ),
           );
         } else if (listingId != null && listingId.isNotEmpty) {
+          print('[NotificationPage] 猫路鲁猫陆卢氓藛掳氓鈥⑩€犆モ€溌伱γζ掆€γ┞÷? $listingId');
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -4602,15 +4499,18 @@ class _NotificationPageState extends State<NotificationPage> {
             ),
           );
         } else {
-          _showSnack('Cannot open notification: missing required IDs',
-              isError: true);
+          print('[NotificationPage] 忙艩楼盲禄路莽卤禄氓啪鈥姑┾偓拧莽鸥楼莽录潞氓掳鈥樏ヂ库€γβ伱♀€濱D盲驴隆忙聛炉');
+          print('[NotificationPage] 氓沤鸥氓搂鈥姑┾偓拧莽鸥楼忙鈥⒙懊β嵚? ${notification.toString()}');
+          _showSnack('Cannot open notification: missing required IDs', isError: true);
         }
         break;
 
       case 'wishlist':
       case 'price_drop':
       default:
+        print('[NotificationPage] 氓陇鈥灻愨€犆モ€β睹ぢ烩€撁甭幻ヅ锯€姑┾偓拧莽鸥楼: $type');
         if (listingId != null && listingId.isNotEmpty) {
+          print('[NotificationPage] 猫路鲁猫陆卢氓藛掳氓鈥⑩€犆モ€溌伱γζ掆€γ┞÷? $listingId');
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -4618,15 +4518,14 @@ class _NotificationPageState extends State<NotificationPage> {
             ),
           );
         } else {
-          _showSnack('Cannot open notification: missing listing ID',
-              isError: true);
+          print('[NotificationPage] 茅鈧∶嘎ッ悸好ヂ扳€榣isting_id');
+          _showSnack('Cannot open notification: missing listing ID', isError: true);
         }
         break;
     }
   }
 
-  Map<String, dynamic>? _buildOfferDataFromNotification(
-      Map<String, dynamic> notification) {
+  Map<String, dynamic>? _buildOfferDataFromNotification(Map<String, dynamic> notification) {
     final metadata = notification['metadata'] as Map<String, dynamic>? ?? {};
     final offerId = notification['offer_id']?.toString();
 
@@ -4724,20 +4623,17 @@ class _NotificationPageState extends State<NotificationPage> {
                 child: ElevatedButton.icon(
                   onPressed: () => Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(
-                        builder: (context) => const LoginScreen()),
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                    padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10.r),
                     ),
                   ),
-                  icon: Icon(Icons.login_rounded,
-                      size: 14.r, color: Colors.white),
+                  icon: Icon(Icons.login_rounded, size: 14.r, color: Colors.white),
                   label: Text(
                     l10n.loginNow,
                     style: TextStyle(
@@ -4754,8 +4650,7 @@ class _NotificationPageState extends State<NotificationPage> {
       );
     }
 
-    final unreadCount =
-        _notifications.where((n) => n['is_read'] != true).length;
+    final unreadCount = _notifications.where((n) => n['is_read'] != true).length;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -4774,10 +4669,8 @@ class _NotificationPageState extends State<NotificationPage> {
         actions: [
           if (_notifications.isNotEmpty)
             PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert_rounded,
-                  color: Colors.white, size: 18.r),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.r)),
+              icon: Icon(Icons.more_vert_rounded, color: Colors.white, size: 18.r),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
               onSelected: (value) {
                 if (value == 'mark_all_read') {
                   _markAllAsRead();
@@ -4790,11 +4683,9 @@ class _NotificationPageState extends State<NotificationPage> {
                   value: 'mark_all_read',
                   child: Row(
                     children: [
-                      Icon(Icons.done_all_rounded,
-                          size: 14.r, color: Colors.grey.shade600),
+                      Icon(Icons.done_all_rounded, size: 14.r, color: Colors.grey.shade600),
                       SizedBox(width: 8.w),
-                      Text(l10n.markAllAsRead,
-                          style: TextStyle(fontSize: 12.sp)),
+                      Text(l10n.markAllAsRead, style: TextStyle(fontSize: 12.sp)),
                     ],
                   ),
                 ),
@@ -4802,11 +4693,9 @@ class _NotificationPageState extends State<NotificationPage> {
                   value: 'clear_all',
                   child: Row(
                     children: [
-                      Icon(Icons.clear_all_rounded,
-                          color: Colors.red, size: 14.r),
+                      Icon(Icons.clear_all_rounded, color: Colors.red, size: 14.r),
                       SizedBox(width: 8.w),
-                      Text(l10n.clearAll,
-                          style: TextStyle(fontSize: 12.sp, color: Colors.red)),
+                      Text(l10n.clearAll, style: TextStyle(fontSize: 12.sp, color: Colors.red)),
                     ],
                   ),
                 ),
@@ -4816,246 +4705,236 @@ class _NotificationPageState extends State<NotificationPage> {
       ),
       body: _isLoading
           ? Center(
-              child: Container(
-                padding: EdgeInsets.all(24.w),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF2196F3).withOpacity(0.08),
-                      blurRadius: 10.r,
-                      offset: Offset(0, 4.h),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 40.w,
-                      height: 40.w,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            const Color(0xFF2196F3).withOpacity(0.2),
-                            const Color(0xFF2196F3).withOpacity(0.1),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(20.r),
-                      ),
-                      child: Center(
-                        child: SizedBox(
-                          width: 20.w,
-                          height: 20.w,
-                          child: CircularProgressIndicator(
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                                Color(0xFF2196F3)),
-                            strokeWidth: 2.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 12.h),
-                    Text(
-                      'Loading notifications...',
-                      style: TextStyle(
-                        color: const Color(0xFF2196F3),
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+        child: Container(
+          padding: EdgeInsets.all(24.w),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16.r),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF2196F3).withOpacity(0.08),
+                blurRadius: 10.r,
+                offset: Offset(0, 4.h),
               ),
-            )
-          : _notifications.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 60.w,
-                        height: 60.w,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              const Color(0xFF2196F3).withOpacity(0.1),
-                              const Color(0xFF1E88E5).withOpacity(0.05),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(30.r),
-                          border: Border.all(
-                            color: const Color(0xFF2196F3).withOpacity(0.2),
-                            width: 1,
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.notifications_none_rounded,
-                          size: 30.r,
-                          color: const Color(0xFF2196F3),
-                        ),
-                      ),
-                      SizedBox(height: 16.h),
-                      Text(
-                        l10n.noNotifications,
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      SizedBox(height: 6.h),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16.w),
-                        child: Text(
-                          l10n.notificationsWillAppearHere,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 12.sp,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40.w,
+                height: 40.w,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF2196F3).withOpacity(0.2),
+                      const Color(0xFF2196F3).withOpacity(0.1),
                     ],
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadNotifications,
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+                child: Center(
+                  child: SizedBox(
+                    width: 20.w,
+                    height: 20.w,
+                    child: CircularProgressIndicator(
+                      valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF2196F3)),
+                      strokeWidth: 2.5,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 12.h),
+              Text(
+                'Loading notifications...',
+                style: TextStyle(
                   color: const Color(0xFF2196F3),
-                  backgroundColor: Colors.white,
-                  strokeWidth: 2.w,
-                  child: ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    itemCount: _notifications.length,
-                    itemBuilder: (context, index) {
-                      final notification = _notifications[index];
-                      final isRead = notification['is_read'] == true;
-                      final type = notification['type']?.toString() ?? '';
-                      final createdAt =
-                          notification['created_at']?.toString() ?? '';
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      )
+          : _notifications.isEmpty
+          ? Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 60.w,
+              height: 60.w,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF2196F3).withOpacity(0.1),
+                    const Color(0xFF1E88E5).withOpacity(0.05),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(30.r),
+                border: Border.all(
+                  color: const Color(0xFF2196F3).withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                Icons.notifications_none_rounded,
+                size: 30.r,
+                color: const Color(0xFF2196F3),
+              ),
+            ),
+            SizedBox(height: 16.h),
+            Text(
+              l10n.noNotifications,
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            SizedBox(height: 6.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Text(
+                l10n.notificationsWillAppearHere,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 12.sp,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
+        ),
+      )
+          : RefreshIndicator(
+        onRefresh: _loadNotifications,
+        color: const Color(0xFF2196F3),
+        backgroundColor: Colors.white,
+        strokeWidth: 2.w,
+        child: ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          itemCount: _notifications.length,
+          itemBuilder: (context, index) {
+            final notification = _notifications[index];
+            final isRead = notification['is_read'] == true;
+            final type = notification['type']?.toString() ?? '';
+            final createdAt = notification['created_at']?.toString() ?? '';
 
-                      return Dismissible(
-                        key: Key('${notification['id']}'),
-                        background: Container(
-                          color: Colors.red.shade600,
-                          alignment: Alignment.centerRight,
-                          padding: EdgeInsets.only(right: 12.w),
-                          child: Icon(
-                            Icons.delete_rounded,
-                            color: Colors.white,
-                            size: 20.r,
-                          ),
-                        ),
-                        direction: DismissDirection.endToStart,
-                        onDismissed: (direction) => _deleteNotification(index),
-                        child: Container(
-                          color: isRead
-                              ? Colors.white
-                              : const Color(0xFF2196F3).withOpacity(0.03),
-                          margin: EdgeInsets.only(bottom: 0.5.h),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () => _handleNotificationTap(notification),
-                              splashColor:
-                                  const Color(0xFF2196F3).withOpacity(0.1),
-                              highlightColor:
-                                  const Color(0xFF2196F3).withOpacity(0.05),
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 12.w,
-                                  vertical: 8.h,
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+            return Dismissible(
+              key: Key('${notification['id']}'),
+              background: Container(
+                color: Colors.red.shade600,
+                alignment: Alignment.centerRight,
+                padding: EdgeInsets.only(right: 12.w),
+                child: Icon(
+                  Icons.delete_rounded,
+                  color: Colors.white,
+                  size: 20.r,
+                ),
+              ),
+              direction: DismissDirection.endToStart,
+              onDismissed: (direction) => _deleteNotification(index),
+              child: Container(
+                color: isRead
+                    ? Colors.white
+                    : const Color(0xFF2196F3).withOpacity(0.03),
+                margin: EdgeInsets.only(bottom: 0.5.h),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _handleNotificationTap(notification),
+                    splashColor: const Color(0xFF2196F3).withOpacity(0.1),
+                    highlightColor: const Color(0xFF2196F3).withOpacity(0.05),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12.w,
+                        vertical: 8.h,
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _getNotificationIcon(type),
+                          SizedBox(width: 10.w),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
                                   children: [
-                                    _getNotificationIcon(type),
-                                    SizedBox(width: 10.w),
                                     Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  '${notification['title'] ?? ''}',
-                                                  style: TextStyle(
-                                                    fontWeight: isRead
-                                                        ? FontWeight.w500
-                                                        : FontWeight.w600,
-                                                    fontSize: 13.sp,
-                                                    color: Colors.black87,
-                                                    height: 1.3,
-                                                  ),
-                                                  maxLines: 2,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                              if (!isRead)
-                                                Container(
-                                                  width: 6.w,
-                                                  height: 6.w,
-                                                  margin: EdgeInsets.only(
-                                                      left: 6.w),
-                                                  decoration:
-                                                      const BoxDecoration(
-                                                    color: Color(0xFF2196F3),
-                                                    shape: BoxShape.circle,
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                          SizedBox(height: 2.h),
-                                          Text(
-                                            '${notification['message'] ?? ''}',
-                                            style: TextStyle(
-                                              fontSize: 11.sp,
-                                              color: Colors.grey.shade600,
-                                              height: 1.4,
-                                            ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          SizedBox(height: 4.h),
-                                          Row(
-                                            children: [
-                                              Icon(
-                                                Icons.access_time_rounded,
-                                                size: 10.r,
-                                                color: Colors.grey.shade400,
-                                              ),
-                                              SizedBox(width: 2.w),
-                                              Text(
-                                                NotificationService
-                                                    .formatNotificationTime(
-                                                        createdAt),
-                                                style: TextStyle(
-                                                  fontSize: 10.sp,
-                                                  color: Colors.grey.shade400,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
+                                      child: Text(
+                                        '${notification['title'] ?? ''}',
+                                        style: TextStyle(
+                                          fontWeight: isRead
+                                              ? FontWeight.w500
+                                              : FontWeight.w600,
+                                          fontSize: 13.sp,
+                                          color: Colors.black87,
+                                          height: 1.3,
+                                        ),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (!isRead)
+                                      Container(
+                                        width: 6.w,
+                                        height: 6.w,
+                                        margin: EdgeInsets.only(left: 6.w),
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFF2196F3),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                SizedBox(height: 2.h),
+                                Text(
+                                  '${notification['message'] ?? ''}',
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    color: Colors.grey.shade600,
+                                    height: 1.4,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                SizedBox(height: 4.h),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.access_time_rounded,
+                                      size: 10.r,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                    SizedBox(width: 2.w),
+                                    Text(
+                                      NotificationService.formatNotificationTime(createdAt),
+                                      style: TextStyle(
+                                        fontSize: 10.sp,
+                                        color: Colors.grey.shade400,
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
+                              ],
                             ),
                           ),
-                        ),
-                      );
-                    },
+                        ],
+                      ),
+                    ),
                   ),
                 ),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }
@@ -5064,15 +4943,12 @@ class _NotificationPageState extends State<NotificationPage> {
 
 class NoGlowScrollBehavior extends ScrollBehavior {
   @override
-  Widget buildViewportChrome(
-      BuildContext context, Widget child, AxisDirection axisDirection) {
+  Widget buildViewportChrome(BuildContext context, Widget child, AxisDirection axisDirection) {
     return child;
   }
 }
-
 const _kPrivacyUrl = 'https://www.swaply.cc/privacy';
-const _kDeleteUrl = 'https://www.swaply.cc/delete-account';
-
+const _kDeleteUrl  = 'https://www.swaply.cc/delete-account';
 /* ---------------- Profile Page 涓汉璧勬枡椤?---------------- */
 class ProfilePage extends StatefulWidget {
   final bool isGuest;
@@ -5109,8 +4985,8 @@ class _ProfilePageState extends State<ProfilePage>
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-        duration: const Duration(milliseconds: 800), vsync: this);
+    _animationController =
+        AnimationController(duration: const Duration(milliseconds: 800), vsync: this);
     _fadeAnimation =
         CurvedAnimation(parent: _animationController, curve: Curves.easeInOut);
 
@@ -5140,7 +5016,7 @@ class _ProfilePageState extends State<ProfilePage>
       // 鍩虹璧勬枡鐢ㄤ簬椤甸潰鏄剧ず锛堝悕瀛?澶村儚/鏃堕棿绛夛級
       final base = await _svc.getUserProfile();
       final map =
-          base == null ? <String, dynamic>{} : Map<String, dynamic>.from(base);
+      base == null ? <String, dynamic>{} : Map<String, dynamic>.from(base);
 
       if (!mounted) return;
       setState(() {
@@ -5164,8 +5040,7 @@ class _ProfilePageState extends State<ProfilePage>
   Future<void> _reloadUserVerificationStatus() async {
     setState(() => _verifyLoading = true);
 
-    final row =
-        await _verifySvc.fetchVerificationRow(); // 浠呮煡 user_verifications
+    final row = await _verifySvc.fetchVerificationRow(); // 浠呮煡 user_verifications
     final user = Supabase.instance.client.auth.currentUser;
 
     final verified = vutils.computeIsVerified(verificationRow: row, user: user);
@@ -5208,8 +5083,7 @@ class _ProfilePageState extends State<ProfilePage>
       barrierDismissible: true,
       builder: (dialogCtx) {
         return Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           elevation: 8,
           child: Container(
             padding: const EdgeInsets.all(24),
@@ -5238,8 +5112,8 @@ class _ProfilePageState extends State<ProfilePage>
                     ),
                     const SizedBox(width: 12),
                     const Text('Edit Profile',
-                        style: TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.w600)),
+                        style:
+                        TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -5250,7 +5124,7 @@ class _ProfilePageState extends State<ProfilePage>
                     labelText: 'Full name',
                     labelStyle: const TextStyle(fontSize: 14),
                     prefixIcon:
-                        const Icon(Icons.person_outline_rounded, size: 20),
+                    const Icon(Icons.person_outline_rounded, size: 20),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12)),
                     focusedBorder: OutlineInputBorder(
@@ -5288,7 +5162,7 @@ class _ProfilePageState extends State<ProfilePage>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 24, vertical: 12)),
                       child:
-                          const Text('Cancel', style: TextStyle(fontSize: 15)),
+                      const Text('Cancel', style: TextStyle(fontSize: 15)),
                     ),
                     const SizedBox(width: 12),
                     DecoratedBox(
@@ -5309,7 +5183,7 @@ class _ProfilePageState extends State<ProfilePage>
                         ),
                         child: const Text('Save',
                             style:
-                                TextStyle(fontSize: 15, color: Colors.white)),
+                            TextStyle(fontSize: 15, color: Colors.white)),
                       ),
                     ),
                   ],
@@ -5324,7 +5198,8 @@ class _ProfilePageState extends State<ProfilePage>
     if (result == true && mounted) {
       try {
         await ProfileService.instance.updateUserProfile(
-          fullName: nameCtrl.text.trim().isEmpty ? null : nameCtrl.text.trim(),
+          fullName:
+          nameCtrl.text.trim().isEmpty ? null : nameCtrl.text.trim(),
           phone: phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
         );
         if (!mounted) return;
@@ -5332,7 +5207,8 @@ class _ProfilePageState extends State<ProfilePage>
           SnackBar(
             content: Row(
               children: const [
-                Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+                Icon(Icons.check_circle_rounded,
+                    color: Colors.white, size: 18),
                 SizedBox(width: 8),
                 Text('Profile updated successfully',
                     style: TextStyle(fontSize: 14)),
@@ -5341,7 +5217,7 @@ class _ProfilePageState extends State<ProfilePage>
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -5363,7 +5239,7 @@ class _ProfilePageState extends State<ProfilePage>
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -5396,12 +5272,12 @@ class _ProfilePageState extends State<ProfilePage>
       final path =
           '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.$ext';
 
-      await Supabase.instance.client.storage.from('avatars').uploadBinary(
-          path, bytes,
-          fileOptions: const FileOptions(upsert: true));
+      await Supabase.instance.client.storage
+          .from('avatars')
+          .uploadBinary(path, bytes, fileOptions: const FileOptions(upsert: true));
 
       final publicUrl =
-          Supabase.instance.client.storage.from('avatars').getPublicUrl(path);
+      Supabase.instance.client.storage.from('avatars').getPublicUrl(path);
       await ProfileService.instance.updateUserProfile(avatarUrl: publicUrl);
 
       await _load();
@@ -5410,7 +5286,8 @@ class _ProfilePageState extends State<ProfilePage>
         SnackBar(
           content: Row(
             children: const [
-              Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+              Icon(Icons.check_circle_rounded,
+                  color: Colors.white, size: 18),
               SizedBox(width: 8),
               Text('Avatar updated successfully',
                   style: TextStyle(fontSize: 14)),
@@ -5419,7 +5296,7 @@ class _ProfilePageState extends State<ProfilePage>
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -5440,7 +5317,7 @@ class _ProfilePageState extends State<ProfilePage>
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -5524,13 +5401,13 @@ class _ProfilePageState extends State<ProfilePage>
     final fullName = (_profile?['full_name'] ?? 'User').toString();
     final phone = (_profile?['phone'] ?? '').toString();
     final email =
-        phone.isNotEmpty ? phone : (_profile?['email'] ?? '').toString();
+    phone.isNotEmpty ? phone : (_profile?['email'] ?? '').toString();
     final avatarUrl = (_profile?['avatar_url'] ?? '') as String?;
     final memberSince = _profile?['created_at']?.toString();
     String? memberSinceText;
     if (memberSince != null && memberSince.isNotEmpty) {
       final cut =
-          memberSince.length >= 10 ? memberSince.substring(0, 10) : memberSince;
+      memberSince.length >= 10 ? memberSince.substring(0, 10) : memberSince;
       memberSinceText = cut;
     }
 
@@ -5555,13 +5432,14 @@ class _ProfilePageState extends State<ProfilePage>
                       isGuest: false,
                       name: fullName,
                       email: email,
-                      avatarUrl: (avatarUrl != null && avatarUrl.isNotEmpty)
+                      avatarUrl:
+                      (avatarUrl != null && avatarUrl.isNotEmpty)
                           ? avatarUrl
                           : null,
                       memberSince: memberSinceText,
                       // 鉁?澶村儚鍙犲姞寰界珷锛氫粎鍦?verified 鏃朵紶鍏ワ紝鍚﹀垯浼?none锛堟湭楠岃瘉灏变笉鏄剧ず锛?
                       verificationType:
-                          _verified ? _badge : vt.VerificationBadgeType.none,
+                      _verified ? _badge : vt.VerificationBadgeType.none,
                     ),
                   ),
                   SliverToBoxAdapter(
@@ -5619,7 +5497,8 @@ class _ProfilePageState extends State<ProfilePage>
                               onTap: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (_) => const MyListingsPage())),
+                                      builder: (_) =>
+                                      const MyListingsPage())),
                             ),
                             const SizedBox(height: 14),
                             _ProfileOptionEnhanced(
@@ -5627,8 +5506,8 @@ class _ProfilePageState extends State<ProfilePage>
                               title: l10n.wishlist,
                               color: Colors.pink,
                               onTap: () {
-                                final user =
-                                    Supabase.instance.client.auth.currentUser;
+                                final user = Supabase
+                                    .instance.client.auth.currentUser;
                                 if (user == null) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
@@ -5640,7 +5519,8 @@ class _ProfilePageState extends State<ProfilePage>
                                 Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                        builder: (_) => const WishlistPage()));
+                                        builder: (_) =>
+                                        const WishlistPage()));
                               },
                             ),
                             const SizedBox(height: 14),
@@ -5653,7 +5533,8 @@ class _ProfilePageState extends State<ProfilePage>
                               onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (_) => const InviteFriendsPage()),
+                                    builder: (_) =>
+                                    const InviteFriendsPage()),
                               ),
                             ),
                             const SizedBox(height: 14),
@@ -5745,16 +5626,16 @@ class _ProfilePageState extends State<ProfilePage>
                                   builder: (ctx) => AlertDialog(
                                     shape: RoundedRectangleBorder(
                                         borderRadius:
-                                            BorderRadius.circular(18)),
+                                        BorderRadius.circular(18)),
                                     title: Row(
                                       children: [
                                         Container(
                                           padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
                                               color:
-                                                  Colors.red.withOpacity(0.1),
+                                              Colors.red.withOpacity(0.1),
                                               borderRadius:
-                                                  BorderRadius.circular(8)),
+                                              BorderRadius.circular(8)),
                                           child: const Icon(
                                               Icons.logout_rounded,
                                               color: Colors.red,
@@ -5764,7 +5645,8 @@ class _ProfilePageState extends State<ProfilePage>
                                         const Text('Logout',
                                             style: TextStyle(
                                                 fontSize: 18,
-                                                fontWeight: FontWeight.w600)),
+                                                fontWeight:
+                                                FontWeight.w600)),
                                       ],
                                     ),
                                     content: const Text(
@@ -5783,7 +5665,7 @@ class _ProfilePageState extends State<ProfilePage>
                                         decoration: BoxDecoration(
                                             color: Colors.red,
                                             borderRadius:
-                                                BorderRadius.circular(8)),
+                                            BorderRadius.circular(8)),
                                         child: TextButton(
                                           onPressed: () =>
                                               Navigator.of(ctx).pop(true),
@@ -5791,7 +5673,8 @@ class _ProfilePageState extends State<ProfilePage>
                                               style: TextStyle(
                                                   color: Colors.white,
                                                   fontSize: 15,
-                                                  fontWeight: FontWeight.w600)),
+                                                  fontWeight:
+                                                  FontWeight.w600)),
                                         ),
                                       ),
                                     ],
@@ -5820,10 +5703,11 @@ class _ProfilePageState extends State<ProfilePage>
                                             ],
                                           ),
                                           backgroundColor: Colors.red,
-                                          behavior: SnackBarBehavior.floating,
+                                          behavior:
+                                          SnackBarBehavior.floating,
                                           shape: RoundedRectangleBorder(
                                               borderRadius:
-                                                  BorderRadius.circular(10)),
+                                              BorderRadius.circular(10)),
                                           margin: const EdgeInsets.all(16),
                                         ),
                                       );
@@ -5925,7 +5809,7 @@ class _ProfilePageState extends State<ProfilePage>
                         verificationType: verificationType,
                         onTap: !isGuest ? _uploadAvatarSimple : null,
                         defaultIcon:
-                            isGuest ? Icons.person_outline : Icons.person,
+                        isGuest ? Icons.person_outline : Icons.person,
                       ),
                     ],
                   ),
@@ -5952,13 +5836,12 @@ class _ProfilePageState extends State<ProfilePage>
               ),
               const SizedBox(height: 8),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                      color: Colors.white.withOpacity(0.3), width: 1),
+                  border:
+                  Border.all(color: Colors.white.withOpacity(0.3), width: 1),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -5978,7 +5861,7 @@ class _ProfilePageState extends State<ProfilePage>
                 const SizedBox(height: 10),
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(16),
@@ -6062,12 +5945,9 @@ class _VerificationTileCard extends StatelessWidget {
                         style: const TextStyle(
                             fontSize: 17, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 3),
-                    Text(
-                        isVerified
-                            ? 'Status: Verified'
-                            : 'Status: Not verified',
+                    Text(isVerified ? 'Status: Verified' : 'Status: Not verified',
                         style:
-                            TextStyle(fontSize: 14, color: Colors.grey[600])),
+                        TextStyle(fontSize: 14, color: Colors.grey[600])),
                   ],
                 ),
               ),
@@ -6075,12 +5955,12 @@ class _VerificationTileCard extends StatelessWidget {
               // 鍙充晶涓庡叾瀹冮」缁熶竴锛氬姞杞藉湀/灏忎笁瑙?
               isLoading
                   ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
                   : Icon(Icons.arrow_forward_ios,
-                      size: 18, color: Colors.grey[400]),
+                  size: 18, color: Colors.grey[400]),
             ],
           ),
         ),
@@ -6145,13 +6025,14 @@ class _ProfileOptionEnhanced extends StatelessWidget {
                       const SizedBox(height: 3),
                       Text(subtitle!,
                           style:
-                              TextStyle(fontSize: 14, color: Colors.grey[600])),
+                          TextStyle(fontSize: 14, color: Colors.grey[600])),
                     ],
                   ],
                 ),
               ),
               const SizedBox(width: 10),
-              Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey[400]),
+              Icon(Icons.arrow_forward_ios,
+                  size: 18, color: Colors.grey[400]),
             ],
           ),
         ),
@@ -6181,8 +6062,8 @@ class _GuestSimpleOptions extends StatelessWidget {
           icon: Icons.info_outline_rounded,
           title: l10n.about,
           color: Colors.indigo,
-          onTap: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => AboutPage())),
+          onTap: () =>
+              Navigator.push(context, MaterialPageRoute(builder: (_) => AboutPage())),
         ),
       ],
     );
@@ -6312,7 +6193,7 @@ class HelpSupportPage extends StatelessWidget {
                       const SizedBox(height: 3),
                       Text(subtitle,
                           style:
-                              TextStyle(fontSize: 14, color: Colors.grey[600])),
+                          TextStyle(fontSize: 14, color: Colors.grey[600])),
                     ]),
               ),
               if (onTap != null)
@@ -6367,7 +6248,9 @@ class AboutPage extends StatelessWidget {
                     'Swaply is your community marketplace for trading items you no longer need for things you actually want.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                        fontSize: 15, color: Color(0xFF6B7280), height: 1.5),
+                        fontSize: 15,
+                        color: Color(0xFF6B7280),
+                        height: 1.5),
                   ),
                 ],
               ),
@@ -6402,3 +6285,4 @@ class AboutPage extends StatelessWidget {
     );
   }
 }
+

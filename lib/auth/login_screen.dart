@@ -3,14 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
-import '../main.dart';
 import 'package:swaply/services/auth_service.dart';
-import 'package:swaply/services/oauth_service.dart'; // ✅ Facebook 仍用此服务
+import 'package:swaply/services/oauth_service.dart'; // 鉁?Facebook 浠嶇敤姝ゆ湇鍔?
 
-// ✅ Google 登录改为使用我们封装的 helper（PKCE + 深链回调）
+// 鉁?Google 鐧诲綍鏀逛负浣跨敤鎴戜滑灏佽鐨?helper锛圥KCE + 娣遍摼鍥炶皟锛?
 import 'package:swaply/auth/google_signin.dart' as gauth;
 
-// ✅ Apple 登录相关
+// 鉁?Apple 鐧诲綍鐩稿叧
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -33,7 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   final _auth = AuthService();
 
-  // ✅ 仅 iOS 显示 Apple 按钮
+  // 鉁?浠?iOS 鏄剧ず Apple 鎸夐挳
   bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
   @override
@@ -55,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (!mounted) return;
-      // 认证监听器会自动处理导航与奖励
+      // 璁よ瘉鐩戝惉鍣ㄤ細鑷姩澶勭悊瀵艰埅涓庡鍔?
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -73,16 +72,16 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ✅ Google 登录：改为走 helper 中的 signInWithGoogle(context)
+  // 鉁?Google 鐧诲綍锛氭敼涓鸿蛋 helper 涓殑 signInWithGoogle(context)
   Future<void> _handleGoogleLogin() async {
     setState(() => _isLoading = true);
     try {
-      await gauth.signInWithGoogle(context); // 交给认证监听器处理后续跳转
+      await gauth.signInWithGoogle(context); // 浜ょ粰璁よ瘉鐩戝惉鍣ㄥ鐞嗗悗缁烦杞?
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Google 登录失败：$e'),
+          content: Text('Google 鐧诲綍澶辫触锛?e'),
           backgroundColor: Colors.red[400],
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -98,12 +97,12 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleFacebookLogin() async {
     setState(() => _isLoading = true);
     try {
-      await OAuthService.signInWithFacebook(); // 交给认证监听器
+      await OAuthService.signInWithFacebook(); // 浜ょ粰璁よ瘉鐩戝惉鍣?
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Facebook 登录失败：$e'),
+          content: Text('Facebook 鐧诲綍澶辫触锛?e'),
           backgroundColor: Colors.red[400],
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -116,7 +115,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ✅ Apple 登录（与 Google/Facebook 同一风格：依赖认证监听器，不手动导航）
+  // 鉁?Apple 鐧诲綍锛堜笌 Google/Facebook 鍚屼竴椋庢牸锛氫緷璧栬璇佺洃鍚櫒锛屼笉鎵嬪姩瀵艰埅锛?
   Future<void> _handleAppleLogin() async {
     setState(() => _isLoading = true);
     try {
@@ -124,15 +123,15 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       if (!ok) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Apple 登录被取消或失败')),
+          const SnackBar(content: Text('Apple 鐧诲綍琚彇娑堟垨澶辫触')),
         );
       }
-      // 成功则由认证监听器处理后续跳转/奖励
+      // 鎴愬姛鍒欑敱璁よ瘉鐩戝惉鍣ㄥ鐞嗗悗缁烦杞?濂栧姳
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Apple 登录失败：$e'),
+          content: Text('Apple 鐧诲綍澶辫触锛?e'),
           backgroundColor: Colors.red[400],
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -301,7 +300,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             context,
                             MaterialPageRoute(
                               builder: (context) =>
-                              const ForgotPasswordScreen(),
+                                  const ForgotPasswordScreen(),
                             ),
                           );
                         },
@@ -346,22 +345,22 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Center(
                         child: _isLoading
                             ? SizedBox(
-                          width: 20.r,
-                          height: 20.r,
-                          child: const CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2.0,
-                          ),
-                        )
+                                width: 20.r,
+                                height: 20.r,
+                                child: const CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2.0,
+                                ),
+                              )
                             : Text(
-                          'Sign In',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
+                                'Sign In',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
                       ),
                     ),
                   ),
@@ -411,7 +410,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
 
-                // ✅ Apple 官方按钮（仅 iOS 展示，整行宽度）
+                // 鉁?Apple 瀹樻柟鎸夐挳锛堜粎 iOS 灞曠ず锛屾暣琛屽搴︼級
                 if (_isIOS) ...[
                   SizedBox(height: 12.h),
                   SizedBox(
@@ -425,7 +424,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             onPressed: _handleAppleLogin,
                             style: SignInWithAppleButtonStyle.black,
                             borderRadius:
-                            const BorderRadius.all(Radius.circular(12)),
+                                const BorderRadius.all(Radius.circular(12)),
                           ),
                         ),
                         if (_isLoading)
@@ -580,11 +579,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _socialLoginButton(
-      String text,
-      Color color,
-      IconData icon,
-      VoidCallback onPressed,
-      ) {
+    String text,
+    Color color,
+    IconData icon,
+    VoidCallback onPressed,
+  ) {
     return Container(
       height: 42.h,
       decoration: BoxDecoration(

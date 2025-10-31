@@ -1,4 +1,4 @@
-﻿// lib/services/profile_service.dart
+// lib/services/profile_service.dart
 // 以 profiles.verification_type 为唯一可信来源；不再用 email_verified 推断“已认证”
 // ✅ 不再写 verification_type / email_verified / is_verified（连初始化也不手写，交给 DB 默认）
 
@@ -71,7 +71,8 @@ class ProfileService {
           .eq('id', userId)
           .maybeSingle();
 
-      final alreadyGranted = (prof?['welcome_reward_granted'] as bool?) ?? false;
+      final alreadyGranted =
+          (prof?['welcome_reward_granted'] as bool?) ?? false;
 
       // 4) 未发过 → 发券 + 标记
       if (!alreadyGranted) {
@@ -102,7 +103,8 @@ class ProfileService {
 
       return grantedNow;
     } on PostgrestException catch (e) {
-      print('❌ Profile/Welcome setup Postgrest error: ${e.message} (code: ${e.code})');
+      print(
+          '❌ Profile/Welcome setup Postgrest error: ${e.message} (code: ${e.code})');
       return false;
     } catch (e) {
       print('❌ Profile/Welcome setup error: $e');
@@ -243,9 +245,8 @@ class ProfileService {
       final ext = _fileExt(file.path);
       final storagePath = '$id/avatar$ext';
 
-      await _sb.storage
-          .from('avatars')
-          .upload(storagePath, file, fileOptions: const FileOptions(upsert: true));
+      await _sb.storage.from('avatars').upload(storagePath, file,
+          fileOptions: const FileOptions(upsert: true));
 
       return _sb.storage.from('avatars').getPublicUrl(storagePath);
     } catch (e) {
@@ -330,7 +331,8 @@ class ProfileService {
 
   /// 读取个人资料；把 verification_type 规整为 {none/verified/official/business/premium}
   /// 若字段为空则只兜底为 official/none
-  Future<Map<String, dynamic>?> getUserProfileWithVerification([String? userId]) async {
+  Future<Map<String, dynamic>?> getUserProfileWithVerification(
+      [String? userId]) async {
     final targetId = userId ?? uid;
     if (targetId == null) return null;
 

@@ -172,16 +172,14 @@ class EmailVerificationService {
   /// 公开读取“任意用户（卖家）”的认证展示字段（通过 SECURITY DEFINER RPC）
   Future<Map<String, dynamic>?> fetchPublicVerification(String userId) async {
     try {
-      final dynamic row = await _sb
-          .rpc('get_user_verification_public', params: {'target': userId})
-          .maybeSingle();
+      final dynamic row = await _sb.rpc('get_user_verification_public',
+          params: {'target': userId}).maybeSingle();
 
       return _asMap(row);
     } catch (_) {
       try {
-        final dynamic row = await _sb
-            .rpc('get_user_verification_public', params: {'target': userId})
-            .single();
+        final dynamic row = await _sb.rpc('get_user_verification_public',
+            params: {'target': userId}).single();
         return _asMap(row);
       } catch (e) {
         // ignore: avoid_print

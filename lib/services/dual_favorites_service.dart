@@ -103,13 +103,12 @@ class DualFavoritesService {
         };
         _debugPrint('准备插入收藏数据: $favoriteData');
 
-        final favoriteResult = await _client
-            .from(_favoritesTable)
-            .insert(favoriteData)
-            .select();
+        final favoriteResult =
+            await _client.from(_favoritesTable).insert(favoriteData).select();
 
         _debugPrint('Favorites 表插入结果: $favoriteResult');
-        favoritesSuccess = (favoriteResult is List) && favoriteResult.isNotEmpty;
+        favoritesSuccess =
+            (favoriteResult is List) && favoriteResult.isNotEmpty;
 
         if (favoritesSuccess) {
           _debugPrint('✅ Favorites 表插入成功');
@@ -131,7 +130,8 @@ class DualFavoritesService {
               .insert(favoriteDataAuto)
               .select();
 
-          favoritesSuccess = (favoriteResult is List) && favoriteResult.isNotEmpty;
+          favoritesSuccess =
+              (favoriteResult is List) && favoriteResult.isNotEmpty;
           _debugPrint('Favorites 表自动处理结果: $favoriteResult');
         } catch (e2) {
           _debugPrint('自动处理也失败: $e2');
@@ -150,10 +150,8 @@ class DualFavoritesService {
           'created_at': now,
         };
 
-        final wishlistResult = await _client
-            .from(_wishlistsTable)
-            .insert(wishlistData)
-            .select();
+        final wishlistResult =
+            await _client.from(_wishlistsTable).insert(wishlistData).select();
 
         wishlistSuccess = (wishlistResult is List) && wishlistResult.isNotEmpty;
 
@@ -168,7 +166,8 @@ class DualFavoritesService {
       }
 
       final success = favoritesSuccess || wishlistSuccess;
-      _debugPrint('最终结果: $success (Favorites: $favoritesSuccess, Wishlist: $wishlistSuccess)');
+      _debugPrint(
+          '最终结果: $success (Favorites: $favoritesSuccess, Wishlist: $wishlistSuccess)');
 
       if (favoritesSuccess && wishlistSuccess) {
         _debugPrint('🟟 完美！同时添加到收藏和心愿单');
@@ -323,7 +322,8 @@ class DualFavoritesService {
     }
 
     // 发起请求
-    final future = _fetchFavorites(userId: userId, limit: limit, offset: offset);
+    final future =
+        _fetchFavorites(userId: userId, limit: limit, offset: offset);
     _inflight[key] = future;
     try {
       final data = await future;
@@ -340,7 +340,9 @@ class DualFavoritesService {
     required int offset,
   }) async {
     try {
-      if (kDebugMode) debugPrint('[DualFavoritesService] FETCH favorites $userId/$limit/$offset');
+      if (kDebugMode)
+        debugPrint(
+            '[DualFavoritesService] FETCH favorites $userId/$limit/$offset');
 
       _debugPrint('=== 获取用户收藏列表 ===');
       _debugPrint('用户ID: $userId, 限制: $limit, 偏移: $offset');
@@ -354,12 +356,14 @@ class DualFavoritesService {
 
       _debugPrint('收藏原始数据: $rawFavoritesData');
 
-      if (rawFavoritesData == null || (rawFavoritesData is List && rawFavoritesData.isEmpty)) {
+      if (rawFavoritesData == null ||
+          (rawFavoritesData is List && rawFavoritesData.isEmpty)) {
         _debugPrint('未找到收藏记录');
         return [];
       }
 
-      final List<Map<String, dynamic>> favoritesData = _safeListConvert(rawFavoritesData);
+      final List<Map<String, dynamic>> favoritesData =
+          _safeListConvert(rawFavoritesData);
 
       final result = <Map<String, dynamic>>[];
       for (final favoriteItem in favoritesData) {
@@ -368,7 +372,8 @@ class DualFavoritesService {
           try {
             final rawListing = await _client
                 .from('listings')
-                .select('id, title, price, city, images, image_urls, status, is_active, seller_name, category, description, created_at')
+                .select(
+                    'id, title, price, city, images, image_urls, status, is_active, seller_name, category, description, created_at')
                 .eq('id', listingId)
                 .eq('is_active', true)
                 .maybeSingle();
@@ -437,7 +442,9 @@ class DualFavoritesService {
     required int offset,
   }) async {
     try {
-      if (kDebugMode) debugPrint('[DualFavoritesService] FETCH wishlist $userId/$limit/$offset');
+      if (kDebugMode)
+        debugPrint(
+            '[DualFavoritesService] FETCH wishlist $userId/$limit/$offset');
 
       _debugPrint('=== 获取用户心愿单列表 ===');
       _debugPrint('用户ID: $userId, 限制: $limit, 偏移: $offset');
@@ -451,12 +458,14 @@ class DualFavoritesService {
 
       _debugPrint('心愿单原始数据: $rawWishlistData');
 
-      if (rawWishlistData == null || (rawWishlistData is List && rawWishlistData.isEmpty)) {
+      if (rawWishlistData == null ||
+          (rawWishlistData is List && rawWishlistData.isEmpty)) {
         _debugPrint('未找到心愿单记录');
         return [];
       }
 
-      final List<Map<String, dynamic>> wishlistData = _safeListConvert(rawWishlistData);
+      final List<Map<String, dynamic>> wishlistData =
+          _safeListConvert(rawWishlistData);
 
       final result = <Map<String, dynamic>>[];
       for (final wishlistItem in wishlistData) {
@@ -465,7 +474,8 @@ class DualFavoritesService {
           try {
             final rawListing = await _client
                 .from('listings')
-                .select('id, title, price, city, images, image_urls, status, is_active, seller_name, category, description, created_at')
+                .select(
+                    'id, title, price, city, images, image_urls, status, is_active, seller_name, category, description, created_at')
                 .eq('id', listingId)
                 .eq('is_active', true)
                 .maybeSingle();
@@ -533,10 +543,18 @@ class DualFavoritesService {
     try {
       _debugPrint('=== 测试数据库连接 ===');
 
-      await _client.from(_favoritesTable).select('id').eq('user_id', userId).limit(1);
+      await _client
+          .from(_favoritesTable)
+          .select('id')
+          .eq('user_id', userId)
+          .limit(1);
       _debugPrint('Favorites 表连接正常');
 
-      await _client.from(_wishlistsTable).select('id').eq('user_id', userId).limit(1);
+      await _client
+          .from(_wishlistsTable)
+          .select('id')
+          .eq('user_id', userId)
+          .limit(1);
       _debugPrint('Wishlists 表连接正常');
 
       return true;

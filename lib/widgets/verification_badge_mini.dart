@@ -10,10 +10,10 @@ class VerificationBadgeMini extends StatelessWidget {
     if (type == VerificationBadgeType.none) return const SizedBox.shrink();
 
     IconData icon = Icons.verified;
-    String text   = VerificationBadgeUtil.label(type);
+    String text = VerificationBadgeUtil.label(type);
 
-    if (type.isOfficial) icon = Icons.verified;     // 你也可换成不同图标
-    if (type.isPremium)  icon = Icons.workspace_premium;
+    if (type.isOfficial) icon = Icons.verified; // 你也可换成不同图标
+    if (type.isPremium) icon = Icons.workspace_premium;
 
     return Row(
       mainAxisSize: MainAxisSize.min,

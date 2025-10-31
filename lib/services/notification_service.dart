@@ -3,8 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 typedef NotificationEventCallback = void Function(
-    Map<String, dynamic> notification,
-    );
+  Map<String, dynamic> notification,
+);
 
 enum NotificationType {
   offer('offer'),
@@ -38,9 +38,9 @@ class NotificationService {
   /// - 若已订阅相同 userId，会直接返回
   /// - 命名参数 [onEvent]：当有新的通知（INSERT）写入时回调
   static Future<void> subscribeUser(
-      String userId, {
-        NotificationEventCallback? onEvent,
-      }) async {
+    String userId, {
+    NotificationEventCallback? onEvent,
+  }) async {
     // 如果已经订阅同一用户，直接返回
     if (_currentUserId == userId && _channel != null) {
       _debugPrint('Already subscribed for user: $userId');
@@ -121,7 +121,7 @@ class NotificationService {
       };
 
       final result =
-      await _client.from(_tableName).insert(data).select().single();
+          await _client.from(_tableName).insert(data).select().single();
       _debugPrint('Notification created successfully: ${result['id']}');
 
       return Map<String, dynamic>.from(result);
@@ -184,7 +184,7 @@ class NotificationService {
         type: NotificationType.offer,
         title: 'New Offer Received',
         message:
-        '$displayName made an offer of \$${offerAmount.toStringAsFixed(0)} for your $listingTitle',
+            '$displayName made an offer of \$${offerAmount.toStringAsFixed(0)} for your $listingTitle',
         listingId: listingId,
         metadata: {
           'offer_amount': offerAmount,
@@ -217,8 +217,7 @@ class NotificationService {
         senderId: likerId,
         type: NotificationType.wishlist,
         title: 'Item Added to Wishlist',
-        message:
-        '$displayName added your $listingTitle to their wishlist',
+        message: '$displayName added your $listingTitle to their wishlist',
         listingId: listingId,
         metadata: {
           'liker_name': displayName,
@@ -322,9 +321,9 @@ class NotificationService {
       await _client
           .from(_tableName)
           .update({
-        'is_read': true,
-        'read_at': DateTime.now().toIso8601String(),
-      })
+            'is_read': true,
+            'read_at': DateTime.now().toIso8601String(),
+          })
           .eq('id', notificationId)
           .eq('recipient_id', currentUserId);
 
@@ -345,9 +344,9 @@ class NotificationService {
       await _client
           .from(_tableName)
           .update({
-        'is_read': true,
-        'read_at': DateTime.now().toIso8601String(),
-      })
+            'is_read': true,
+            'read_at': DateTime.now().toIso8601String(),
+          })
           .eq('recipient_id', targetUserId)
           .eq('is_read', false);
 
@@ -387,8 +386,7 @@ class NotificationService {
 
       await _client
           .from(_tableName)
-          .update({'is_deleted': true})
-          .eq('recipient_id', targetUserId);
+          .update({'is_deleted': true}).eq('recipient_id', targetUserId);
 
       return true;
     } catch (e) {

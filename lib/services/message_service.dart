@@ -104,10 +104,10 @@ class MessageService {
       final result = await _client.rpc('send_offer_message_v2', params: {
         'p_data': {
           'offer_id': offerId.toString(), // 传字符串由函数内部 ::bigint
-          'sender_id': senderId,          // uuid
-          'receiver_id': receiverId,      // uuid
+          'sender_id': senderId, // uuid
+          'receiver_id': receiverId, // uuid
           'message': message.trim(),
-          'message_type': messageType,    // 'text' / 'system'
+          'message_type': messageType, // 'text' / 'system'
         }
       });
 
@@ -234,27 +234,29 @@ class MessageService {
     _debugPrint('转换结果: $offerIdInt');
 
     final channel = _client
-        .channel('offer_messages:$offerId:${DateTime.now().millisecondsSinceEpoch}')
+        .channel(
+            'offer_messages:$offerId:${DateTime.now().millisecondsSinceEpoch}')
         .onPostgresChanges(
-      event: PostgresChangeEvent.insert,
-      schema: 'public',
-      table: _tableName,
-      filter: PostgresChangeFilter(
-        type: PostgresChangeFilterType.eq,
-        column: 'offer_id',
-        value: offerIdInt,
-      ),
-      callback: (payload) async {
-        final record = payload.newRecord;
-        if (record != null) {
-          final messageData = Map<String, dynamic>.from(record);
-          _debugPrint('通过实时连接收到新消息: ${messageData['message']}');
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: _tableName,
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'offer_id',
+            value: offerIdInt,
+          ),
+          callback: (payload) async {
+            final record = payload.newRecord;
+            if (record != null) {
+              final messageData = Map<String, dynamic>.from(record);
+              _debugPrint('通过实时连接收到新消息: ${messageData['message']}');
 
-          // 仅在前端需要时触发“本地提示”；入库通知已由 DB 触发器完成
-          onMessageReceived(messageData);
-        }
-      },
-    ).subscribe();
+              // 仅在前端需要时触发“本地提示”；入库通知已由 DB 触发器完成
+              onMessageReceived(messageData);
+            }
+          },
+        )
+        .subscribe();
 
     _debugPrint('实时订阅创建成功: $offerId');
     return channel;
@@ -277,10 +279,12 @@ class MessageService {
 
       _debugPrint('标记消息为已读: offer $offerId');
 
-      await _client.from(_tableName).update({
-        'is_read': true,
-        'read_at': DateTime.now().toIso8601String(),
-      })
+      await _client
+          .from(_tableName)
+          .update({
+            'is_read': true,
+            'read_at': DateTime.now().toIso8601String(),
+          })
           .eq('offer_id', offerIdInt)
           .eq('receiver_id', userId)
           .eq('is_read', false);
@@ -447,9 +451,9 @@ class MessageService {
       await _client
           .from(_tableName)
           .update({
-        'is_read': true,
-        'read_at': DateTime.now().toIso8601String(),
-      })
+            'is_read': true,
+            'read_at': DateTime.now().toIso8601String(),
+          })
           .filter('id', 'in', '(${messageIds.join(',')})')
           .eq('receiver_id', userId);
 

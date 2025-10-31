@@ -81,7 +81,8 @@ class AppleAuthService {
       // 4) 可选：首登补全 profile（失败忽略）
       final given = (credential.givenName ?? '').trim();
       final family = (credential.familyName ?? '').trim();
-      final fullName = ([given, family]..removeWhere((e) => e.isEmpty)).join(' ');
+      final fullName =
+          ([given, family]..removeWhere((e) => e.isEmpty)).join(' ');
       final email = (credential.email ?? '').trim();
 
       if (fullName.isNotEmpty || email.isNotEmpty) {

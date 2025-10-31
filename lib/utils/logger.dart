@@ -21,7 +21,8 @@ class AppLogger {
     info('日志系统初始化完成', data: {'remote_logging': enableRemoteLogging});
   }
 
-  static void debug(String message, {Map<String, dynamic>? data, String? tag}) =>
+  static void debug(String message,
+          {Map<String, dynamic>? data, String? tag}) =>
       _log(LogLevel.debug, message, data: data, tag: tag);
 
   static void info(String message, {Map<String, dynamic>? data, String? tag}) =>
@@ -31,7 +32,10 @@ class AppLogger {
       _log(LogLevel.warn, message, data: data, tag: tag);
 
   static void error(String message,
-      {dynamic error, StackTrace? stackTrace, Map<String, dynamic>? data, String? tag}) {
+      {dynamic error,
+      StackTrace? stackTrace,
+      Map<String, dynamic>? data,
+      String? tag}) {
     final errorData = {
       ...?data,
       if (error != null) 'error': error.toString(),
@@ -40,32 +44,40 @@ class AppLogger {
     _log(LogLevel.error, message, data: errorData, tag: tag);
   }
 
-  static void userAction(String action, {String? userId, Map<String, dynamic>? data}) {
-    info('用户行为: $action', data: {
-      'user_id': userId,
-      'action': action,
-      'timestamp': DateTime.now().toIso8601String(),
-      ...?data,
-    }, tag: 'USER_ACTION');
+  static void userAction(String action,
+      {String? userId, Map<String, dynamic>? data}) {
+    info('用户行为: $action',
+        data: {
+          'user_id': userId,
+          'action': action,
+          'timestamp': DateTime.now().toIso8601String(),
+          ...?data,
+        },
+        tag: 'USER_ACTION');
   }
 
-  static void businessEvent(String event, {String? userId, Map<String, dynamic>? data}) {
-    info('业务事件: $event', data: {
-      'user_id': userId,
-      'event': event,
-      'timestamp': DateTime.now().toIso8601String(),
-      ...?data,
-    }, tag: 'BUSINESS');
+  static void businessEvent(String event,
+      {String? userId, Map<String, dynamic>? data}) {
+    info('业务事件: $event',
+        data: {
+          'user_id': userId,
+          'event': event,
+          'timestamp': DateTime.now().toIso8601String(),
+          ...?data,
+        },
+        tag: 'BUSINESS');
   }
 
   static void performance(String operation,
       {required Duration duration, Map<String, dynamic>? data}) {
-    info('性能监控: $operation', data: {
-      'operation': operation,
-      'duration_ms': duration.inMilliseconds,
-      'timestamp': DateTime.now().toIso8601String(),
-      ...?data,
-    }, tag: 'PERFORMANCE');
+    info('性能监控: $operation',
+        data: {
+          'operation': operation,
+          'duration_ms': duration.inMilliseconds,
+          'timestamp': DateTime.now().toIso8601String(),
+          ...?data,
+        },
+        tag: 'PERFORMANCE');
   }
 
   static void _log(LogLevel level, String message,
@@ -92,7 +104,8 @@ class AppLogger {
     }
   }
 
-  static String _formatLogForConsole(Map<String, dynamic> logInfo, LogLevel level) {
+  static String _formatLogForConsole(
+      Map<String, dynamic> logInfo, LogLevel level) {
     final timestamp = logInfo['timestamp'];
     final tag = logInfo['tag'];
     final levelStr = logInfo['level'];

@@ -20,7 +20,7 @@ Future<void> signInWithGoogle(BuildContext context) async {
     final redirectUrl = _redirectUrl();
 
     await client.auth.signInWithOAuth(
-      OAuthProvider.google,                // ✅ 关键：用 OAuthProvider.google
+      OAuthProvider.google, // ✅ 关键：用 OAuthProvider.google
       scopes: 'openid email profile',
       redirectTo: redirectUrl,
     );

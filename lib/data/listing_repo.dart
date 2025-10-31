@@ -10,13 +10,13 @@ class ListingRepo {
     final ts = DateTime.now().millisecondsSinceEpoch;
     final path = 'items/item_$ts.$ext'; // 存到 bucket:listings 下的 items/ 目录
     await _sp.storage.from('listings').uploadBinary(
-      path,
-      bytes,
-      fileOptions: FileOptions(
-        upsert: true,
-        contentType: 'image/$ext',
-      ),
-    );
+          path,
+          bytes,
+          fileOptions: FileOptions(
+            upsert: true,
+            contentType: 'image/$ext',
+          ),
+        );
     return _sp.storage.from('listings').getPublicUrl(path);
   }
 
@@ -32,13 +32,13 @@ class ListingRepo {
     final res = await _sp
         .from('listings')
         .insert({
-      'title': title,
-      'price': price,
-      'category': category,
-      'city': city,
-      'image_url': imageUrl,
-      'user_id': userId, // 现在可以传 null；以后接入登录再填 uid
-    })
+          'title': title,
+          'price': price,
+          'category': category,
+          'city': city,
+          'image_url': imageUrl,
+          'user_id': userId, // 现在可以传 null；以后接入登录再填 uid
+        })
         .select('id')
         .single();
 

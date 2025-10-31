@@ -15,10 +15,10 @@ import 'dart:math';
 
 /// 新增：统一承载 ensure_welcome_coupon 返回
 class EnsureWelcomeResult {
-  final bool created;                 // 本次是否新建了欢迎券
-  final bool welcomeGranted;          // 服务端是否已标记发过欢迎券
-  final bool shouldPopup;             // 只在“首次真正创建且此前未标记”时为 true
-  final String? couponId;             // 欢迎券的 id（服务端返回）
+  final bool created; // 本次是否新建了欢迎券
+  final bool welcomeGranted; // 服务端是否已标记发过欢迎券
+  final bool shouldPopup; // 只在“首次真正创建且此前未标记”时为 true
+  final String? couponId; // 欢迎券的 id（服务端返回）
   EnsureWelcomeResult({
     required this.created,
     required this.welcomeGranted,
@@ -55,8 +55,11 @@ class RewardService {
     final uid = _client.auth.currentUser?.id;
     if (uid == null) throw Exception('Not signed in');
 
-    final res = await _client.rpc('ensure_welcome_coupon', params: {'p_user': uid});
-    final map = (res is Map) ? Map<String, dynamic>.from(res as Map) : <String, dynamic>{};
+    final res =
+        await _client.rpc('ensure_welcome_coupon', params: {'p_user': uid});
+    final map = (res is Map)
+        ? Map<String, dynamic>.from(res as Map)
+        : <String, dynamic>{};
 
     return EnsureWelcomeResult(
       created: map['created'] == true,
@@ -67,13 +70,17 @@ class RewardService {
   }
 
   /// 改造：不再前端插券。调用 RPC 后返回欢迎券行（若存在）。
-  static Future<Map<String, dynamic>?> ensureWelcomeGiftRow(String userId) async {
+  static Future<Map<String, dynamic>?> ensureWelcomeGiftRow(
+      String userId) async {
     if (userId.isEmpty) return null;
 
     try {
       // 1) 调服务端幂等 RPC（内部已保障并发/唯一性/置位 profiles）
-      final res = await _client.rpc('ensure_welcome_coupon', params: {'p_user': userId});
-      final map = (res is Map) ? Map<String, dynamic>.from(res as Map) : <String, dynamic>{};
+      final res = await _client
+          .rpc('ensure_welcome_coupon', params: {'p_user': userId});
+      final map = (res is Map)
+          ? Map<String, dynamic>.from(res as Map)
+          : <String, dynamic>{};
       final couponId = map['coupon_id'] as String?;
 
       // 2) 优先用 coupon_id 精准取券，否则回落到“取该用户最近的 welcome 券”
@@ -129,8 +136,11 @@ class RewardService {
   static Future<bool> ensureWelcomeGiftFor(String userId) async {
     if (userId.isEmpty) return false;
     try {
-      final res = await _client.rpc('ensure_welcome_coupon', params: {'p_user': userId});
-      final map = (res is Map) ? Map<String, dynamic>.from(res as Map) : <String, dynamic>{};
+      final res = await _client
+          .rpc('ensure_welcome_coupon', params: {'p_user': userId});
+      final map = (res is Map)
+          ? Map<String, dynamic>.from(res as Map)
+          : <String, dynamic>{};
       final granted = map['welcome_reward_granted'] == true;
       _welcomeChecked = true; // 仅防抖
       return granted;
@@ -153,7 +163,8 @@ class RewardService {
   }
 
   // ===== 核心缓存 =====
-  static Future<Map<String, dynamic>> getSummary({required String userId}) async {
+  static Future<Map<String, dynamic>> getSummary(
+      {required String userId}) async {
     final key = 'summary:$userId';
     final now = DateTime.now();
     final cached = _cache[key];
@@ -172,7 +183,8 @@ class RewardService {
     }
   }
 
-  static Future<Map<String, dynamic>> _fetchSummary(String userId, String cacheKey, DateTime now) async {
+  static Future<Map<String, dynamic>> _fetchSummary(
+      String userId, String cacheKey, DateTime now) async {
     try {
       final stats = await getUserRewardStats(userId);
 
@@ -191,7 +203,8 @@ class RewardService {
           .eq('status', 'active')
           .or('source.eq.rewards,source.eq.reward,source.eq.task,source.eq.signup,type.eq.welcome');
 
-      final activeCouponCount = (activeCoupons is List ? activeCoupons.length : 0);
+      final activeCouponCount =
+          (activeCoupons is List ? activeCoupons.length : 0);
 
       final summary = {
         'points': stats['total_rewards'] ?? 0,
@@ -240,13 +253,13 @@ class RewardService {
   }
 
   static Map<String, dynamic> _getEmptySummary() => {
-    'points': 0,
-    'coupons': 0,
-    'tasks': 0,
-    'completed_tasks': 0,
-    'total_tasks': 0,
-    'stats': {},
-  };
+        'points': 0,
+        'coupons': 0,
+        'tasks': 0,
+        'completed_tasks': 0,
+        'total_tasks': 0,
+        'stats': {},
+      };
 
   static String _generateInvitationCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -281,7 +294,7 @@ class RewardService {
         type: CouponType.category,
         title: 'New User Category Pinning Coupon',
         description:
-        'Welcome to Swaply! Use this coupon to pin your item in category page for 3 days to increase exposure',
+            'Welcome to Swaply! Use this coupon to pin your item in category page for 3 days to increase exposure',
         durationDays: 3,
         maxUses: 1,
         metadata: {
@@ -323,11 +336,15 @@ class RewardService {
     try {
       if (userId.trim().isEmpty) return false;
 
-      final existingTasks =
-      await _client.from('user_tasks').select('id').eq('user_id', userId).limit(1);
+      final existingTasks = await _client
+          .from('user_tasks')
+          .select('id')
+          .eq('user_id', userId)
+          .limit(1);
 
-      final List<dynamic> tasksList =
-      existingTasks is List ? existingTasks : (existingTasks != null ? [existingTasks] : []);
+      final List<dynamic> tasksList = existingTasks is List
+          ? existingTasks
+          : (existingTasks != null ? [existingTasks] : []);
 
       if (tasksList.isNotEmpty) {
         _debugPrint('User already has tasks created');
@@ -340,7 +357,8 @@ class RewardService {
           'user_id': userId,
           'task_type': 'publish_items',
           'task_name': 'Publish Your First Items',
-          'description': 'Publish 3 items with images to unlock hot pinning coupon',
+          'description':
+              'Publish 3 items with images to unlock hot pinning coupon',
           'target_count': 3,
           'current_count': 0,
           'status': 'active',
@@ -350,7 +368,7 @@ class RewardService {
             'actual_type': 'trending',
             'title': 'Active User Hot Pinning Coupon',
             'description':
-            'Congratulations on completing the publishing task! Use this coupon to pin on homepage trending for 3 days'
+                'Congratulations on completing the publishing task! Use this coupon to pin on homepage trending for 3 days'
           },
           'created_at': now,
         },
@@ -386,7 +404,7 @@ class RewardService {
           .eq('status', 'active');
 
       final List<dynamic> tasks =
-      response is List ? response : (response != null ? [response] : []);
+          response is List ? response : (response != null ? [response] : []);
 
       if (tasks.isEmpty) {
         _debugPrint('No matching active tasks found');
@@ -398,21 +416,23 @@ class RewardService {
         try {
           final taskData = Map<String, dynamic>.from(item);
           final taskId = taskData['id'];
-          final currentCount = (taskData['current_count'] as num?)?.toInt() ?? 0;
+          final currentCount =
+              (taskData['current_count'] as num?)?.toInt() ?? 0;
           final targetCount = (taskData['target_count'] as num?)?.toInt() ?? 1;
           final newCount = (currentCount + increment).clamp(0, targetCount);
 
-          await _client
-              .from('user_tasks')
-              .update({'current_count': newCount, 'updated_at': DateTime.now().toIso8601String()})
-              .eq('id', taskId);
+          await _client.from('user_tasks').update({
+            'current_count': newCount,
+            'updated_at': DateTime.now().toIso8601String()
+          }).eq('id', taskId);
 
           if (newCount >= targetCount && taskData['status'] == 'active') {
             await _completeTask(taskId.toString(), userId);
           }
 
           hasUpdated = true;
-          _debugPrint('Task progress updated: $taskType ($newCount/$targetCount)');
+          _debugPrint(
+              'Task progress updated: $taskType ($newCount/$targetCount)');
         } catch (e) {
           _debugPrint('Error updating individual task: $e');
         }
@@ -432,12 +452,15 @@ class RewardService {
 
       final response = await _client
           .from('user_tasks')
-          .update({'status': 'completed', 'completed_at': DateTime.now().toIso8601String()})
+          .update({
+            'status': 'completed',
+            'completed_at': DateTime.now().toIso8601String()
+          })
           .eq('id', taskId)
           .select();
 
       final List<dynamic> taskList =
-      response is List ? response : (response != null ? [response] : []);
+          response is List ? response : (response != null ? [response] : []);
       if (taskList.isNotEmpty) {
         final taskData = Map<String, dynamic>.from(taskList.first);
         _debugPrint('Task completed: ${taskData['task_name']}');
@@ -458,8 +481,9 @@ class RewardService {
       if (userId == null || userId.isEmpty) return;
       if (rewardType == null || rewardType.isEmpty) return;
 
-      final config =
-      rewardConfig is Map<String, dynamic> ? rewardConfig : <String, dynamic>{};
+      final config = rewardConfig is Map<String, dynamic>
+          ? rewardConfig
+          : <String, dynamic>{};
 
       CouponType couponType;
       switch (rewardType) {
@@ -480,8 +504,8 @@ class RewardService {
         userId: userId,
         type: couponType,
         title: config['title']?.toString() ?? 'Activity Reward Coupon',
-        description:
-        config['description']?.toString() ?? 'Congratulations on completing the task!',
+        description: config['description']?.toString() ??
+            'Congratulations on completing the task!',
         durationDays: (config['days'] as num?)?.toInt() ?? 3,
         maxUses: 1,
         metadata: {
@@ -494,10 +518,10 @@ class RewardService {
       );
 
       if (coupon != null) {
-        await _client
-            .from('user_tasks')
-            .update({'status': 'rewarded', 'rewarded_at': DateTime.now().toIso8601String()})
-            .eq('id', task['id']);
+        await _client.from('user_tasks').update({
+          'status': 'rewarded',
+          'rewarded_at': DateTime.now().toIso8601String()
+        }).eq('id', task['id']);
 
         await _client.from('reward_logs').insert({
           'user_id': userId,
@@ -556,7 +580,8 @@ class RewardService {
           return code;
         } catch (e) {
           if (attempts >= maxAttempts) {
-            _debugPrint('Create invite code failed after $attempts attempts: $e');
+            _debugPrint(
+                'Create invite code failed after $attempts attempts: $e');
             return null;
           }
         }
@@ -607,12 +632,15 @@ class RewardService {
       final codeStr = (e.code ?? '').toLowerCase();
 
       // 唯一约束冲突：按已绑定处理
-      if (codeStr == '23505' || msg.contains('unique') || msg.contains('duplicate')) {
+      if (codeStr == '23505' ||
+          msg.contains('unique') ||
+          msg.contains('duplicate')) {
         return 'already_linked';
       }
       // 参数名不匹配/函数签名不匹配等
       if (msg.contains('could not find the function') ||
-          msg.contains('no function matches the given name and argument types')) {
+          msg.contains(
+              'no function matches the given name and argument types')) {
         return 'error';
       }
       _debugPrint('link_referral error: $e');
@@ -631,7 +659,8 @@ class RewardService {
       return;
     }
     try {
-      final res = await _client.rpc('complete_referral', params: {'p_invitee': uid});
+      final res =
+          await _client.rpc('complete_referral', params: {'p_invitee': uid});
 
       if (res is String && res.isNotEmpty) {
         final inviterId = res;
@@ -639,7 +668,8 @@ class RewardService {
 
         // 优先使用后端 RPC（单张里程碑券：1/5/10）
         try {
-          final r = await _client.rpc('issue_referral_milestone_reward', params: {
+          final r =
+              await _client.rpc('issue_referral_milestone_reward', params: {
             'p_inviter': inviterId,
           });
           _debugPrint('issue_referral_milestone_reward: $r');
@@ -669,7 +699,7 @@ class RewardService {
           .eq('status', 'completed');
 
       final List<dynamic> completed =
-      response is List ? response : (response != null ? [response] : []);
+          response is List ? response : (response != null ? [response] : []);
       final count = completed.length;
       _debugPrint('Completed referrals count: $count');
 
@@ -684,8 +714,7 @@ class RewardService {
             .select('id')
             .eq('user_id', inviterId)
             .eq('reward_type', 'referral_bonus')
-            .contains('metadata', {'reward_level': rewardLevel})
-            .maybeSingle();
+            .contains('metadata', {'reward_level': rewardLevel}).maybeSingle();
         if (already != null) {
           _debugPrint('Reward for $rewardLevel already granted');
           return;
@@ -734,8 +763,7 @@ class RewardService {
             .select('id')
             .eq('user_id', inviterId)
             .eq('reward_type', 'referral_bonus')
-            .contains('metadata', {'reward_level': rewardLevel})
-            .maybeSingle();
+            .contains('metadata', {'reward_level': rewardLevel}).maybeSingle();
         if (already != null) {
           _debugPrint('Reward for $rewardLevel already granted');
           return;
@@ -746,7 +774,7 @@ class RewardService {
           durationDays: 3,
           title: 'Referral Reward · Search/Popular Pin (3d)',
           description:
-          'Invite 5 friends completed — search top & appear in Popular for 3 days',
+              'Invite 5 friends completed — search top & appear in Popular for 3 days',
         );
 
         if (coupon != null) {
@@ -765,7 +793,8 @@ class RewardService {
             },
             'created_at': DateTime.now().toIso8601String(),
           });
-          _debugPrint('Referral milestone reward granted: M5 - Search/Popular(3d)');
+          _debugPrint(
+              'Referral milestone reward granted: M5 - Search/Popular(3d)');
           clearCache();
         }
       } else if (count == 10) {
@@ -777,8 +806,7 @@ class RewardService {
             .select('id')
             .eq('user_id', inviterId)
             .eq('reward_type', 'referral_bonus')
-            .contains('metadata', {'reward_level': rewardLevel})
-            .maybeSingle();
+            .contains('metadata', {'reward_level': rewardLevel}).maybeSingle();
         if (already != null) {
           _debugPrint('Reward for $rewardLevel already granted');
           return;
@@ -788,7 +816,8 @@ class RewardService {
           userId: inviterId,
           type: CouponType.trending,
           title: 'Referral Reward · Home Trending (7d)',
-          description: 'Invite 10 friends completed — homepage trending for 7 days',
+          description:
+              'Invite 10 friends completed — homepage trending for 7 days',
           durationDays: 7,
           maxUses: 1,
           metadata: {
@@ -848,12 +877,12 @@ class RewardService {
           final resp = await _client
               .from('daily_quotas')
               .insert({
-            'date': today,
-            'quota_type': quotaType,
-            'max_count': maxDaily,
-            'used_count': 0,
-            'created_at': DateTime.now().toIso8601String(),
-          })
+                'date': today,
+                'quota_type': quotaType,
+                'max_count': maxDaily,
+                'used_count': 0,
+                'created_at': DateTime.now().toIso8601String(),
+              })
               .select()
               .single();
           quota = resp;
@@ -877,10 +906,10 @@ class RewardService {
         return false;
       }
 
-      await _client
-          .from('daily_quotas')
-          .update({'used_count': used + 1, 'updated_at': DateTime.now().toIso8601String()})
-          .eq('id', q['id']);
+      await _client.from('daily_quotas').update({
+        'used_count': used + 1,
+        'updated_at': DateTime.now().toIso8601String()
+      }).eq('id', q['id']);
 
       _debugPrint('Quota consumed: $quotaType (${used + 1}/$max)');
       return true;
@@ -929,7 +958,8 @@ class RewardService {
         'max_count': max,
         'remaining': remaining,
         'available': remaining > 0,
-        'usage_percentage': max > 0 ? (used / max * 100).clamp(0.0, 100.0) : 0.0,
+        'usage_percentage':
+            max > 0 ? (used / max * 100).clamp(0.0, 100.0) : 0.0,
       };
     } catch (e) {
       _debugPrint('getQuotaStatus error: $e');
@@ -982,12 +1012,15 @@ class RewardService {
       final tasksResponse = futures[1];
       final referralsResponse = futures[2];
 
-      final List<dynamic> rewards =
-      rewardsResponse is List ? rewardsResponse : (rewardsResponse != null ? [rewardsResponse] : []);
-      final List<dynamic> tasks =
-      tasksResponse is List ? tasksResponse : (tasksResponse != null ? [tasksResponse] : []);
-      final List<dynamic> referrals =
-      referralsResponse is List ? referralsResponse : (referralsResponse != null ? [referralsResponse] : []);
+      final List<dynamic> rewards = rewardsResponse is List
+          ? rewardsResponse
+          : (rewardsResponse != null ? [rewardsResponse] : []);
+      final List<dynamic> tasks = tasksResponse is List
+          ? tasksResponse
+          : (tasksResponse != null ? [tasksResponse] : []);
+      final List<dynamic> referrals = referralsResponse is List
+          ? referralsResponse
+          : (referralsResponse != null ? [referralsResponse] : []);
 
       int countRewardsByType(String type) {
         return rewards.where((r) {
@@ -1036,14 +1069,16 @@ class RewardService {
         'total_tasks': totalTasks,
         'completed_tasks': completedTasks,
         'pending_tasks': countTasksByStatus(['active']),
-        'task_completion_rate':
-        totalTasks > 0 ? (completedTasks / totalTasks * 100).clamp(0.0, 100.0) : 0.0,
+        'task_completion_rate': totalTasks > 0
+            ? (completedTasks / totalTasks * 100).clamp(0.0, 100.0)
+            : 0.0,
         'total_invitations': totalInvitations,
         'successful_invitations': successfulInvitations,
         'pending_invitations': countReferralsByStatus('pending'),
         'accepted_invitations': 0,
-        'invitation_success_rate':
-        totalInvitations > 0 ? (successfulInvitations / totalInvitations * 100).clamp(0.0, 100.0) : 0.0,
+        'invitation_success_rate': totalInvitations > 0
+            ? (successfulInvitations / totalInvitations * 100).clamp(0.0, 100.0)
+            : 0.0,
       };
 
       _cache[cacheKey] = _CacheEntry(now, stats);
@@ -1065,22 +1100,23 @@ class RewardService {
   }
 
   static Map<String, dynamic> _getEmptyStats() => {
-    'total_rewards': 0,
-    'register_rewards': 0,
-    'activity_rewards': 0,
-    'referral_rewards': 0,
-    'total_tasks': 0,
-    'completed_tasks': 0,
-    'pending_tasks': 0,
-    'task_completion_rate': 0.0,
-    'total_invitations': 0,
-    'successful_invitations': 0,
-    'pending_invitations': 0,
-    'accepted_invitations': 0,
-    'invitation_success_rate': 0.0,
-  };
+        'total_rewards': 0,
+        'register_rewards': 0,
+        'activity_rewards': 0,
+        'referral_rewards': 0,
+        'total_tasks': 0,
+        'completed_tasks': 0,
+        'pending_tasks': 0,
+        'task_completion_rate': 0.0,
+        'total_invitations': 0,
+        'successful_invitations': 0,
+        'pending_invitations': 0,
+        'accepted_invitations': 0,
+        'invitation_success_rate': 0.0,
+      };
 
-  static Future<List<Map<String, dynamic>>> getUserInvitations(String userId) async {
+  static Future<List<Map<String, dynamic>>> getUserInvitations(
+      String userId) async {
     try {
       if (userId.trim().isEmpty) return [];
 
@@ -1090,15 +1126,16 @@ class RewardService {
           .eq('inviter_id', userId)
           .order('created_at', ascending: false);
 
-      final List<dynamic> list = response is List ? response : (response != null ? [response] : []);
+      final List<dynamic> list =
+          response is List ? response : (response != null ? [response] : []);
       return list
           .map<Map<String, dynamic>>((item) {
-        try {
-          return Map<String, dynamic>.from(item);
-        } catch (_) {
-          return <String, dynamic>{};
-        }
-      })
+            try {
+              return Map<String, dynamic>.from(item);
+            } catch (_) {
+              return <String, dynamic>{};
+            }
+          })
           .where((e) => e.isNotEmpty)
           .toList();
     } on PostgrestException catch (e) {
@@ -1110,7 +1147,8 @@ class RewardService {
     }
   }
 
-  static Future<List<Map<String, dynamic>>> getUserRewardHistory(String userId) async {
+  static Future<List<Map<String, dynamic>>> getUserRewardHistory(
+      String userId) async {
     final key = 'history:$userId';
     final now = DateTime.now();
 
@@ -1135,34 +1173,32 @@ class RewardService {
     try {
       if (userId.trim().isEmpty) return [];
 
-      final response = await _client
-          .from('reward_logs')
-          .select('''
+      final response = await _client.from('reward_logs').select('''
             *,
             coupons:coupon_id (code, type, title, status)
-          ''')
-          .eq('user_id', userId)
-          .order('created_at', ascending: false);
+          ''').eq('user_id', userId).order('created_at', ascending: false);
 
       final List<dynamic> rewards =
-      response is List ? response : (response != null ? [response] : []);
+          response is List ? response : (response != null ? [response] : []);
 
       final result = rewards
           .map<Map<String, dynamic>>((item) {
-        try {
-          final rewardData = Map<String, dynamic>.from(item);
-          if (rewardData['coupons'] != null && rewardData['coupons'] is Map) {
-            final couponData = Map<String, dynamic>.from(rewardData['coupons']);
-            rewardData['coupon_code'] = couponData['code'];
-            rewardData['coupon_title'] = couponData['title'];
-            rewardData['coupon_status'] = couponData['status'];
-            rewardData['coupon_type'] = couponData['type'];
-          }
-          return rewardData;
-        } catch (_) {
-          return <String, dynamic>{};
-        }
-      })
+            try {
+              final rewardData = Map<String, dynamic>.from(item);
+              if (rewardData['coupons'] != null &&
+                  rewardData['coupons'] is Map) {
+                final couponData =
+                    Map<String, dynamic>.from(rewardData['coupons']);
+                rewardData['coupon_code'] = couponData['code'];
+                rewardData['coupon_title'] = couponData['title'];
+                rewardData['coupon_status'] = couponData['status'];
+                rewardData['coupon_type'] = couponData['type'];
+              }
+              return rewardData;
+            } catch (_) {
+              return <String, dynamic>{};
+            }
+          })
           .where((e) => e.isNotEmpty)
           .toList();
 
@@ -1188,14 +1224,22 @@ class RewardService {
   }) async {
     try {
       if (couponId.trim().isEmpty || listingId.trim().isEmpty) {
-        return {'success': false, 'message': 'Invalid parameters provided', 'error_code': 'INVALID_PARAMS'};
+        return {
+          'success': false,
+          'message': 'Invalid parameters provided',
+          'error_code': 'INVALID_PARAMS'
+        };
       }
 
       _debugPrint('Smart pinning: $couponId -> $listingId');
 
       final coupon = await CouponService.getCoupon(couponId);
       if (coupon == null) {
-        return {'success': false, 'message': 'Coupon not found', 'error_code': 'COUPON_NOT_FOUND'};
+        return {
+          'success': false,
+          'message': 'Coupon not found',
+          'error_code': 'COUPON_NOT_FOUND'
+        };
       }
       if (!coupon.isUsable) {
         return {
@@ -1206,30 +1250,37 @@ class RewardService {
       }
 
       if (coupon.type == CouponType.trending) {
-        final ok = await checkAndConsumeQuota(quotaType: 'trending_pins', maxDaily: 20);
+        final ok = await checkAndConsumeQuota(
+            quotaType: 'trending_pins', maxDaily: 20);
         if (!ok) {
           return {
             'success': false,
-            'message': 'Daily trending quota exhausted, please try again tomorrow',
+            'message':
+                'Daily trending quota exhausted, please try again tomorrow',
             'error_code': 'QUOTA_EXHAUSTED',
           };
         }
       }
 
-      final success =
-      await CouponService.useCouponForPinning(couponId: couponId, listingId: listingId);
+      final success = await CouponService.useCouponForPinning(
+          couponId: couponId, listingId: listingId);
 
       if (success) {
         clearCache();
         return {
           'success': true,
-          'message': 'Coupon used successfully for ${coupon.type.displayLocation}',
+          'message':
+              'Coupon used successfully for ${coupon.type.displayLocation}',
           'coupon_type': coupon.type.value,
           'display_location': coupon.type.displayLocation,
           'function_description': coupon.type.functionDescription,
         };
       } else {
-        return {'success': false, 'message': 'Failed to use coupon for pinning', 'error_code': 'PINNING_FAILED'};
+        return {
+          'success': false,
+          'message': 'Failed to use coupon for pinning',
+          'error_code': 'PINNING_FAILED'
+        };
       }
     } catch (e) {
       _debugPrint('useSmartPinning error: $e');
@@ -1261,9 +1312,11 @@ class RewardService {
         };
       }
 
-      final actualType = couponType.isActualCouponType ? couponType : CouponType.category;
+      final actualType =
+          couponType.isActualCouponType ? couponType : CouponType.category;
 
-      _debugPrint('Batch granting ${actualType.value} coupons to ${userIds.length} users');
+      _debugPrint(
+          'Batch granting ${actualType.value} coupons to ${userIds.length} users');
 
       int grantedCount = 0;
       int failedCount = 0;
@@ -1275,7 +1328,8 @@ class RewardService {
             userId: userId,
             type: actualType,
             title: title ?? 'Admin Reward ${actualType.displayNameEn}',
-            description: description ?? 'Special reward from admin: ${actualType.functionDescription}',
+            description: description ??
+                'Special reward from admin: ${actualType.functionDescription}',
             durationDays: durationDays,
             maxUses: 1,
             metadata: {
@@ -1300,24 +1354,36 @@ class RewardService {
             });
 
             grantedCount++;
-            results.add({'user_id': userId, 'success': true, 'coupon_id': coupon.id, 'coupon_code': coupon.code});
+            results.add({
+              'user_id': userId,
+              'success': true,
+              'coupon_id': coupon.id,
+              'coupon_code': coupon.code
+            });
           } else {
             failedCount++;
-            results.add({'user_id': userId, 'success': false, 'error': 'Failed to create coupon'});
+            results.add({
+              'user_id': userId,
+              'success': false,
+              'error': 'Failed to create coupon'
+            });
           }
         } catch (e) {
           _debugPrint('Batch grant error for $userId: $e');
           failedCount++;
-          results.add({'user_id': userId, 'success': false, 'error': e.toString()});
+          results.add(
+              {'user_id': userId, 'success': false, 'error': e.toString()});
         }
       }
 
-      _debugPrint('Batch grant completed: $grantedCount granted, $failedCount failed');
+      _debugPrint(
+          'Batch grant completed: $grantedCount granted, $failedCount failed');
       clearCache();
 
       return {
         'success': grantedCount > 0,
-        'message': 'Batch reward completed: $grantedCount granted, $failedCount failed',
+        'message':
+            'Batch reward completed: $grantedCount granted, $failedCount failed',
         'granted_count': grantedCount,
         'failed_count': failedCount,
         'total_count': userIds.length,
@@ -1342,7 +1408,8 @@ class RewardService {
       _debugPrint('Starting expired data cleanup');
 
       final now = DateTime.now();
-      final thirtyDaysAgo = now.subtract(const Duration(days: 30)).toIso8601String();
+      final thirtyDaysAgo =
+          now.subtract(const Duration(days: 30)).toIso8601String();
 
       final expiredTasksResponse = await _client
           .from('user_tasks')
@@ -1351,8 +1418,9 @@ class RewardService {
           .lt('created_at', thirtyDaysAgo)
           .select('id');
 
-      final expiredTasksCount =
-      expiredTasksResponse is List ? expiredTasksResponse.length : (expiredTasksResponse != null ? 1 : 0);
+      final expiredTasksCount = expiredTasksResponse is List
+          ? expiredTasksResponse.length
+          : (expiredTasksResponse != null ? 1 : 0);
 
       final cancelledReferralsResponse = await _client
           .from('referrals')
@@ -1365,12 +1433,19 @@ class RewardService {
           ? cancelledReferralsResponse.length
           : (cancelledReferralsResponse != null ? 1 : 0);
 
-      final sevenDaysAgo = now.subtract(const Duration(days: 7)).toIso8601String().substring(0, 10);
-      final deletedQuotasResponse =
-      await _client.from('daily_quotas').delete().lt('date', sevenDaysAgo).select('id');
+      final sevenDaysAgo = now
+          .subtract(const Duration(days: 7))
+          .toIso8601String()
+          .substring(0, 10);
+      final deletedQuotasResponse = await _client
+          .from('daily_quotas')
+          .delete()
+          .lt('date', sevenDaysAgo)
+          .select('id');
 
-      final deletedQuotasCount =
-      deletedQuotasResponse is List ? deletedQuotasResponse.length : (deletedQuotasResponse != null ? 1 : 0);
+      final deletedQuotasCount = deletedQuotasResponse is List
+          ? deletedQuotasResponse.length
+          : (deletedQuotasResponse != null ? 1 : 0);
 
       _debugPrint(
           'Cleanup: tasks=$expiredTasksCount, referrals_cancelled=$cancelledReferralsCount, quotas_deleted=$deletedQuotasCount');
@@ -1403,23 +1478,48 @@ class RewardService {
     DateTime? endDate,
   }) async {
     try {
-      final start =
-          startDate?.toIso8601String() ?? DateTime.now().subtract(const Duration(days: 30)).toIso8601String();
-      final end = endDate?.toIso8601String() ?? DateTime.now().toIso8601String();
+      final start = startDate?.toIso8601String() ??
+          DateTime.now().subtract(const Duration(days: 30)).toIso8601String();
+      final end =
+          endDate?.toIso8601String() ?? DateTime.now().toIso8601String();
 
       _debugPrint('Overview period: $start → $end');
 
       final futures = await Future.wait([
-        _client.from('reward_logs').select('*').gte('created_at', start).lte('created_at', end),
-        _client.from('user_tasks').select('*').gte('created_at', start).lte('created_at', end),
-        _client.from('referrals').select('*').gte('created_at', start).lte('created_at', end),
-        _client.from('coupons').select('*').gte('created_at', start).lte('created_at', end),
+        _client
+            .from('reward_logs')
+            .select('*')
+            .gte('created_at', start)
+            .lte('created_at', end),
+        _client
+            .from('user_tasks')
+            .select('*')
+            .gte('created_at', start)
+            .lte('created_at', end),
+        _client
+            .from('referrals')
+            .select('*')
+            .gte('created_at', start)
+            .lte('created_at', end),
+        _client
+            .from('coupons')
+            .select('*')
+            .gte('created_at', start)
+            .lte('created_at', end),
       ]);
 
-      final rewardsData = futures[0] is List ? futures[0] as List : (futures[0] != null ? [futures[0]] : []);
-      final tasksData = futures[1] is List ? futures[1] as List : (futures[1] != null ? [futures[1]] : []);
-      final referralsData = futures[2] is List ? futures[2] as List : (futures[2] != null ? [futures[2]] : []);
-      final couponsData = futures[3] is List ? futures[3] as List : (futures[3] != null ? [futures[3]] : []);
+      final rewardsData = futures[0] is List
+          ? futures[0] as List
+          : (futures[0] != null ? [futures[0]] : []);
+      final tasksData = futures[1] is List
+          ? futures[1] as List
+          : (futures[1] != null ? [futures[1]] : []);
+      final referralsData = futures[2] is List
+          ? futures[2] as List
+          : (futures[2] != null ? [futures[2]] : []);
+      final couponsData = futures[3] is List
+          ? futures[3] as List
+          : (futures[3] != null ? [futures[3]] : []);
 
       Map<String, int> countByField(List<dynamic> items, String field) {
         final counts = <String, int>{};
@@ -1436,13 +1536,19 @@ class RewardService {
       return {
         'success': true,
         'period': {'start_date': start, 'end_date': end},
-        'rewards': {'total': rewardsData.length, 'by_type': countByField(rewardsData, 'reward_type')},
+        'rewards': {
+          'total': rewardsData.length,
+          'by_type': countByField(rewardsData, 'reward_type')
+        },
         'tasks': {
           'total': tasksData.length,
           'by_status': countByField(tasksData, 'status'),
           'by_type': countByField(tasksData, 'task_type'),
         },
-        'invitations': {'total': referralsData.length, 'by_status': countByField(referralsData, 'status')},
+        'invitations': {
+          'total': referralsData.length,
+          'by_status': countByField(referralsData, 'status')
+        },
         'coupons': {
           'total': couponsData.length,
           'by_type': countByField(couponsData, 'type'),
@@ -1477,7 +1583,8 @@ class RewardService {
     }
   }
 
-  static Future<Map<String, dynamic>> getRewardStats(String userId) => getUserRewardStats(userId);
+  static Future<Map<String, dynamic>> getRewardStats(String userId) =>
+      getUserRewardStats(userId);
 
   static Future<List<Map<String, dynamic>>> getRewardHistory({
     required String userId,
@@ -1502,7 +1609,8 @@ class RewardService {
     return getUserRewardHistory(userId);
   }
 
-  static Future<List<Map<String, dynamic>>> getActiveTasks(String userId) async {
+  static Future<List<Map<String, dynamic>>> getActiveTasks(
+      String userId) async {
     final key = 'active_tasks:$userId';
     final now = DateTime.now();
 

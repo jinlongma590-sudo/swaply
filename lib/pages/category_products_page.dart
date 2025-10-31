@@ -40,8 +40,20 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
   static const Color _successGreen = Color(0xFF4CAF50);
 
   final List<String> _locations = const [
-    'All Zimbabwe','Harare','Bulawayo','Chitungwiza','Mutare','Gweru','Kwekwe',
-    'Kadoma','Masvingo','Chinhoyi','Chegutu','Bindura','Marondera','Redcliff',
+    'All Zimbabwe',
+    'Harare',
+    'Bulawayo',
+    'Chitungwiza',
+    'Mutare',
+    'Gweru',
+    'Kwekwe',
+    'Kadoma',
+    'Masvingo',
+    'Chinhoyi',
+    'Chegutu',
+    'Bindura',
+    'Marondera',
+    'Redcliff',
   ];
 
   final List<Map<String, dynamic>> _items = [];
@@ -135,7 +147,8 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
     }
 
     if (priceData is String) {
-      if (priceData.toLowerCase().contains('free') || priceData == '0') return 'Free';
+      if (priceData.toLowerCase().contains('free') || priceData == '0')
+        return 'Free';
 
       final cleanPrice = priceData.replaceAll(RegExp(r'[^\d.]'), '');
       final parsedPrice = num.tryParse(cleanPrice);
@@ -160,7 +173,8 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
     setState(() => _loadingPinned = true);
     try {
       final categoryDb = _categoryIdToDb(widget.categoryId);
-      final city = _selectedLocation == 'All Zimbabwe' ? null : _selectedLocation;
+      final city =
+          _selectedLocation == 'All Zimbabwe' ? null : _selectedLocation;
 
       final pinnedAds = await CouponService.getCategoryPinnedAds(
         category: categoryDb,
@@ -224,7 +238,8 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
   Future<void> _refreshTotalCount() async {
     final categoryDb = _categoryIdToDb(widget.categoryId);
     final city = _selectedLocation == 'All Zimbabwe' ? null : _selectedLocation;
-    final total = await ListingApi.countListings(category: categoryDb, city: city);
+    final total =
+        await ListingApi.countListings(category: categoryDb, city: city);
     if (mounted) setState(() => _totalCount = total);
   }
 
@@ -261,7 +276,9 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
     return rows.map<Map<String, dynamic>>((r) {
       final num? priceNum = r['price'] is num ? (r['price'] as num) : null;
       final priceText = _formatPrice(r['price']);
-      final imgs = (r['images'] as List?) ?? (r['image_urls'] as List?) ?? const <String>[];
+      final imgs = (r['images'] as List?) ??
+          (r['image_urls'] as List?) ??
+          const <String>[];
 
       return {
         'id': r['id'],
@@ -296,8 +313,12 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
         final sa = (a['postedDate'] ?? '').toString();
         final sb = (b['postedDate'] ?? '').toString();
         DateTime? da, db;
-        try { da = DateTime.tryParse(sa); } catch (_) {}
-        try { db = DateTime.tryParse(sb); } catch (_) {}
+        try {
+          da = DateTime.tryParse(sa);
+        } catch (_) {}
+        try {
+          db = DateTime.tryParse(sb);
+        } catch (_) {}
         if (da == null || db == null) return 0;
         return db.compareTo(da);
       });
@@ -416,13 +437,15 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
                     title: Text(
                       loc,
                       style: TextStyle(
-                        fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+                        fontWeight:
+                            selected ? FontWeight.w600 : FontWeight.normal,
                         color: selected ? _primaryBlue : Colors.grey[800],
                         fontSize: 13.sp,
                       ),
                     ),
                     trailing: selected
-                        ? Icon(Icons.check_circle, color: _primaryBlue, size: 18.sp)
+                        ? Icon(Icons.check_circle,
+                            color: _primaryBlue, size: 18.sp)
                         : null,
                     onTap: () {
                       setState(() => _selectedLocation = loc);
@@ -525,7 +548,8 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
                         ),
                       ),
                     ),
-                    Icon(Icons.arrow_drop_down, color: Colors.grey[600], size: 18.sp),
+                    Icon(Icons.arrow_drop_down,
+                        color: Colors.grey[600], size: 18.sp),
                   ],
                 ),
               ),
@@ -577,7 +601,8 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
             SizedBox(
               width: 12.w,
               height: 12.h,
-              child: CircularProgressIndicator(strokeWidth: 2, color: _primaryBlue),
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: _primaryBlue),
             )
           else ...[
             Container(
@@ -629,7 +654,8 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
   }
 
   Widget _buildBody() {
-    if (_loading && _items.isEmpty && _pinnedAds.isEmpty) return _buildSkeleton();
+    if (_loading && _items.isEmpty && _pinnedAds.isEmpty)
+      return _buildSkeleton();
     if (_error != null) {
       return _buildErrorState();
     }
@@ -675,7 +701,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
                   mainAxisSpacing: 6.h, // 减少间距
                 ),
                 delegate: SliverChildBuilderDelegate(
-                      (context, i) {
+                  (context, i) {
                     if (i >= _items.length) return _buildLoadingTile();
                     final p = _items[i];
                     return _buildUltraCompactProductCard(p);
@@ -740,10 +766,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
         ),
 
         // 特色广告网格
-        if (_loadingPinned)
-          _buildPinnedAdsLoading()
-        else
-          _buildPinnedAdsGrid(),
+        if (_loadingPinned) _buildPinnedAdsLoading() else _buildPinnedAdsGrid(),
 
         // 分隔线
         if (_pinnedAds.isNotEmpty) ...[
@@ -753,7 +776,11 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
             height: 1.h,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.transparent, Colors.orange[300]!, Colors.transparent],
+                colors: [
+                  Colors.transparent,
+                  Colors.orange[300]!,
+                  Colors.transparent
+                ],
               ),
             ),
           ),
@@ -829,9 +856,12 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.grey[200],
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(7.r)),
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(7.r)),
                     ),
-                    child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: _primaryBlue)),
+                    child: Center(
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: _primaryBlue)),
                   ),
                 ),
                 Container(
@@ -920,14 +950,16 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
                   SizedBox(height: 2.h),
                   Row(
                     children: [
-                      Icon(Icons.location_on, size: 7.sp, color: Colors.grey[500]),
+                      Icon(Icons.location_on,
+                          size: 7.sp, color: Colors.grey[500]),
                       SizedBox(width: 1.w),
                       Expanded(
                         child: Text(
                           p['location']?.toString() ?? '',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 7.sp, color: Colors.grey[600]),
+                          style: TextStyle(
+                              fontSize: 7.sp, color: Colors.grey[600]),
                         ),
                       ),
                     ],
@@ -970,7 +1002,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
                 color: _primaryBlue,
                 value: loadingProgress.expectedTotalBytes != null
                     ? loadingProgress.cumulativeBytesLoaded /
-                    loadingProgress.expectedTotalBytes!
+                        loadingProgress.expectedTotalBytes!
                     : null,
               ),
             ),
@@ -1041,7 +1073,9 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
         color: Colors.white,
         borderRadius: BorderRadius.circular(8.r),
       ),
-      child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: _primaryBlue)),
+      child: Center(
+          child:
+              CircularProgressIndicator(strokeWidth: 2, color: _primaryBlue)),
     );
   }
 
@@ -1066,9 +1100,12 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
               child: Container(
                 decoration: BoxDecoration(
                   color: Colors.grey[300],
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(8.r)),
+                  borderRadius:
+                      BorderRadius.vertical(top: Radius.circular(8.r)),
                 ),
-                child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: _primaryBlue)),
+                child: Center(
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: _primaryBlue)),
               ),
             ),
             Container(
@@ -1098,7 +1135,10 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
           SizedBox(height: 10.h),
           Text(
             'Something went wrong',
-            style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600, color: Colors.grey[800]),
+            style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[800]),
           ),
           SizedBox(height: 4.h),
           Padding(
@@ -1120,7 +1160,8 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
             style: ElevatedButton.styleFrom(
               backgroundColor: _primaryBlue,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.r)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6.r)),
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
             ),
           ),
@@ -1134,11 +1175,15 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.inventory_2_outlined, size: 50.sp, color: Colors.grey[400]),
+          Icon(Icons.inventory_2_outlined,
+              size: 50.sp, color: Colors.grey[400]),
           SizedBox(height: 12.h),
           Text(
             'No listings found',
-            style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600, color: Colors.grey[700]),
+            style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700]),
           ),
           SizedBox(height: 6.h),
           Padding(
@@ -1146,7 +1191,8 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
             child: Text(
               'There are no listings in this category for the selected location. Try changing the location or check back later.',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 11.sp, color: Colors.grey[600], height: 1.3),
+              style: TextStyle(
+                  fontSize: 11.sp, color: Colors.grey[600], height: 1.3),
             ),
           ),
           SizedBox(height: 16.h),
@@ -1160,7 +1206,8 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
             style: ElevatedButton.styleFrom(
               backgroundColor: _primaryBlue,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.r)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(6.r)),
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
             ),
           ),

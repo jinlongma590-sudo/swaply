@@ -59,7 +59,8 @@ class PinnedAdCard extends StatelessWidget {
                 children: [
                   // 主图片
                   ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(12)),
                     child: SizedBox.expand(
                       child: _buildImage(images),
                     ),
@@ -71,7 +72,8 @@ class PinnedAdCard extends StatelessWidget {
                       top: 8,
                       left: 8,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 3),
                         decoration: BoxDecoration(
                           color: Colors.orange,
                           borderRadius: BorderRadius.circular(8),
@@ -114,7 +116,8 @@ class PinnedAdCard extends StatelessWidget {
                     height: 60,
                     child: Container(
                       decoration: BoxDecoration(
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(12)),
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
@@ -133,7 +136,8 @@ class PinnedAdCard extends StatelessWidget {
                       top: 8,
                       right: 8,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 2),
                         decoration: BoxDecoration(
                           color: Colors.black.withAlpha(150),
                           borderRadius: BorderRadius.circular(6),
@@ -157,7 +161,8 @@ class PinnedAdCard extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                borderRadius:
+                    const BorderRadius.vertical(bottom: Radius.circular(12)),
                 border: Border(
                   top: BorderSide(color: Colors.orange[100]!, width: 1),
                 ),
@@ -213,11 +218,13 @@ class PinnedAdCard extends StatelessWidget {
                       // 置顶剩余时间提示
                       if (pinnedUntil != null && showPinnedBadge)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 1),
                           decoration: BoxDecoration(
                             color: Colors.orange[50],
                             borderRadius: BorderRadius.circular(4),
-                            border: Border.all(color: Colors.orange[200]!, width: 0.5),
+                            border: Border.all(
+                                color: Colors.orange[200]!, width: 0.5),
                           ),
                           child: Text(
                             _formatRemainingDays(pinnedUntil),

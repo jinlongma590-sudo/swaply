@@ -18,7 +18,8 @@ class MyListingsPage extends StatefulWidget {
   State<MyListingsPage> createState() => _MyListingsPageState();
 }
 
-class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStateMixin {
+class _MyListingsPageState extends State<MyListingsPage>
+    with TickerProviderStateMixin {
   late TabController _tabController;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -77,7 +78,8 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
 
       final response = await Supabase.instance.client
           .from('listings')
-          .select('id, title, images, image_urls, price, city, created_at, views_count')
+          .select(
+              'id, title, images, image_urls, price, city, created_at, views_count')
           .eq('user_id', user.id)
           .eq('status', 'active')
           .order('created_at', ascending: false)
@@ -192,7 +194,8 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
 
       if (mounted) {
         setState(() {
-          _receivedOffers = offersMutable.map((offer) => OfferModel.fromMap(offer)).toList();
+          _receivedOffers =
+              offersMutable.map((offer) => OfferModel.fromMap(offer)).toList();
           _isLoadingOffers = false;
         });
 
@@ -242,14 +245,16 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.check_circle_rounded, color: Colors.white, size: 14.sp),
+                Icon(Icons.check_circle_rounded,
+                    color: Colors.white, size: 14.sp),
                 SizedBox(width: 8.w),
                 const Text('Listing deleted successfully'),
               ],
             ),
             backgroundColor: Colors.green.shade600,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.r)),
             margin: EdgeInsets.all(12.w),
           ),
         );
@@ -264,14 +269,17 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.error_outline_rounded, color: Colors.white, size: 14.sp),
+                Icon(Icons.error_outline_rounded,
+                    color: Colors.white, size: 14.sp),
                 SizedBox(width: 8.w),
-                Expanded(child: Text('Failed to delete listing: ${e.toString()}')),
+                Expanded(
+                    child: Text('Failed to delete listing: ${e.toString()}')),
               ],
             ),
             backgroundColor: Colors.red.shade600,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.r)),
             margin: EdgeInsets.all(12.w),
           ),
         );
@@ -284,7 +292,8 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
           title: Row(
             children: [
               Container(
@@ -293,10 +302,13 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                   color: Colors.red.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6.r),
                 ),
-                child: Icon(Icons.delete_outline, color: Colors.red, size: 18.r),
+                child:
+                    Icon(Icons.delete_outline, color: Colors.red, size: 18.r),
               ),
               SizedBox(width: 10.w),
-              Text('Delete Listing', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600)),
+              Text('Delete Listing',
+                  style:
+                      TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600)),
             ],
           ),
           content: Text(
@@ -306,16 +318,22 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel', style: TextStyle(fontSize: 14.sp, color: Colors.grey[600])),
+              child: Text('Cancel',
+                  style: TextStyle(fontSize: 14.sp, color: Colors.grey[600])),
             ),
             Container(
-              decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(6.r)),
+              decoration: BoxDecoration(
+                  color: Colors.red, borderRadius: BorderRadius.circular(6.r)),
               child: TextButton(
                 onPressed: () {
                   Navigator.pop(context);
                   _deleteListing(listing, index);
                 },
-                child: const Text('Delete', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                child: const Text('Delete',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600)),
               ),
             ),
           ],
@@ -324,7 +342,8 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
     );
   }
 
-  Future<void> _handleOfferAction(OfferModel offer, OfferStatus newStatus, String? message) async {
+  Future<void> _handleOfferAction(
+      OfferModel offer, OfferStatus newStatus, String? message) async {
     try {
       final success = await OfferService.updateOfferStatus(
         offerId: offer.id,
@@ -335,13 +354,15 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
       if (success) {
         await _loadReceivedOffers();
 
-        if (newStatus == OfferStatus.accepted || newStatus == OfferStatus.declined) {
+        if (newStatus == OfferStatus.accepted ||
+            newStatus == OfferStatus.declined) {
           try {
             if (newStatus == OfferStatus.accepted) {
               await NotificationService.createSystemNotification(
                 recipientId: offer.buyerId,
                 title: 'Offer Accepted!',
-                message: 'Your offer of ${offer.formattedOfferAmount} for ${offer.listingTitle ?? 'the item'} has been accepted!',
+                message:
+                    'Your offer of ${offer.formattedOfferAmount} for ${offer.listingTitle ?? 'the item'} has been accepted!',
                 metadata: {
                   'offer_amount': offer.offerAmount,
                   'listing_title': offer.listingTitle,
@@ -363,7 +384,8 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
               await NotificationService.createSystemNotification(
                 recipientId: offer.buyerId,
                 title: 'Offer Declined',
-                message: 'Your offer of ${offer.formattedOfferAmount} for ${offer.listingTitle ?? 'the item'} has been declined${message != null && message.isNotEmpty ? ': $message' : '.'}',
+                message:
+                    'Your offer of ${offer.formattedOfferAmount} for ${offer.listingTitle ?? 'the item'} has been declined${message != null && message.isNotEmpty ? ': $message' : '.'}',
                 metadata: {
                   'offer_amount': offer.offerAmount,
                   'listing_title': offer.listingTitle,
@@ -394,14 +416,17 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
             SnackBar(
               content: Row(
                 children: [
-                  Icon(Icons.check_circle_rounded, color: Colors.white, size: 14.sp),
+                  Icon(Icons.check_circle_rounded,
+                      color: Colors.white, size: 14.sp),
                   SizedBox(width: 8.w),
-                  Text('Offer ${newStatus.displayText.toLowerCase()} successfully'),
+                  Text(
+                      'Offer ${newStatus.displayText.toLowerCase()} successfully'),
                 ],
               ),
               backgroundColor: Colors.green.shade600,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.r)),
               margin: EdgeInsets.all(12.w),
             ),
           );
@@ -417,14 +442,18 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.error_outline_rounded, color: Colors.white, size: 14.sp),
+                Icon(Icons.error_outline_rounded,
+                    color: Colors.white, size: 14.sp),
                 SizedBox(width: 8.w),
-                Expanded(child: Text('Failed to ${newStatus.displayText.toLowerCase()} offer')),
+                Expanded(
+                    child: Text(
+                        'Failed to ${newStatus.displayText.toLowerCase()} offer')),
               ],
             ),
             backgroundColor: Colors.red.shade600,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.r)),
             margin: EdgeInsets.all(12.w),
           ),
         );
@@ -460,7 +489,11 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [Color(0xFF2563EB), Color(0xFF3B82F6), Color(0xFF60A5FA)],
+                colors: [
+                  Color(0xFF2563EB),
+                  Color(0xFF3B82F6),
+                  Color(0xFF60A5FA)
+                ],
               ),
             ),
             child: SafeArea(
@@ -523,8 +556,10 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                         color: Colors.white.withOpacity(0.3),
                         borderRadius: BorderRadius.circular(8.r),
                       ),
-                      labelStyle: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600),
-                      unselectedLabelStyle: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.normal),
+                      labelStyle: TextStyle(
+                          fontSize: 12.sp, fontWeight: FontWeight.w600),
+                      unselectedLabelStyle: TextStyle(
+                          fontSize: 12.sp, fontWeight: FontWeight.normal),
                       indicatorSize: TabBarIndicatorSize.tab,
                       dividerHeight: 0,
                       tabs: [
@@ -613,7 +648,8 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
 
     // Safe get image list
     final images = ListingService.readImages(listing) ?? <String>[];
-    final firstImage = images.isNotEmpty ? images.first : 'assets/images/placeholder.jpg';
+    final firstImage =
+        images.isNotEmpty ? images.first : 'assets/images/placeholder.jpg';
 
     final city = listing['city']?.toString() ?? '';
     final createdAt = listing['created_at']?.toString() ?? '';
@@ -681,19 +717,23 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                             borderRadius: BorderRadius.circular(8.r),
                             child: firstImage.startsWith('http')
                                 ? Image.network(
-                              firstImage,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(Icons.image_rounded, color: Colors.grey.shade400, size: 20.w);
-                              },
-                            )
+                                    firstImage,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Icon(Icons.image_rounded,
+                                          color: Colors.grey.shade400,
+                                          size: 20.w);
+                                    },
+                                  )
                                 : Image.asset(
-                              firstImage,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(Icons.image_rounded, color: Colors.grey.shade400, size: 20.w);
-                              },
-                            ),
+                                    firstImage,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Icon(Icons.image_rounded,
+                                          color: Colors.grey.shade400,
+                                          size: 20.w);
+                                    },
+                                  ),
                           ),
                         ),
                         SizedBox(width: 12.w),
@@ -724,7 +764,9 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                               Row(
                                 children: [
                                   if (city.isNotEmpty) ...[
-                                    Icon(Icons.location_on_outlined, size: 12.w, color: Colors.grey.shade500),
+                                    Icon(Icons.location_on_outlined,
+                                        size: 12.w,
+                                        color: Colors.grey.shade500),
                                     SizedBox(width: 2.w),
                                     Flexible(
                                       child: Text(
@@ -739,11 +781,14 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                                     ),
                                     SizedBox(width: 6.w),
                                   ],
-                                  Icon(Icons.access_time, size: 11.w, color: Colors.grey.shade500),
+                                  Icon(Icons.access_time,
+                                      size: 11.w, color: Colors.grey.shade500),
                                   SizedBox(width: 2.w),
                                   Text(
                                     timeAgo,
-                                    style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade500),
+                                    style: TextStyle(
+                                        fontSize: 11.sp,
+                                        color: Colors.grey.shade500),
                                   ),
                                 ],
                               ),
@@ -763,7 +808,8 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => const SellFormPage(),
+                                      builder: (context) =>
+                                          const SellFormPage(),
                                     ),
                                   );
                                   break;
@@ -772,16 +818,22 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                                   break;
                               }
                             },
-                            icon: Icon(Icons.more_horiz, size: 20.r, color: Colors.grey.shade600),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+                            icon: Icon(Icons.more_horiz,
+                                size: 20.r, color: Colors.grey.shade600),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8.r)),
                             itemBuilder: (BuildContext context) => [
                               PopupMenuItem(
                                 value: 'edit',
                                 child: Row(
                                   children: [
-                                    Icon(Icons.edit_outlined, size: 16.r, color: const Color(0xFF2563EB)),
+                                    Icon(Icons.edit_outlined,
+                                        size: 16.r,
+                                        color: const Color(0xFF2563EB)),
                                     SizedBox(width: 8.w),
-                                    const Text('Edit', style: TextStyle(fontWeight: FontWeight.w500)),
+                                    const Text('Edit',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w500)),
                                   ],
                                 ),
                               ),
@@ -789,9 +841,13 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                                 value: 'delete',
                                 child: Row(
                                   children: [
-                                    Icon(Icons.delete_outline, size: 16.r, color: Colors.red),
+                                    Icon(Icons.delete_outline,
+                                        size: 16.r, color: Colors.red),
                                     SizedBox(width: 8.w),
-                                    const Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500)),
+                                    const Text('Delete',
+                                        style: TextStyle(
+                                            color: Colors.red,
+                                            fontWeight: FontWeight.w500)),
                                   ],
                                 ),
                               ),
@@ -837,8 +893,10 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                                     Container(
                                       padding: EdgeInsets.all(6.r),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF2563EB).withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(6.r),
+                                        color: const Color(0xFF2563EB)
+                                            .withOpacity(0.1),
+                                        borderRadius:
+                                            BorderRadius.circular(6.r),
                                       ),
                                       child: Icon(
                                         Icons.visibility_outlined,
@@ -848,7 +906,8 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                                     ),
                                     SizedBox(width: 8.w),
                                     Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           '$viewsCount',
@@ -887,32 +946,46 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                             child: FutureBuilder<Map<String, int>>(
                               future: _getInquiryStats(listingId),
                               builder: (context, snapshot) {
-                                if (snapshot.connectionState == ConnectionState.waiting) {
+                                if (snapshot.connectionState ==
+                                    ConnectionState.waiting) {
                                   return Container(
-                                    padding: EdgeInsets.symmetric(vertical: 4.h),
+                                    padding:
+                                        EdgeInsets.symmetric(vertical: 4.h),
                                     child: Row(
                                       children: [
                                         Container(
                                           padding: EdgeInsets.all(6.r),
                                           decoration: BoxDecoration(
-                                            color: Colors.green.withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(6.r),
+                                            color:
+                                                Colors.green.withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(6.r),
                                           ),
                                           child: SizedBox(
                                             width: 14.r,
                                             height: 14.r,
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2,
-                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                      Colors.green),
                                             ),
                                           ),
                                         ),
                                         SizedBox(width: 8.w),
                                         Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
-                                            Text('...', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold)),
-                                            Text('Inquiries', style: TextStyle(fontSize: 10.sp, color: Colors.grey[600])),
+                                            Text('...',
+                                                style: TextStyle(
+                                                    fontSize: 14.sp,
+                                                    fontWeight:
+                                                        FontWeight.bold)),
+                                            Text('Inquiries',
+                                                style: TextStyle(
+                                                    fontSize: 10.sp,
+                                                    color: Colors.grey[600])),
                                           ],
                                         ),
                                       ],
@@ -920,22 +993,32 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                                   );
                                 }
 
-                                final stats = snapshot.data ?? {'total': 0, 'call': 0, 'whatsapp': 0, 'offer': 0};
+                                final stats = snapshot.data ??
+                                    {
+                                      'total': 0,
+                                      'call': 0,
+                                      'whatsapp': 0,
+                                      'offer': 0
+                                    };
                                 final totalInquiries = stats['total'] ?? 0;
 
                                 return GestureDetector(
                                   onTap: () {
-                                    _showInquiryBreakdown(context, stats, title);
+                                    _showInquiryBreakdown(
+                                        context, stats, title);
                                   },
                                   child: Container(
-                                    padding: EdgeInsets.symmetric(vertical: 4.h),
+                                    padding:
+                                        EdgeInsets.symmetric(vertical: 4.h),
                                     child: Row(
                                       children: [
                                         Container(
                                           padding: EdgeInsets.all(6.r),
                                           decoration: BoxDecoration(
-                                            color: Colors.green.withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(6.r),
+                                            color:
+                                                Colors.green.withOpacity(0.1),
+                                            borderRadius:
+                                                BorderRadius.circular(6.r),
                                           ),
                                           child: Icon(
                                             Icons.chat_bubble_outline,
@@ -946,7 +1029,8 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                                         SizedBox(width: 8.w),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 '$totalInquiries',
@@ -993,7 +1077,8 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
     );
   }
 
-  void _showInquiryBreakdown(BuildContext context, Map<String, int> stats, String title) {
+  void _showInquiryBreakdown(
+      BuildContext context, Map<String, int> stats, String title) {
     final calls = stats['call'] ?? 0;
     final whatsapp = stats['whatsapp'] ?? 0;
     final offers = stats['offer'] ?? 0;
@@ -1003,7 +1088,8 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
           contentPadding: EdgeInsets.zero,
           content: Container(
             width: MediaQuery.of(context).size.width * 0.85,
@@ -1020,13 +1106,15 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                         color: Colors.green.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(6.r),
                       ),
-                      child: Icon(Icons.analytics_outlined, color: Colors.green, size: 16.r),
+                      child: Icon(Icons.analytics_outlined,
+                          color: Colors.green, size: 16.r),
                     ),
                     SizedBox(width: 8.w),
                     Expanded(
                       child: Text(
                         'Inquiry Breakdown',
-                        style: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                            fontSize: 15.sp, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ],
@@ -1034,16 +1122,19 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                 SizedBox(height: 6.h),
                 Text(
                   title,
-                  style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
+                  style:
+                      TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 SizedBox(height: 12.h),
                 _buildStatRow(Icons.phone, 'Phone Calls', calls, Colors.green),
                 SizedBox(height: 8.h),
-                _buildStatRow(Icons.chat, 'WhatsApp', whatsapp, const Color(0xFF25D366)),
+                _buildStatRow(
+                    Icons.chat, 'WhatsApp', whatsapp, const Color(0xFF25D366)),
                 SizedBox(height: 8.h),
-                _buildStatRow(Icons.local_offer, 'Offers', offers, const Color(0xFF2563EB)),
+                _buildStatRow(Icons.local_offer, 'Offers', offers,
+                    const Color(0xFF2563EB)),
                 SizedBox(height: 10.h),
                 Container(
                   width: double.infinity,
@@ -1157,7 +1248,8 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
   Widget _buildOfferCard(OfferModel offer, int index) {
     // Safe get image list
     final images = offer.listingImages ?? <String>[];
-    final firstImage = images.isNotEmpty ? images.first : 'assets/images/placeholder.jpg';
+    final firstImage =
+        images.isNotEmpty ? images.first : 'assets/images/placeholder.jpg';
 
     return TweenAnimationBuilder<double>(
       duration: Duration(milliseconds: 200 + (index * 50)),
@@ -1203,19 +1295,23 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                             borderRadius: BorderRadius.circular(8.r),
                             child: firstImage.startsWith('http')
                                 ? Image.network(
-                              firstImage,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(Icons.image_rounded, color: Colors.grey.shade400, size: 18.w);
-                              },
-                            )
+                                    firstImage,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Icon(Icons.image_rounded,
+                                          color: Colors.grey.shade400,
+                                          size: 18.w);
+                                    },
+                                  )
                                 : Image.asset(
-                              firstImage,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Icon(Icons.image_rounded, color: Colors.grey.shade400, size: 18.w);
-                              },
-                            ),
+                                    firstImage,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Icon(Icons.image_rounded,
+                                          color: Colors.grey.shade400,
+                                          size: 18.w);
+                                    },
+                                  ),
                           ),
                         ),
                         SizedBox(width: 12.w),
@@ -1265,9 +1361,11 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                           ),
                         ),
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 8.w, vertical: 4.h),
                           decoration: BoxDecoration(
-                            color: _getStatusColor(offer.status).withOpacity(0.1),
+                            color:
+                                _getStatusColor(offer.status).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12.r),
                           ),
                           child: Text(
@@ -1294,15 +1392,20 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                                 borderRadius: BorderRadius.circular(8.r),
                               ),
                               child: ElevatedButton(
-                                onPressed: () => _handleOfferAction(offer, OfferStatus.declined, null),
+                                onPressed: () => _handleOfferAction(
+                                    offer, OfferStatus.declined, null),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.transparent,
                                   foregroundColor: Colors.grey.shade700,
                                   elevation: 0,
                                   shadowColor: Colors.transparent,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8.r)),
                                 ),
-                                child: Text('Decline', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.sp)),
+                                child: Text('Decline',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12.sp)),
                               ),
                             ),
                           ),
@@ -1312,20 +1415,28 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                               height: 32.h,
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
-                                  colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
+                                  colors: [
+                                    Color(0xFF2563EB),
+                                    Color(0xFF3B82F6)
+                                  ],
                                 ),
                                 borderRadius: BorderRadius.circular(8.r),
                               ),
                               child: ElevatedButton(
-                                onPressed: () => _handleOfferAction(offer, OfferStatus.accepted, null),
+                                onPressed: () => _handleOfferAction(
+                                    offer, OfferStatus.accepted, null),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.transparent,
                                   foregroundColor: Colors.white,
                                   elevation: 0,
                                   shadowColor: Colors.transparent,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8.r)),
                                 ),
-                                child: Text('Accept', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12.sp)),
+                                child: Text('Accept',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12.sp)),
                               ),
                             ),
                           ),
@@ -1449,10 +1560,16 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
-                  padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 10.h),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 24.w, vertical: 10.h),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.r)),
                 ),
-                child: Text('Try Again', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12.sp)),
+                child: Text('Try Again',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12.sp)),
               ),
             ),
           ],
@@ -1533,16 +1650,23 @@ class _MyListingsPageState extends State<MyListingsPage> with TickerProviderStat
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const SellFormPage()),
+                    MaterialPageRoute(
+                        builder: (context) => const SellFormPage()),
                   );
                 },
                 icon: Icon(Icons.add, color: Colors.white, size: 16.r),
-                label: Text('Create Your First Listing', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 12.sp)),
+                label: Text('Create Your First Listing',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12.sp)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
-                  padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.r)),
                 ),
               ),
             ),

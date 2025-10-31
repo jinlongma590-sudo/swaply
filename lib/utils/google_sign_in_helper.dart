@@ -168,7 +168,8 @@ class GoogleSignInHelper {
   static Stream<gsi.GoogleSignInAccount?> get onCurrentUserChanged =>
       _googleSignIn.onCurrentUserChanged;
 
-  static void listenToSignInChanges(void Function(gsi.GoogleSignInAccount?) cb) {
+  static void listenToSignInChanges(
+      void Function(gsi.GoogleSignInAccount?) cb) {
     onCurrentUserChanged.listen((a) {
       AppLogger.info(a != null ? '用户登录状态变化: ${a.email}' : '用户已退出登录');
       cb(a);
@@ -203,25 +204,27 @@ class GoogleUserInfo {
   });
 
   Map<String, dynamic> toMap() => {
-    'id': id,
-    'email': email,
-    'displayName': displayName,
-    'photoUrl': photoUrl,
-    'accessToken': accessToken,
-    'idToken': idToken,
-  };
+        'id': id,
+        'email': email,
+        'displayName': displayName,
+        'photoUrl': photoUrl,
+        'accessToken': accessToken,
+        'idToken': idToken,
+      };
 
   factory GoogleUserInfo.fromMap(Map<String, dynamic> m) => GoogleUserInfo(
-    id: m['id'] ?? '',
-    email: m['email'] ?? '',
-    displayName: m['displayName'],
-    photoUrl: m['photoUrl'],
-    accessToken: m['accessToken'],
-    idToken: m['idToken'],
-  );
+        id: m['id'] ?? '',
+        email: m['email'] ?? '',
+        displayName: m['displayName'],
+        photoUrl: m['photoUrl'],
+        accessToken: m['accessToken'],
+        idToken: m['idToken'],
+      );
 
   String get displayNameOrEmail =>
-      (displayName != null && displayName!.isNotEmpty) ? displayName! : email.split('@').first;
+      (displayName != null && displayName!.isNotEmpty)
+          ? displayName!
+          : email.split('@').first;
 
   String? getPhotoUrl({int size = 96}) =>
       (photoUrl != null && photoUrl!.contains('googleusercontent.com'))
@@ -229,11 +232,13 @@ class GoogleUserInfo {
           : photoUrl;
 
   @override
-  String toString() => 'GoogleUserInfo(id: $id, email: $email, displayName: $displayName)';
+  String toString() =>
+      'GoogleUserInfo(id: $id, email: $email, displayName: $displayName)';
 
   @override
   bool operator ==(Object o) =>
-      identical(this, o) || (o is GoogleUserInfo && o.id == id && o.email == email);
+      identical(this, o) ||
+      (o is GoogleUserInfo && o.id == id && o.email == email);
 
   @override
   int get hashCode => id.hashCode ^ email.hashCode;
@@ -259,13 +264,14 @@ class GoogleSignInResultWrapper {
   bool get hasError => error != null;
 
   factory GoogleSignInResultWrapper.success(GoogleUserInfo u) =>
-      GoogleSignInResultWrapper(result: GoogleSignInResult.success, userInfo: u);
-  factory GoogleSignInResultWrapper.canceled() =>
-      GoogleSignInResultWrapper(result: GoogleSignInResult.canceled, error: '用户取消登录');
+      GoogleSignInResultWrapper(
+          result: GoogleSignInResult.success, userInfo: u);
+  factory GoogleSignInResultWrapper.canceled() => GoogleSignInResultWrapper(
+      result: GoogleSignInResult.canceled, error: '用户取消登录');
   factory GoogleSignInResultWrapper.error(String e) =>
       GoogleSignInResultWrapper(result: GoogleSignInResult.unknown, error: e);
-  factory GoogleSignInResultWrapper.networkError() =>
-      GoogleSignInResultWrapper(result: GoogleSignInResult.networkError, error: '网络连接失败');
+  factory GoogleSignInResultWrapper.networkError() => GoogleSignInResultWrapper(
+      result: GoogleSignInResult.networkError, error: '网络连接失败');
 }
 
 class GoogleSignInConfig {
@@ -280,6 +286,6 @@ class GoogleSignInConfig {
     this.forceCodeForRefreshToken = false,
   });
   static const GoogleSignInConfig defaultConfig = GoogleSignInConfig();
-  static const GoogleSignInConfig supabaseConfig =
-  GoogleSignInConfig(scopes: ['email', 'profile', 'openid'], forceCodeForRefreshToken: true);
+  static const GoogleSignInConfig supabaseConfig = GoogleSignInConfig(
+      scopes: ['email', 'profile', 'openid'], forceCodeForRefreshToken: true);
 }

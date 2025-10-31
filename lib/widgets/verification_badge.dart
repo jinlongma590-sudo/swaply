@@ -1,6 +1,7 @@
 // lib/widgets/verification_badge.dart
 import 'package:flutter/material.dart';
-import 'package:swaply/models/verification_types.dart' as vt; // 只 import，不 export
+import 'package:swaply/models/verification_types.dart'
+    as vt; // 只 import，不 export
 
 /// 认证徽标（叠在头像右下角的小圆图标）
 /// - 官方：蓝标（verified_rounded）
@@ -54,17 +55,17 @@ class VerificationBadge extends StatelessWidget {
       case vt.VerificationBadgeType.none:
         return Icons.circle_outlined;
 
-    // 官方/政府（老：official，新：government）
+      // 官方/政府（老：official，新：government）
       case vt.VerificationBadgeType.official:
       case vt.VerificationBadgeType.government:
-        return Icons.verified_rounded;            // ✅ 官方：蓝标图标
+        return Icons.verified_rounded; // ✅ 官方：蓝标图标
 
-    // 基础蓝勾（老：verified，新：blue）
+      // 基础蓝勾（老：verified，新：blue）
       case vt.VerificationBadgeType.verified:
       case vt.VerificationBadgeType.blue:
-        return Icons.verified_user_rounded;       // ✅ 基础：绿标图标
+        return Icons.verified_user_rounded; // ✅ 基础：绿标图标
 
-    // 付费/金标/商家（老：premium，新：gold/business）
+      // 付费/金标/商家（老：premium，新：gold/business）
       case vt.VerificationBadgeType.premium:
       case vt.VerificationBadgeType.gold:
         return Icons.workspace_premium_rounded;
@@ -73,7 +74,7 @@ class VerificationBadge extends StatelessWidget {
         return Icons.apartment_rounded;
 
       default:
-      // 理论到不了这里，但为压分析器，兜底按未认证处理
+        // 理论到不了这里，但为压分析器，兜底按未认证处理
         return Icons.circle_outlined;
     }
   }
@@ -88,27 +89,27 @@ class VerificationBadge extends StatelessWidget {
       case vt.VerificationBadgeType.none:
         return 'Unverified';
 
-    // 官方/政府（老：official，新：government）
+      // 官方/政府（老：official，新：government）
       case vt.VerificationBadgeType.official:
       case vt.VerificationBadgeType.government:
         return 'Official';
 
-    // 基础蓝勾（老：verified，新：blue）
+      // 基础蓝勾（老：verified，新：blue）
       case vt.VerificationBadgeType.verified:
       case vt.VerificationBadgeType.blue:
         return 'Verified';
 
-    // 付费/金标（老：premium，新：gold）
+      // 付费/金标（老：premium，新：gold）
       case vt.VerificationBadgeType.premium:
       case vt.VerificationBadgeType.gold:
         return 'Premium';
 
-    // 商家
+      // 商家
       case vt.VerificationBadgeType.business:
         return 'Business';
 
       default:
-      // 理论到不了这里，但为压分析器，兜底按未认证处理
+        // 理论到不了这里，但为压分析器，兜底按未认证处理
         return 'Unverified';
     }
   }
@@ -162,7 +163,6 @@ class VerificationBadge extends StatelessWidget {
 
         // ✅ 注意：不再读取 email_verified 或 is_verified
         // 这些字段不应该影响徽章显示
-
       } catch (_) {
         // 如果所有尝试都失败，使用空 Map
         userOrProfileMap = {};
@@ -171,7 +171,8 @@ class VerificationBadge extends StatelessWidget {
 
     // ✅ 直接调用统一的工具函数进行判断
     // 只根据 verification_type 字段决定徽章类型
-    return vt.VerificationBadgeUtil.getVerificationTypeFromUser(userOrProfileMap);
+    return vt.VerificationBadgeUtil.getVerificationTypeFromUser(
+        userOrProfileMap);
   }
 
   // ====== 内部实现 ======
@@ -182,29 +183,29 @@ class VerificationBadge extends StatelessWidget {
       case vt.VerificationBadgeType.none:
         return const [Color(0xFF9E9E9E), Color(0xFF9E9E9E)];
 
-    // 官方/政府（老：official，新：government）
+      // 官方/政府（老：official，新：government）
       case vt.VerificationBadgeType.official:
       case vt.VerificationBadgeType.government:
-      // ✅ 官方：蓝
+        // ✅ 官方：蓝
         return const [Color(0xFF2D7CFF), Color(0xFF2979FF)];
 
-    // 基础蓝勾（老：verified，新：blue）
+      // 基础蓝勾（老：verified，新：blue）
       case vt.VerificationBadgeType.verified:
       case vt.VerificationBadgeType.blue:
-      // ✅ 基础：绿
+        // ✅ 基础：绿
         return const [Color(0xFF28A745), Color(0xFF34C759)];
 
-    // 付费/金标（老：premium，新：gold）
+      // 付费/金标（老：premium，新：gold）
       case vt.VerificationBadgeType.premium:
       case vt.VerificationBadgeType.gold:
         return const [Color(0xFFFFB300), Color(0xFFF59E0B)]; // Amber
 
-    // 商家
+      // 商家
       case vt.VerificationBadgeType.business:
         return const [Color(0xFF7C4DFF), Color(0xFF6366F1)]; // Indigo
 
       default:
-      // 理论到不了这里，但为压分析器，兜底按未认证处理
+        // 理论到不了这里，但为压分析器，兜底按未认证处理
         return const [Color(0xFF9E9E9E), Color(0xFF9E9E9E)];
     }
   }

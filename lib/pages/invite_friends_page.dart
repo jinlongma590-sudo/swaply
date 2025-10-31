@@ -80,13 +80,13 @@ class _InviteFriendsPageState extends State<InviteFriendsPage>
             final inviteeId = invitation['invitee_id']?.toString();
 
             if (inviterId == user.id && inviteeId == user.id) return false;
-            if (inviterId == user.id && (inviteeId == null || inviteeId.isEmpty)) return false;
+            if (inviterId == user.id &&
+                (inviteeId == null || inviteeId.isEmpty)) return false;
             return inviterId == user.id &&
                 inviteeId != null &&
                 inviteeId.isNotEmpty &&
                 inviteeId != user.id;
-          })
-              .toList();
+          }).toList();
         } else {
           _invitations = [];
         }
@@ -177,7 +177,8 @@ Download: https://www.swaply.cc
 
       switch (status) {
         case 'ok':
-          _showSnack('Invitation linked! Reward will be granted after you publish your first listing.');
+          _showSnack(
+              'Invitation linked! Reward will be granted after you publish your first listing.');
           _inviteInputCtrl.clear();
           await _refreshData();
           break;
@@ -201,7 +202,6 @@ Download: https://www.swaply.cc
       if (mounted) setState(() => _binding = false);
     }
   }
-
 
   void _showSnack(String msg, {bool isError = false, Color? color}) {
     if (!mounted) return;
@@ -263,13 +263,13 @@ Download: https://www.swaply.cc
             onPressed: _isRefreshing ? null : _refreshData,
             icon: _isRefreshing
                 ? SizedBox(
-              width: 20.r,
-              height: 20.r,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
-            )
+                    width: 20.r,
+                    height: 20.r,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
                 : Icon(Icons.refresh, size: 20.r),
           ),
         ],
@@ -277,32 +277,32 @@ Download: https://www.swaply.cc
       body: _loading
           ? _buildLoadingState()
           : FadeTransition(
-        opacity: _fadeAnimation,
-        child: RefreshIndicator(
-          onRefresh: _refreshData,
-          color: const Color(0xFF4CAF50),
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(16.w),
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildModernStatsCard(),
-                SizedBox(height: 20.h),
-                _buildRewardsInfoCard(),
-                SizedBox(height: 20.h),
-                _buildInviteCodeCard(),
-                SizedBox(height: 20.h),
-                _buildBindInviteCard(),
-                SizedBox(height: 20.h),
-                _buildProgressCard(),
-                SizedBox(height: 20.h),
-                _buildHistoryCard(),
-              ],
+              opacity: _fadeAnimation,
+              child: RefreshIndicator(
+                onRefresh: _refreshData,
+                color: const Color(0xFF4CAF50),
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(16.w),
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildModernStatsCard(),
+                      SizedBox(height: 20.h),
+                      _buildRewardsInfoCard(),
+                      SizedBox(height: 20.h),
+                      _buildInviteCodeCard(),
+                      SizedBox(height: 20.h),
+                      _buildBindInviteCard(),
+                      SizedBox(height: 20.h),
+                      _buildProgressCard(),
+                      SizedBox(height: 20.h),
+                      _buildHistoryCard(),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -363,7 +363,7 @@ Download: https://www.swaply.cc
 
   Widget _buildModernStatsCard() {
     final successRate =
-    _totalCount > 0 ? (_completedCount / _totalCount * 100).toInt() : 0;
+        _totalCount > 0 ? (_completedCount / _totalCount * 100).toInt() : 0;
 
     return Container(
       padding: EdgeInsets.all(20.w),
@@ -521,7 +521,8 @@ Download: https://www.swaply.cc
             runSpacing: 8.h,
             children: [
               _buildRewardChip('1', 'Category Pin (3d)', _completedCount >= 1),
-              _buildRewardChip('5', 'Search/Popular Pin (3d)', _completedCount >= 5),
+              _buildRewardChip(
+                  '5', 'Search/Popular Pin (3d)', _completedCount >= 5),
               _buildRewardChip('10', 'Trending (3d)', _completedCount >= 10),
             ],
           ),
@@ -646,8 +647,8 @@ Download: https://www.swaply.cc
               decoration: BoxDecoration(
                 color: const Color(0xFFF8F9FA),
                 borderRadius: BorderRadius.circular(12.r),
-                border: Border.all(
-                    color: const Color(0xFF4CAF50).withOpacity(0.3)),
+                border:
+                    Border.all(color: const Color(0xFF4CAF50).withOpacity(0.3)),
               ),
               child: Column(
                 children: [
@@ -702,10 +703,10 @@ Download: https://www.swaply.cc
                 onPressed: _regenerating ? null : _refreshCode,
                 icon: _regenerating
                     ? SizedBox(
-                  width: 16.r,
-                  height: 16.r,
-                  child: const CircularProgressIndicator(strokeWidth: 2),
-                )
+                        width: 16.r,
+                        height: 16.r,
+                        child: const CircularProgressIndicator(strokeWidth: 2),
+                      )
                     : const Icon(Icons.refresh, size: 16),
                 // 文案改为 Refresh，避免误导
                 label: Text(_regenerating ? 'Refreshing...' : 'Refresh Code'),
@@ -768,7 +769,7 @@ Download: https://www.swaply.cc
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12.r),
                 borderSide:
-                const BorderSide(color: Color(0xFFFF9800), width: 2),
+                    const BorderSide(color: Color(0xFFFF9800), width: 2),
               ),
             ),
           ),
@@ -779,13 +780,13 @@ Download: https://www.swaply.cc
               onPressed: _binding ? null : _bindInviteCode,
               icon: _binding
                   ? SizedBox(
-                width: 16.r,
-                height: 16.r,
-                child: const CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
+                      width: 16.r,
+                      height: 16.r,
+                      child: const CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : const Icon(Icons.link, size: 18),
               label: Text(_binding ? 'Binding...' : 'Bind Invitation'),
               style: ElevatedButton.styleFrom(
@@ -881,8 +882,7 @@ Download: https://www.swaply.cc
           LinearProgressIndicator(
             value: rate,
             backgroundColor: Colors.grey[300],
-            valueColor:
-            const AlwaysStoppedAnimation<Color>(Color(0xFF4CAF50)),
+            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF4CAF50)),
             minHeight: 8.h,
           ),
         ],
@@ -986,7 +986,9 @@ Download: https://www.swaply.cc
               ),
             )
           else
-            ..._invitations.take(5).map((invitation) => _buildHistoryItem(invitation)),
+            ..._invitations
+                .take(5)
+                .map((invitation) => _buildHistoryItem(invitation)),
         ],
       ),
     );
@@ -995,7 +997,9 @@ Download: https://www.swaply.cc
   Widget _buildHistoryItem(Map<String, dynamic> invitation) {
     final status = invitation['status']?.toString() ?? 'pending';
     // 同时兼容 referrals 里的不同字段名
-    final code = (invitation['code'] ?? invitation['invitation_code'])?.toString() ?? 'N/A';
+    final code =
+        (invitation['code'] ?? invitation['invitation_code'])?.toString() ??
+            'N/A';
 
     Color statusColor;
     String statusText;

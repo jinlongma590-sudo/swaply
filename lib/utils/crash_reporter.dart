@@ -73,11 +73,11 @@ class CrashReporter {
 
   /// 手动报告错误
   static void reportError(
-      dynamic error, {
-        StackTrace? stackTrace,
-        String? reason,
-        Map<String, dynamic>? additionalInfo,
-      }) {
+    dynamic error, {
+    StackTrace? stackTrace,
+    String? reason,
+    Map<String, dynamic>? additionalInfo,
+  }) {
     AppLogger.error(
       '手动报告错误: ${reason ?? error.toString()}',
       error: error,

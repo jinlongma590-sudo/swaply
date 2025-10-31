@@ -31,9 +31,14 @@ class WelcomeDialogService {
     }
 
     // 小重试：0s / 1s / 3s
-    for (final delay in [Duration.zero, const Duration(seconds: 1), const Duration(seconds: 3)]) {
+    for (final delay in [
+      Duration.zero,
+      const Duration(seconds: 1),
+      const Duration(seconds: 3)
+    ]) {
       if (delay > Duration.zero) {
-        if (kDebugMode) print('[WelcomeDialog] Retrying after ${delay.inSeconds}s...');
+        if (kDebugMode)
+          print('[WelcomeDialog] Retrying after ${delay.inSeconds}s...');
         await Future.delayed(delay);
       }
 
@@ -41,7 +46,8 @@ class WelcomeDialogService {
         // 查询用户的欢迎券
         final rows = await Supabase.instance.client
             .from('coupons')
-            .select('id, code, title, description, expires_at, created_at, type')
+            .select(
+                'id, code, title, description, expires_at, created_at, type')
             .eq('user_id', uid)
             .eq('type', 'welcome')
             .eq('status', 'active')
@@ -49,7 +55,8 @@ class WelcomeDialogService {
             .limit(1);
 
         if (rows is List && rows.isNotEmpty) {
-          if (kDebugMode) print('[WelcomeDialog] Found welcome coupon, showing dialog');
+          if (kDebugMode)
+            print('[WelcomeDialog] Found welcome coupon, showing dialog');
 
           _welcomeShownThisSession = true;
 
@@ -69,7 +76,8 @@ class WelcomeDialogService {
           if (kDebugMode) print('[WelcomeDialog] No welcome coupon found yet');
         }
       } catch (e) {
-        if (kDebugMode) print('[WelcomeDialog] Error checking welcome coupon: $e');
+        if (kDebugMode)
+          print('[WelcomeDialog] Error checking welcome coupon: $e');
         // 继续重试
       }
     }
@@ -86,16 +94,21 @@ class WelcomeDialogService {
     final prefs = await SharedPreferences.getInstance();
     final shownKey = 'welcome_dialog_shown_$userId';
     await prefs.remove(shownKey);
-    if (kDebugMode) print('[WelcomeDialog] Cleared shown flag for user $userId');
+    if (kDebugMode)
+      print('[WelcomeDialog] Cleared shown flag for user $userId');
   }
 
   /// 清除所有已显示标记（用于测试）
   static Future<void> clearAllShownFlags() async {
     final prefs = await SharedPreferences.getInstance();
-    final keys = prefs.getKeys().where((key) => key.startsWith('welcome_dialog_shown_')).toList();
+    final keys = prefs
+        .getKeys()
+        .where((key) => key.startsWith('welcome_dialog_shown_'))
+        .toList();
     for (final key in keys) {
       await prefs.remove(key);
     }
-    if (kDebugMode) print('[WelcomeDialog] Cleared all shown flags (${keys.length} users)');
+    if (kDebugMode)
+      print('[WelcomeDialog] Cleared all shown flags (${keys.length} users)');
   }
 }

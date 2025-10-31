@@ -109,7 +109,8 @@ class ListingService {
     required int id,
     List<String>? imageObjectPaths, // 如果你保存的是 public URL，需要先转成对象 path 再传入
   }) async {
-    await ListingApi.deleteListing(id: id, storageObjectPaths: imageObjectPaths);
+    await ListingApi.deleteListing(
+        id: id, storageObjectPaths: imageObjectPaths);
   }
 
   /// 根据用户拉取我的广告（分页）

@@ -236,7 +236,9 @@ class _WelcomeCouponDialogState extends State<WelcomeCouponDialog>
 
                       // 主标题：优先显示券标题（已修复），否则退回默认
                       Text(
-                        (fixedTitle.isNotEmpty ? fixedTitle : 'Welcome gift 🎉'),
+                        (fixedTitle.isNotEmpty
+                            ? fixedTitle
+                            : 'Welcome gift 🎉'),
                         textAlign: TextAlign.center,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,

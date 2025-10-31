@@ -4,7 +4,7 @@ import 'package:swaply/services/listing_service.dart';
 import 'package:swaply/pages/product_detail_page.dart';
 
 class SearchResultsPage extends StatefulWidget {
-  final String keyword;   // 由首页传入
+  final String keyword; // 由首页传入
   final String? location; // 可选：城市筛选（'All Zimbabwe' 表示不过滤）
 
   const SearchResultsPage({
@@ -43,8 +43,8 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
       }
 
       final city = (widget.location != null &&
-          widget.location!.isNotEmpty &&
-          widget.location != 'All Zimbabwe')
+              widget.location!.isNotEmpty &&
+              widget.location != 'All Zimbabwe')
           ? widget.location
           : null;
 
@@ -66,8 +66,9 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
 
   Map<String, dynamic> _mapRowToCard(Map<String, dynamic> r) {
     final num? priceNum = r['price'] is num ? (r['price'] as num) : null;
-    final priceText =
-    priceNum != null ? '\$${priceNum.toStringAsFixed(0)}' : (r['price']?.toString() ?? '');
+    final priceText = priceNum != null
+        ? '\$${priceNum.toStringAsFixed(0)}'
+        : (r['price']?.toString() ?? '');
 
     // 统一读取图片（兼容 images / image_urls）
     final imgs = ListingService.readImages(r);
@@ -129,121 +130,121 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-          ? Center(
-        child: Text('Load failed: $_error',
-            style: const TextStyle(color: Colors.red)),
-      )
-          : _items.isEmpty
-          ? const Center(child: Text('No results'))
-          : Column(
-        children: [
-          Container(
-            alignment: Alignment.centerLeft,
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(
-                horizontal: 16, vertical: 12),
-            color: Colors.grey[50],
-            child: Text(
-              '${_items.length} ads found',
-              style: const TextStyle(
-                  color: Colors.grey, fontSize: 14),
-            ),
-          ),
-          Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(16),
-              gridDelegate:
-              const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.75,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-              ),
-              itemCount: _items.length,
-              itemBuilder: (_, i) {
-                final p = _items[i];
-                return GestureDetector(
-                  onTap: () => _openDetail(p),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(20),
-                          blurRadius: 6,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment:
-                      CrossAxisAlignment.start,
+              ? Center(
+                  child: Text('Load failed: $_error',
+                      style: const TextStyle(color: Colors.red)),
+                )
+              : _items.isEmpty
+                  ? const Center(child: Text('No results'))
+                  : Column(
                       children: [
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius:
-                            const BorderRadius.vertical(
-                                top: Radius.circular(14)),
-                            child: _thumb(p),
+                        Container(
+                          alignment: Alignment.centerLeft,
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          color: Colors.grey[50],
+                          child: Text(
+                            '${_items.length} ads found',
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 14),
                           ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                p['price']?.toString() ?? '',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                p['title']?.toString() ?? '',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style:
-                                const TextStyle(fontSize: 14),
-                              ),
-                              const SizedBox(height: 3),
-                              Row(
-                                children: [
-                                  const Icon(Icons.location_on,
-                                      size: 12,
-                                      color: Colors.grey),
-                                  const SizedBox(width: 2),
-                                  Expanded(
-                                    child: Text(
-                                      p['location']?.toString() ??
-                                          '',
-                                      maxLines: 1,
-                                      overflow:
-                                      TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey),
-                                    ),
+                        Expanded(
+                          child: GridView.builder(
+                            padding: const EdgeInsets.all(16),
+                            gridDelegate:
+                                const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 0.75,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                            ),
+                            itemCount: _items.length,
+                            itemBuilder: (_, i) {
+                              final p = _items[i];
+                              return GestureDetector(
+                                onTap: () => _openDetail(p),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(14),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withAlpha(20),
+                                        blurRadius: 6,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                            ],
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Expanded(
+                                        child: ClipRRect(
+                                          borderRadius:
+                                              const BorderRadius.vertical(
+                                                  top: Radius.circular(14)),
+                                          child: _thumb(p),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              p['price']?.toString() ?? '',
+                                              style: const TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.green,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              p['title']?.toString() ?? '',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style:
+                                                  const TextStyle(fontSize: 14),
+                                            ),
+                                            const SizedBox(height: 3),
+                                            Row(
+                                              children: [
+                                                const Icon(Icons.location_on,
+                                                    size: 12,
+                                                    color: Colors.grey),
+                                                const SizedBox(width: 2),
+                                                Expanded(
+                                                  child: Text(
+                                                    p['location']?.toString() ??
+                                                        '',
+                                                    maxLines: 1,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: const TextStyle(
+                                                        fontSize: 12,
+                                                        color: Colors.grey),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ],
                     ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -253,19 +254,17 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
       final first = imgs.first.toString();
       if (first.startsWith('http')) {
         return Image.network(first,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _imgPlaceholder());
+            fit: BoxFit.cover, errorBuilder: (_, __, ___) => _imgPlaceholder());
       } else {
         return Image.asset(first,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _imgPlaceholder());
+            fit: BoxFit.cover, errorBuilder: (_, __, ___) => _imgPlaceholder());
       }
     }
     return _imgPlaceholder();
   }
 
   Widget _imgPlaceholder() => Container(
-    color: Colors.grey[300],
-    child: const Icon(Icons.image, size: 50, color: Colors.grey),
-  );
+        color: Colors.grey[300],
+        child: const Icon(Icons.image, size: 50, color: Colors.grey),
+      );
 }

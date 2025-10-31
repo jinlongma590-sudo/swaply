@@ -6,7 +6,8 @@ class AppLocalizations {
   final Locale locale;
   AppLocalizations(this.locale);
 
-  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate =
+      _AppLocalizationsDelegate();
 
   static AppLocalizations? of(BuildContext context) {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
@@ -15,7 +16,8 @@ class AppLocalizations {
   // Generic
   String get appTitle => 'Swaply';
   String get loginRequired => 'Login required';
-  String loginRequiredMessage(String feature) => 'Please login to use $feature.';
+  String loginRequiredMessage(String feature) =>
+      'Please login to use $feature.';
   String get cancel => 'Cancel';
   String get login => 'Login';
 
@@ -51,12 +53,14 @@ class AppLocalizations {
 
   // Saved
   String get myFavorites => 'My Favorites';
-  String get loginToSaveFavorites => 'Login to save your favorite items and searches.';
+  String get loginToSaveFavorites =>
+      'Login to save your favorite items and searches.';
   String get loginNow => 'Login now';
   String get ads => 'Ads';
   String get searches => 'Searches';
   String get noFavoriteAdsYet => 'No favorite ads yet';
-  String get favoritesHelp => 'Tap the bookmark icon on a listing to add it to Favorites.';
+  String get favoritesHelp =>
+      'Tap the bookmark icon on a listing to add it to Favorites.';
   String get browseItems => 'Browse items';
   String get removedFromFavorites => 'Removed from favorites';
   String get alertsEnabled => 'Alerts enabled';
@@ -87,7 +91,8 @@ class AppLocalizations {
   String get markAllAsRead => 'Mark all as read';
   String get clearAll => 'Clear all';
   String get noNotifications => 'No notifications';
-  String get notificationsWillAppearHere => 'Your notifications will appear here.';
+  String get notificationsWillAppearHere =>
+      'Your notifications will appear here.';
 
   // Profile
   String get guestUser => 'Guest user';
@@ -112,7 +117,8 @@ class AppLocalizations {
   String get redcliff => 'Redcliff';
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -120,7 +126,8 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
 
   @override
   Future<AppLocalizations> load(Locale locale) async {
-    return SynchronousFuture<AppLocalizations>(AppLocalizations(const Locale('en')));
+    return SynchronousFuture<AppLocalizations>(
+        AppLocalizations(const Locale('en')));
   }
 
   @override

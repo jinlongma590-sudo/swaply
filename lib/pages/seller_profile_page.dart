@@ -14,6 +14,7 @@ import 'package:swaply/services/email_verification_service.dart';
 class SellerProfileViewPage extends StatefulWidget {
   final String sellerId;
   final Map<String, dynamic>? initialSellerData;
+
   /// 可选：从上个页面传入的初始徽章（用于首屏先显示，随后以 RPC 结果覆盖）
   final vt.VerificationBadgeType verificationType;
 
@@ -107,7 +108,8 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
 
       final listingsResponse = await Supabase.instance.client
           .from('listings')
-          .select('id, title, price, images, image_urls, city, created_at, views_count')
+          .select(
+              'id, title, price, images, image_urls, city, created_at, views_count')
           .eq('user_id', widget.sellerId)
           .order('created_at', ascending: false)
           .limit(50);
@@ -223,7 +225,8 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
                             Container(
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 3),
+                                border:
+                                    Border.all(color: Colors.white, width: 3),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withOpacity(0.1),
@@ -235,7 +238,8 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
                               child: VerifiedAvatar(
                                 avatarUrl: avatarUrl,
                                 radius: 40.r,
-                                verificationType: badgeType, // ✅ 使用 _isVerified 映射
+                                verificationType:
+                                    badgeType, // ✅ 使用 _isVerified 映射
                                 defaultIcon: Icons.person,
                               ),
                             ),
@@ -342,8 +346,8 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
                         size: 48.sp, color: Colors.grey[400]),
                     SizedBox(height: 8.h),
                     Text('No listings yet',
-                        style:
-                        TextStyle(color: Colors.grey[600], fontSize: 14.sp)),
+                        style: TextStyle(
+                            color: Colors.grey[600], fontSize: 14.sp)),
                   ],
                 ),
               ),
@@ -359,7 +363,7 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
                   mainAxisSpacing: 12.w,
                 ),
                 delegate: SliverChildBuilderDelegate(
-                      (context, index) {
+                  (context, index) {
                     final listing = _sellerListings[index];
                     return _buildListingCard(listing);
                   },
@@ -398,7 +402,7 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
   Widget _buildListingCard(Map<String, dynamic> listing) {
     final images = listing['images'] ?? listing['image_urls'] ?? [];
     final imageUrl =
-    images is List && images.isNotEmpty ? images[0].toString() : '';
+        images is List && images.isNotEmpty ? images[0].toString() : '';
 
     return InkWell(
       onTap: () {
@@ -436,24 +440,23 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
                 color: Colors.grey[200],
               ),
               child: ClipRRect(
-                borderRadius:
-                BorderRadius.vertical(top: Radius.circular(12.r)),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
                 child: imageUrl.isNotEmpty
                     ? Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Center(
-                      child: Icon(Icons.image,
-                          size: 32.sp, color: Colors.grey[400]),
-                    );
-                  },
-                )
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Center(
+                            child: Icon(Icons.image,
+                                size: 32.sp, color: Colors.grey[400]),
+                          );
+                        },
+                      )
                     : Center(
-                  child: Icon(Icons.image,
-                      size: 32.sp, color: Colors.grey[400]),
-                ),
+                        child: Icon(Icons.image,
+                            size: 32.sp, color: Colors.grey[400]),
+                      ),
               ),
             ),
             // 信息

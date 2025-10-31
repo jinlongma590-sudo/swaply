@@ -30,10 +30,11 @@ class SellFormPage extends StatefulWidget {
 /* =========================
  * 相册选图：返回内存字节而不是路径
  * ========================= */
-Future<({Uint8List bytes, String? name, String? ext, String? mime})?> pickImageBytes() async {
+Future<({Uint8List bytes, String? name, String? ext, String? mime})?>
+    pickImageBytes() async {
   final res = await FilePicker.platform.pickFiles(
     type: FileType.image,
-    withData: true,      // 关键：要 bytes
+    withData: true, // 关键：要 bytes
     allowMultiple: false,
   );
   if (res == null || res.files.isEmpty) return null;
@@ -60,7 +61,8 @@ Future<({Uint8List bytes, String? name, String? ext, String? mime})?> pickImageB
   return (bytes: bytes, name: name, ext: ext, mime: mime);
 }
 
-class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMixin {
+class _SellFormPageState extends State<SellFormPage>
+    with TickerProviderStateMixin {
   /* ------------ Controllers & State ------------ */
   final _formKey = GlobalKey<FormState>();
   final _titleCtrl = TextEditingController();
@@ -80,7 +82,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
   final _cameraPicker = ImagePicker();
 
   // 用 record 存每张图的 bytes + 元信息
-  final List<({Uint8List bytes, String? name, String? ext, String? mime})> _images = [];
+  final List<({Uint8List bytes, String? name, String? ext, String? mime})>
+      _images = [];
 
   String _category = '';
   String _city = 'Harare';
@@ -98,14 +101,37 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
   static const _maxPhotos = 10;
 
   final _cities = const [
-    'Harare', 'Bulawayo', 'Chitungwiza', 'Mutare', 'Gweru', 'Kwekwe',
-    'Kadoma', 'Masvingo', 'Chinhoyi', 'Chegutu', 'Bindura', 'Marondera', 'Redcliff'
+    'Harare',
+    'Bulawayo',
+    'Chitungwiza',
+    'Mutare',
+    'Gweru',
+    'Kwekwe',
+    'Kadoma',
+    'Masvingo',
+    'Chinhoyi',
+    'Chegutu',
+    'Bindura',
+    'Marondera',
+    'Redcliff'
   ];
 
   final _categories = const [
-    'Vehicles', 'Property', 'Beauty and Personal Care', 'Jobs', 'Babies and Kids',
-    'Services', 'Leisure Activities', 'Repair and Construction', 'Home Furniture and Appliances',
-    'Pets', 'Electronics', 'Phones and Tablets', 'Seeking Work and CVs', 'Fashion', 'Food Agriculture and Drinks'
+    'Vehicles',
+    'Property',
+    'Beauty and Personal Care',
+    'Jobs',
+    'Babies and Kids',
+    'Services',
+    'Leisure Activities',
+    'Repair and Construction',
+    'Home Furniture and Appliances',
+    'Pets',
+    'Electronics',
+    'Phones and Tablets',
+    'Seeking Work and CVs',
+    'Fashion',
+    'Food Agriculture and Drinks'
   ];
 
   @override
@@ -173,7 +199,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
           CouponModel? preselect;
           if (_initialCouponIdFromRoute != null) {
             try {
-              preselect = usable.firstWhere((c) => c.id == _initialCouponIdFromRoute);
+              preselect =
+                  usable.firstWhere((c) => c.id == _initialCouponIdFromRoute);
             } catch (_) {
               preselect = null;
             }
@@ -202,84 +229,140 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
     switch (_category) {
       case 'Vehicles':
         return [
-          _buildCompactDropdown('Vehicle Type *', 'vehicleType', [
-            'Car', 'Motorcycle', 'Truck', 'Bus', 'Van', 'Tractor', 'Boat', 'Other'
-          ], isRequired: true),
+          _buildCompactDropdown(
+              'Vehicle Type *',
+              'vehicleType',
+              [
+                'Car',
+                'Motorcycle',
+                'Truck',
+                'Bus',
+                'Van',
+                'Tractor',
+                'Boat',
+                'Other'
+              ],
+              isRequired: true),
           SizedBox(height: 12.h),
-          _buildCompactTextField('make', 'Make/Brand *', 'e.g. Toyota, Honda', isRequired: true),
+          _buildCompactTextField('make', 'Make/Brand *', 'e.g. Toyota, Honda',
+              isRequired: true),
           SizedBox(height: 12.h),
-          _buildCompactTextField('model', 'Model *', 'e.g. Corolla, Civic', isRequired: true),
+          _buildCompactTextField('model', 'Model *', 'e.g. Corolla, Civic',
+              isRequired: true),
           SizedBox(height: 12.h),
-          _buildCompactTextField('year', 'Year', 'e.g. 2020', keyboardType: TextInputType.number),
+          _buildCompactTextField('year', 'Year', 'e.g. 2020',
+              keyboardType: TextInputType.number),
           SizedBox(height: 12.h),
-          _buildCompactTextField('mileage', 'Mileage (km)', 'e.g. 50000', keyboardType: TextInputType.number),
+          _buildCompactTextField('mileage', 'Mileage (km)', 'e.g. 50000',
+              keyboardType: TextInputType.number),
           SizedBox(height: 12.h),
-          _buildCompactDropdown('Fuel Type', 'fuelType', [
-            'Petrol', 'Diesel', 'Electric', 'Hybrid', 'LPG', 'Other'
-          ]),
+          _buildCompactDropdown('Fuel Type', 'fuelType',
+              ['Petrol', 'Diesel', 'Electric', 'Hybrid', 'LPG', 'Other']),
           SizedBox(height: 12.h),
-          _buildCompactDropdown('Transmission', 'transmission', [
-            'Manual', 'Automatic', 'Semi-Automatic'
-          ]),
+          _buildCompactDropdown('Transmission', 'transmission',
+              ['Manual', 'Automatic', 'Semi-Automatic']),
         ];
 
       case 'Property':
         return [
-          _buildCompactDropdown('Property Type *', 'propertyType', [
-            'House', 'Apartment', 'Land', 'Commercial', 'Office Space', 'Warehouse', 'Farm'
-          ], isRequired: true),
+          _buildCompactDropdown(
+              'Property Type *',
+              'propertyType',
+              [
+                'House',
+                'Apartment',
+                'Land',
+                'Commercial',
+                'Office Space',
+                'Warehouse',
+                'Farm'
+              ],
+              isRequired: true),
           SizedBox(height: 12.h),
-          _buildCompactDropdown('Listing Type *', 'listingType', [
-            'For Sale', 'For Rent', 'Lease'
-          ], isRequired: true),
+          _buildCompactDropdown('Listing Type *', 'listingType',
+              ['For Sale', 'For Rent', 'Lease'],
+              isRequired: true),
           SizedBox(height: 12.h),
-          _buildCompactTextField('bedrooms', 'Bedrooms', '', keyboardType: TextInputType.number),
+          _buildCompactTextField('bedrooms', 'Bedrooms', '',
+              keyboardType: TextInputType.number),
           SizedBox(height: 12.h),
-          _buildCompactTextField('bathrooms', 'Bathrooms', '', keyboardType: TextInputType.number),
+          _buildCompactTextField('bathrooms', 'Bathrooms', '',
+              keyboardType: TextInputType.number),
           SizedBox(height: 12.h),
-          _buildCompactTextField('area', 'Area (sq meters)', '', keyboardType: TextInputType.number),
+          _buildCompactTextField('area', 'Area (sq meters)', '',
+              keyboardType: TextInputType.number),
         ];
 
       case 'Beauty and Personal Care':
         return [
-          _buildCompactDropdown('Product Type *', 'beautyType', [
-            'Skincare', 'Makeup', 'Hair Care', 'Perfume', 'Tools & Accessories', 'Other'
-          ], isRequired: true),
+          _buildCompactDropdown(
+              'Product Type *',
+              'beautyType',
+              [
+                'Skincare',
+                'Makeup',
+                'Hair Care',
+                'Perfume',
+                'Tools & Accessories',
+                'Other'
+              ],
+              isRequired: true),
           SizedBox(height: 12.h),
           _buildCompactTextField('brand', 'Brand', ''),
           SizedBox(height: 12.h),
-          _buildCompactDropdown('Condition', 'condition', [
-            'New', 'Like New', 'Used', 'Sample Size'
-          ]),
+          _buildCompactDropdown('Condition', 'condition',
+              ['New', 'Like New', 'Used', 'Sample Size']),
         ];
 
       case 'Electronics':
         return [
-          _buildCompactDropdown('Product Type *', 'electronicsType', [
-            'TV & Audio', 'Computer & Laptop', 'Camera & Photo', 'Gaming', 'Home Appliances', 'Other'
-          ], isRequired: true),
+          _buildCompactDropdown(
+              'Product Type *',
+              'electronicsType',
+              [
+                'TV & Audio',
+                'Computer & Laptop',
+                'Camera & Photo',
+                'Gaming',
+                'Home Appliances',
+                'Other'
+              ],
+              isRequired: true),
           SizedBox(height: 12.h),
           _buildCompactTextField('brand', 'Brand', 'e.g. Samsung, Apple, Sony'),
           SizedBox(height: 12.h),
           _buildCompactTextField('model', 'Model', ''),
           SizedBox(height: 12.h),
-          _buildCompactDropdown('Condition', 'condition', [
-            'New', 'Like New', 'Good', 'Fair', 'For Parts'
-          ]),
+          _buildCompactDropdown('Condition', 'condition',
+              ['New', 'Like New', 'Good', 'Fair', 'For Parts']),
         ];
 
       case 'Fashion':
         return [
-          _buildCompactDropdown('Category *', 'fashionCategory', [
-            'Men\'s Clothing', 'Women\'s Clothing', 'Shoes', 'Accessories', 'Bags', 'Watches', 'Jewelry'
-          ], isRequired: true),
+          _buildCompactDropdown(
+              'Category *',
+              'fashionCategory',
+              [
+                'Men\'s Clothing',
+                'Women\'s Clothing',
+                'Shoes',
+                'Accessories',
+                'Bags',
+                'Watches',
+                'Jewelry'
+              ],
+              isRequired: true),
           SizedBox(height: 12.h),
           _buildCompactTextField('brand', 'Brand', ''),
           SizedBox(height: 12.h),
           _buildCompactTextField('size', 'Size', 'e.g. M, L, 42, etc.'),
           SizedBox(height: 12.h),
           _buildCompactDropdown('Condition', 'condition', [
-            'New with tags', 'New without tags', 'Very good', 'Good', 'Acceptable'
+            'New with tags',
+            'New without tags',
+            'Very good',
+            'Good',
+            'Acceptable'
           ]),
         ];
 
@@ -288,7 +371,10 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
     }
   }
 
-  Widget _buildCompactTextField(String key, String label, String hint, {
+  Widget _buildCompactTextField(
+    String key,
+    String label,
+    String hint, {
     bool isRequired = false,
     TextInputType? keyboardType,
   }) {
@@ -311,7 +397,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
-          contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+          contentPadding:
+              EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10.r),
             borderSide: BorderSide.none,
@@ -326,7 +413,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
     );
   }
 
-  Widget _buildCompactDropdown(String label, String key, List<String> items, {bool isRequired = false}) {
+  Widget _buildCompactDropdown(String label, String key, List<String> items,
+      {bool isRequired = false}) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -342,7 +430,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
       child: DropdownButtonFormField<String>(
         decoration: InputDecoration(
           labelText: label,
-          contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+          contentPadding:
+              EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10.r),
             borderSide: BorderSide.none,
@@ -352,12 +441,14 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
           labelStyle: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
         ),
         value: _dynamicValues[key],
-        items: items.map((c) => DropdownMenuItem(
-            value: c,
-            child: Text(c, style: TextStyle(fontSize: 13.sp))
-        )).toList(),
+        items: items
+            .map((c) => DropdownMenuItem(
+                value: c, child: Text(c, style: TextStyle(fontSize: 13.sp))))
+            .toList(),
         onChanged: (v) => setState(() => _dynamicValues[key] = v ?? ''),
-        validator: isRequired ? (v) => v == null ? 'Please select $label' : null : null,
+        validator: isRequired
+            ? (v) => v == null ? 'Please select $label' : null
+            : null,
         style: TextStyle(fontSize: 13.sp, color: Colors.black87),
         dropdownColor: Colors.white,
       ),
@@ -368,7 +459,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
   // ✅ 本地发布（mock）：需要把 bytes 写到临时文件才能预览
   Future<void> _publishLocalOnly() async {
     // 守卫：未登录/未验证则引导
-    if (!await VerificationGuard.ensureVerifiedOrPrompt(context, feature: AppFeature.postListing)) return;
+    if (!await VerificationGuard.ensureVerifiedOrPrompt(context,
+        feature: AppFeature.postListing)) return;
 
     if (!_formKey.currentState!.validate()) return;
     if (_images.isEmpty) {
@@ -381,7 +473,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
     final paths = <String>[];
     for (final img in _images) {
       final ext = (img.ext?.isNotEmpty == true) ? img.ext! : 'jpg';
-      final path = '${tempDir.path}/local_${DateTime.now().millisecondsSinceEpoch}_${paths.length}.$ext';
+      final path =
+          '${tempDir.path}/local_${DateTime.now().millisecondsSinceEpoch}_${paths.length}.$ext';
       final f = File(path);
       await f.writeAsBytes(img.bytes);
       paths.add(path);
@@ -406,14 +499,16 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) => pd.ProductDetailPage(productId: id, productData: listing),
+        builder: (_) =>
+            pd.ProductDetailPage(productId: id, productData: listing),
       ),
     );
   }
 
   Future<void> _submitListing() async {
     // 守卫：未登录/未验证则引导
-    if (!await VerificationGuard.ensureVerifiedOrPrompt(context, feature: AppFeature.postListing)) return;
+    if (!await VerificationGuard.ensureVerifiedOrPrompt(context,
+        feature: AppFeature.postListing)) return;
 
     if (_submitting) return;
     if (!_formKey.currentState!.validate()) return;
@@ -449,18 +544,17 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
 
         final ext = (img.ext?.isNotEmpty == true) ? img.ext! : 'jpg';
         final fileName = 'img_${DateTime.now().millisecondsSinceEpoch}_$i.$ext';
-        final objectPath = '$userId/${DateTime.now().millisecondsSinceEpoch}_$fileName';
+        final objectPath =
+            '$userId/${DateTime.now().millisecondsSinceEpoch}_$fileName';
 
-        await Supabase.instance.client.storage
-            .from('listings')
-            .uploadBinary(
-          objectPath,
-          img.bytes, // 👈 直接 bytes
-          fileOptions: FileOptions(
-            contentType: img.mime ?? 'image/*',
-            upsert: false,
-          ),
-        );
+        await Supabase.instance.client.storage.from('listings').uploadBinary(
+              objectPath,
+              img.bytes, // 👈 直接 bytes
+              fileOptions: FileOptions(
+                contentType: img.mime ?? 'image/*',
+                upsert: false,
+              ),
+            );
 
         final publicUrl = Supabase.instance.client.storage
             .from('listings')
@@ -479,7 +573,9 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
         final vv = v.trim();
         if (vv.isNotEmpty) extrasLines.add('$k: $vv');
       });
-      final extrasText = extrasLines.isEmpty ? '' : '\n\n---\nExtras:\n${extrasLines.join('\n')}';
+      final extrasText = extrasLines.isEmpty
+          ? ''
+          : '\n\n---\nExtras:\n${extrasLines.join('\n')}';
       final desc = '${_descCtrl.text.trim()}$extrasText';
 
       // Insert listing
@@ -495,8 +591,10 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
         description: desc,
         imageUrls: urls, // ⬅️ 写入上传后的 urls
         userId: userId,
-        sellerName: _nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text.trim(),
-        contactPhone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+        sellerName:
+            _nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text.trim(),
+        contactPhone:
+            _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
       );
 
       if (!mounted) return;
@@ -519,7 +617,9 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
         'category': row['category'] ?? '',
         'images': urls, // ⬅️ 用我们本地掌握的 urls，避免后端返回字段缺失
         'title': row['title'] ?? '',
-        'price': row['price'] == null ? '' : '\$${(row['price'] as num).toStringAsFixed(2)}',
+        'price': row['price'] == null
+            ? ''
+            : '\$${(row['price'] as num).toStringAsFixed(2)}',
         'location': row['city'] ?? '',
         'postedDate': row['created_at'] ?? DateTime.now().toIso8601String(),
         'description': row['description'] ?? '',
@@ -582,7 +682,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
           ),
           backgroundColor: Colors.orange[600],
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
           margin: EdgeInsets.all(16.w),
           duration: const Duration(seconds: 5),
         ),
@@ -618,7 +719,6 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
 
       await RewardService.handleInviteeFirstPost(userId);
       await _showTaskProgressIfNeeded(userId);
-
     } catch (e) {
       // ignore: avoid_print
       print('Failed to handle post-publish rewards: $e');
@@ -626,7 +726,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
   }
 
   // 安全查找活跃的发布任务（替代 firstOrNull，避免编译问题）
-  Map<String, dynamic>? _findActivePublishTask(List<Map<String, dynamic>> tasks) {
+  Map<String, dynamic>? _findActivePublishTask(
+      List<Map<String, dynamic>> tasks) {
     for (final t in tasks) {
       if (t['task_type'] == 'publish_items' && t['status'] == 'active') {
         return t;
@@ -674,7 +775,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
                 children: [
                   Icon(Icons.celebration, color: Colors.white, size: 20.r),
                   SizedBox(width: 8.w),
-                  const Text('🎉 Congratulations! Publishing task completed - Hot pin earned!'),
+                  const Text(
+                      '🎉 Congratulations! Publishing task completed - Hot pin earned!'),
                 ],
               ),
               backgroundColor: Colors.green[600],
@@ -732,7 +834,7 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
                     child: _buildImageOption(
                       Icons.photo_camera_rounded,
                       'Camera',
-                          () async {
+                      () async {
                         Navigator.pop(context);
                         final file = await _cameraPicker.pickImage(
                           source: ImageSource.camera,
@@ -745,11 +847,12 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
                           }
                           final bytes = await file.readAsBytes();
                           setState(() => _images.add((
-                          bytes: bytes,
-                          name: 'camera_${DateTime.now().millisecondsSinceEpoch}.jpg',
-                          ext: 'jpg',
-                          mime: 'image/jpeg',
-                          )));
+                                bytes: bytes,
+                                name:
+                                    'camera_${DateTime.now().millisecondsSinceEpoch}.jpg',
+                                ext: 'jpg',
+                                mime: 'image/jpeg',
+                              )));
                         }
                       },
                     ),
@@ -759,7 +862,7 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
                     child: _buildImageOption(
                       Icons.photo_library_rounded,
                       'Gallery',
-                          () async {
+                      () async {
                         Navigator.pop(context);
                         // ✅ 只在一个地方调用 bytes 版选图
                         final picked = await pickImageBytes();
@@ -930,7 +1033,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
                       SizedBox(height: 16.h),
                       Text(
                         _progressMsg,
-                        style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                            fontSize: 14.sp, fontWeight: FontWeight.w500),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -968,7 +1072,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
                   color: const Color(0xFF2196F3).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8.r),
                 ),
-                child: Icon(Icons.camera_alt_rounded, color: const Color(0xFF2196F3), size: 16.r),
+                child: Icon(Icons.camera_alt_rounded,
+                    color: const Color(0xFF2196F3), size: 16.r),
               ),
               SizedBox(width: 8.w),
               Expanded(
@@ -977,11 +1082,13 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
                   children: [
                     Text(
                       'Photos',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14.sp),
+                      style: TextStyle(
+                          fontWeight: FontWeight.w600, fontSize: 14.sp),
                     ),
                     Text(
                       'Add up to $_maxPhotos photos. First photo will be main.',
-                      style: TextStyle(fontSize: 10.sp, color: Colors.grey.shade600),
+                      style: TextStyle(
+                          fontSize: 10.sp, color: Colors.grey.shade600),
                     ),
                   ],
                 ),
@@ -989,7 +1096,6 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
             ],
           ),
           SizedBox(height: 10.h),
-
           Container(
             constraints: BoxConstraints(minHeight: 60.h),
             child: Wrap(
@@ -1001,8 +1107,7 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
                   final img = entry.value;
                   return _buildImagePreview(index, img.bytes);
                 }),
-                if (_images.length < _maxPhotos)
-                  _buildAddPhotoButton(),
+                if (_images.length < _maxPhotos) _buildAddPhotoButton(),
               ],
             ),
           ),
@@ -1040,7 +1145,10 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
                     child: Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [const Color(0xFF2196F3), const Color(0xFF1976D2)],
+                          colors: [
+                            const Color(0xFF2196F3),
+                            const Color(0xFF1976D2)
+                          ],
                         ),
                         borderRadius: BorderRadius.only(
                           bottomLeft: Radius.circular(10.r),
@@ -1097,16 +1205,21 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
         decoration: BoxDecoration(
           color: const Color(0xFF2196F3).withOpacity(0.1),
           borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(color: const Color(0xFF2196F3).withOpacity(0.3), width: 2),
+          border: Border.all(
+              color: const Color(0xFF2196F3).withOpacity(0.3), width: 2),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_a_photo_rounded, color: const Color(0xFF2196F3), size: 20.r),
+            Icon(Icons.add_a_photo_rounded,
+                color: const Color(0xFF2196F3), size: 20.r),
             SizedBox(height: 2.h),
             Text(
               'Add Photo',
-              style: TextStyle(fontSize: 8.sp, color: const Color(0xFF2196F3), fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  fontSize: 8.sp,
+                  color: const Color(0xFF2196F3),
+                  fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -1139,7 +1252,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
                   color: const Color(0xFF2196F3).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8.r),
                 ),
-                child: Icon(Icons.category_rounded, color: const Color(0xFF2196F3), size: 16.r),
+                child: Icon(Icons.category_rounded,
+                    color: const Color(0xFF2196F3), size: 16.r),
               ),
               SizedBox(width: 8.w),
               Text(
@@ -1160,7 +1274,9 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
                 color: Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(10.r),
                 border: Border.all(
-                  color: _category.isEmpty ? Colors.red.shade300 : Colors.grey.shade300,
+                  color: _category.isEmpty
+                      ? Colors.red.shade300
+                      : Colors.grey.shade300,
                   width: 1,
                 ),
               ),
@@ -1184,11 +1300,17 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
                   ],
                   Expanded(
                     child: Text(
-                      _category.isEmpty ? 'Choose a category for your item' : _category,
+                      _category.isEmpty
+                          ? 'Choose a category for your item'
+                          : _category,
                       style: TextStyle(
                         fontSize: 13.sp,
-                        color: _category.isEmpty ? Colors.grey.shade500 : Colors.black87,
-                        fontWeight: _category.isEmpty ? FontWeight.w400 : FontWeight.w500,
+                        color: _category.isEmpty
+                            ? Colors.grey.shade500
+                            : Colors.black87,
+                        fontWeight: _category.isEmpty
+                            ? FontWeight.w400
+                            : FontWeight.w500,
                       ),
                     ),
                   ),
@@ -1244,7 +1366,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
                           'Selected Category',
                           style: TextStyle(
                             fontSize: 9.sp,
-                            color: _getCategoryColor(_category).withOpacity(0.8),
+                            color:
+                                _getCategoryColor(_category).withOpacity(0.8),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -1346,7 +1469,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
                             Navigator.pop(context);
                           },
                           child: Container(
-                            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 12.w, vertical: 10.h),
                             decoration: BoxDecoration(
                               color: Colors.grey.shade50,
                               borderRadius: BorderRadius.circular(8.r),
@@ -1361,7 +1485,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
                                   width: 28.w,
                                   height: 28.w,
                                   decoration: BoxDecoration(
-                                    color: _getCategoryColor(category).withOpacity(0.15),
+                                    color: _getCategoryColor(category)
+                                        .withOpacity(0.15),
                                     borderRadius: BorderRadius.circular(6.r),
                                   ),
                                   child: Icon(
@@ -1500,7 +1625,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
             style: TextStyle(fontSize: 13.sp),
             decoration: InputDecoration(
               labelText: 'Title *',
-              contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10.r),
                 borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1519,7 +1645,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
             decoration: InputDecoration(
               labelText: 'Price (USD) *',
               prefixText: '\$ ',
-              contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10.r),
                 borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1534,7 +1661,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
           DropdownButtonFormField<String>(
             decoration: InputDecoration(
               labelText: 'Region *',
-              contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10.r),
                 borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1542,10 +1670,11 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
               labelStyle: TextStyle(fontSize: 12.sp),
             ),
             value: _city,
-            items: _cities.map((c) => DropdownMenuItem(
-                value: c,
-                child: Text(c, style: TextStyle(fontSize: 13.sp))
-            )).toList(),
+            items: _cities
+                .map((c) => DropdownMenuItem(
+                    value: c,
+                    child: Text(c, style: TextStyle(fontSize: 13.sp))))
+                .toList(),
             onChanged: (v) => setState(() => _city = v!),
             style: TextStyle(fontSize: 13.sp, color: Colors.black87),
           ),
@@ -1558,7 +1687,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
             style: TextStyle(fontSize: 13.sp),
             decoration: InputDecoration(
               labelText: 'Description',
-              contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10.r),
                 borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1597,7 +1727,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
                   color: const Color(0xFF2196F3).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8.r),
                 ),
-                child: Icon(Icons.person_rounded, color: const Color(0xFF2196F3), size: 16.r),
+                child: Icon(Icons.person_rounded,
+                    color: const Color(0xFF2196F3), size: 16.r),
               ),
               SizedBox(width: 8.w),
               Text(
@@ -1614,7 +1745,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
             style: TextStyle(fontSize: 13.sp),
             decoration: InputDecoration(
               labelText: 'Your Name *',
-              contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10.r),
                 borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1633,13 +1765,15 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
             decoration: InputDecoration(
               labelText: 'Phone Number *',
               hintText: '+263 77 123 4567',
-              contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10.r),
                 borderSide: BorderSide(color: Colors.grey.shade300),
               ),
               labelStyle: TextStyle(fontSize: 12.sp),
-              hintStyle: TextStyle(fontSize: 11.sp, color: Colors.grey.shade400),
+              hintStyle:
+                  TextStyle(fontSize: 11.sp, color: Colors.grey.shade400),
             ),
             validator: (v) => v!.isEmpty ? 'Required' : null,
           ),
@@ -1676,7 +1810,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
                   ),
                   borderRadius: BorderRadius.circular(10.r),
                 ),
-                child: Icon(Icons.card_giftcard, color: Colors.white, size: 16.r),
+                child:
+                    Icon(Icons.card_giftcard, color: Colors.white, size: 16.r),
               ),
               SizedBox(width: 8.w),
               Expanded(
@@ -1704,7 +1839,6 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
             ],
           ),
           SizedBox(height: 12.h),
-
           if (_loadingCoupons)
             const Center(child: CircularProgressIndicator(color: Colors.orange))
           else if (_availableCoupons.isEmpty)
@@ -1716,7 +1850,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: Colors.grey.shade600, size: 14.r),
+                  Icon(Icons.info_outline,
+                      color: Colors.grey.shade600, size: 14.r),
                   SizedBox(width: 6.w),
                   Expanded(
                     child: Text(
@@ -1731,33 +1866,36 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
               ),
             )
           else ...[
-              Text(
-                'Select a coupon to use:',
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w600,
-                ),
+            Text(
+              'Select a coupon to use:',
+              style: TextStyle(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w600,
               ),
-              SizedBox(height: 10.h),
-              Wrap(
-                spacing: 6.w,
-                runSpacing: 6.h,
-                children: [
-                  _buildCouponOption(null, 'No Coupon', 'Post without pinning'),
-                  ..._availableCoupons.map((coupon) => _buildCouponOption(
-                    coupon,
-                    coupon.title,
-                    '${_getCouponTypeDescription(coupon.type)} • ${coupon.expiryStatusText}',
-                  )).toList(),
-                ],
-              ),
-            ],
+            ),
+            SizedBox(height: 10.h),
+            Wrap(
+              spacing: 6.w,
+              runSpacing: 6.h,
+              children: [
+                _buildCouponOption(null, 'No Coupon', 'Post without pinning'),
+                ..._availableCoupons
+                    .map((coupon) => _buildCouponOption(
+                          coupon,
+                          coupon.title,
+                          '${_getCouponTypeDescription(coupon.type)} • ${coupon.expiryStatusText}',
+                        ))
+                    .toList(),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildCouponOption(CouponModel? coupon, String title, String subtitle) {
+  Widget _buildCouponOption(
+      CouponModel? coupon, String title, String subtitle) {
     final isSelected = _selectedCoupon?.id == coupon?.id && coupon != null ||
         (_selectedCoupon == null && coupon == null);
 
@@ -1802,7 +1940,8 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
                     style: TextStyle(
                       fontSize: 12.sp,
                       fontWeight: FontWeight.w600,
-                      color: isSelected ? Colors.orange.shade800 : Colors.black87,
+                      color:
+                          isSelected ? Colors.orange.shade800 : Colors.black87,
                     ),
                   ),
                 ),
@@ -1815,7 +1954,9 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
                 subtitle,
                 style: TextStyle(
                   fontSize: 10.sp,
-                  color: isSelected ? Colors.orange.shade600 : Colors.grey.shade600,
+                  color: isSelected
+                      ? Colors.orange.shade600
+                      : Colors.grey.shade600,
                 ),
               ),
             ),
@@ -1866,26 +2007,30 @@ class _SellFormPageState extends State<SellFormPage> with TickerProviderStateMix
         ],
       ),
       child: ElevatedButton(
-        onPressed: _submitting ? null : (kUploadToRemote ? _submitListing : _publishLocalOnly),
+        onPressed: _submitting
+            ? null
+            : (kUploadToRemote ? _submitListing : _publishLocalOnly),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
         ),
         child: _submitting
             ? SizedBox(
-          height: 18.h,
-          width: 18.w,
-          child: const CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-        )
+                height: 18.h,
+                width: 18.w,
+                child: const CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white),
+              )
             : Text(
-          'Post Advertisement',
-          style: TextStyle(
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
+                'Post Advertisement',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
       ),
     );
   }

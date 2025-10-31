@@ -274,7 +274,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                     onPressed: _canSubmit ? _deleteAccount : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                      _canSubmit ? danger : danger.withOpacity(.5),
+                          _canSubmit ? danger : danger.withOpacity(.5),
                       textStyle: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -283,10 +283,10 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                     ),
                     child: _deleting
                         ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
                         : const Text('Delete My Account'),
                   ),
                 ),

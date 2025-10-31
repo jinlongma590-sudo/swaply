@@ -3,16 +3,18 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 class FavoritesUpdateService {
-  static final FavoritesUpdateService _instance = FavoritesUpdateService._internal();
+  static final FavoritesUpdateService _instance =
+      FavoritesUpdateService._internal();
   factory FavoritesUpdateService() => _instance;
   FavoritesUpdateService._internal();
 
   // 用于通知收藏状态改变的流控制器
   final StreamController<FavoriteUpdateEvent> _favoritesController =
-  StreamController<FavoriteUpdateEvent>.broadcast();
+      StreamController<FavoriteUpdateEvent>.broadcast();
 
   // 获取收藏更新流
-  Stream<FavoriteUpdateEvent> get favoritesStream => _favoritesController.stream;
+  Stream<FavoriteUpdateEvent> get favoritesStream =>
+      _favoritesController.stream;
 
   // 通知收藏状态改变
   void notifyFavoriteChanged({

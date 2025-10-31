@@ -7,12 +7,12 @@ import 'package:swaply/utils/logger.dart';
 
 /// 错误类型枚举
 enum ErrorType {
-  network,   // 网络错误
-  auth,      // 认证错误
-  validation,// 验证错误
-  business,  // 业务逻辑错误
-  system,    // 系统错误
-  unknown,   // 未知错误
+  network, // 网络错误
+  auth, // 认证错误
+  validation, // 验证错误
+  business, // 业务逻辑错误
+  system, // 系统错误
+  unknown, // 未知错误
 }
 
 /// 自定义应用异常类
@@ -41,17 +41,24 @@ class AppException implements Exception {
       AppException(message: message, type: ErrorType.validation, code: code);
 
   factory AppException.business(String message,
-      {String? code, Map<String, dynamic>? details}) =>
+          {String? code, Map<String, dynamic>? details}) =>
       AppException(
-          message: message, type: ErrorType.business, code: code, details: details);
+          message: message,
+          type: ErrorType.business,
+          code: code,
+          details: details);
 
   factory AppException.system(String message,
-      {String? code, StackTrace? stackTrace}) =>
+          {String? code, StackTrace? stackTrace}) =>
       AppException(
-          message: message, type: ErrorType.system, code: code, stackTrace: stackTrace);
+          message: message,
+          type: ErrorType.system,
+          code: code,
+          stackTrace: stackTrace);
 
   @override
-  String toString() => 'AppException(type: $type, message: $message, code: $code)';
+  String toString() =>
+      'AppException(type: $type, message: $message, code: $code)';
 }
 
 /// 全局错误处理器
@@ -167,7 +174,8 @@ class ErrorHandler {
   }
 
   /// 在 UI 中显示错误
-  static void showError(BuildContext context, dynamic error, {VoidCallback? onRetry}) {
+  static void showError(BuildContext context, dynamic error,
+      {VoidCallback? onRetry}) {
     final appError = handleError(error);
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -175,15 +183,16 @@ class ErrorHandler {
         content: _buildErrorSnackBar(appError),
         backgroundColor: _getErrorColor(appError.type),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
         margin: EdgeInsets.all(16.r),
         duration: Duration(seconds: appError.type == ErrorType.system ? 5 : 3),
         action: onRetry != null
             ? SnackBarAction(
-          label: '重试',
-          textColor: Colors.white,
-          onPressed: onRetry,
-        )
+                label: '重试',
+                textColor: Colors.white,
+                onPressed: onRetry,
+              )
             : null,
       ),
     );
@@ -202,11 +211,16 @@ class ErrorHandler {
             children: [
               Text(
                 _getErrorTitle(error.type),
-                style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600, color: Colors.white),
+                style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white),
               ),
               Text(
                 error.message,
-                style: TextStyle(fontSize: 12.sp, color: Colors.white.withValues(alpha: 0.9)),
+                style: TextStyle(
+                    fontSize: 12.sp,
+                    color: Colors.white.withValues(alpha: 0.9)),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -219,34 +233,52 @@ class ErrorHandler {
 
   static Color _getErrorColor(ErrorType type) {
     switch (type) {
-      case ErrorType.network:    return Colors.orange[600]!;
-      case ErrorType.auth:       return Colors.red[600]!;
-      case ErrorType.validation: return Colors.amber[600]!;
-      case ErrorType.business:   return Colors.blue[600]!;
-      case ErrorType.system:     return Colors.red[700]!;
-      case ErrorType.unknown:    return Colors.grey[600]!;
+      case ErrorType.network:
+        return Colors.orange[600]!;
+      case ErrorType.auth:
+        return Colors.red[600]!;
+      case ErrorType.validation:
+        return Colors.amber[600]!;
+      case ErrorType.business:
+        return Colors.blue[600]!;
+      case ErrorType.system:
+        return Colors.red[700]!;
+      case ErrorType.unknown:
+        return Colors.grey[600]!;
     }
   }
 
   static IconData _getErrorIcon(ErrorType type) {
     switch (type) {
-      case ErrorType.network:    return Icons.wifi_off;
-      case ErrorType.auth:       return Icons.lock;
-      case ErrorType.validation: return Icons.warning;
-      case ErrorType.business:   return Icons.info;
-      case ErrorType.system:     return Icons.error;
-      case ErrorType.unknown:    return Icons.help;
+      case ErrorType.network:
+        return Icons.wifi_off;
+      case ErrorType.auth:
+        return Icons.lock;
+      case ErrorType.validation:
+        return Icons.warning;
+      case ErrorType.business:
+        return Icons.info;
+      case ErrorType.system:
+        return Icons.error;
+      case ErrorType.unknown:
+        return Icons.help;
     }
   }
 
   static String _getErrorTitle(ErrorType type) {
     switch (type) {
-      case ErrorType.network:    return '网络错误';
-      case ErrorType.auth:       return '认证错误';
-      case ErrorType.validation: return '输入错误';
-      case ErrorType.business:   return '业务错误';
-      case ErrorType.system:     return '系统错误';
-      case ErrorType.unknown:    return '未知错误';
+      case ErrorType.network:
+        return '网络错误';
+      case ErrorType.auth:
+        return '认证错误';
+      case ErrorType.validation:
+        return '输入错误';
+      case ErrorType.business:
+        return '业务错误';
+      case ErrorType.system:
+        return '系统错误';
+      case ErrorType.unknown:
+        return '未知错误';
     }
   }
 }

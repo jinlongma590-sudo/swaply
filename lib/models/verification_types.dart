@@ -12,9 +12,9 @@ enum VerificationBadgeType {
   none,
 
   // —— 旧名字（向后兼容）
-  verified,   // ≈ blue/basic
-  official,   // ≈ government/官方
-  premium,    // ≈ gold/business/付费
+  verified, // ≈ blue/basic
+  official, // ≈ government/官方
+  premium, // ≈ gold/business/付费
 
   // —— 新名字（可在新代码里用）
   blue,
@@ -30,7 +30,7 @@ class VerificationBadgeUtil {
   static VerificationBadgeType fromRaw(String? raw) {
     final v = (raw ?? '').trim().toLowerCase();
     switch (v) {
-    // === 基础已验证 ===
+      // === 基础已验证 ===
       case 'verified':
       case 'blue':
       case 'basic':
@@ -38,25 +38,25 @@ class VerificationBadgeUtil {
       case 'blue-check':
         return VerificationBadgeType.verified;
 
-    // === 官方 ===
+      // === 官方 ===
       case 'official':
       case 'government':
       case 'gov':
         return VerificationBadgeType.official;
 
-    // === 付费 / 高级 ===
+      // === 付费 / 高级 ===
       case 'premium':
       case 'gold':
         return VerificationBadgeType.premium;
 
-    // === 商业 ===
+      // === 商业 ===
       case 'business':
       case 'biz':
       case 'pro':
       case 'enterprise':
         return VerificationBadgeType.business;
 
-    // === 无 ===
+      // === 无 ===
       case 'none':
       case '':
       default:
@@ -96,16 +96,15 @@ class VerificationBadgeUtil {
   /// ✅ 这里只看 `verification_type`，若为空或 none，则仅在 `is_official == true` 时返回 `official`，否则 `none`。
   /// ❌ 不在此处判定“是否已认证”（由 verification_utils 决定）。
   static VerificationBadgeType getVerificationTypeFromUser(
-      Map<String, dynamic>? userOrProfile,
-      ) {
+    Map<String, dynamic>? userOrProfile,
+  ) {
     if (userOrProfile == null) return VerificationBadgeType.none;
 
     // 既支持直接传 profile，也兼容外层包了一层 { profile: {...} } 的结构
     final m = Map<String, dynamic>.from(userOrProfile);
     final profileVal = m['profile'];
-    final Map<String, dynamic> p = (profileVal is Map)
-        ? Map<String, dynamic>.from(profileVal as Map)
-        : m;
+    final Map<String, dynamic> p =
+        (profileVal is Map) ? Map<String, dynamic>.from(profileVal as Map) : m;
 
     final raw = (p['verification_type'] ?? '').toString();
     final type = fromRaw(raw);
@@ -113,7 +112,9 @@ class VerificationBadgeUtil {
 
     // 极简兜底：旧数据只有 is_official 标记时
     final isOfficial = p['is_official'] == true;
-    return isOfficial ? VerificationBadgeType.official : VerificationBadgeType.none;
+    return isOfficial
+        ? VerificationBadgeType.official
+        : VerificationBadgeType.none;
   }
 
   /// 把任意枚举规整到三档（旧名字），便于 UI 统一处理
@@ -161,8 +162,8 @@ class VerificationBadgeUtil {
 /// 兼容旧 API：vt.VerificationBadge.getVerificationTypeFromUser(...)
 class VerificationBadge {
   static VerificationBadgeType getVerificationTypeFromUser(
-      Map<String, dynamic>? userOrProfile,
-      ) {
+    Map<String, dynamic>? userOrProfile,
+  ) {
     return VerificationBadgeUtil.getVerificationTypeFromUser(userOrProfile);
   }
 }
@@ -171,16 +172,16 @@ class VerificationBadge {
 extension VerificationX on VerificationBadgeType {
   bool get isOfficial =>
       this == VerificationBadgeType.official ||
-          this == VerificationBadgeType.government;
+      this == VerificationBadgeType.government;
 
   bool get isPremium =>
       this == VerificationBadgeType.premium ||
-          this == VerificationBadgeType.business ||
-          this == VerificationBadgeType.gold;
+      this == VerificationBadgeType.business ||
+      this == VerificationBadgeType.gold;
 
   bool get isVerifiedBasic =>
       this == VerificationBadgeType.verified ||
-          this == VerificationBadgeType.blue;
+      this == VerificationBadgeType.blue;
 
   /// “有徽章”即非 none —— 仅用于展示层
   bool get isAnyVerified => this != VerificationBadgeType.none;

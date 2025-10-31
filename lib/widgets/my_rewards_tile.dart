@@ -22,8 +22,9 @@ class _MyRewardsTileState extends State<MyRewardsTile> {
 
   void _initFuture() {
     final uid = Supabase.instance.client.auth.currentUser?.id;
-    _future =
-    (uid == null) ? Future.value(<String, dynamic>{}) : RewardService.getSummary(userId: uid);
+    _future = (uid == null)
+        ? Future.value(<String, dynamic>{})
+        : RewardService.getSummary(userId: uid);
   }
 
   Future<void> _refresh() async {
@@ -64,7 +65,8 @@ class _MyRewardsTileState extends State<MyRewardsTile> {
             subtitle: 'Failed to load rewards',
             trailing: IconButton(
               tooltip: 'Retry',
-              icon: const Icon(Icons.refresh_rounded, size: 20, color: Colors.grey),
+              icon: const Icon(Icons.refresh_rounded,
+                  size: 20, color: Colors.grey),
               onPressed: _refresh,
             ),
             onTap: _refresh,
@@ -72,18 +74,21 @@ class _MyRewardsTileState extends State<MyRewardsTile> {
         }
 
         final data = snap.data ?? const <String, dynamic>{};
-        final points = _pickInt(data, ['points', 'total_points', 'point', 'totalPoints']);
-        final coupons =
-        _pickInt(data, ['coupons', 'couponCount', 'coupon_count', 'total_coupons']);
+        final points =
+            _pickInt(data, ['points', 'total_points', 'point', 'totalPoints']);
+        final coupons = _pickInt(
+            data, ['coupons', 'couponCount', 'coupon_count', 'total_coupons']);
 
         return _tileShell(
           iconBg: const Color(0xFF7C3AED).withOpacity(0.10),
           iconColor: const Color(0xFF7C3AED),
           title: 'My Rewards',
           subtitle: 'Points: $points · Coupons: $coupons',
-          trailing: Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey[400]),
+          trailing:
+              Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey[400]),
           onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const TaskManagementPage()));
+            Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const TaskManagementPage()));
           },
         );
       },
@@ -125,16 +130,21 @@ class _MyRewardsTileState extends State<MyRewardsTile> {
                   color: iconBg,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(Icons.emoji_events_rounded, color: iconColor, size: 26),
+                child: Icon(Icons.emoji_events_rounded,
+                    color: iconColor, size: 26),
               ),
               const SizedBox(width: 18),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+                    Text(title,
+                        style: const TextStyle(
+                            fontSize: 17, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 3),
-                    Text(subtitle, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                    Text(subtitle,
+                        style:
+                            TextStyle(fontSize: 14, color: Colors.grey[600])),
                   ],
                 ),
               ),

@@ -28,8 +28,10 @@ class CouponService {
   static final Map<String, Future<List<CouponModel>>> _couponInflight = {};
 
   // 首页"热门置顶"缓存（按 city|limit 维度）
-  static final Map<String, _CacheEntry<List<Map<String, dynamic>>>> _trendingCache = {};
-  static final Map<String, Future<List<Map<String, dynamic>>>> _trendingInflight = {};
+  static final Map<String, _CacheEntry<List<Map<String, dynamic>>>>
+      _trendingCache = {};
+  static final Map<String, Future<List<Map<String, dynamic>>>>
+      _trendingInflight = {};
 
   /// 清理缓存（同时清理券与置顶广告两个缓存与并发占位）
   static void clearCache() {
@@ -56,7 +58,8 @@ class CouponService {
   static String _generateCouponCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     final random = Random();
-    return List.generate(10, (index) => chars[random.nextInt(chars.length)]).join();
+    return List.generate(10, (index) => chars[random.nextInt(chars.length)])
+        .join();
   }
 
   /// Safe parsing method
@@ -79,7 +82,8 @@ class CouponService {
   // ========== ★ 核心映射 ==========
 
   /// 根据优惠券类型获取正确的 category 和 source（确保 welcome 被计入奖励）
-  static (String category, String source) _categoryAndSourceForType(CouponType type) {
+  static (String category, String source) _categoryAndSourceForType(
+      CouponType type) {
     switch (type) {
       case CouponType.welcome:
         return ('reward', 'signup'); // 关键：欢迎券算奖励，来源为注册
@@ -129,7 +133,8 @@ class CouponService {
 
       final code = 'WELCOME-${userId.substring(0, 6).toUpperCase()}';
       final now = DateTime.now();
-      final expiresAt = now.add(const Duration(days: 30)); // 券有效期（与RewardService一致）
+      final expiresAt =
+          now.add(const Duration(days: 30)); // 券有效期（与RewardService一致）
 
       final couponData = {
         'user_id': userId,
@@ -181,7 +186,8 @@ class CouponService {
     String description = 'Invite 5 friends completed — search pin for 3 days.',
   }) async {
     try {
-      _debugPrint('Creating Search/Popular coupon (featured/search) for $userId');
+      _debugPrint(
+          'Creating Search/Popular coupon (featured/search) for $userId');
 
       final code = _generateCouponCode();
       final now = DateTime.now();
@@ -190,8 +196,8 @@ class CouponService {
       final data = {
         'code': code,
         'user_id': userId,
-        'type': 'featured',       // 关键：type=featured
-        'pin_scope': 'search',    // 或后端字段 pin_type='search'，这里写 pin_scope（两端兼容）
+        'type': 'featured', // 关键：type=featured
+        'pin_scope': 'search', // 或后端字段 pin_type='search'，这里写 pin_scope（两端兼容）
         'status': 'active',
         'category': 'pinning',
         'source': 'referral_reward',
@@ -209,7 +215,8 @@ class CouponService {
         },
       };
 
-      final response = await _client.from('coupons').insert(data).select().single();
+      final response =
+          await _client.from('coupons').insert(data).select().single();
       return _safeParseCoupon(response);
     } catch (e) {
       _debugPrint('Failed to create search/popular coupon: $e');
@@ -236,7 +243,8 @@ class CouponService {
   // ========== ★ 新增：getPinningEligibleCoupons 方法 ==========
 
   /// 获取可用于置顶的券（放宽查询，仅在内存中过滤 canPin & isUsable）
-  static Future<List<CouponModel>> getPinningEligibleCoupons(String userId) async {
+  static Future<List<CouponModel>> getPinningEligibleCoupons(
+      String userId) async {
     try {
       _debugPrint('Getting pinning eligible coupons for user: $userId');
 
@@ -248,7 +256,8 @@ class CouponService {
           .gt('expires_at', DateTime.now().toIso8601String())
           .order('created_at', ascending: false);
 
-      final responseList = response is List ? response : (response != null ? [response] : []);
+      final responseList =
+          response is List ? response : (response != null ? [response] : []);
       final coupons = <CouponModel>[];
 
       for (final data in responseList) {
@@ -339,7 +348,8 @@ class CouponService {
         'metadata': metadata,
       };
 
-      final response = await _client.from('coupons').insert(couponData).select().single();
+      final response =
+          await _client.from('coupons').insert(couponData).select().single();
 
       final coupon = _safeParseCoupon(response);
       if (coupon != null) {
@@ -357,8 +367,11 @@ class CouponService {
     try {
       _debugPrint('Getting coupon details: $couponId');
 
-      final response =
-      await _client.from('coupons').select('*').eq('id', couponId).maybeSingle();
+      final response = await _client
+          .from('coupons')
+          .select('*')
+          .eq('id', couponId)
+          .maybeSingle();
 
       if (response == null) {
         _debugPrint('Coupon not found: $couponId');
@@ -393,7 +406,8 @@ class CouponService {
   // ========== 2. 配额检查方法 ==========
 
   /// 检查 trending 置顶配额状态（最多 20）
-  static Future<Map<String, dynamic>> getTrendingQuotaStatus({String? city}) async {
+  static Future<Map<String, dynamic>> getTrendingQuotaStatus(
+      {String? city}) async {
     try {
       _debugPrint('检查 trending 置顶配额状态: city=$city');
 
@@ -440,7 +454,8 @@ class CouponService {
     CouponType? type,
     int? limit,
   }) async {
-    final key = _couponKey(userId: userId, status: status, type: type, limit: limit);
+    final key =
+        _couponKey(userId: userId, status: status, type: type, limit: limit);
 
     // 命中 TTL 缓存
     final hit = _couponCache[key];
@@ -461,7 +476,8 @@ class CouponService {
     }
 
     // 真正发请求
-    final future = _fetchCoupons(userId: userId, status: status, type: type, limit: limit);
+    final future =
+        _fetchCoupons(userId: userId, status: status, type: type, limit: limit);
     _couponInflight[key] = future;
     try {
       final data = await future;
@@ -480,10 +496,12 @@ class CouponService {
   }) async {
     try {
       if (kDebugMode && _kLogCacheHit) {
-        debugPrint('[CouponService] FETCH user coupons -> user=$userId, status=$status, type=$type');
+        debugPrint(
+            '[CouponService] FETCH user coupons -> user=$userId, status=$status, type=$type');
       }
 
-      final queryBuilder = _client.from('coupons').select('*').eq('user_id', userId);
+      final queryBuilder =
+          _client.from('coupons').select('*').eq('user_id', userId);
 
       if (status != null) {
         queryBuilder.eq('status', status.value);
@@ -496,7 +514,8 @@ class CouponService {
       queryBuilder.limit(limit ?? 100);
 
       final response = await queryBuilder;
-      final responseList = response is List ? response : (response != null ? [response] : []);
+      final responseList =
+          response is List ? response : (response != null ? [response] : []);
 
       final coupons = <CouponModel>[];
       for (final data in responseList) {
@@ -552,8 +571,8 @@ class CouponService {
       final typeStr = _safeString(couponData['type']).toLowerCase();
       final pinTypeStr = _safeString(couponData['pin_type']).toLowerCase();
       final pinScopeStr = _safeString(couponData['pin_scope']).toLowerCase();
-      final isSearchPopularCoupon =
-          typeStr == 'featured' && (pinTypeStr == 'search' || pinScopeStr == 'search');
+      final isSearchPopularCoupon = typeStr == 'featured' &&
+          (pinTypeStr == 'search' || pinScopeStr == 'search');
 
       // 过期检查
       final expiresAtString = _safeString(couponData['expires_at']);
@@ -591,7 +610,9 @@ class CouponService {
 
       final couponType = _safeString(couponData['type']);
       final pinScope = _safeString(couponData['pin_scope']);
-      final pinningType = pinScope.isNotEmpty ? pinScope : _getPinningTypeFromCouponType(couponType);
+      final pinningType = pinScope.isNotEmpty
+          ? pinScope
+          : _getPinningTypeFromCouponType(couponType);
 
       if (pinningType == 'boost') {
         throw Exception('This coupon cannot create a pin (boost-type)');
@@ -634,7 +655,8 @@ class CouponService {
         'listing_id': listingId,
       }).eq('id', couponId);
 
-      _debugPrint('Coupon used successfully for pinning: $pinningType for $pinDays days');
+      _debugPrint(
+          'Coupon used successfully for pinning: $pinningType for $pinDays days');
     } catch (e) {
       _debugPrint('Failed to use coupon for pinning: $e');
       rethrow;
@@ -650,8 +672,11 @@ class CouponService {
       _debugPrint('Using coupon for pinning: $couponId -> $listingId');
 
       // 读原始券数据（不强制 userId，这个旧接口历史上没有传）
-      final couponData =
-      await _client.from('coupons').select('*').eq('id', couponId).maybeSingle();
+      final couponData = await _client
+          .from('coupons')
+          .select('*')
+          .eq('id', couponId)
+          .maybeSingle();
 
       if (couponData == null) {
         _debugPrint('Coupon does not exist: $couponId');
@@ -676,8 +701,8 @@ class CouponService {
       final typeStr = _safeString(couponData['type']).toLowerCase();
       final pinTypeStr = _safeString(couponData['pin_type']).toLowerCase();
       final pinScopeStr = _safeString(couponData['pin_scope']).toLowerCase();
-      final isSearchPopularCoupon =
-          typeStr == 'featured' && (pinTypeStr == 'search' || pinScopeStr == 'search');
+      final isSearchPopularCoupon = typeStr == 'featured' &&
+          (pinTypeStr == 'search' || pinScopeStr == 'search');
 
       if (isSearchPopularCoupon) {
         final ok = await _redeemSearchPopularViaRpc(
@@ -709,7 +734,9 @@ class CouponService {
 
       final couponType = _safeString(couponData['type']);
       final pinScope = _safeString(couponData['pin_scope']);
-      final pinningType = pinScope.isNotEmpty ? pinScope : _getPinningTypeFromCouponType(couponType);
+      final pinningType = pinScope.isNotEmpty
+          ? pinScope
+          : _getPinningTypeFromCouponType(couponType);
 
       if (pinningType == 'trending') {
         final quotaStatus = await getTrendingQuotaStatus();
@@ -785,13 +812,15 @@ class CouponService {
     final running = _trendingInflight[key];
     if (running != null) {
       if (kDebugMode && _kLogCacheHit) {
-        debugPrint('[CouponService] join inflight getTrendingPinnedAds key=$key');
+        debugPrint(
+            '[CouponService] join inflight getTrendingPinnedAds key=$key');
       }
       return await running;
     }
 
     if (kDebugMode && _kLogCacheHit) {
-      debugPrint('[CouponService] 获取首页热门置顶广告: city=$city, limit=$effectiveLimit');
+      debugPrint(
+          '[CouponService] 获取首页热门置顶广告: city=$city, limit=$effectiveLimit');
     }
 
     final future = () async {
@@ -827,7 +856,8 @@ class CouponService {
             .limit(effectiveLimit);
 
         final response = await queryBuilder;
-        final ads = response is List ? response : (response != null ? [response] : []);
+        final ads =
+            response is List ? response : (response != null ? [response] : []);
 
         final filteredAds = <Map<String, dynamic>>[];
         for (final ad in ads) {
@@ -851,7 +881,8 @@ class CouponService {
         }
 
         if (kDebugMode && _kLogCacheHit) {
-          debugPrint('[CouponService] 成功获取 ${filteredAds.length} 个首页热门置顶广告（最多${effectiveLimit}个）');
+          debugPrint(
+              '[CouponService] 成功获取 ${filteredAds.length} 个首页热门置顶广告（最多${effectiveLimit}个）');
         }
         return filteredAds;
       } catch (e) {
@@ -921,7 +952,8 @@ class CouponService {
       }
 
       final response = await queryBuilder;
-      final ads = response is List ? response : (response != null ? [response] : []);
+      final ads =
+          response is List ? response : (response != null ? [response] : []);
 
       final filteredAds = <Map<String, dynamic>>[];
       for (final ad in ads) {
@@ -1015,8 +1047,9 @@ class CouponService {
             .eq('pinning_type', 'category')
             .eq('status', 'active');
 
-        final categoryPinsList =
-        categoryPins is List ? categoryPins : (categoryPins != null ? [categoryPins] : []);
+        final categoryPinsList = categoryPins is List
+            ? categoryPins
+            : (categoryPins != null ? [categoryPins] : []);
         if (categoryPinsList.length >= 50) {
           return {
             'eligible': false,
@@ -1153,10 +1186,13 @@ class CouponService {
     try {
       _debugPrint('Getting coupon statistics');
 
-      final queryBuilder = _client.from('coupons').select('type, status, created_at');
+      final queryBuilder =
+          _client.from('coupons').select('type, status, created_at');
       if (userId != null) queryBuilder.eq('user_id', userId);
-      if (startDate != null) queryBuilder.gte('created_at', startDate.toIso8601String());
-      if (endDate != null) queryBuilder.lte('created_at', endDate.toIso8601String());
+      if (startDate != null)
+        queryBuilder.gte('created_at', startDate.toIso8601String());
+      if (endDate != null)
+        queryBuilder.lte('created_at', endDate.toIso8601String());
 
       final response = await queryBuilder;
 
@@ -1203,9 +1239,7 @@ class CouponService {
     try {
       _debugPrint('Getting active pinned ads: type=$pinningType, user=$userId');
 
-      final queryBuilder = _client
-          .from('pinned_ads')
-          .select('''
+      final queryBuilder = _client.from('pinned_ads').select('''
             *,
             listings:listing_id (
               id,
@@ -1217,8 +1251,7 @@ class CouponService {
               code,
               type
             )
-          ''')
-          .eq('status', 'active');
+          ''').eq('status', 'active');
 
       if (pinningType != null) queryBuilder.eq('pinning_type', pinningType);
       if (userId != null) queryBuilder.eq('user_id', userId);
@@ -1235,13 +1268,13 @@ class CouponService {
 
       return ads
           .map<Map<String, dynamic>>((ad) {
-        try {
-          return Map<String, dynamic>.from(ad);
-        } catch (e) {
-          _debugPrint('Error processing pinned ad: $e');
-          return <String, dynamic>{};
-        }
-      })
+            try {
+              return Map<String, dynamic>.from(ad);
+            } catch (e) {
+              _debugPrint('Error processing pinned ad: $e');
+              return <String, dynamic>{};
+            }
+          })
           .where((ad) => ad.isNotEmpty)
           .toList();
     } catch (e) {
@@ -1282,13 +1315,15 @@ class CouponService {
       }
 
       if (!coupon.isUsable) {
-        return {'valid': false, 'error': 'Coupon is not usable: ${coupon.statusDescription}'};
+        return {
+          'valid': false,
+          'error': 'Coupon is not usable: ${coupon.statusDescription}'
+        };
       }
 
       // ★ 对 featured/search 的特殊处理：不经过 pinned_ads 限额校验，直接允许
-      final isSearchPopular =
-          (coupon.type.value == 'featured') &&
-              ((coupon.pinScope?.toLowerCase() ?? '') == 'search');
+      final isSearchPopular = (coupon.type.value == 'featured') &&
+          ((coupon.pinScope?.toLowerCase() ?? '') == 'search');
 
       if (isSearchPopular) {
         return {
@@ -1304,7 +1339,10 @@ class CouponService {
       );
 
       if (!(eligibility['eligible'] as bool? ?? false)) {
-        return {'valid': false, 'error': eligibility['reason'] ?? 'Pinning not eligible'};
+        return {
+          'valid': false,
+          'error': eligibility['reason'] ?? 'Pinning not eligible'
+        };
       }
 
       return {
@@ -1319,13 +1357,12 @@ class CouponService {
   }
 
   /// Get user's pinned items（非缓存）
-  static Future<List<Map<String, dynamic>>> getUserPinnedItems(String userId) async {
+  static Future<List<Map<String, dynamic>>> getUserPinnedItems(
+      String userId) async {
     try {
       _debugPrint('Getting user pinned items: $userId');
 
-      final response = await _client
-          .from('pinned_ads')
-          .select('''
+      final response = await _client.from('pinned_ads').select('''
             *,
             listings:listing_id (
               id,
@@ -1340,9 +1377,7 @@ class CouponService {
               type,
               title
             )
-          ''')
-          .eq('user_id', userId)
-          .order('created_at', ascending: false);
+          ''').eq('user_id', userId).order('created_at', ascending: false);
 
       List<dynamic> pinnedItems = [];
       if (response is List) {
@@ -1353,13 +1388,13 @@ class CouponService {
 
       return pinnedItems
           .map<Map<String, dynamic>>((item) {
-        try {
-          return Map<String, dynamic>.from(item);
-        } catch (e) {
-          _debugPrint('Error processing pinned item: $e');
-          return <String, dynamic>{};
-        }
-      })
+            try {
+              return Map<String, dynamic>.from(item);
+            } catch (e) {
+              _debugPrint('Error processing pinned item: $e');
+              return <String, dynamic>{};
+            }
+          })
           .where((item) => item.isNotEmpty)
           .toList();
     } catch (e) {
@@ -1391,7 +1426,8 @@ class CouponService {
     }
   }
 
-  static Map<String, dynamic> processListingData(Map<String, dynamic> listingData) {
+  static Map<String, dynamic> processListingData(
+      Map<String, dynamic> listingData) {
     final processedData = Map<String, dynamic>.from(listingData);
     if (processedData.containsKey('price')) {
       processedData['formatted_price'] = formatPrice(processedData['price']);
@@ -1418,7 +1454,9 @@ class CouponService {
           .eq('status', 'active')
           .gte('created_at', todayStart.toIso8601String());
 
-      final pins = todayPins is List ? todayPins : (todayPins != null ? [todayPins] : []);
+      final pins = todayPins is List
+          ? todayPins
+          : (todayPins != null ? [todayPins] : []);
 
       final hourlyUsage = <int, int>{};
       for (final pin in pins) {
@@ -1427,7 +1465,8 @@ class CouponService {
           if (createdAtStr != null) {
             final createdAt = DateTime.tryParse(createdAtStr);
             if (createdAt != null) {
-              hourlyUsage[createdAt.hour] = (hourlyUsage[createdAt.hour] ?? 0) + 1;
+              hourlyUsage[createdAt.hour] =
+                  (hourlyUsage[createdAt.hour] ?? 0) + 1;
             }
           }
         } catch (_) {}
@@ -1438,7 +1477,9 @@ class CouponService {
         'usage_percentage': ((usedCount / maxCount) * 100).round(),
         'hourly_usage': hourlyUsage,
         'peak_hour': hourlyUsage.entries.isNotEmpty
-            ? hourlyUsage.entries.reduce((a, b) => a.value > b.value ? a : b).key
+            ? hourlyUsage.entries
+                .reduce((a, b) => a.value > b.value ? a : b)
+                .key
             : null,
       };
     } catch (e) {
@@ -1515,16 +1556,22 @@ class CouponService {
       }
       if (statuses != null && statuses.isNotEmpty) {
         final statusValues = statuses.map((s) => s.value).toList();
-        final statusConditions = statusValues.map((s) => 'status.eq.$s').join(',');
+        final statusConditions =
+            statusValues.map((s) => 'status.eq.$s').join(',');
         queryBuilder.or(statusConditions);
       }
-      if (fromDate != null) queryBuilder.gte('created_at', fromDate.toIso8601String());
-      if (toDate != null) queryBuilder.lte('created_at', toDate.toIso8601String());
+      if (fromDate != null)
+        queryBuilder.gte('created_at', fromDate.toIso8601String());
+      if (toDate != null)
+        queryBuilder.lte('created_at', toDate.toIso8601String());
 
-      queryBuilder.order('created_at', ascending: false).range(offset, offset + limit - 1);
+      queryBuilder
+          .order('created_at', ascending: false)
+          .range(offset, offset + limit - 1);
 
       final response = await queryBuilder;
-      final responseList = response is List ? response : (response != null ? [response] : []);
+      final responseList =
+          response is List ? response : (response != null ? [response] : []);
 
       return responseList
           .map((data) => _safeParseCoupon(data))
@@ -1548,7 +1595,8 @@ class CouponService {
           .eq('user_id', userId)
           .order('created_at', ascending: false);
 
-      final responseList = response is List ? response : (response != null ? [response] : []);
+      final responseList =
+          response is List ? response : (response != null ? [response] : []);
       final coupons = <CouponModel>[];
       final now = DateTime.now();
 
@@ -1574,7 +1622,8 @@ class CouponService {
         }
       }
 
-      _debugPrint('Coupon stats: All=$all, Available=$available, Used=$used, Expired=$expired');
+      _debugPrint(
+          'Coupon stats: All=$all, Available=$available, Used=$used, Expired=$expired');
 
       return CouponStats(
         totalCoupons: all,

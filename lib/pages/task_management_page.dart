@@ -55,12 +55,33 @@ class _TaskManagementPageState extends State<TaskManagementPage>
 
   // -------- UTF-8 乱码修复 --------
   static const Map<int, int> _cp1252Reverse = {
-    0x20AC: 0x80, 0x201A: 0x82, 0x0192: 0x83, 0x201E: 0x84, 0x2026: 0x85,
-    0x2020: 0x86, 0x2021: 0x87, 0x02C6: 0x88, 0x2030: 0x89, 0x0160: 0x8A,
-    0x2039: 0x8B, 0x0152: 0x8C, 0x017D: 0x8E, 0x2018: 0x91, 0x2019: 0x92,
-    0x201C: 0x93, 0x201D: 0x94, 0x2022: 0x95, 0x2013: 0x96, 0x2014: 0x97,
-    0x02DC: 0x98, 0x2122: 0x99, 0x0161: 0x9A, 0x203A: 0x9B, 0x0153: 0x9C,
-    0x017E: 0x9E, 0x0178: 0x9F,
+    0x20AC: 0x80,
+    0x201A: 0x82,
+    0x0192: 0x83,
+    0x201E: 0x84,
+    0x2026: 0x85,
+    0x2020: 0x86,
+    0x2021: 0x87,
+    0x02C6: 0x88,
+    0x2030: 0x89,
+    0x0160: 0x8A,
+    0x2039: 0x8B,
+    0x0152: 0x8C,
+    0x017D: 0x8E,
+    0x2018: 0x91,
+    0x2019: 0x92,
+    0x201C: 0x93,
+    0x201D: 0x94,
+    0x2022: 0x95,
+    0x2013: 0x96,
+    0x2014: 0x97,
+    0x02DC: 0x98,
+    0x2122: 0x99,
+    0x0161: 0x9A,
+    0x203A: 0x9B,
+    0x0153: 0x9C,
+    0x017E: 0x9E,
+    0x0178: 0x9F,
   };
 
   /// 更谨慎的修复：仅在明显乱码痕迹出现时才做 cp1252→utf8 的回转
@@ -69,12 +90,16 @@ class _TaskManagementPageState extends State<TaskManagementPage>
     if (s.isEmpty) return s;
 
     // 只含 ASCII + 常见分隔符（·/•）等“安全字符”——直接返回，避免误修
-    final safe = RegExp(r'^[\x00-\x7F\u00B7\u2022\s\.\,\;\:\!\?\-_/()\[\]&\+\%]*$');
+    final safe =
+        RegExp(r'^[\x00-\x7F\u00B7\u2022\s\.\,\;\:\!\?\-_/()\[\]&\+\%]*$');
     if (safe.hasMatch(s)) return s;
 
     // 只有出现这些“明显乱码痕迹”时才尝试修复
-    final looksBroken =
-        s.contains('Ã') || s.contains('Â') || s.contains('â') || s.contains('ð') || s.contains('�');
+    final looksBroken = s.contains('Ã') ||
+        s.contains('Â') ||
+        s.contains('â') ||
+        s.contains('ð') ||
+        s.contains('�');
     if (!looksBroken) return s;
 
     try {
@@ -164,79 +189,79 @@ class _TaskManagementPageState extends State<TaskManagementPage>
     _couponChannel = client
         .channel('rewards-coupons-${user.id}')
         .onPostgresChanges(
-      event: PostgresChangeEvent.all,
-      schema: 'public',
-      table: 'coupons',
-      filter: PostgresChangeFilter(
-        column: 'user_id',
-        type: PostgresChangeFilterType.eq,
-        value: user.id,
-      ),
-      callback: (_) {
-        _loadRewardCoupons();
-        _loadRewardStats();
-      },
-    )
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'coupons',
+          filter: PostgresChangeFilter(
+            column: 'user_id',
+            type: PostgresChangeFilterType.eq,
+            value: user.id,
+          ),
+          callback: (_) {
+            _loadRewardCoupons();
+            _loadRewardStats();
+          },
+        )
         .subscribe();
 
     // ✅ coupon_usages（历史/统计变化 -> 立即刷新）
     _logsChannel = client
         .channel('rewards-logs-${user.id}')
         .onPostgresChanges(
-      event: PostgresChangeEvent.all,
-      schema: 'public',
-      table: 'coupon_usages', // ← 已从 reward_logs 改为 coupon_usages
-      filter: PostgresChangeFilter(
-        column: 'user_id',
-        type: PostgresChangeFilterType.eq,
-        value: user.id,
-      ),
-      callback: (_) {
-        _loadRewardHistory();
-        _loadRewardStats();
-      },
-    )
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'coupon_usages', // ← 已从 reward_logs 改为 coupon_usages
+          filter: PostgresChangeFilter(
+            column: 'user_id',
+            type: PostgresChangeFilterType.eq,
+            value: user.id,
+          ),
+          callback: (_) {
+            _loadRewardHistory();
+            _loadRewardStats();
+          },
+        )
         .subscribe();
 
     // user_tasks（任务进度）
     _taskChannel = client
         .channel('rewards-tasks-${user.id}')
         .onPostgresChanges(
-      event: PostgresChangeEvent.all,
-      schema: 'public',
-      table: 'user_tasks', // ← 这里
-      filter: PostgresChangeFilter(
-        column: 'user_id',
-        type: PostgresChangeFilterType.eq,
-        value: user.id,
-      ),
-      callback: (_) async {
-        await _loadTasks();
-        await _loadRewardStats();
-      },
-    )
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'user_tasks', // ← 这里
+          filter: PostgresChangeFilter(
+            column: 'user_id',
+            type: PostgresChangeFilterType.eq,
+            value: user.id,
+          ),
+          callback: (_) async {
+            await _loadTasks();
+            await _loadRewardStats();
+          },
+        )
         .subscribe();
 
     // referrals（邀请关系状态变化 -> 刷新统计/奖励券/历史）
     _referralChannel = client
         .channel('rewards-referrals-${user.id}')
         .onPostgresChanges(
-      event: PostgresChangeEvent.all,
-      schema: 'public',
-      table: 'referrals',
-      // 监听我作为 inviter 的记录
-      filter: PostgresChangeFilter(
-        column: 'inviter_id',
-        type: PostgresChangeFilterType.eq,
-        value: user.id,
-      ),
-      callback: (_) async {
-        // 邀请达成可能触发发券/日志，保险起见三者都刷
-        await _loadRewardStats();
-        await _loadRewardCoupons();
-        await _loadRewardHistory();
-      },
-    )
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'referrals',
+          // 监听我作为 inviter 的记录
+          filter: PostgresChangeFilter(
+            column: 'inviter_id',
+            type: PostgresChangeFilterType.eq,
+            value: user.id,
+          ),
+          callback: (_) async {
+            // 邀请达成可能触发发券/日志，保险起见三者都刷
+            await _loadRewardStats();
+            await _loadRewardCoupons();
+            await _loadRewardHistory();
+          },
+        )
         .subscribe();
   }
 
@@ -245,7 +270,9 @@ class _TaskManagementPageState extends State<TaskManagementPage>
     if (_loading) return;
 
     final now = DateTime.now();
-    if (!force && _lastFetchAt != null && now.difference(_lastFetchAt!) < _ttl) {
+    if (!force &&
+        _lastFetchAt != null &&
+        now.difference(_lastFetchAt!) < _ttl) {
       if (mounted && _animationController.value == 0.0) {
         _animationController.forward();
       }
@@ -330,8 +357,10 @@ class _TaskManagementPageState extends State<TaskManagementPage>
 
       Map<String, Map<String, dynamic>> couponById = {};
       if (ids.isNotEmpty) {
-        final coupons =
-        await supabase.from('coupons').select('id,title,type').or(ids.map((id) => 'id.eq.$id').join(','));
+        final coupons = await supabase
+            .from('coupons')
+            .select('id,title,type')
+            .or(ids.map((id) => 'id.eq.$id').join(','));
         for (final c in coupons) {
           final id = c['id'] as String;
           couponById[id] = (c as Map).map((k, v) => MapEntry(k.toString(), v));
@@ -483,7 +512,8 @@ class _TaskManagementPageState extends State<TaskManagementPage>
             backgroundColor: const Color(0xFF4CAF50),
             elevation: 0,
             leading: IconButton(
-              icon: Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18.w),
+              icon: Icon(Icons.arrow_back_ios_new,
+                  color: Colors.white, size: 18.w),
               onPressed: () => Navigator.of(context).pop(),
             ),
             actions: [
@@ -499,13 +529,13 @@ class _TaskManagementPageState extends State<TaskManagementPage>
                     ),
                     child: _isRefreshing
                         ? SizedBox(
-                      width: 20.r,
-                      height: 20.r,
-                      child: const CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
+                            width: 20.r,
+                            height: 20.r,
+                            child: const CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
                         : Icon(Icons.refresh, color: Colors.white, size: 20.r),
                   ),
                 ),
@@ -599,16 +629,16 @@ class _TaskManagementPageState extends State<TaskManagementPage>
                 child: isInitialLoading
                     ? _buildLoadingState()
                     : FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildActiveTasksTab(),
-                      _buildRewardCouponsTab(),
-                      _buildHistoryTab(),
-                    ],
-                  ),
-                ),
+                        opacity: _fadeAnimation,
+                        child: TabBarView(
+                          controller: _tabController,
+                          children: [
+                            _buildActiveTasksTab(),
+                            _buildRewardCouponsTab(),
+                            _buildHistoryTab(),
+                          ],
+                        ),
+                      ),
               ),
             ],
           ),
@@ -631,11 +661,16 @@ class _TaskManagementPageState extends State<TaskManagementPage>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildQuickStatItem('Active\nTasks', activeTasks.toString(), Icons.assignment),
-          Container(width: 1, height: 30.h, color: Colors.white.withOpacity(0.3)),
-          _buildQuickStatItem('Completed', completedTasks.toString(), Icons.check_circle),
-          Container(width: 1, height: 30.h, color: Colors.white.withOpacity(0.3)),
-          _buildQuickStatItem('Coupons', availableCoupons.toString(), Icons.card_giftcard),
+          _buildQuickStatItem(
+              'Active\nTasks', activeTasks.toString(), Icons.assignment),
+          Container(
+              width: 1, height: 30.h, color: Colors.white.withOpacity(0.3)),
+          _buildQuickStatItem(
+              'Completed', completedTasks.toString(), Icons.check_circle),
+          Container(
+              width: 1, height: 30.h, color: Colors.white.withOpacity(0.3)),
+          _buildQuickStatItem(
+              'Coupons', availableCoupons.toString(), Icons.card_giftcard),
         ],
       ),
     );
@@ -692,7 +727,8 @@ class _TaskManagementPageState extends State<TaskManagementPage>
                   height: 40.r,
                   child: const CircularProgressIndicator(
                     strokeWidth: 3,
-                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4CAF50)),
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(Color(0xFF4CAF50)),
                   ),
                 ),
                 SizedBox(height: 16.h),
@@ -720,22 +756,22 @@ class _TaskManagementPageState extends State<TaskManagementPage>
       color: const Color(0xFF4CAF50),
       child: activeTasks.isEmpty
           ? ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.all(20.r),
-        children: [
-          _buildEmptyState(
-            icon: Icons.assignment_outlined,
-            title: 'No Active Tasks',
-            subtitle: 'Complete daily activities to earn rewards',
-          ),
-        ],
-      )
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.all(20.r),
+              children: [
+                _buildEmptyState(
+                  icon: Icons.assignment_outlined,
+                  title: 'No Active Tasks',
+                  subtitle: 'Complete daily activities to earn rewards',
+                ),
+              ],
+            )
           : ListView.builder(
-        padding: EdgeInsets.all(20.r),
-        itemCount: activeTasks.length,
-        itemBuilder: (context, index) =>
-            _buildTaskCard(activeTasks[index], index),
-      ),
+              padding: EdgeInsets.all(20.r),
+              itemCount: activeTasks.length,
+              itemBuilder: (context, index) =>
+                  _buildTaskCard(activeTasks[index], index),
+            ),
     );
   }
 
@@ -745,22 +781,22 @@ class _TaskManagementPageState extends State<TaskManagementPage>
       color: const Color(0xFF4CAF50),
       child: _rewardCoupons.isEmpty
           ? ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.all(20.r),
-        children: [
-          _buildEmptyState(
-            icon: Icons.card_giftcard_outlined,
-            title: 'No Reward Coupons',
-            subtitle: 'Complete tasks to earn reward coupons',
-          ),
-        ],
-      )
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.all(20.r),
+              children: [
+                _buildEmptyState(
+                  icon: Icons.card_giftcard_outlined,
+                  title: 'No Reward Coupons',
+                  subtitle: 'Complete tasks to earn reward coupons',
+                ),
+              ],
+            )
           : ListView.builder(
-        padding: EdgeInsets.all(20.r),
-        itemCount: _rewardCoupons.length,
-        itemBuilder: (context, index) =>
-            _buildRewardCouponCard(_rewardCoupons[index], index),
-      ),
+              padding: EdgeInsets.all(20.r),
+              itemCount: _rewardCoupons.length,
+              itemBuilder: (context, index) =>
+                  _buildRewardCouponCard(_rewardCoupons[index], index),
+            ),
     );
   }
 
@@ -770,22 +806,22 @@ class _TaskManagementPageState extends State<TaskManagementPage>
       color: const Color(0xFF4CAF50),
       child: _rewardHistory.isEmpty
           ? ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.all(20.r),
-        children: [
-          _buildEmptyState(
-            icon: Icons.history_outlined,
-            title: 'No History Records',
-            subtitle: 'Your reward history will appear here',
-          ),
-        ],
-      )
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.all(20.r),
+              children: [
+                _buildEmptyState(
+                  icon: Icons.history_outlined,
+                  title: 'No History Records',
+                  subtitle: 'Your reward history will appear here',
+                ),
+              ],
+            )
           : ListView.builder(
-        padding: EdgeInsets.all(20.r),
-        itemCount: _rewardHistory.length,
-        itemBuilder: (context, index) =>
-            _buildHistoryCard(_rewardHistory[index], index),
-      ),
+              padding: EdgeInsets.all(20.r),
+              itemCount: _rewardHistory.length,
+              itemBuilder: (context, index) =>
+                  _buildHistoryCard(_rewardHistory[index], index),
+            ),
     );
   }
 
@@ -842,7 +878,8 @@ class _TaskManagementPageState extends State<TaskManagementPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      task['task_name'] ?? _getTaskDisplayName(task['task_type']),
+                      task['task_name'] ??
+                          _getTaskDisplayName(task['task_type']),
                       style: TextStyle(
                         fontSize: 16.sp,
                         fontWeight: FontWeight.w600,
@@ -852,7 +889,8 @@ class _TaskManagementPageState extends State<TaskManagementPage>
                     if (task['description'] != null) ...[
                       SizedBox(height: 4.h),
                       Text(
-                        _normalizeSeparators(_fixUtf8Mojibake(task['description'])),
+                        _normalizeSeparators(
+                            _fixUtf8Mojibake(task['description'])),
                         style: TextStyle(
                           fontSize: 12.sp,
                           color: Colors.grey[600],
@@ -905,7 +943,8 @@ class _TaskManagementPageState extends State<TaskManagementPage>
 
   Widget _buildRewardCouponCard(CouponModel coupon, int index) {
     final fixedTitle = _normalizeSeparators(_fixUtf8Mojibake(coupon.title));
-    final fixedDesc  = _normalizeSeparators(_fixUtf8Mojibake(coupon.description));
+    final fixedDesc =
+        _normalizeSeparators(_fixUtf8Mojibake(coupon.description));
 
     return Container(
       margin: EdgeInsets.only(bottom: 16.h),
@@ -1024,7 +1063,8 @@ class _TaskManagementPageState extends State<TaskManagementPage>
     );
 
     // 友好化 reason：app/system/auto 这类就隐藏；否则做分隔符/乱码修复
-    final rawReason = (reward['reward_reason'] ?? '').toString().trim().toLowerCase();
+    final rawReason =
+        (reward['reward_reason'] ?? '').toString().trim().toLowerCase();
     String prettyReason(String raw, String? type) {
       if (raw.isEmpty || raw == 'app' || raw == 'system' || raw == 'auto') {
         switch ((type ?? '').toLowerCase()) {
@@ -1040,6 +1080,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
       }
       return _normalizeSeparators(_fixUtf8Mojibake(raw));
     }
+
     final reason = prettyReason(rawReason, reward['reward_type']);
     // =======================================================================
 
@@ -1293,7 +1334,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
         return 'welcome';
       case 'referralbonus':
         return 'referral_bonus';
-    // 下面这些都算“活动奖励”
+      // 下面这些都算“活动奖励”
       case 'trending':
       case 'hot':
       case 'category':

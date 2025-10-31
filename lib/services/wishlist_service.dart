@@ -54,7 +54,8 @@ class WishlistService {
     required String listingId,
   }) async {
     try {
-      _debugPrint('Removing from wishlist: userId=$userId, listingId=$listingId');
+      _debugPrint(
+          'Removing from wishlist: userId=$userId, listingId=$listingId');
 
       await _client
           .from(_tableName)
@@ -76,7 +77,8 @@ class WishlistService {
     required String listingId,
   }) async {
     try {
-      _debugPrint('Checking wishlist status: userId=$userId, listingId=$listingId');
+      _debugPrint(
+          'Checking wishlist status: userId=$userId, listingId=$listingId');
 
       final result = await _client
           .from(_tableName)
@@ -99,10 +101,8 @@ class WishlistService {
     try {
       _debugPrint('Getting wishlist count for user: $userId');
 
-      final data = await _client
-          .from(_tableName)
-          .select('id')
-          .eq('user_id', userId);
+      final data =
+          await _client.from(_tableName).select('id').eq('user_id', userId);
 
       final count = (data as List).length;
       _debugPrint('Wishlist count: $count');
@@ -120,7 +120,8 @@ class WishlistService {
     int offset = 0,
   }) async {
     try {
-      _debugPrint('Getting user wishlist: userId=$userId, limit=$limit, offset=$offset');
+      _debugPrint(
+          'Getting user wishlist: userId=$userId, limit=$limit, offset=$offset');
 
       // å…ˆèŽ·å–wishlistè®°å½•
       final wishlistData = await _client
@@ -145,7 +146,8 @@ class WishlistService {
           try {
             final listing = await _client
                 .from('listings')
-                .select('id, title, price, city, images, image_urls, status, is_active, seller_name, category, description')
+                .select(
+                    'id, title, price, city, images, image_urls, status, is_active, seller_name, category, description')
                 .eq('id', listingId)
                 .eq('is_active', true)
                 .maybeSingle();
@@ -157,7 +159,8 @@ class WishlistService {
                 'listing_id': listingId,
                 'listings': listing,
               });
-              _debugPrint('Successfully loaded listing data for item $listingId');
+              _debugPrint(
+                  'Successfully loaded listing data for item $listingId');
             }
           } catch (e) {
             _debugPrint('Error fetching listing $listingId: $e');
@@ -180,7 +183,8 @@ class WishlistService {
     int offset = 0,
   }) async {
     try {
-      _debugPrint('Getting user wishlist simple: userId=$userId, limit=$limit, offset=$offset');
+      _debugPrint(
+          'Getting user wishlist simple: userId=$userId, limit=$limit, offset=$offset');
 
       final data = await _client
           .from(_tableName)
@@ -222,7 +226,9 @@ class WishlistService {
           listingId: listingId,
         );
         _debugPrint('Remove operation success: $success');
-        return success ? false : isCurrentlyInWishlist; // æˆåŠŸç§»é™¤è¿”å›žfalse
+        return success
+            ? false
+            : isCurrentlyInWishlist; // æˆåŠŸç§»é™¤è¿”å›žfalse
       } else {
         // å¦‚æžœä¸åœ¨wishlistä¸­ï¼Œåˆ™æ·»åŠ
         success = await addToWishlist(
@@ -249,10 +255,7 @@ class WishlistService {
     try {
       _debugPrint('Clearing wishlist for user: $userId');
 
-      await _client
-          .from(_tableName)
-          .delete()
-          .eq('user_id', userId);
+      await _client.from(_tableName).delete().eq('user_id', userId);
 
       _debugPrint('Successfully cleared wishlist');
       return true;

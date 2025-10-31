@@ -1,4 +1,4 @@
-﻿// lib/services/auth_service.dart
+// lib/services/auth_service.dart
 // 登录/注册/OAuth 后自动 upsert profile；不再自动同步邮箱验证状态与徽章
 // 2.2：onEmailCodeVerified 仅刷新会话，不写 DB
 // 2.1：前端任何地方都不更新 profiles 的认证字段（email_verified / is_verified / verification_type）
@@ -21,8 +21,10 @@ class AuthService {
   DateTime? _lastRefresh;
 
   /// 安全刷新：默认 30s 内至多刷新一次（当前禁用，沿用 Supabase 自动刷新）
-  Future<void> refreshSession({Duration minInterval = const Duration(seconds: 30)}) async {
-    debugPrint('[AuthService] refreshSession() disabled. Using Supabase auto-refresh.');
+  Future<void> refreshSession(
+      {Duration minInterval = const Duration(seconds: 30)}) async {
+    debugPrint(
+        '[AuthService] refreshSession() disabled. Using Supabase auto-refresh.');
     return;
   }
   // =======================================================
@@ -98,11 +100,16 @@ class AuthService {
 
   Future<bool> signInWithGoogle({String? redirectTo}) async {
     try {
-      await supabase.auth.signInWithOAuth(OAuthProvider.google, redirectTo: redirectTo);
+      await supabase.auth
+          .signInWithOAuth(OAuthProvider.google, redirectTo: redirectTo);
       final user = supabase.auth.currentUser;
       if (user == null) return false;
 
-      final existing = await supabase.from('profiles').select('id').eq('id', user.id).maybeSingle();
+      final existing = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
       final isNew = existing == null;
 
       // Google 登录后确保 profile + 欢迎券
@@ -110,7 +117,8 @@ class AuthService {
         userId: user.id,
         email: user.email,
         fullName: user.userMetadata?['full_name'] ?? user.userMetadata?['name'],
-        avatarUrl: user.userMetadata?['avatar_url'] ?? user.userMetadata?['picture'],
+        avatarUrl:
+            user.userMetadata?['avatar_url'] ?? user.userMetadata?['picture'],
       );
 
       return isNew;
@@ -121,11 +129,16 @@ class AuthService {
 
   Future<bool> signInWithFacebook({String? redirectTo}) async {
     try {
-      await supabase.auth.signInWithOAuth(OAuthProvider.facebook, redirectTo: redirectTo);
+      await supabase.auth
+          .signInWithOAuth(OAuthProvider.facebook, redirectTo: redirectTo);
       final user = supabase.auth.currentUser;
       if (user == null) return false;
 
-      final existing = await supabase.from('profiles').select('id').eq('id', user.id).maybeSingle();
+      final existing = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', user.id)
+          .maybeSingle();
       final isNew = existing == null;
 
       // Facebook 登录后确保 profile + 欢迎券
@@ -133,7 +146,8 @@ class AuthService {
         userId: user.id,
         email: user.email,
         fullName: user.userMetadata?['name'] ?? user.userMetadata?['full_name'],
-        avatarUrl: user.userMetadata?['avatar_url'] ?? user.userMetadata?['picture'],
+        avatarUrl:
+            user.userMetadata?['avatar_url'] ?? user.userMetadata?['picture'],
       );
 
       return isNew;
@@ -159,7 +173,8 @@ class AuthService {
         // ⚠️ 不写 email_verified / is_verified / verification_type（交给 DB 默认）
       };
 
-      if (email?.isNotEmpty == true) data['email'] = email!.trim().toLowerCase();
+      if (email?.isNotEmpty == true)
+        data['email'] = email!.trim().toLowerCase();
       if (fullName?.isNotEmpty == true) data['full_name'] = fullName;
       if (phone?.isNotEmpty == true) data['phone'] = phone;
       if (avatarUrl?.isNotEmpty == true) data['avatar_url'] = avatarUrl;
@@ -167,7 +182,8 @@ class AuthService {
       await supabase.from('profiles').upsert(data, onConflict: 'id');
 
       if (kDebugMode) {
-        print('[AuthService] New user profile created (verification fields by DB defaults)');
+        print(
+            '[AuthService] New user profile created (verification fields by DB defaults)');
       }
     } catch (e) {
       if (kDebugMode) print('Failed to upsert user profile: $e');
@@ -196,7 +212,8 @@ class AuthService {
         // ⚠️ 不写认证字段
       };
 
-      if (email?.isNotEmpty == true) data['email'] = email!.trim().toLowerCase();
+      if (email?.isNotEmpty == true)
+        data['email'] = email!.trim().toLowerCase();
       if (fullName?.isNotEmpty == true) data['full_name'] = fullName;
       if (phone?.isNotEmpty == true) data['phone'] = phone;
       if (avatarUrl?.isNotEmpty == true) data['avatar_url'] = avatarUrl;
@@ -242,7 +259,8 @@ class AuthService {
   Future<void> signInAnonymously() async {
     try {
       await supabase.auth.signInAnonymously();
-      if (supabase.auth.currentUser == null) throw Exception('Anonymous login failed');
+      if (supabase.auth.currentUser == null)
+        throw Exception('Anonymous login failed');
     } on AuthException catch (e) {
       throw Exception('Anonymous login failed: ${e.message}');
     }
@@ -332,10 +350,26 @@ class AuthService {
       await Future.wait<void>([
         supabase.from('profiles').delete().eq('id', user.id).then((_) {}),
         supabase.from('coupons').delete().eq('user_id', user.id).then((_) {}),
-        supabase.from('user_tasks').delete().eq('user_id', user.id).then((_) {}),
-        supabase.from('reward_logs').delete().eq('user_id', user.id).then((_) {}),
-        supabase.from('user_invitations').delete().eq('inviter_id', user.id).then((_) {}),
-        supabase.from('pinned_ads').delete().eq('user_id', user.id).then((_) {}),
+        supabase
+            .from('user_tasks')
+            .delete()
+            .eq('user_id', user.id)
+            .then((_) {}),
+        supabase
+            .from('reward_logs')
+            .delete()
+            .eq('user_id', user.id)
+            .then((_) {}),
+        supabase
+            .from('user_invitations')
+            .delete()
+            .eq('inviter_id', user.id)
+            .then((_) {}),
+        supabase
+            .from('pinned_ads')
+            .delete()
+            .eq('user_id', user.id)
+            .then((_) {}),
       ]);
 
       await signOut();
@@ -379,7 +413,11 @@ class AuthService {
     try {
       final user = currentUser;
       if (user == null) return null;
-      final row = await supabase.from('profiles').select('*').eq('id', user.id).maybeSingle();
+      final row = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
       return row == null ? null : Map<String, dynamic>.from(row);
     } catch (e) {
       throw Exception('Failed to get user profile: $e');
@@ -408,8 +446,16 @@ class AuthService {
       final fs = await Future.wait<dynamic>([
         supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
         supabase.from('coupons').select('id').eq('user_id', user.id),
-        supabase.from('user_tasks').select('id').eq('user_id', user.id).eq('status', 'completed'),
-        supabase.from('user_invitations').select('id').eq('inviter_id', user.id).eq('status', 'completed'),
+        supabase
+            .from('user_tasks')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('status', 'completed'),
+        supabase
+            .from('user_invitations')
+            .select('id')
+            .eq('inviter_id', user.id)
+            .eq('status', 'completed'),
       ]);
 
       final profile = fs[0] as Map<String, dynamic>?;
@@ -435,7 +481,8 @@ class AuthService {
       final user = currentUser;
       if (user == null || user.email == null) return false;
       try {
-        await supabase.auth.signInWithPassword(email: user.email!, password: password);
+        await supabase.auth
+            .signInWithPassword(email: user.email!, password: password);
         return true;
       } catch (_) {
         return false;
@@ -449,19 +496,33 @@ class AuthService {
     try {
       final user = currentUser;
       if (user == null) {
-        return {'total_invitations': 0, 'pending_invitations': 0, 'successful_invitations': 0};
+        return {
+          'total_invitations': 0,
+          'pending_invitations': 0,
+          'successful_invitations': 0
+        };
       }
 
-      final res = await supabase.from('user_invitations').select('status').eq('inviter_id', user.id);
-      final list = List<Map<String, dynamic>>.from((res as List).map((e) => Map<String, dynamic>.from(e)));
+      final res = await supabase
+          .from('user_invitations')
+          .select('status')
+          .eq('inviter_id', user.id);
+      final list = List<Map<String, dynamic>>.from(
+          (res as List).map((e) => Map<String, dynamic>.from(e)));
       return {
         'total_invitations': list.length,
-        'pending_invitations': list.where((i) => i['status'] == 'pending').length,
-        'successful_invitations': list.where((i) => i['status'] == 'completed').length,
+        'pending_invitations':
+            list.where((i) => i['status'] == 'pending').length,
+        'successful_invitations':
+            list.where((i) => i['status'] == 'completed').length,
       };
     } catch (e) {
       if (kDebugMode) print('Failed to get invitation stats: $e');
-      return {'total_invitations': 0, 'pending_invitations': 0, 'successful_invitations': 0};
+      return {
+        'total_invitations': 0,
+        'pending_invitations': 0,
+        'successful_invitations': 0
+      };
     }
   }
 }
