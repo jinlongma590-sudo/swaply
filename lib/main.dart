@@ -1,4 +1,4 @@
-// lib/main.dart - 修复版本：移除导致自动登出的refreshSession调用 + 启用 PKCE OAuth
+﻿// lib/main.dart - 淇鐗堟湰锛氱Щ闄ゅ鑷磋嚜鍔ㄧ櫥鍑虹殑refreshSession璋冪敤 + 鍚敤 PKCE OAuth
 import 'dart:async';
 import 'dart:io';
 import 'package:swaply/widgets/ios_insets_guard.dart';
@@ -14,7 +14,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-// ====== 本项目内的依�?======
+// ====== 鏈」鐩唴鐨勪緷璧?======
 import 'package:swaply/auth/login_screen.dart';
 import 'package:swaply/auth/welcome_screen.dart';
 import 'package:swaply/models/coupon.dart';
@@ -46,12 +46,12 @@ import 'package:swaply/widgets/verification_badge.dart' as vb;
 import 'package:swaply/widgets/verification_badge_mini.dart';
 import 'startup_screen.dart';
 
-// ========= 全局 Auth 事件订阅（只注册一次）=========
+// ========= 鍏ㄥ眬 Auth 浜嬩欢璁㈤槄锛堝彧娉ㄥ唽涓€娆★級=========
 bool _authHookWired = false;
 StreamSubscription<AuthState>? _globalAuthSub;
 final GlobalKey<NavigatorState> appNavKey = GlobalKey<NavigatorState>();
 
-// === 路由保险：只允许第一次进主壳，统一导航�?===
+// === 璺敱淇濋櫓锛氬彧鍏佽绗竴娆¤繘涓诲３锛岀粺涓€瀵艰埅鍙?===
 class RouteGate {
   static bool _wentToMain = false;
 
@@ -202,7 +202,7 @@ class AppLocalizations {
 
   // ---------- Variants / Typos you might have ----------
   String get saveItems => 'Save items';
-  String get saveltems => 'Save items'; // l/I 拼写错误
+  String get saveltems => 'Save items'; // l/I 鎷煎啓閿欒
 
   @override
   dynamic noSuchMethod(Invocation invocation) => '';
@@ -236,7 +236,7 @@ class LanguageProvider extends ChangeNotifier {
   }
 }
 
-// ========= 全局 Auth 处理（带欢迎弹窗：一次性） =========
+// ========= 鍏ㄥ眬 Auth 澶勭悊锛堝甫娆㈣繋寮圭獥锛氫竴娆℃€э級 =========
 void wireAuthHook() {
   if (_authHookWired) return;
   _authHookWired = true;
@@ -260,7 +260,7 @@ void wireAuthHook() {
       if (u != null) {
         await NotificationService.subscribeUser(u.id);
 
-        // �?新逻辑：由服务端幂�?RPC 决定是否需要弹一次欢迎券
+        // 鉁?鏂伴€昏緫锛氱敱鏈嶅姟绔箓绛?RPC 鍐冲畾鏄惁闇€瑕佸脊涓€娆℃杩庡埜
         try {
           final res = await RewardService.ensureWelcomeForCurrentUser();
           if (res.shouldPopup) {
@@ -271,9 +271,9 @@ void wireAuthHook() {
           debugPrint('[Auth] ensureWelcomeForCurrentUser error: $e');
         }
 
-        // ⚠️ 关键：initialSession 不做导航，避免与 initialRoute 双触�?
+        // 鈿狅笍 鍏抽敭锛歩nitialSession 涓嶅仛瀵艰埅锛岄伩鍏嶄笌 initialRoute 鍙岃Е鍙?
         if (event == AuthChangeEvent.signedIn) {
-          RouteGate.toMainOnce(); // 仅真正登录成功时导航到主�?
+          RouteGate.toMainOnce(); // 浠呯湡姝ｇ櫥褰曟垚鍔熸椂瀵艰埅鍒颁富澹?
         }
       }
     }
@@ -284,46 +284,46 @@ void wireAuthHook() {
       DualFavoritesService.clearCache();
       RewardService.clearCache();
 
-      RouteGate.toSignIn(); // 统一回登录页并重置“只进一次主壳”的标记
+      RouteGate.toSignIn(); // 缁熶竴鍥炵櫥褰曢〉骞堕噸缃€滃彧杩涗竴娆′富澹斥€濈殑鏍囪
     }
   });
 }
 
-// —�?仅供本文件使用的 UTF-8 乱码修复（把“ðŸ�?/ Ã / â …”类还原），不依�?dart:convert —�?
-// （避免你�?main.dart 顶部忘记 import 导致的报错）
+// 鈥斺€?浠呬緵鏈枃浠朵娇鐢ㄧ殑 UTF-8 涔辩爜淇锛堟妸鈥溍芭糕€?/ 脙 / 芒 鈥︹€濈被杩樺師锛夛紝涓嶄緷璧?dart:convert 鈥斺€?
+// 锛堥伩鍏嶄綘鍦?main.dart 椤堕儴蹇樿 import 瀵艰嚧鐨勬姤閿欙級
 String _fixUtf8Mojibake(String? raw) {
   if (raw == null || raw.isEmpty) return raw ?? '';
   var s = raw;
 
-  // 若不存在典型乱码痕迹，直接返�?
-  if (!s.contains('ð') && !s.contains('Ã') && !s.contains('â')) return s;
+  // 鑻ヤ笉瀛樺湪鍏稿瀷涔辩爜鐥曡抗锛岀洿鎺ヨ繑鍥?
+  if (!s.contains('冒') && !s.contains('脙') && !s.contains('芒')) return s;
 
   const map = <String, String>{
-    'ðŸŽ�?: '🎉', // party popper
-    'ðŸŽ': '🎁', // gift
-    'â†�?: '�?,
-    'â€�?: '�?,
-    'â€�?: '�?,
-    'â€�?: '�?,
-    'â€�?: '�?,
-    'â€�?: '�?,
-    'â€™': '�?,
-    'â€�?: '�?,
-    'â€�?: '�?,
-    'Ã�?: '×',
-    'Ã·': '÷',
-    'Â®': '®',
-    'Â©': '©',
-    'Â°': '°',
-    'Â·': '·',
-    'Â':  '',  // 孤立�?Â
+    '冒鸥沤鈥?: '馃帀', // party popper
+    '冒鸥沤聛': '馃巵', // gift
+    '芒鈥犫€?: '鈫?,
+    '芒鈧€?: '鈥?,
+    '芒鈧€?: '鈥?,
+    '芒鈧?: '鈥?,
+    '芒鈧?: '鈥?,
+    '芒鈧?: '鈥?,
+    '芒鈧劉': '鈥?,
+    '芒鈧?: '鈥?,
+    '芒鈧?: '鈥?,
+    '脙鈥?: '脳',
+    '脙路': '梅',
+    '脗庐': '庐',
+    '脗漏': '漏',
+    '脗掳': '掳',
+    '脗路': '路',
+    '脗':  '',  // 瀛ょ珛鐨?脗
   };
 
   map.forEach((k, v) => s = s.replaceAll(k, v));
   return s;
 }
 
-// 简单的“欢迎礼”弹窗（保持与其他处视觉一致）
+// 绠€鍗曠殑鈥滄杩庣ぜ鈥濆脊绐楋紙淇濇寔涓庡叾浠栧瑙嗚涓€鑷达級
 void _showWelcomeGiftDialog() {
   final ctx = appNavKey.currentContext;
   if (ctx == null) return;
@@ -347,13 +347,13 @@ void _showWelcomeGiftDialog() {
             child: Icon(Icons.card_giftcard, size: 30.w, color: const Color(0xFF2196F3)),
           ),
           SizedBox(height: 12.h),
-          Text(_fixUtf8Mojibake('Welcome gift 🎁'),
+          Text(_fixUtf8Mojibake('Welcome gift 馃巵'),
               style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w700)),
           SizedBox(height: 6.h),
           Text(
             _fixUtf8Mojibake(
               'A Welcome Coupon has been added to your account.\n'
-                  'You can find it in My Coupons or My Rewards �?Coupons tab.',
+                  'You can find it in My Coupons or My Rewards 鈫?Coupons tab.',
             ),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13.sp, color: Colors.black87),
@@ -397,20 +397,20 @@ void _showWelcomeGiftDialog() {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // === 静音 Supabase �?refresh session 噪音（仅开发期�?===
+  // === 闈欓煶 Supabase 鐨?refresh session 鍣煶锛堜粎寮€鍙戞湡锛?===
       {
     final _orig = debugPrint;
     debugPrint = (String? message, {int? wrapWidth}) {
       if (message != null &&
           message.contains('supabase.auth: INFO: Refresh session')) {
-        return; // 忽略这条日志
+        return; // 蹇界暐杩欐潯鏃ュ織
       }
       _orig(message, wrapWidth: wrapWidth);
     };
   }
   // =====================================================
 
-  // ========= 全局错误兜底 =========
+  // ========= 鍏ㄥ眬閿欒鍏滃簳 =========
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
   };
@@ -447,17 +447,17 @@ Future<void> main() async {
     );
   };
 
-  // �?启用 PKCE OAuth（移动端必须�?
+  // 鉁?鍚敤 PKCE OAuth锛堢Щ鍔ㄧ蹇呴』锛?
   await Supabase.initialize(
     url: 'https://rhckybselarzglkmlyqs.supabase.co',
     anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoY2t5YnNlbGFyemdsa21seXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTM0NTgsImV4cCI6MjA3MDU4OTQ1OH0.3I0T2DidiF-q9l2tWeHOjB31QogXHDqRtEjDn0RfVbU',
     authOptions: const FlutterAuthClientOptions(
-      authFlowType: AuthFlowType.pkce, // 👈 关键，别写成 flowType
+      authFlowType: AuthFlowType.pkce, // 馃憟 鍏抽敭锛屽埆鍐欐垚 flowType
       autoRefreshToken: true,
     ),
   );
 
-  // �?�?Supabase 初始化后，runApp 之前调用全局监听�?
+  // 鉁?鍦?Supabase 鍒濆鍖栧悗锛宺unApp 涔嬪墠璋冪敤鍏ㄥ眬鐩戝惉鍣?
   wireAuthHook();
 
   runApp(
@@ -494,7 +494,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     switch (state) {
       case AppLifecycleState.resumed:
         debugPrint('App resumed - clearing notifications if needed');
-        // 不再主动 refreshSession，避免自动登�?
+        // 涓嶅啀涓诲姩 refreshSession锛岄伩鍏嶈嚜鍔ㄧ櫥鍑?
         // AuthService().refreshSession(minInterval: const Duration(minutes: 15));
         break;
       case AppLifecycleState.paused:
@@ -564,12 +564,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   ),
                 ),
               ),
-              // �?仅使�?initialRoute，避免同时设�?home 造成路由冲突
+              // 鉁?浠呬娇鐢?initialRoute锛岄伩鍏嶅悓鏃惰缃?home 閫犳垚璺敱鍐茬獊
               initialRoute: hasSession ? '/home' : '/welcome',
               routes: {
                 '/welcome': (_) => const WelcomeScreen(),
                 '/login': (_) => const LoginScreen(),
-                // �?改为�?5 个底栏的主壳
+                // 鉁?鏀逛负甯?5 涓簳鏍忕殑涓诲３
                 '/home': (_) => const MainNavigationPage(),
                 '/coupons': (_) => CouponManagementPage(),
               },
@@ -581,9 +581,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 }
 
-// 继续添加 MainNavigationPage 和其他类...
-// [为了节省空间，这里保持其余代码不变]
-// 继续添加 MainNavigationPage 和其他类...
+// 缁х画娣诲姞 MainNavigationPage 鍜屽叾浠栫被...
+// [涓轰簡鑺傜渷绌洪棿锛岃繖閲屼繚鎸佸叾浣欎唬鐮佷笉鍙榏
+// 缁х画娣诲姞 MainNavigationPage 鍜屽叾浠栫被...
 class MainNavigationPage extends StatefulWidget {
   final bool isGuest;
   const MainNavigationPage({Key? key, this.isGuest = false}) : super(key: key);
@@ -596,7 +596,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
   int _notificationCount = 0;
   late AnimationController _sellButtonController;
   late Animation<double> _sellButtonAnimation;
-  // �?删掉第二套监听器相关变量（已删除 _authSubscription�?
+  // 鈶?鍒犳帀绗簩濂楃洃鍚櫒鐩稿叧鍙橀噺锛堝凡鍒犻櫎 _authSubscription锛?
 
   final _homeKey = GlobalKey<NavigatorState>();
   final _savedKey = GlobalKey<NavigatorState>();
@@ -608,7 +608,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
     _homeKey, _savedKey, _sellKey, _notifKey, _profileKey,
   ];
 
-  // �?新增：类级别的静态标�?
+  // 鉁?鏂板锛氱被绾у埆鐨勯潤鎬佹爣璁?
   static bool _welcomeGiftChecked = false;
 
   @override
@@ -616,9 +616,9 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
     super.initState();
     _loadNotificationCount();
 
-    // �?删除 MainNavigationPage 里的第二套监听（整段已删除）
+    // 鈶?鍒犻櫎 MainNavigationPage 閲岀殑绗簩濂楃洃鍚紙鏁存宸插垹闄わ級
 
-    // Sell按钮动画
+    // Sell鎸夐挳鍔ㄧ敾
     _sellButtonController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
@@ -627,7 +627,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
       CurvedAnimation(parent: _sellButtonController, curve: Curves.easeInOut),
     );
 
-    // �?新增：延迟检查欢迎券（幂底机制）
+    // 鉁?鏂板锛氬欢杩熸鏌ユ杩庡埜锛堝箓搴曟満鍒讹級
     if (!widget.isGuest) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Future.delayed(const Duration(milliseconds: 1500), () {
@@ -642,13 +642,13 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
   @override
   void dispose() {
     _sellButtonController.dispose();
-    // �?取消取订阅代吗（已删除）
+    // 鈶?鍙栨秷鍙栬闃呬唬鍚楋紙宸插垹闄わ級
     super.dispose();
   }
 
-  // �?新增：检查并显示欢迎券的方法
+  // 鉁?鏂板锛氭鏌ュ苟鏄剧ず娆㈣繋鍒哥殑鏂规硶
   Future<void> _checkAndShowWelcomeGift() async {
-    // 避免重复检�?
+    // 閬垮厤閲嶅妫€鏌?
     if (_welcomeGiftChecked) return;
 
     final user = Supabase.instance.client.auth.currentUser;
@@ -659,14 +659,14 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
       final pendingKey = 'new_user_welcome_pending_${user.id}';
       final shownKey   = 'welcome_gift_shown_${user.id}';
 
-      // 只在“刚创建了欢迎券”的情况下弹窗（该标记在 wireAuthHook 中被置为 true�?
+      // 鍙湪鈥滃垰鍒涘缓浜嗘杩庡埜鈥濈殑鎯呭喌涓嬪脊绐楋紙璇ユ爣璁板湪 wireAuthHook 涓缃负 true锛?
       final pending = prefs.getBool(pendingKey) ?? false;
       if (!pending) {
-        _welcomeGiftChecked = true; // 没有待弹窗标记：认为已检查过，避免反复查�?
+        _welcomeGiftChecked = true; // 娌℃湁寰呭脊绐楁爣璁帮細璁や负宸叉鏌ヨ繃锛岄伩鍏嶅弽澶嶆煡璇?
         return;
       }
 
-      // 尝试取出最�?welcome 券以展示码值（失败也不影响弹窗�?
+      // 灏濊瘯鍙栧嚭鏈€鏂?welcome 鍒镐互灞曠ず鐮佸€硷紙澶辫触涔熶笉褰卞搷寮圭獥锛?
       Map<String, dynamic>? row;
       try {
         final rows = await Supabase.instance.client
@@ -682,16 +682,16 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
         }
       } catch (_) {}
 
-      // 标记已处理，并清�?pending
+      // 鏍囪宸插鐞嗭紝骞舵竻鎺?pending
       _welcomeGiftChecked = true;
       await prefs.setBool(shownKey, true);
       await prefs.remove(pendingKey);
 
       if (!mounted) return;
       if (row != null) {
-        _showLocalWelcomeDialog(row);   // 带码值的弹窗
+        _showLocalWelcomeDialog(row);   // 甯︾爜鍊肩殑寮圭獥
       } else {
-        _showWelcomeGiftDialog();       // 兜底弹窗（无码值也可）
+        _showWelcomeGiftDialog();       // 鍏滃簳寮圭獥锛堟棤鐮佸€间篃鍙級
       }
     } catch (e) {
       if (kDebugMode) {
@@ -721,7 +721,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
             ),
             SizedBox(height: 12.h),
             Text(
-              _fixUtf8Mojibake('Welcome gift 🎁'),
+              _fixUtf8Mojibake('Welcome gift 馃巵'),
               style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w700),
             ),
             SizedBox(height: 6.h),
@@ -845,7 +845,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
     );
   }
 
-  // 新增：切换到首页的方�?
+  // 鏂板锛氬垏鎹㈠埌棣栭〉鐨勬柟娉?
   void _navigateToHome() {
     setState(() => _selectedIndex = 0);
   }
@@ -855,7 +855,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
     final l10n = AppLocalizations.of(context)!;
     final languageProvider = Provider.of<LanguageProvider>(context);
 
-    // 定义5个标签页
+    // 瀹氫箟5涓爣绛鹃〉
     final List<Widget> _pages = [
       _buildTabNavigator(_homeKey, IosInsetsGuard(child: const _HomeRoot()), languageProvider),
       _buildTabNavigator(_savedKey, _SavedRoot(
@@ -961,7 +961,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
         setState(() => _selectedIndex = index);
       },
       child: Container(
-        width: 60.w, // 增加宽度以显示完整文�?
+        width: 60.w, // 澧炲姞瀹藉害浠ユ樉绀哄畬鏁存枃瀛?
         height: 52.h,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -993,14 +993,14 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
                   color: isSelected
                       ? const Color(0xFF2196F3)
                       : Colors.grey[600],
-                  fontSize: 8.5.sp, // 稍微调字体大�?
+                  fontSize: 8.5.sp, // 绋嶅井璋冨瓧浣撳ぇ灏?
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
                 child: Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center, // 居中对齐
+                  textAlign: TextAlign.center, // 灞呬腑瀵归綈
                 ),
               ),
             ],
@@ -1033,7 +1033,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
         });
       },
       child: Container(
-        width: 60.w, // 增加宽度以显示完整文�?
+        width: 60.w, // 澧炲姞瀹藉害浠ユ樉绀哄畬鏁存枃瀛?
         height: 52.h,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -1113,14 +1113,14 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
                   color: isSelected
                       ? const Color(0xFF2196F3)
                       : Colors.grey[600],
-                  fontSize: 8.5.sp, // 稍微调字体大�?
+                  fontSize: 8.5.sp, // 绋嶅井璋冨瓧浣撳ぇ灏?
                   fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
                 child: Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center, // 居中对齐
+                  textAlign: TextAlign.center, // 灞呬腑瀵归綈
                 ),
               ),
             ],
@@ -1151,8 +1151,8 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
           return Transform.scale(
             scale: _sellButtonAnimation.value,
             child: Container(
-              width: 56.w, // 稍微增大悬浮按钮
-              height: 46.h, // �?降低高度以避免底�?3~4px 溢出
+              width: 56.w, // 绋嶅井澧炲ぇ鎮诞鎸夐挳
+              height: 46.h, // 鈫?闄嶄綆楂樺害浠ラ伩鍏嶅簳閮?3~4px 婧㈠嚭
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -1177,7 +1177,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
                     offset: Offset(0, isSelected ? 4.h : 3.h),
                     spreadRadius: isSelected ? 2.w : 1.w,
                   ),
-                  // 添加额外的阴影增强悬浮效�?
+                  // 娣诲姞棰濆鐨勯槾褰卞寮烘偓娴晥鏋?
                   BoxShadow(
                     color: const Color(0xFF2196F3).withOpacity(0.2),
                     blurRadius: 6.h,
@@ -1199,10 +1199,10 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
                     child: Icon(
                       Icons.add_rounded,
                       color: Colors.white,
-                      size: 22.h, // �?减小图标以配合整体高�?
+                      size: 22.h, // 鈫?鍑忓皬鍥炬爣浠ラ厤鍚堟暣浣撻珮搴?
                     ),
                   ),
-                  SizedBox(height: 0.5.h), // �?减少上下留白
+                  SizedBox(height: 0.5.h), // 鈫?鍑忓皯涓婁笅鐣欑櫧
                   Text(
                     l10n.sell,
                     textHeightBehavior: const TextHeightBehavior(
@@ -1211,8 +1211,8 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
                     ),
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 7.5.sp,  // �?再小一点避免文字行高撑开
-                      height: 1.0,       // �?紧凑行高，消�?1~2px 视觉溢出
+                      fontSize: 7.5.sp,  // 鈫?鍐嶅皬涓€鐐归伩鍏嶆枃瀛楄楂樻拺寮€
+                      height: 1.0,       // 鈫?绱у噾琛岄珮锛屾秷闄?1~2px 瑙嗚婧㈠嚭
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.2,
                       shadows: [
@@ -1234,9 +1234,9 @@ class _MainNavigationPageState extends State<MainNavigationPage> with TickerProv
   }
 }
 
-// ... ç»§ç»­æ·»åŠ å‰©ä½™çš„ä»£�?ï¼ˆåŒ…æ‹¬æ‰€æœ‰å…¶ä»–é¡µé¢ç»„ä»¶ï¼�?..
-// ç”±äºŽä»£�?å¤ªé•¿ï¼Œæˆ‘åªå±•ç¤ºäº†ä¿®æ”¹çš„�?¸å¿ƒéƒ¨åˆ†ã€‚å…¶ä½™éƒ¨åˆ†ä¿æŒä¸å�?
-/* ---------------- Tab æ ¹é¡µ ---------------- */
+// ... 莽禄搂莽禄颅忙路禄氓艩 氓鈥奥┟ぢ解劉莽拧鈥灻ぢ宦Ｃ?聛茂录藛氓艗鈥γ︹€孤︹€扳偓忙艙鈥懊モ€β睹ぢ烩€撁┞÷得┞澛⒚烩€灻ぢ宦睹尖€?..
+// 莽鈥澛泵ぢ号矫ぢ宦Ｃ?聛氓陇陋茅鈥⒙棵寂捗λ嗏€樏ヂ徛ヂ扁€⒚ぢ好ぢ衡€犆ぢ柯︹€澛姑♀€灻?赂氓驴茠茅茠篓氓藛鈥犆ｂ偓鈥毭モ€β睹ぢ解劉茅茠篓氓藛鈥犆ぢ柯澝ε捖伱ぢ嘎嵜ヂ徦?
+/* ---------------- Tab 忙 鹿茅隆碌 ---------------- */
 
 class _HomeRoot extends StatelessWidget {
   const _HomeRoot();
@@ -1244,7 +1244,7 @@ class _HomeRoot extends StatelessWidget {
   Widget build(BuildContext context) => const swaply.HomePage();
 }
 
-// ä¿®æ”¹ï¼šæ·»å�?å¯¼èˆªå›žè°ƒå‚æ•�?
+// 盲驴庐忙鈥澛姑寂∶β仿幻ヅ?氓炉录猫藛陋氓鈥号久捌捗ヂ忊€毭︹€⒙?
 class _SavedRoot extends StatelessWidget {
   final bool isGuest;
   final VoidCallback? onNavigateToHome;
@@ -1312,9 +1312,9 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
 
     if (!widget.isGuest) {
       _loadFavorites();
-      // å¯åŠ¨è‡ªåŠ¨åˆ·æ–°å®šæ—¶å™¨ï¼ˆæ¯30ç§’æ£€æŸ¥ä¸€æ¬¡ï¼�?
+      // 氓聬炉氓艩篓猫鈥÷ヅ犅ニ喡访︹€撀懊ヂ∶︹€斅睹モ劉篓茂录藛忙炉聫30莽搂鈥櫭βｂ偓忙鸥楼盲赂鈧β∶尖€?
       _startAutoRefresh();
-      // è®¾ç½®æ”¶è—æ›´æ–°ç›‘å�?
+      // 猫庐戮莽陆庐忙鈥澛睹ㄢ€斅徝︹€郝疵︹€撀懊р€衡€樏ヂ惵?
       _setupFavoritesListener();
     } else {
       setState(() => _isLoading = false);
@@ -1329,16 +1329,16 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  // âœ�?ä¿®å¤ï¼šè¿™é‡Œåº”è¯¥æ˜¯ç”Ÿå‘½å‘¨æœŸå›žè°ƒï¼Œè€Œä¸æ˜¯è·¯ç”±æ¡ç›�?
+  // 芒艙鈥?盲驴庐氓陇聧茂录拧猫驴鈩⒚┾€∨捗ヂ衡€澝ッλ溌р€澟该モ€樎矫モ€樎ε撆该モ€号久捌捗寂捗ㄢ偓艗盲赂聧忙藴炉猫路炉莽鈥澛泵β澛∶р€郝?
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && !widget.isGuest) {
-      // åº”ç”¨é‡æ–°æ¿€æ´»æ—¶åˆ·æ–°æ•°æ�?
+      // 氓潞鈥澝р€澛┾€÷嵜︹€撀懊β库偓忙麓禄忙鈥斅睹ニ喡访︹€撀懊︹€⒙懊β嵚?
       _loadFavorites();
     }
   }
 
-  /// è®¾ç½®æ”¶è—æ›´æ–°ç›‘å�?
+  /// 猫庐戮莽陆庐忙鈥澛睹ㄢ€斅徝︹€郝疵︹€撀懊р€衡€樏ヂ惵?
   void _setupFavoritesListener() {
     _favoritesSubscription = FavoritesUpdateService().favoritesStream.listen(
           (event) {
@@ -1349,10 +1349,10 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         }
 
         if (event.isAdded && event.listingData != null) {
-          // æ·»åŠ åˆ°æ”¶è—ï¼šç«‹å³æ·»å�?åˆ°æœ¬åœ°åˆ—è¡�?
+          // 忙路禄氓艩 氓藛掳忙鈥澛睹ㄢ€斅徝寂∶€姑ヂ嵚趁β仿幻ヅ?氓藛掳忙艙卢氓艙掳氓藛鈥斆÷?
           _addToLocalFavorites(event.listingData!);
         } else if (!event.isAdded) {
-          // ä»Žæ”¶è—ç§»é™¤ï¼šç«‹å³ä»Žæœ¬åœ°åˆ—è¡¨ç§»é™¤
+          // 盲禄沤忙鈥澛睹ㄢ€斅徝幻┾劉陇茂录拧莽芦鈥姑ヂ嵚趁ぢ慌矫ε撀ヅ撀懊ニ嗏€斆÷幻┾劉陇
           _removeFromLocalFavorites(event.listingId);
         }
       },
@@ -1362,10 +1362,10 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  /// ç«‹å³æ·»å�?åˆ°æœ¬åœ°æ”¶è—åˆ—è¡�?
+  /// 莽芦鈥姑ヂ嵚趁β仿幻ヅ?氓藛掳忙艙卢氓艙掳忙鈥澛睹ㄢ€斅徝ニ嗏€斆÷?
   void _addToLocalFavorites(Map<String, dynamic> listingData) {
     try {
-      // æ£€æŸ¥æ˜¯å¦å·²å­˜åœ�?
+      // 忙拢鈧ε嘎ッλ溌ヂ惵γヂ仿裁ヂ溍ヅ撀?
       final listingId = listingData['id']?.toString();
       if (listingId == null) return;
 
@@ -1375,7 +1375,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       );
 
       if (!exists) {
-        // æž„é€ ç¬¦åˆæ”¶è—�?¼å¼çš„æ•°æ�?
+        // 忙啪鈥灻┾偓 莽卢娄氓聬藛忙鈥澛睹ㄢ€斅徝?录氓录聫莽拧鈥灻︹€⒙懊β嵚?
         final favoriteItem = {
           'listing_id': listingId,
           'listing': _safeMapConvert(listingData),
@@ -1383,7 +1383,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         };
 
         setState(() {
-          _favoriteItems.insert(0, favoriteItem); // æ’å…¥åˆ°åˆ—è¡¨å¼€å¤´
+          _favoriteItems.insert(0, favoriteItem); // 忙聫鈥櫭モ€βッニ喡懊ニ嗏€斆÷ヂ尖偓氓陇麓
         });
 
         if (kDebugMode) {
@@ -1395,7 +1395,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  /// ç«‹å³ä»Žæœ¬åœ°æ”¶è—åˆ—è¡¨ç§»é™¤
+  /// 莽芦鈥姑ヂ嵚趁ぢ慌矫ε撀ヅ撀懊︹€澛睹ㄢ€斅徝ニ嗏€斆÷幻┾劉陇
   void _removeFromLocalFavorites(String listingId) {
     try {
       final initialLength = _favoriteItems.length;
@@ -1417,18 +1417,18 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  /// å¯åŠ¨è‡ªåŠ¨åˆ·æ–°å®šæ—¶å™¨
+  /// 氓聬炉氓艩篓猫鈥÷ヅ犅ニ喡访︹€撀懊ヂ∶︹€斅睹モ劉篓
   void _startAutoRefresh() {
     _autoRefreshTimer?.cancel();
     _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       if (!widget.isGuest && mounted && !_isRefreshing) {
-        if (kDebugMode) print('è‡ªåŠ¨åˆ·æ–°æ”¶è—åˆ—è¡�?..');
+        if (kDebugMode) print('猫鈥÷ヅ犅ニ喡访︹€撀懊︹€澛睹ㄢ€斅徝ニ嗏€斆÷?..');
         _loadFavorites();
       }
     });
   }
 
-  /// å®‰å…¨çš„ç±»åž‹è½¬æ¢æ–¹æ³�?
+  /// 氓庐鈥懊モ€β♀€灻甭幻ヅ锯€姑铰β嵚⒚︹€撀姑β斥€?
   Map<String, dynamic> _safeMapConvert(dynamic input) {
     if (input == null) return <String, dynamic>{};
 
@@ -1438,7 +1438,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       try {
         return Map<String, dynamic>.from(input);
       } catch (e) {
-        if (kDebugMode) print('ç±»åž‹è½¬æ¢å¤±è´�? $e');
+        if (kDebugMode) print('莽卤禄氓啪鈥姑铰β嵚⒚ヂぢ泵绰? $e');
         return <String, dynamic>{};
       }
     }
@@ -1446,7 +1446,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     return <String, dynamic>{};
   }
 
-  /// å®‰å…¨èŽ·å–å­—ç¬¦ä¸²å€¼
+  /// 氓庐鈥懊モ€βㄅ铰访ヂ忊€撁ヂ€斆γぢ嘎裁モ偓录
   String _safeGetString(Map<String, dynamic> map, String key, {String defaultValue = ''}) {
     try {
       return map[key]?.toString() ?? defaultValue;
@@ -1456,7 +1456,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  /// åŠ è½½æ”¶è—åˆ—è¡�?- ä¿®å¤ï¼šä½¿ç”�?DualFavoritesService
+  /// 氓艩 猫陆陆忙鈥澛睹ㄢ€斅徝ニ嗏€斆÷?- 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService
   Future<void> _loadFavorites() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
@@ -1477,19 +1477,19 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         print('Loading favorites for user: ${user.id}');
       }
 
-      // ä¿®å¤ï¼šä½¿ç”�?DualFavoritesService èŽ·å–æ”¶è—åˆ—è¡¨ï¼ˆä»�?favorites è¡¨ï¼�?
+      // 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService 猫沤路氓聫鈥撁︹€澛睹ㄢ€斅徝ニ嗏€斆÷妓喢ぢ慌?favorites 猫隆篓茂录鈥?
       final rawItems = await DualFavoritesService.getUserFavorites(
         userId: user.id,
         limit: 100,
       );
 
       if (mounted) {
-        // å®‰å…¨è½¬æ¢æ•°æ�?
+        // 氓庐鈥懊モ€β铰β嵚⒚︹€⒙懊β嵚?
         final safeItems = <Map<String, dynamic>>[];
         for (final item in rawItems) {
           final safeItem = _safeMapConvert(item);
           if (safeItem.isNotEmpty) {
-            // ç¡®ä¿ listing æ•°æ®ä¹Ÿæ˜¯å®‰å…¨è½¬æ¢çš�?
+            // 莽隆庐盲驴聺 listing 忙鈥⒙懊β嵚ぢ古该λ溌ヂ€懊モ€β铰β嵚⒚♀€?
             if (safeItem.containsKey('listing')) {
               safeItem['listing'] = _safeMapConvert(safeItem['listing']);
             }
@@ -1520,20 +1520,20 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  /// åˆ·æ–°æ”¶è—åˆ—è¡�?
+  /// 氓藛路忙鈥撀懊︹€澛睹ㄢ€斅徝ニ嗏€斆÷?
   Future<void> _refreshFavorites() async {
     setState(() => _isRefreshing = true);
     await _loadFavorites();
     setState(() => _isRefreshing = false);
   }
 
-  /// ä»Žæ”¶è—å¤¹ç§»é™¤å•†å“�?- ä¿®å¤ï¼šä½¿ç”�?DualFavoritesService
+  /// 盲禄沤忙鈥澛睹ㄢ€斅徝ヂぢ姑幻┾劉陇氓鈥⑩€犆モ€溌?- 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService
   Future<void> _removeFromFavorites(String listingId, int index) async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
     try {
-      // ä¿®å¤ï¼šä½¿ç”�?DualFavoritesService åŒæ­¥ç§»é™�?
+      // 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼莽搂禄茅鈩⒙?
       final success = await DualFavoritesService.removeFromFavorites(
         userId: user.id,
         listingId: listingId,
@@ -1544,7 +1544,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           _favoriteItems.removeAt(index);
         });
 
-        // å‘é€å®žæ—¶æ›´æ–°é€šçŸ¥
+        // 氓聫鈥樏┾偓聛氓庐啪忙鈥斅睹︹€郝疵︹€撀懊┾偓拧莽鸥楼
         FavoritesUpdateService().notifyFavoriteChanged(
           listingId: listingId,
           isAdded: false,
@@ -1591,7 +1591,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  /// èŽ·å–å•†å“å›¾ç‰�?- å®‰å…¨ç‰ˆæœ�?
+  /// 猫沤路氓聫鈥撁モ€⑩€犆モ€溌伱モ€郝久р€扳€?- 氓庐鈥懊モ€βр€八喢ε撀?
   String _getListingImage(Map<String, dynamic> listing) {
     try {
       final images = listing['images'] ?? listing['image_urls'];
@@ -1604,7 +1604,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     return 'assets/images/placeholder.jpg';
   }
 
-  /// æ ¼å¼åŒ–ä»·�?¼ - å®‰å…¨ç‰ˆæœ�?
+  /// 忙 录氓录聫氓艗鈥撁ぢ宦访?录 - 氓庐鈥懊モ€βр€八喢ε撀?
   String _formatPrice(dynamic price) {
     if (price == null) return 'Price not available';
 
@@ -1624,10 +1624,10 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  /// æž„å»ºå•†å“å¡ç‰�?- ä¿®å¤ç‰ˆæœ�?
+  /// 忙啪鈥灻ヂ宦好モ€⑩€犆モ€溌伱ヂ嵚∶р€扳€?- 盲驴庐氓陇聧莽鈥八喢ε撀?
   Widget _buildFavoriteCard(Map<String, dynamic> item, int index) {
     try {
-      // å®‰å…¨çš„ç±»åž‹è½¬æ�?- ç»Ÿä¸€ä½¿ç”�?'listing' é”�?
+      // 氓庐鈥懊モ€β♀€灻甭幻ヅ锯€姑铰β嵚?- 莽禄鸥盲赂鈧ぢ铰棵р€澛?'listing' 茅鈥澛?
       final safeListing = _safeMapConvert(item['listing'] ?? {});
       final safeItem = _safeMapConvert(item);
 
@@ -1643,7 +1643,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       final imageUrl = _getListingImage(safeListing);
       final createdAt = _safeGetString(safeItem, 'created_at');
 
-      // æ ¼å¼åŒ–æ”¶è—æ—¶é—�?
+      // 忙 录氓录聫氓艗鈥撁︹€澛睹ㄢ€斅徝︹€斅睹┾€斅?
       final timeAdded = DualFavoritesService.formatSavedTime(createdAt);
 
       return Card(
@@ -1663,7 +1663,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                   ),
                 ),
               ).then((_) {
-                // ä»Žå•†å“è¯¦æƒ…é¡µè¿”å›žåŽåˆ·æ–°åˆ—è¡�?
+                // 盲禄沤氓鈥⑩€犆モ€溌伱γζ掆€γ┞÷得库€澝モ€号久ヂ惻矫ニ喡访︹€撀懊ニ嗏€斆÷?
                 _loadFavorites();
               });
             }
@@ -1685,7 +1685,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // å•†å“å›¾ç‰�?- ç¼©å°
+                  // 氓鈥⑩€犆モ€溌伱モ€郝久р€扳€?- 莽录漏氓掳聫
                   Hero(
                     tag: 'favorite_image_$listingId',
                     child: ClipRRect(
@@ -1747,7 +1747,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                   ),
                   SizedBox(width: 8.w),
 
-                  // å•†å“ä¿¡æ�?- ç¼©å°å­—ä½“å’Œé—´è·�?
+                  // 氓鈥⑩€犆モ€溌伱ぢ柯∶β伮?- 莽录漏氓掳聫氓颅鈥斆ぢ解€溍モ€櫯捗┾€斅疵仿?
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1824,7 +1824,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                     ),
                   ),
 
-                  // ç§»é™¤æŒ‰é’�?- ç¼©å°
+                  // 莽搂禄茅鈩⒙っε掆€懊┾€櫬?- 莽录漏氓掳聫
                   Container(
                     margin: EdgeInsets.only(left: 4.w),
                     decoration: BoxDecoration(
@@ -1859,7 +1859,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         print('Stack trace: $stackTrace');
         print('Item data: $item');
       }
-      // è¿”å›žé”™è¯¯å¡ç‰‡è€Œä¸æ˜¯å´©æºƒ
+      // 猫驴鈥澝モ€号久┾€濃劉猫炉炉氓聧隆莽鈥扳€∶ㄢ偓艗盲赂聧忙藴炉氓麓漏忙潞茠
       return Container(
         margin: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
         padding: EdgeInsets.all(16.w),
@@ -1887,7 +1887,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  /// æ˜¾ç¤ºç§»é™¤ç¡®è®¤å¯¹è¯æ¡�?
+  /// 忙藴戮莽陇潞莽搂禄茅鈩⒙っ÷っヂ姑澝β♀€?
   void _showRemoveDialog(String listingId, String title, int index) {
     showDialog(
       context: context,
@@ -1948,7 +1948,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  /// æž„å»ºç©ºçŠ¶æ€ - ç´§å‡‘ç‰�?
+  /// 忙啪鈥灻ヂ宦好┞好犅睹︹偓聛 - 莽麓搂氓鈥♀€樏р€八?
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -2022,11 +2022,11 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
               ),
               child: ElevatedButton.icon(
                 onPressed: () {
-                  // ä¿®å¤ï¼šä½¿ç”¨å›žè°ƒå‡½æ•°å¯¼èˆªåˆ°é¦–é¡�?
+                  // 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛モ€号久捌捗モ€÷矫︹€⒙懊ヂ济ㄋ喡ニ喡懊┞︹€撁┞÷?
                   if (widget.onNavigateToHome != null) {
                     widget.onNavigateToHome!();
                   } else {
-                    // å¤‡ç”¨æ–¹æ¡ˆï¼šå¼¹å‡ºåˆ°é¡¶å±�?
+                    // 氓陇鈥∶р€澛︹€撀姑β∷喢寂∶ヂ悸姑モ€÷好ニ喡懊┞÷睹ヂ扁€?
                     Navigator.of(context).popUntil((route) => route.isFirst);
                   }
                 },
@@ -2055,7 +2055,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  /// æž„å»ºé”™è¯¯çŠ¶æ€�?
+  /// 忙啪鈥灻ヂ宦好┾€濃劉猫炉炉莽艩露忙鈧?
   Widget _buildErrorState() {
     return Center(
       child: Padding(
@@ -2128,7 +2128,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    // å®‰å…¨èŽ·å–æœ¬åœ°åŒ–ï¼Œé¿å…ä¸ºç©�?
+    // 氓庐鈥懊モ€βㄅ铰访ヂ忊€撁ε撀ヅ撀懊ヅ掆€撁寂捗┞伮棵モ€β嵜ぢ嘎好┞?
     AppLocalizations? l10n;
     try {
       l10n = AppLocalizations.of(context);
@@ -2138,7 +2138,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       }
     }
 
-    // è®¿å®¢çŠ¶æ€�?
+    // 猫庐驴氓庐垄莽艩露忙鈧?
     if (widget.isGuest) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
@@ -2237,7 +2237,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       );
     }
 
-    // å·²ç™»å½•çŠ¶æ€
+    // 氓路虏莽鈩⒙幻ヂ解€⒚犅睹︹偓聛
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -2321,7 +2321,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  /// æ˜¾ç¤ºæ¸…ç©ºæ‰€æœ‰ç¡®è®¤å¯¹è¯æ¡�?
+  /// 忙藴戮莽陇潞忙赂鈥γ┞好︹€扳偓忙艙鈥懊÷っヂ姑澝β♀€?
   void _showClearAllDialog() {
     showDialog(
       context: context,
@@ -2382,16 +2382,16 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  /// æ¸…ç©ºæ‰€æœ‰æ”¶è—�?- ä¿®å¤ï¼šä½¿ç”�?DualFavoritesService åŒæ­¥æ¸…ç©�?
+  /// 忙赂鈥γ┞好︹€扳偓忙艙鈥懊︹€澛睹ㄢ€斅?- 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼忙赂鈥γ┞?
   Future<void> _clearAllFavorites() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
     try {
-      // å…ˆä¿å­˜å½“å‰åˆ—è¡¨é¡¹ï¼Œç”¨äºŽå‘é€é€šçŸ�?
+      // 氓鈥λ喢ぢ柯澝ヂ溍ヂ解€溍モ€奥嵜ニ嗏€斆÷┞÷姑寂捗р€澛ぢ号矫ヂ忊€樏┾偓聛茅鈧∶嘎?
       final currentItems = List<Map<String, dynamic>>.from(_favoriteItems);
 
-      // ä¿®å¤ï¼šä½¿ç”�?DualFavoritesService åŒæ­¥æ¸…ç©�?
+      // 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼忙赂鈥γ┞?
       final success = await DualFavoritesService.clearUserFavorites(userId: user.id);
 
       if (success && mounted) {
@@ -2399,7 +2399,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           _favoriteItems.clear();
         });
 
-        // å‘é€å®žæ—¶æ¸…ç©ºé€šçŸ¥
+        // 氓聫鈥樏┾偓聛氓庐啪忙鈥斅睹β糕€γ┞好┾偓拧莽鸥楼
         for (final item in currentItems) {
           final listingId = item['listing_id']?.toString();
           if (listingId != null) {
@@ -2451,7 +2451,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 }
-/* ---------------- Wishlist Page å¿ƒæ„¿å•é¡µé�?- æ–°å¢�?---------------- */
+/* ---------------- Wishlist Page 氓驴茠忙鈥灺棵ヂ嶁€⒚┞÷得┞澛?- 忙鈥撀懊ヂ⑴?---------------- */
 
 class WishlistPage extends StatefulWidget {
   const WishlistPage({Key? key}) : super(key: key);
@@ -2472,7 +2472,7 @@ class _WishlistPageState extends State<WishlistPage> {
     _loadWishlist();
   }
 
-  /// åŠ è½½å¿ƒæ„¿å•åˆ—è¡�?
+  /// 氓艩 猫陆陆氓驴茠忙鈥灺棵ヂ嶁€⒚ニ嗏€斆÷?
   Future<void> _loadWishlist() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
@@ -2493,7 +2493,7 @@ class _WishlistPageState extends State<WishlistPage> {
         print('Loading wishlist for user: ${user.id}');
       }
 
-      // ä½¿ç”�?DualFavoritesService èŽ·å–å¿ƒæ„¿å•åˆ—è¡¨ï¼ˆä»�?wishlists è¡¨ï¼�?
+      // 盲陆驴莽鈥澛?DualFavoritesService 猫沤路氓聫鈥撁ヂ科捗︹€灺棵ヂ嶁€⒚ニ嗏€斆÷妓喢ぢ慌?wishlists 猫隆篓茂录鈥?
       final items = await DualFavoritesService.getUserWishlist(
         userId: user.id,
         limit: 100,
@@ -2523,20 +2523,20 @@ class _WishlistPageState extends State<WishlistPage> {
     }
   }
 
-  /// åˆ·æ–°å¿ƒæ„¿å•åˆ—è¡�?
+  /// 氓藛路忙鈥撀懊ヂ科捗︹€灺棵ヂ嶁€⒚ニ嗏€斆÷?
   Future<void> _refreshWishlist() async {
     setState(() => _isRefreshing = true);
     await _loadWishlist();
     setState(() => _isRefreshing = false);
   }
 
-  /// ä»Žå¿ƒæ„¿å•ç§»é™¤å•†å“�?
+  /// 盲禄沤氓驴茠忙鈥灺棵ヂ嶁€⒚幻┾劉陇氓鈥⑩€犆モ€溌?
   Future<void> _removeFromWishlist(String listingId, int index) async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
     try {
-      // ä½¿ç”�?DualFavoritesService åŒæ­¥ç§»é™�?
+      // 盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼莽搂禄茅鈩⒙?
       final success = await DualFavoritesService.removeFromFavorites(
         userId: user.id,
         listingId: listingId,
@@ -2588,7 +2588,7 @@ class _WishlistPageState extends State<WishlistPage> {
     }
   }
 
-  /// èŽ·å–å•†å“å›¾ç‰�?
+  /// 猫沤路氓聫鈥撁モ€⑩€犆モ€溌伱モ€郝久р€扳€?
   String _getListingImage(Map<String, dynamic> listing) {
     final images = listing['images'] ?? listing['image_urls'];
     if (images is List && images.isNotEmpty) {
@@ -2597,7 +2597,7 @@ class _WishlistPageState extends State<WishlistPage> {
     return 'assets/images/placeholder.jpg';
   }
 
-  /// æ ¼å¼åŒ–ä»·�?¼
+  /// 忙 录氓录聫氓艗鈥撁ぢ宦访?录
   String _formatPrice(dynamic price) {
     if (price == null) return 'Price not available';
 
@@ -2612,7 +2612,7 @@ class _WishlistPageState extends State<WishlistPage> {
     return priceStr;
   }
 
-  /// æž„å»ºå¿ƒæ„¿å•å¡ç‰�?
+  /// 忙啪鈥灻ヂ宦好ヂ科捗︹€灺棵ヂ嶁€⒚ヂ嵚∶р€扳€?
   Widget _buildWishlistCard(Map<String, dynamic> item, int index) {
     final listing = item['listing'] ?? {};
     final listingId = item['listing_id']?.toString() ?? listing['id']?.toString() ?? '';
@@ -2622,7 +2622,7 @@ class _WishlistPageState extends State<WishlistPage> {
     final imageUrl = _getListingImage(listing);
     final createdAt = item['created_at']?.toString() ?? '';
 
-    // æ ¼å¼åŒ–æ·»å�?æ—¶é—�?
+    // 忙 录氓录聫氓艗鈥撁β仿幻ヅ?忙鈥斅睹┾€斅?
     final timeAdded = DualFavoritesService.formatSavedTime(createdAt);
 
     return Card(
@@ -2642,7 +2642,7 @@ class _WishlistPageState extends State<WishlistPage> {
                 ),
               ),
             ).then((_) {
-              // ä»Žå•†å“è¯¦æƒ…é¡µè¿”å›žåŽåˆ·æ–°åˆ—è¡�?
+              // 盲禄沤氓鈥⑩€犆モ€溌伱γζ掆€γ┞÷得库€澝モ€号久ヂ惻矫ニ喡访︹€撀懊ニ嗏€斆÷?
               _loadWishlist();
             });
           }
@@ -2664,7 +2664,7 @@ class _WishlistPageState extends State<WishlistPage> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // å•†å“å›¾ç‰�?
+                // 氓鈥⑩€犆モ€溌伱モ€郝久р€扳€?
                 Hero(
                   tag: 'wishlist_image_$listingId',
                   child: ClipRRect(
@@ -2726,7 +2726,7 @@ class _WishlistPageState extends State<WishlistPage> {
                 ),
                 SizedBox(width: 12.w),
 
-                // å•†å“ä¿¡æ�?
+                // 氓鈥⑩€犆モ€溌伱ぢ柯∶β伮?
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2803,7 +2803,7 @@ class _WishlistPageState extends State<WishlistPage> {
                   ),
                 ),
 
-                // ç§»é™¤æŒ‰é’�?
+                // 莽搂禄茅鈩⒙っε掆€懊┾€櫬?
                 Container(
                   margin: EdgeInsets.only(left: 6.w),
                   decoration: BoxDecoration(
@@ -2834,7 +2834,7 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  /// æ˜¾ç¤ºç§»é™¤ç¡®è®¤å¯¹è¯æ¡�?
+  /// 忙藴戮莽陇潞莽搂禄茅鈩⒙っ÷っヂ姑澝β♀€?
   void _showRemoveDialog(String listingId, String title, int index) {
     showDialog(
       context: context,
@@ -2895,7 +2895,7 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  /// æž„å»ºç©ºçŠ¶æ€
+  /// 忙啪鈥灻ヂ宦好┞好犅睹︹偓聛
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -2994,7 +2994,7 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  /// æž„å»ºé”™è¯¯çŠ¶æ€�?
+  /// 忙啪鈥灻ヂ宦好┾€濃劉猫炉炉莽艩露忙鈧?
   Widget _buildErrorState() {
     return Center(
       child: Padding(
@@ -3150,7 +3150,7 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  /// æ˜¾ç¤ºæ¸…ç©ºæ‰€æœ‰ç¡®è®¤å¯¹è¯æ¡�?
+  /// 忙藴戮莽陇潞忙赂鈥γ┞好︹€扳偓忙艙鈥懊÷っヂ姑澝β♀€?
   void _showClearAllDialog() {
     showDialog(
       context: context,
@@ -3211,13 +3211,13 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  /// æ¸…ç©ºæ‰€æœ‰å¿ƒæ„¿å�?
+  /// 忙赂鈥γ┞好︹€扳偓忙艙鈥懊ヂ科捗︹€灺棵ヂ嶁€?
   Future<void> _clearAllWishlist() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
     try {
-      // ä½¿ç”�?DualFavoritesService åŒæ­¥æ¸…ç©�?
+      // 盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼忙赂鈥γ┞?
       final success = await DualFavoritesService.clearUserFavorites(userId: user.id);
 
       if (success && mounted) {
@@ -3266,9 +3266,9 @@ class _WishlistPageState extends State<WishlistPage> {
     }
   }
 }
-// ç¬¬å››éƒ¨åˆ†ï¼šSellPage å‡ºå”®é¡�?(æ¢å¤å®Œæ•´åŠŸèƒ�? å’�?NotificationPage é€šçŸ¥é¡�?(ä½¿ç”¨ç¬¬äºŒä¸ªç‰ˆæœ¬çš„Serviceé›†æˆ�?
+// 莽卢卢氓鈥衡€好┢捖ニ嗏€犆寂ellPage 氓鈥÷好モ€澛┞÷?(忙聛垄氓陇聧氓庐艗忙鈥⒙疵ヅ犈该ㄆ捖? 氓鈥櫯?NotificationPage 茅鈧∶嘎ッ┞÷?(盲陆驴莽鈥澛ぢ号捗ぢ嘎р€八喢ε撀♀€濻ervice茅鈥衡€犆λ喡?
 
-/* ---------------- Sell Page å‡ºå”®é¡�?(ç¾ŽåŒ–ç‰ˆæœ�? ---------------- */
+/* ---------------- Sell Page 氓鈥÷好モ€澛┞÷?(莽戮沤氓艗鈥撁р€八喢ε撀? ---------------- */
 
 class SellPage extends StatefulWidget {
   final bool isGuest;
@@ -3860,7 +3860,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
             padding: EdgeInsets.all(16.w),
             child: Row(
               children: [
-                // å•†å“å›¾ç‰�?
+                // 氓鈥⑩€犆モ€溌伱モ€郝久р€扳€?
                 Hero(
                   tag: 'listing_${item['id']}',
                   child: Container(
@@ -3894,7 +3894,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                 ),
                 SizedBox(width: 16.w),
 
-                // å•†å“ä¿¡æ�?
+                // 氓鈥⑩€犆モ€溌伱ぢ柯∶β伮?
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -3948,7 +3948,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                   ),
                 ),
 
-                // èœå•æŒ‰é’�?
+                // 猫聫艙氓聧鈥⒚ε掆€懊┾€櫬?
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
@@ -4158,7 +4158,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   }
 }
 
-/* ---------------- Notification Page é€šçŸ¥é¡�?(ç´§å‡‘ç¾ŽåŒ–ç‰ˆæœ�? ---------------- */
+/* ---------------- Notification Page 茅鈧∶嘎ッ┞÷?(莽麓搂氓鈥♀€樏九矫ヅ掆€撁р€八喢ε撀? ---------------- */
 
 class NotificationPage extends StatefulWidget {
   final VoidCallback? onClearBadge;
@@ -4227,14 +4227,14 @@ class _NotificationPageState extends State<NotificationPage> {
     }
   }
 
-  // âœ�?ä¿®æ­£ï¼šä½¿ç”¨æ­£ç¡®çš„å‚æ•°è°ƒç”�?
+  // 芒艙鈥?盲驴庐忙颅拢茂录拧盲陆驴莽鈥澛βＣ÷♀€灻ヂ忊€毭︹€⒙懊捌捗р€澛?
   Future<void> _subscribeToNotifications() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
     await NotificationService.subscribeUser(
-      user.id,  // ä½ç½®å‚æ•�?
-      onEvent: (Map<String, dynamic> notification) {  // å‘½åå‚æ•�?
+      user.id,  // 盲陆聧莽陆庐氓聫鈥毭︹€⒙?
+      onEvent: (Map<String, dynamic> notification) {  // 氓鈥樎矫ヂ惵嵜ヂ忊€毭︹€⒙?
         if (!mounted) return;
         setState(() {
           _notifications.insert(0, notification);
@@ -4422,16 +4422,16 @@ class _NotificationPageState extends State<NotificationPage> {
       _markAsRead(index);
     }
 
-    // æ·»åŠ è°ƒè¯•æ—¥å¿�?
-    print('[NotificationPage] ç‚¹å‡»é€šçŸ¥: ${notification.toString()}');
+    // 忙路禄氓艩 猫掳茠猫炉鈥⒚︹€斅ッヂ库€?
+    print('[NotificationPage] 莽鈥毬姑モ€÷幻┾偓拧莽鸥楼: ${notification.toString()}');
 
     final type = notification['type']?.toString() ?? '';
 
-    // å°è¯•ä»Žå¤šä¸ªä½ç½®èŽ·å–IDä¿¡æ¯
+    // 氓掳聺猫炉鈥⒚ぢ慌矫ヂづ∶ぢ嘎ぢ铰嵜铰ㄅ铰访ヂ忊€揑D盲驴隆忙聛炉
     String? listingId = notification['listing_id']?.toString();
     String? offerId = notification['offer_id']?.toString();
 
-    // å¦‚æžœç›´æŽ¥å­—æ®µä¸ºç©ºï¼Œå°è¯•ä»Žpayloadä¸­èŽ·å�?
+    // 氓娄鈥毭ε九撁р€郝疵ε铰ッヂ€斆β得ぢ嘎好┞好寂捗ヂ奥澝€⒚ぢ慌絧ayload盲赂颅猫沤路氓聫鈥?
     final payload = notification['payload'] as Map<String, dynamic>? ?? {};
     if ((listingId == null || listingId.isEmpty) && payload.isNotEmpty) {
       listingId = payload['listing_id']?.toString();
@@ -4440,7 +4440,7 @@ class _NotificationPageState extends State<NotificationPage> {
       offerId = payload['offer_id']?.toString();
     }
 
-    // ä¹Ÿå°è¯•ä»Žmetadataä¸­èŽ·å�?
+    // 盲鹿鸥氓掳聺猫炉鈥⒚ぢ慌絤etadata盲赂颅猫沤路氓聫鈥?
     final metadata = notification['metadata'] as Map<String, dynamic>? ?? {};
     if ((listingId == null || listingId.isEmpty) && metadata.isNotEmpty) {
       listingId = metadata['listing_id']?.toString();
@@ -4451,22 +4451,22 @@ class _NotificationPageState extends State<NotificationPage> {
 
     final notificationId = notification['id']?.toString();
 
-    print('[NotificationPage] è§£æžç»“æž�?- Type: $type, ListingId: $listingId, OfferId: $offerId, NotificationId: $notificationId');
-    print('[NotificationPage] Payloadæ•°æ�? $payload');
-    print('[NotificationPage] Metadataæ•°æ�? $metadata');
+    print('[NotificationPage] 猫搂拢忙啪聬莽禄鈥溍ε九?- Type: $type, ListingId: $listingId, OfferId: $offerId, NotificationId: $notificationId');
+    print('[NotificationPage] Payload忙鈥⒙懊β嵚? $payload');
+    print('[NotificationPage] Metadata忙鈥⒙懊β嵚? $metadata');
 
-    // æ£€æŸ¥æ•°æ®å®Œæ•´æ€§
+    // 忙拢鈧ε嘎ッ︹€⒙懊β嵚ヂ捗︹€⒙疵︹偓搂
     if (type.isEmpty) {
-      print('[NotificationPage] é”™è¯¯ï¼šé€šçŸ¥ç±»åž‹ä¸ºç©�?);
+      print('[NotificationPage] 茅鈥濃劉猫炉炉茂录拧茅鈧∶嘎ッ甭幻ヅ锯€姑ぢ嘎好┞?);
       _showSnack('Notification data is incomplete', isError: true);
       return;
     }
 
     switch (type) {
       case 'message':
-        print('[NotificationPage] å¤„ç†æ¶ˆæ¯ç±»åž‹é€šçŸ¥');
+        print('[NotificationPage] 氓陇鈥灻愨€犆β端喢β伮甭幻ヅ锯€姑┾偓拧莽鸥楼');
         if (offerId != null && offerId.isNotEmpty) {
-          print('[NotificationPage] è·³è½¬åˆ°æŠ¥ä»·è¯¦æƒ…é¡�? $offerId');
+          print('[NotificationPage] 猫路鲁猫陆卢氓藛掳忙艩楼盲禄路猫炉娄忙茠鈥γ┞÷? $offerId');
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -4477,16 +4477,16 @@ class _NotificationPageState extends State<NotificationPage> {
             ),
           );
         } else {
-          print('[NotificationPage] æ¶ˆæ¯ç±»åž‹é€šçŸ¥ç¼ºå°‘offer_id');
+          print('[NotificationPage] 忙露藛忙聛炉莽卤禄氓啪鈥姑┾偓拧莽鸥楼莽录潞氓掳鈥榦ffer_id');
           _showSnack('Cannot open message: missing offer ID', isError: true);
         }
         break;
 
       case 'offer':
       case 'system':
-        print('[NotificationPage] å¤„ç†æŠ¥ä»�?ç³»ç»Ÿç±»åž‹é€šçŸ¥');
+        print('[NotificationPage] 氓陇鈥灻愨€犆ε犅ッぢ宦?莽鲁禄莽禄鸥莽卤禄氓啪鈥姑┾偓拧莽鸥楼');
         if (offerId != null && offerId.isNotEmpty) {
-          print('[NotificationPage] è·³è½¬åˆ°æŠ¥ä»·è¯¦æƒ…é¡�? $offerId');
+          print('[NotificationPage] 猫路鲁猫陆卢氓藛掳忙艩楼盲禄路猫炉娄忙茠鈥γ┞÷? $offerId');
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -4497,7 +4497,7 @@ class _NotificationPageState extends State<NotificationPage> {
             ),
           );
         } else if (listingId != null && listingId.isNotEmpty) {
-          print('[NotificationPage] è·³è½¬åˆ°å•†å“è¯¦æƒ…é¡�? $listingId');
+          print('[NotificationPage] 猫路鲁猫陆卢氓藛掳氓鈥⑩€犆モ€溌伱γζ掆€γ┞÷? $listingId');
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -4505,8 +4505,8 @@ class _NotificationPageState extends State<NotificationPage> {
             ),
           );
         } else {
-          print('[NotificationPage] æŠ¥ä»·ç±»åž‹é€šçŸ¥ç¼ºå°‘å¿…è¦çš„IDä¿¡æ¯');
-          print('[NotificationPage] åŽŸå§‹é€šçŸ¥æ•°æ�? ${notification.toString()}');
+          print('[NotificationPage] 忙艩楼盲禄路莽卤禄氓啪鈥姑┾偓拧莽鸥楼莽录潞氓掳鈥樏ヂ库€γβ伱♀€濱D盲驴隆忙聛炉');
+          print('[NotificationPage] 氓沤鸥氓搂鈥姑┾偓拧莽鸥楼忙鈥⒙懊β嵚? ${notification.toString()}');
           _showSnack('Cannot open notification: missing required IDs', isError: true);
         }
         break;
@@ -4514,9 +4514,9 @@ class _NotificationPageState extends State<NotificationPage> {
       case 'wishlist':
       case 'price_drop':
       default:
-        print('[NotificationPage] å¤„ç†å…¶ä»–ç±»åž‹é€šçŸ¥: $type');
+        print('[NotificationPage] 氓陇鈥灻愨€犆モ€β睹ぢ烩€撁甭幻ヅ锯€姑┾偓拧莽鸥楼: $type');
         if (listingId != null && listingId.isNotEmpty) {
-          print('[NotificationPage] è·³è½¬åˆ°å•†å“è¯¦æƒ…é¡�? $listingId');
+          print('[NotificationPage] 猫路鲁猫陆卢氓藛掳氓鈥⑩€犆モ€溌伱γζ掆€γ┞÷? $listingId');
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -4524,7 +4524,7 @@ class _NotificationPageState extends State<NotificationPage> {
             ),
           );
         } else {
-          print('[NotificationPage] é€šçŸ¥ç¼ºå°‘listing_id');
+          print('[NotificationPage] 茅鈧∶嘎ッ悸好ヂ扳€榣isting_id');
           _showSnack('Cannot open notification: missing listing ID', isError: true);
         }
         break;
@@ -4945,7 +4945,7 @@ class _NotificationPageState extends State<NotificationPage> {
   }
 }
 
-/* ---------------- 公共：无边缘光晕滚动 & UI 基座 ---------------- */
+/* ---------------- 鍏叡锛氭棤杈圭紭鍏夋檿婊氬姩 & UI 鍩哄骇 ---------------- */
 
 class NoGlowScrollBehavior extends ScrollBehavior {
   @override
@@ -4955,7 +4955,7 @@ class NoGlowScrollBehavior extends ScrollBehavior {
 }
 const _kPrivacyUrl = 'https://www.swaply.cc/privacy';
 const _kDeleteUrl  = 'https://www.swaply.cc/delete-account';
-/* ---------------- Profile Page 个人资料�?---------------- */
+/* ---------------- Profile Page 涓汉璧勬枡椤?---------------- */
 class ProfilePage extends StatefulWidget {
   final bool isGuest;
   const ProfilePage({Key? key, this.isGuest = false}) : super(key: key);
@@ -4968,15 +4968,15 @@ class _ProfilePageState extends State<ProfilePage>
     with SingleTickerProviderStateMixin {
   bool _loading = true;
 
-  /// 基础资料（显示名/头像/时间等）
+  /// 鍩虹璧勬枡锛堟樉绀哄悕/澶村儚/鏃堕棿绛夛級
   Map<String, dynamic>? _profile;
 
-  /// 只读�?profiles 行（仅含 verification_type 等）
+  /// 鍙鐨?profiles 琛岋紙浠呭惈 verification_type 绛夛級
   Map<String, dynamic>? _profileRow;
 
   final _svc = ProfileService();
 
-  // �?新增：认证服务与状态（仅看 user_verifications�?
+  // 鉁?鏂板锛氳璇佹湇鍔′笌鐘舵€侊紙浠呯湅 user_verifications锛?
   final _verifySvc = EmailVerificationService();
   bool _verified = false;
   vt.VerificationBadgeType _badge = vt.VerificationBadgeType.none;
@@ -4996,14 +4996,14 @@ class _ProfilePageState extends State<ProfilePage>
     _fadeAnimation =
         CurvedAnimation(parent: _animationController, curve: Curves.easeInOut);
 
-    // 基础资料
+    // 鍩虹璧勬枡
     if (!widget.isGuest) {
       _load();
     } else {
       _animationController.forward();
     }
 
-    // �?首次进入拉取认证状�?& 监听登录态变化自动刷�?
+    // 鉁?棣栨杩涘叆鎷夊彇璁よ瘉鐘舵€?& 鐩戝惉鐧诲綍鎬佸彉鍖栬嚜鍔ㄥ埛鏂?
     _reloadUserVerificationStatus();
     Supabase.instance.client.auth.onAuthStateChange.listen((event) {
       _reloadUserVerificationStatus();
@@ -5016,10 +5016,10 @@ class _ProfilePageState extends State<ProfilePage>
     super.dispose();
   }
 
-  /// �?只读加载：仅加载资料（用于显示），不再用 profiles/appMetadata 计算认证
+  /// 鉁?鍙鍔犺浇锛氫粎鍔犺浇璧勬枡锛堢敤浜庢樉绀猴級锛屼笉鍐嶇敤 profiles/appMetadata 璁＄畻璁よ瘉
   Future<void> _load() async {
     try {
-      // 基础资料用于页面显示（名�?头像/时间等）
+      // 鍩虹璧勬枡鐢ㄤ簬椤甸潰鏄剧ず锛堝悕瀛?澶村儚/鏃堕棿绛夛級
       final base = await _svc.getUserProfile();
       final map =
       base == null ? <String, dynamic>{} : Map<String, dynamic>.from(base);
@@ -5042,11 +5042,11 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
-  // �?仅查 user_verifications，一次性计�?_verified/_badge，并更新到状�?
+  // 鉁?浠呮煡 user_verifications锛屼竴娆℃€ц绠?_verified/_badge锛屽苟鏇存柊鍒扮姸鎬?
   Future<void> _reloadUserVerificationStatus() async {
     setState(() => _verifyLoading = true);
 
-    final row = await _verifySvc.fetchVerificationRow(); // 仅查 user_verifications
+    final row = await _verifySvc.fetchVerificationRow(); // 浠呮煡 user_verifications
     final user = Supabase.instance.client.auth.currentUser;
 
     final verified = vutils.computeIsVerified(verificationRow: row, user: user);
@@ -5443,7 +5443,7 @@ class _ProfilePageState extends State<ProfilePage>
                           ? avatarUrl
                           : null,
                       memberSince: memberSinceText,
-                      // �?头像叠加徽章：仅�?verified 时传入，否则�?none（未验证就不显示�?
+                      // 鉁?澶村儚鍙犲姞寰界珷锛氫粎鍦?verified 鏃朵紶鍏ワ紝鍚﹀垯浼?none锛堟湭楠岃瘉灏变笉鏄剧ず锛?
                       verificationType:
                       _verified ? _badge : vt.VerificationBadgeType.none,
                     ),
@@ -5471,16 +5471,16 @@ class _ProfilePageState extends State<ProfilePage>
                             ),
                             const SizedBox(height: 14),
 
-                            // �?认证入口：图�?文案绑定 _verified；点击进入验证并返回后【总是】刷�?
+                            // 鉁?璁よ瘉鍏ュ彛锛氬浘鏍?鏂囨缁戝畾 _verified锛涚偣鍑昏繘鍏ラ獙璇佸苟杩斿洖鍚庛€愭€绘槸銆戝埛鏂?
                             _VerificationTileCard(
                               isVerified: _verified,
-                              isLoading: _verifyLoading, // �?新增：刷新时给出反馈
+                              isLoading: _verifyLoading, // 鉁?鏂板锛氬埛鏂版椂缁欏嚭鍙嶉
                               onTap: () async {
                                 await Navigator.of(context).push<bool>(
                                   MaterialPageRoute(
                                       builder: (_) => const VerificationPage()),
                                 );
-                                // �?无条件刷新（避免验证页未 pop(true) 的情况）
+                                // 鉁?鏃犳潯浠跺埛鏂帮紙閬垮厤楠岃瘉椤垫湭 pop(true) 鐨勬儏鍐碉級
                                 await _reloadUserVerificationStatus();
                               },
                             ),
@@ -5565,7 +5565,7 @@ class _ProfilePageState extends State<ProfilePage>
                                     letterSpacing: 0.5)),
                             const SizedBox(height: 14),
 
-                            // �?新增：Account 入口（先到账户设置页，再含删除账号等�?
+                            // 鉁?鏂板锛欰ccount 鍏ュ彛锛堝厛鍒拌处鎴疯缃〉锛屽啀鍚垹闄よ处鍙风瓑锛?
                             _ProfileOptionEnhanced(
                               icon: Icons.manage_accounts,
                               title: 'Account',
@@ -5580,7 +5580,7 @@ class _ProfilePageState extends State<ProfilePage>
                             ),
                             const SizedBox(height: 14),
 
-                            // �?新增：隐私政策外�?
+                            // 鉁?鏂板锛氶殣绉佹斂绛栧閾?
                             _ProfileOptionEnhanced(
                               icon: Icons.privacy_tip_outlined,
                               title: 'Privacy Policy',
@@ -5591,7 +5591,7 @@ class _ProfilePageState extends State<ProfilePage>
                             ),
                             const SizedBox(height: 14),
 
-                            // �?新增：数据删除说明外�?
+                            // 鉁?鏂板锛氭暟鎹垹闄よ鏄庡閾?
                             _ProfileOptionEnhanced(
                               icon: Icons.delete_outline,
                               title: 'Data Deletion / How to delete my account',
@@ -5762,7 +5762,7 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  // 头像区域：右下角仅在 verified 时展示徽章（VerifiedAvatar 内部已处理）
+  // 澶村儚鍖哄煙锛氬彸涓嬭浠呭湪 verified 鏃跺睍绀哄窘绔狅紙VerifiedAvatar 鍐呴儴宸插鐞嗭級
   Widget _buildEnhancedHeader({
     required bool isGuest,
     required String name,
@@ -5808,7 +5808,7 @@ class _ProfilePageState extends State<ProfilePage>
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      // VerifiedAvatar 内部会根�?verificationType==none 决定是否展示角标
+                      // VerifiedAvatar 鍐呴儴浼氭牴鎹?verificationType==none 鍐冲畾鏄惁灞曠ず瑙掓爣
                       VerifiedAvatar(
                         avatarUrl: avatarUrl,
                         radius: 45,
@@ -5895,15 +5895,15 @@ class _ProfilePageState extends State<ProfilePage>
   }
 }
 
-/* ---------------- Verification Tile（精简版：�?�?+ chevron�?---------------- */
+/* ---------------- Verification Tile锛堢簿绠€鐗堬細鐏?缁?+ chevron锛?---------------- */
 class _VerificationTileCard extends StatelessWidget {
   final bool isVerified;
-  final bool isLoading; // �?新增：刷新中的可视反�?
+  final bool isLoading; // 鉁?鏂板锛氬埛鏂颁腑鐨勫彲瑙嗗弽棣?
   final VoidCallback? onTap;
 
   const _VerificationTileCard({
     required this.isVerified,
-    required this.isLoading, // �?新增
+    required this.isLoading, // 鉁?鏂板
     this.onTap,
   });
 
@@ -5917,7 +5917,7 @@ class _VerificationTileCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          // 与其它通用项保持一致的内边距与阴影
+          // 涓庡叾瀹冮€氱敤椤逛繚鎸佷竴鑷寸殑鍐呰竟璺濅笌闃村奖
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -5932,7 +5932,7 @@ class _VerificationTileCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // �?左侧与其它项完全一致的“彩色圆角方块�?
+              // 鉁?宸︿晶涓庡叾瀹冮」瀹屽叏涓€鑷寸殑鈥滃僵鑹插渾瑙掓柟鍧椻€?
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -5942,7 +5942,7 @@ class _VerificationTileCard extends StatelessWidget {
                 child: Icon(Icons.verified, color: badgeColor, size: 26),
               ),
               const SizedBox(width: 18),
-              // 文案
+              // 鏂囨
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -5958,7 +5958,7 @@ class _VerificationTileCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              // 右侧与其它项统一：加载圈/小三�?
+              // 鍙充晶涓庡叾瀹冮」缁熶竴锛氬姞杞藉湀/灏忎笁瑙?
               isLoading
                   ? const SizedBox(
                 width: 18,
@@ -5975,7 +5975,7 @@ class _VerificationTileCard extends StatelessWidget {
   }
 }
 
-/* ---------------- 通用列表项（其余项仍用你的卡片样式；不再渲染任何小徽章） ---------------- */
+/* ---------------- 閫氱敤鍒楄〃椤癸紙鍏朵綑椤逛粛鐢ㄤ綘鐨勫崱鐗囨牱寮忥紱涓嶅啀娓叉煋浠讳綍灏忓窘绔狅級 ---------------- */
 class _ProfileOptionEnhanced extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -6047,7 +6047,7 @@ class _ProfileOptionEnhanced extends StatelessWidget {
   }
 }
 
-/* ---------------- Guest 选项（简版） ---------------- */
+/* ---------------- Guest 閫夐」锛堢畝鐗堬級 ---------------- */
 class _GuestSimpleOptions extends StatelessWidget {
   const _GuestSimpleOptions();
 
@@ -6291,4 +6291,6 @@ class AboutPage extends StatelessWidget {
     );
   }
 }
+
+
 
