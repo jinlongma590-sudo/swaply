@@ -1,6 +1,6 @@
 // lib/pages/home_page.dart
 // 使用Facebook亮蓝色和Jiji风格的自动图片调整功能
-// 本次仅按要求“让出”状态栏空间：移除头部 Stack/Positioned，用 SafeArea(top:true) 包裹蓝色头部容器；不改颜色/样式。
+// 本次修改：蓝色头部使用“固定高度 + MediaQuery.of(context).padding.top 下移内容”，不再用 SafeArea(top:true)
 
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -38,6 +38,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   static const Color _primaryBlue = Color(0xFF1877F2); // Facebook亮蓝色
   static const Color _lightBlue = Color(0xFFE3F2FD);
   static const Color _successGreen = Color(0xFF4CAF50);
+
+  // 头部可视高度（请按你“修改前的视觉高度”微调）
+  static const double _kHeaderVisualHeightRaw = 180;
 
   static const List<String> _locations = [
     'All Zimbabwe',
@@ -328,8 +331,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             controller: _scrollController,
             padding: EdgeInsets.zero,
             children: [
-              // 头部区域（已用 SafeArea 让出状态栏）
-              _buildCompactHeader(),
+              // 头部蓝色条（固定可视高度 + 状态栏下移）
+              _buildBlueHeader(context),
+
+              // 白色内容卡（搜索 + 分类）
+              _buildSearchAndCategoriesCard(),
 
               // 趋势区域
               _buildTrendingSection(),
@@ -366,93 +372,97 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  /// 头部：单层蓝色背景 + SafeArea(top: true, bottom: false)
-  /// 不再使用 Stack/Positioned 顶部覆盖；不改任何颜色/样式
-  Widget _buildCompactHeader() {
+  /// 蓝色头部：固定高度 + 内容下移（用状态栏高度），不再使用 SafeArea
+  Widget _buildBlueHeader(BuildContext context) {
+    final double statusBar = MediaQuery.of(context).padding.top;
+    final double headerHeight = _kHeaderVisualHeightRaw.h;
+
     return Container(
-      color: _primaryBlue, // ⚠️ 保持原来的蓝色，不改颜色/渐变
-      child: SafeArea(
-        top: true, // ✅ 让出状态栏
-        bottom: false,
-        child: Padding(
-          padding: EdgeInsets.only(left: 16.w, right: 16.w, bottom: 12.h),
+      height: headerHeight, // 蓝色可见高度固定，不随状态栏变化
+      decoration: const BoxDecoration(
+        color: _primaryBlue, // 保持你的原蓝色/渐变，不改
+      ),
+      padding: EdgeInsets.only(
+        top: statusBar + 12.h, // 仅内容下移，替代 SafeArea(top:true)
+        left: 16.w,
+        right: 16.w,
+        bottom: 12.h,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 28.w,
+            height: 28.h,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(6.r),
+            ),
+            child: Center(
+              child: Text(
+                'S',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.bold,
+                  color: _primaryBlue,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: 10.w),
+          Text(
+            'Swaply',
+            style: TextStyle(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 白色内容卡（标题 + 搜索 + 分类）
+  Widget _buildSearchAndCategoriesCard() {
+    return Container(
+      color: _primaryBlue, // 保持顶区与白卡的衔接背景
+      child: Padding(
+        padding: EdgeInsets.only(left: 16.w, right: 16.w, bottom: 12.h),
+        child: Container(
+          margin: EdgeInsets.symmetric(horizontal: 0.w),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Logo 区域（无需手动预留状态栏高度，SafeArea 已处理）
+              // 标题
               Padding(
-                padding: EdgeInsets.only(top: 12.h, bottom: 16.h),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 28.w,
-                      height: 28.h,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(6.r),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'S',
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.bold,
-                            color: _primaryBlue,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 10.w),
-                    Text(
-                      'Swaply',
-                      style: TextStyle(
-                        fontSize: 18.sp,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
+                padding: EdgeInsets.only(left: 16.w, top: 12.h, bottom: 10.h),
+                child: Text(
+                  'What are you looking for?',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    color: _primaryBlue,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
 
-              // 白色内容卡（搜索 + 分类）
-              Container(
-                margin: EdgeInsets.symmetric(horizontal: 0.w),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding:
-                      EdgeInsets.only(left: 16.w, top: 12.h, bottom: 10.h),
-                      child: Text(
-                        'What are you looking for?',
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          color: _primaryBlue,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+              // 搜索区域
+              _buildCompactSearchSection(),
 
-                    // 紧凑搜索区域
-                    _buildCompactSearchSection(),
-
-                    // 紧凑分类网格
-                    _buildCompactCategoriesGrid(),
-                  ],
-                ),
-              ),
+              // 分类网格
+              _buildCompactCategoriesGrid(),
             ],
           ),
         ),
@@ -519,8 +529,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                         style: TextStyle(fontSize: 12.sp),
                         decoration: InputDecoration(
                           hintText: 'Search products...',
-                          hintStyle: TextStyle(
-                              color: Colors.grey[500], fontSize: 11.sp),
+                          hintStyle:
+                          TextStyle(color: Colors.grey[500], fontSize: 11.sp),
                           border: InputBorder.none,
                           isCollapsed: true,
                         ),
@@ -569,8 +579,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 color: isTrending ? Colors.orange.shade50 : Colors.grey[50],
                 borderRadius: BorderRadius.circular(10.r),
                 border: Border.all(
-                  color:
-                  isTrending ? Colors.orange.shade200 : Colors.transparent,
+                  color: isTrending ? Colors.orange.shade200 : Colors.transparent,
                   width: 1,
                 ),
                 boxShadow: [
@@ -678,8 +687,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         // 趋势内容
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 12.w),
-          child:
-          _loadingTrending ? _buildTrendingLoading() : _buildTrendingGrid(),
+          child: _loadingTrending ? _buildTrendingLoading() : _buildTrendingGrid(),
         ),
       ],
     );
@@ -1034,8 +1042,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           r['city']?.toString() ?? '',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              fontSize: 8.sp, color: Colors.grey[600]),
+                          style:
+                          TextStyle(fontSize: 8.sp, color: Colors.grey[600]),
                         ),
                       ),
                     ],
@@ -1115,8 +1123,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           r['city']?.toString() ?? '',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              fontSize: 8.sp, color: Colors.grey[600]),
+                          style:
+                          TextStyle(fontSize: 8.sp, color: Colors.grey[600]),
                         ),
                       ),
                     ],
@@ -1180,7 +1188,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         height: double.infinity,
         decoration: BoxDecoration(
           color: Colors.grey[200],
-          borderRadius: BorderRadius.vertical(top: Radius.circular(10.r)),
+          borderRadius:
+          BorderRadius.vertical(top: Radius.circular(10.r)),
         ),
         child: Center(
           child: Column(
@@ -1191,7 +1200,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               SizedBox(height: 2.h),
               Text(
                 'Image failed to load',
-                style: TextStyle(fontSize: 8.sp, color: Colors.grey[500]),
+                style:
+                TextStyle(fontSize: 8.sp, color: Colors.grey[500]),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -1210,7 +1220,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         height: double.infinity,
         decoration: BoxDecoration(
           color: Colors.grey[200],
-          borderRadius: BorderRadius.vertical(top: Radius.circular(10.r)),
+          borderRadius:
+          BorderRadius.vertical(top: Radius.circular(10.r)),
         ),
         child: Center(
           child: Column(
@@ -1221,7 +1232,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               SizedBox(height: 2.h),
               Text(
                 'Image not found',
-                style: TextStyle(fontSize: 8.sp, color: Colors.grey[500]),
+                style:
+                TextStyle(fontSize: 8.sp, color: Colors.grey[500]),
                 textAlign: TextAlign.center,
               ),
             ],
