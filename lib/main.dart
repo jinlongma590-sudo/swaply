@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart'; // ✅ 系统栏控制（仅显示，不改样式）
 
 // ====== 鏈」鐩唴鐨勪緷璧?======
 import 'package:swaply/auth/login_screen.dart';
@@ -385,8 +386,18 @@ void _showWelcomeGiftDialog() {
   );
 }
 
+// ✅ 仅显示系统栏：退出沉浸/贴边模式；不改样式
+Future<void> _showSystemBarsOnly() async {
+  await SystemChrome.setEnabledSystemUIMode(
+    SystemUiMode.manual,
+    overlays: const [SystemUiOverlay.top, SystemUiOverlay.bottom],
+  );
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // ✅ 只恢复系统栏显示（不设置任何 SystemUiOverlayStyle）
+  await _showSystemBarsOnly();
 
   // === 闈欓煶 Supabase 鐨?refresh session 鍣煶锛堜粎寮€鍙戞湡锛?===
       {
@@ -547,6 +558,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   backgroundColor: Color(0xFF2196F3),
                   foregroundColor: Colors.white,
                   elevation: 0,
+                  // ❌ 不再设置 systemOverlayStyle（遵循系统默认）
                 ),
                 elevatedButtonTheme: ElevatedButtonThemeData(
                   style: ElevatedButton.styleFrom(

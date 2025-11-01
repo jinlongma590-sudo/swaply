@@ -63,11 +63,13 @@
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
 
+    <!-- ✅ 改为不隐藏状态栏 -->
     <key>UIStatusBarHidden</key>
-    <true/>
-
-    <key>UIViewControllerBasedStatusBarAppearance</key>
     <false/>
+
+    <!-- ✅ 改为由页面控制状态栏样式 -->
+    <key>UIViewControllerBasedStatusBarAppearance</key>
+    <true/>
 
     <!-- 隐私权限说明 -->
     <key>NSCameraUsageDescription</key>
