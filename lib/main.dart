@@ -5192,7 +5192,7 @@ class _ProfilePageState extends State<ProfilePage>
   /// 鍩虹璧勬枡锛堟樉绀哄名/澶村儚/鏃堕棿绛夛級
   Map<String, dynamic>? _profile;
 
-  /// 鍙鐨?profiles 琛岋紙浠呭惈 verification_type 绛夛級
+  /// 鍙鐨?profiles 琛岋紙浠呭 contenir verification_type 绛夛級
   Map<String, dynamic>? _profileRow;
 
   final _svc = ProfileService();
