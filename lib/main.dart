@@ -5279,7 +5279,8 @@ class _ProfilePageState extends State<ProfilePage>
     await _verifySvc.fetchVerificationRow(); // 浠呮煡 user_verifications
     final user = Supabase.instance.client.auth.currentUser;
 
-    final verified = vutils.computeIsVerified(verificationRow: row, user: user);
+    final verified =
+    vutils.computeIsVerified(verificationRow: row, user: user);
     final badge = vutils.computeBadgeType(verificationRow: row, user: user);
 
     if (!mounted) return;
@@ -5303,7 +5304,8 @@ class _ProfilePageState extends State<ProfilePage>
     try {
       final p = await ProfileService.instance.getUserProfile();
       if (p != null) {
-        nameCtrl.text = (p['display_name'] ?? p['full_name'] ?? '').toString();
+        nameCtrl.text =
+            (p['display_name'] ?? p['full_name'] ?? '').toString();
         phoneCtrl.text = (p['phone'] ?? '').toString();
       }
     } catch (_) {}
@@ -5523,11 +5525,13 @@ class _ProfilePageState extends State<ProfilePage>
           fileOptions: const FileOptions(upsert: true));
 
       // 修复 Bug: 添加缓存破坏参数 (Cache-Busting)
-      final baseUrl = Supabase.instance.client.storage.from('avatars').getPublicUrl(path);
+      final baseUrl =
+      Supabase.instance.client.storage.from('avatars').getPublicUrl(path);
       final cacheBust = DateTime.now().millisecondsSinceEpoch;
       final publicUrlWithCacheBust = '$baseUrl?v=$cacheBust';
 
-      await ProfileService.instance.updateUserProfile(avatarUrl: publicUrlWithCacheBust);
+      await ProfileService.instance
+          .updateUserProfile(avatarUrl: publicUrlWithCacheBust);
 
       // 强制重新加载状态
       await _load();
@@ -5578,7 +5582,7 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   // -----------------------------------------------------
-  // 修正：重构头部，使用 Stack + Positioned.fill 解决断层和放大问题
+  // 修正：重构头部，固定高度 + 内消化状态栏；跨平台观感一致
   // 核心修复：使用固定 double 值，以保证跨平台尺寸稳定。
   // -----------------------------------------------------
   Widget _buildEnhancedHeader({
@@ -5589,148 +5593,158 @@ class _ProfilePageState extends State<ProfilePage>
     String? memberSince,
     vt.VerificationBadgeType verificationType = vt.VerificationBadgeType.none,
   }) {
-    // 渐变色值（原先的 Profile Page 颜色）
+    // 固定一个视觉高度；数值按你安卓那张图的观感定，280~320 都可以
+    const double kHeaderHeight = 300;
+
+    // iOS 刘海/状态栏高度，我们在固定高度里“内部消化”，而不是让 SafeArea 拉高整体
+    final double statusBar = MediaQuery.of(context).padding.top;
+
     const List<Color> gradientColors = [
       Color(0xFF2563EB),
       Color(0xFF3B82F6),
-      Color(0xFF60A5FA)
+      Color(0xFF60A5FA),
     ];
 
-    return Stack(
-      children: [
-        // 1. 背景层：Positioned.fill 延伸到状态栏上方，解决断层
-        Positioned.fill(
-          child: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: gradientColors,
-                stops: [0.0, 0.5, 1.0],
+    return SizedBox(
+      height: kHeaderHeight, // ← 关键：头部整体高度固定
+      child: Stack(
+        children: [
+          // 背景渐变铺满
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: gradientColors,
+                  stops: [0.0, 0.5, 1.0],
+                ),
               ),
             ),
           ),
-        ),
 
-        // 2. 内容层：使用 SafeArea 保护内容
-        SafeArea(
-          bottom: false,
-          // 修复居中问题: 添加 Center 包裹 Padding，确保内容在 Stack 中水平居中
-          child: Center(
-            child: Padding(
-              // 统一使用固定值 (基于 Android 视觉效果)
-              padding: const EdgeInsets.fromLTRB(24, 20, 24, 30),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                // 确保所有内容水平居中
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Hero(
-                    tag: 'profile_avatar',
-                    child: Container(
-                      padding: const EdgeInsets.all(4), // 固定值
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(colors: [
+          // 不再用 SafeArea(top:true)。我们自己加一个“内容内边距 = 状态栏 + 额外间距”
+          Padding(
+            // 如果没有刘海，取 20；有刘海，则 statusBar + 12，保证不被遮挡，但不拉高整体
+            padding: EdgeInsets.fromLTRB(
+                24, (statusBar > 0 ? statusBar + 12 : 20), 24, 30),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Hero(
+                  tag: 'profile_avatar',
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [
                           Colors.white.withOpacity(0.9),
-                          Colors.white.withOpacity(0.3)
-                        ]),
-                        boxShadow: const [
-                          BoxShadow(
-                              color: Color.fromRGBO(0, 0, 0, 0.2),
-                              blurRadius: 20, // 固定值
-                              offset: Offset(0, 10)) // 固定值
+                          Colors.white.withOpacity(0.3),
                         ],
                       ),
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          VerifiedAvatar(
-                            avatarUrl: avatarUrl,
-                            radius: 45, // 修复放大问题: 使用固定值
-                            verificationType: verificationType,
-                            onTap: !isGuest ? _uploadAvatarSimple : null,
-                            defaultIcon:
-                            isGuest ? Icons.person_outline : Icons.person,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16), // 固定值
-                  Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22.0, // 微调字体，使用固定值
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                      shadows: [
-                        Shadow(
-                            offset: Offset(0, 2),
-                            blurRadius: 4,
-                            color: Color(0x40000000))
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color.fromRGBO(0, 0, 0, 0.2),
+                          blurRadius: 20,
+                          offset: Offset(0, 10),
+                        ),
                       ],
                     ),
+                    child: VerifiedAvatar(
+                      avatarUrl: avatarUrl,
+                      radius: 45, // 固定值，跨平台一致
+                      verificationType: verificationType,
+                      onTap: !isGuest ? _uploadAvatarSimple : null,
+                      defaultIcon:
+                      isGuest ? Icons.person_outline : Icons.person,
+                    ),
                   ),
-                  const SizedBox(height: 8), // 固定值
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22.0,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                    shadows: [
+                      Shadow(
+                        offset: Offset(0, 2),
+                        blurRadius: 4,
+                        color: Color(0x40000000),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                        color: Colors.white.withOpacity(0.3), width: 1),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        email.contains('@') ? Icons.email : Icons.phone,
+                        size: 14,
+                        color: Colors.white.withOpacity(0.95),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        email,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.95),
+                          fontSize: 13.0,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (!isGuest && memberSince != null) ...[
+                  const SizedBox(height: 10),
                   Container(
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // 固定值
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(24), // 固定值
-                      border: Border.all(
-                          color: Colors.white.withOpacity(0.3), width: 1), // 固定值
+                      color: Colors.black.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(email.contains('@') ? Icons.email : Icons.phone,
-                            size: 14, color: Colors.white.withOpacity(0.95)), // 固定值
-                        const SizedBox(width: 6), // 固定值
-                        // 修复 Bug: 直接从 profile 数据显示，防止解析错误
-                        Text(email,
-                            style: TextStyle(
-                                color: Colors.white.withOpacity(0.95),
-                                fontSize: 13.0, // 固定值
-                                fontWeight: FontWeight.w500)),
+                        const Icon(Icons.calendar_today_outlined,
+                            size: 12, color: Colors.white),
+                        const SizedBox(width: 4),
+                        // 文本保持原有拼接逻辑
+                        Text(
+                          'Member since $memberSince',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11.0,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                  if (!isGuest && memberSince != null) ...[
-                    const SizedBox(height: 10), // 固定值
-                    Container(
-                      padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6), // 固定值
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(16), // 固定值
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.calendar_today_outlined,
-                              size: 12, color: Colors.white), // 固定值
-                          const SizedBox(width: 4), // 固定值
-                          Text('Member since $memberSince',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11.0, // 固定值
-                                  fontWeight: FontWeight.w500)),
-                        ],
-                      ),
-                    ),
-                  ],
                 ],
-              ),
+              ],
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -5795,7 +5809,8 @@ class _ProfilePageState extends State<ProfilePage>
     final fullName = (_profile?['full_name'] ?? 'User').toString();
     final phone = (_profile?['phone'] ?? '').toString();
     // 修复 Bug: 确保 phone/email 显示逻辑正确
-    final displayContact = phone.isNotEmpty ? phone : (_profile?['email'] ?? '').toString();
+    final displayContact =
+    phone.isNotEmpty ? phone : (_profile?['email'] ?? '').toString();
     final avatarUrl = (_profile?['avatar_url'] ?? '') as String?;
     final memberSince = _profile?['created_at']?.toString();
     String? memberSinceText;
@@ -5822,7 +5837,8 @@ class _ProfilePageState extends State<ProfilePage>
                     isGuest: false,
                     name: fullName,
                     email: displayContact, // 使用修正后的联系方式
-                    avatarUrl: (avatarUrl != null && avatarUrl.isNotEmpty)
+                    avatarUrl:
+                    (avatarUrl != null && avatarUrl.isNotEmpty)
                         ? avatarUrl
                         : null,
                     memberSince: memberSinceText,
@@ -6537,7 +6553,8 @@ class AboutPage extends StatelessWidget {
                       size: 18, color: Colors.grey[600]), // 固定值
                   const SizedBox(width: 5), // 固定值
                   Text('2024 Swaply. All rights reserved.',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600])), // 固定值
+                      style:
+                      TextStyle(fontSize: 14, color: Colors.grey[600])), // 固定值
                 ],
               ),
             ),
