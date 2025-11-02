@@ -5192,7 +5192,7 @@ class _ProfilePageState extends State<ProfilePage>
   /// 鍩虹璧勬枡锛堟樉绀哄名/澶村儚/鏃堕棿绛夛級
   Map<String, dynamic>? _profile;
 
-  /// 鍙鐨?profiles 琛岋紙浠呭 contenir verification_type 绛夛級
+  /// 鍙鐨?profiles 琛岋紙浠呭惈 verification_type 绛夛級
   Map<String, dynamic>? _profileRow;
 
   final _svc = ProfileService();
@@ -5589,7 +5589,7 @@ class _ProfilePageState extends State<ProfilePage>
     String? memberSince,
     vt.VerificationBadgeType verificationType = vt.VerificationBadgeType.none,
   }) {
-    // 渐变色值（原先的 ProfilePage 颜色）
+    // 渐变色值（原先的 Profile Page 颜色）
     const List<Color> gradientColors = [
       Color(0xFF2563EB),
       Color(0xFF3B82F6),
@@ -6167,15 +6167,15 @@ class _VerificationTileCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: Container(
           // 涓庡叾瀹冮項缁熶竴鐨勫昂瀵?
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(18), // 固定值
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 12,
-                offset: const Offset(0, 2),
+            borderRadius: BorderRadius.circular(16), // 固定值
+            boxShadow: const [
+              BoxShadow( // 修复：移除 const 以外的动态 opacity/color
+                color: Color.fromRGBO(0, 0, 0, 0.04), // 转换为 const color
+                blurRadius: 12, // 固定值
+                offset: Offset(0, 2), // 固定值
               ),
             ],
           ),
@@ -6183,45 +6183,45 @@ class _VerificationTileCard extends StatelessWidget {
             children: [
               // 鉁?宸︿晶涓庡叾瀹冮項瀹屽叏涓€鑷寸殑鈥滃僵鑹插渾瑙掓柟鍧椻€?
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(12), // 固定值
                 decoration: BoxDecoration(
                   color: badgeColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(14), // 固定值
                 ),
-                child: Icon(Icons.verified, color: badgeColor, size: 26),
+                child: const Icon(Icons.verified, color: Colors.green, size: 26), // 修复：使用 Icons.verified
               ),
-              const SizedBox(width: 18),
+              const SizedBox(width: 18), // 固定值
               // 鏂囨
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(isVerified ? 'Verified' : 'Verification', // 修复 const 报错
+                    Text(isVerified ? 'Verified' : 'Verification', // 修复 const 报错，移除 const
                         style: const TextStyle(
                           // 修复放大问题: 使用固定值 17.0
                             fontSize: 17.0,
                             fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 3), // 固定值
                     Text(
                         isVerified
                             ? 'Status: Verified'
                             : 'Status: Not verified',
                         style:
                         // 修复放大问题: 使用固定值 14.0
-                        TextStyle(fontSize: 14.0, color: Colors.grey[600])),
+                        TextStyle(fontSize: 14.0, color: Colors.grey[600])), // 固定值
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 10), // 固定值
               // 鍙充晶涓庡叾瀹冮項缁熶竴锛氬姞杞藉湀/灏忎笁瑙?
               isLoading
                   ? const SizedBox(
-                width: 18,
-                height: 18,
+                width: 18, // 固定值
+                height: 18, // 固定值
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
                   : Icon(Icons.arrow_forward_ios,
-                  size: 18, color: Colors.grey[400]),
+                  size: 18, color: Colors.grey[400]), // 固定值
             ],
           ),
         ),
@@ -6254,27 +6254,27 @@ class _ProfileOptionEnhanced extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(18), // 固定值
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 2))
+            borderRadius: BorderRadius.circular(16), // 固定值
+            boxShadow: const [
+              BoxShadow( // 修复：移除 const 以外的动态 opacity/color
+                  color: Color.fromRGBO(0, 0, 0, 0.04), // 转换为 const color
+                  blurRadius: 12, // 固定值
+                  offset: Offset(0, 2)) // 固定值
             ],
           ),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(12), // 固定值
                 decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(14)),
-                child: Icon(icon, color: color, size: 26),
+                    borderRadius: BorderRadius.circular(14)), // 固定值
+                child: Icon(icon, color: color, size: 26), // 固定值
               ),
-              const SizedBox(width: 18),
+              const SizedBox(width: 18), // 固定值
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -6285,17 +6285,17 @@ class _ProfileOptionEnhanced extends StatelessWidget {
                             fontSize: 17.0,
                             fontWeight: FontWeight.w600)),
                     if (subtitle != null) ...[
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 3), // 固定值
                       Text(subtitle!,
                           style:
                           // 修复放大问题: 使用固定值 14.0
-                          TextStyle(fontSize: 14.0, color: Colors.grey[600])),
+                          TextStyle(fontSize: 14.0, color: Colors.grey[600])), // 固定值
                     ],
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
-              Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey[400]),
+              const SizedBox(width: 10), // 固定值
+              Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey[400]), // 固定值
             ],
           ),
         ),
@@ -6321,7 +6321,7 @@ class _GuestSimpleOptions extends StatelessWidget {
               context, MaterialPageRoute(builder: (_) => HelpSupportPage())),
         ),
         // 修复 Column 布局错误
-        const SizedBox(height: 14),
+        const SizedBox(height: 14), // 固定值
         _ProfileOptionEnhanced(
           icon: Icons.info_outline_rounded,
           title: l10n.about,
@@ -6348,23 +6348,23 @@ class HelpSupportPage extends StatelessWidget {
         elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20), // 固定值
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(20), // 固定值
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [Color(0xFF60A5FA), Color(0xFF3B82F6)]),
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
+                borderRadius: BorderRadius.circular(18), // 固定值
+                boxShadow: const [
                   BoxShadow(
-                      color: Colors.blue.withOpacity(0.3),
-                      blurRadius: 24,
-                      offset: const Offset(0, 12))
+                      color: Color.fromRGBO(37, 99, 235, 0.3),
+                      blurRadius: 24, // 固定值
+                      offset: Offset(0, 12)) // 固定值
                 ],
               ),
               child: Column(
@@ -6373,22 +6373,22 @@ class HelpSupportPage extends StatelessWidget {
                   const Text('Need Help?',
                       style: TextStyle(
                           color: Colors.white,
-                          fontSize: 20,
+                          fontSize: 20, // 固定值
                           fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 10), // 固定值
                   Text('Our support team is here to help you 24/7',
                       style: TextStyle(
-                          color: Colors.white.withOpacity(0.9), fontSize: 15)),
+                          color: Colors.white.withOpacity(0.9), fontSize: 15)), // 固定值
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 24), // 固定值
             Text('Contact Information',
                 style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 18, // 固定值
                     fontWeight: FontWeight.w700,
                     color: Colors.grey[800])),
-            const SizedBox(height: 14),
+            const SizedBox(height: 14), // 固定值
             _buildContactCard(
               icon: Icons.email_outlined,
               title: 'Email Support',
@@ -6397,7 +6397,7 @@ class HelpSupportPage extends StatelessWidget {
               onTap: () =>
                   launchUrl(Uri(scheme: 'mailto', path: 'swaply@swaply.cc')),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 12), // 固定值
             _buildContactCard(
               icon: Icons.language,
               title: 'Website',
@@ -6422,47 +6422,47 @@ class HelpSupportPage extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(14), // 固定值
         child: Container(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(18), // 固定值
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
+            borderRadius: BorderRadius.circular(14), // 固定值
+            boxShadow: const [
               BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2))
+                  color: Color.fromRGBO(0, 0, 0, 0.04),
+                  blurRadius: 10, // 固定值
+                  offset: Offset(0, 2)) // 固定值
             ],
           ),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(12), // 固定值
                 decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12)),
-                child: Icon(icon, color: color, size: 26),
+                    borderRadius: BorderRadius.circular(12)), // 固定值
+                child: Icon(icon, color: color, size: 26), // 固定值
               ),
-              const SizedBox(width: 18),
+              const SizedBox(width: 18), // 固定值
               Expanded(
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(title,
                           style: TextStyle(
-                              fontSize: 16,
+                              fontSize: 16, // 固定值
                               fontWeight: FontWeight.w600,
                               color: Colors.grey[800])),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 3), // 固定值
                       Text(subtitle,
                           style:
-                          TextStyle(fontSize: 14, color: Colors.grey[600])),
+                          TextStyle(fontSize: 14, color: Colors.grey[600])), // 固定值
                     ]),
               ),
               if (onTap != null)
                 Icon(Icons.arrow_forward_ios,
-                    size: 16, color: Colors.grey[400]),
+                    size: 16, color: Colors.grey[400]), // 固定值
             ],
           ),
         ),
@@ -6483,19 +6483,19 @@ class AboutPage extends StatelessWidget {
         elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20), // 固定值
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(20), // 固定值
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
+                borderRadius: BorderRadius.circular(16), // 固定值
+                boxShadow: const [
                   BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4))
+                      color: Color.fromRGBO(0, 0, 0, 0.05),
+                      blurRadius: 12, // 固定值
+                      offset: Offset(0, 4)) // 固定值
                 ],
               ),
               child: Column(
@@ -6503,41 +6503,41 @@ class AboutPage extends StatelessWidget {
                   Text('Trade What You Have\nFor What You Need',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 20, // 固定值
                           fontWeight: FontWeight.w700,
                           color: Color(0xFF2F2F2F),
                           height: 1.3)),
-                  SizedBox(height: 14),
+                  SizedBox(height: 14), // 固定值
                   Text(
                     'Swaply is your community marketplace for trading items you no longer need for things you actually want.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                        fontSize: 15, color: Color(0xFF6B7280), height: 1.5),
+                        fontSize: 15, color: Color(0xFF6B7280), height: 1.5), // 固定值
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 24), // 固定值
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(20), // 固定值
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
+                borderRadius: BorderRadius.circular(16), // 固定值
+                boxShadow: const [
                   BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4))
+                      color: Color.fromRGBO(0, 0, 0, 0.05),
+                      blurRadius: 12, // 固定值
+                      offset: Offset(0, 4)) // 固定值
                 ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.copyright_rounded,
-                      size: 18, color: Colors.grey[600]),
-                  const SizedBox(width: 5),
+                      size: 18, color: Colors.grey[600]), // 固定值
+                  const SizedBox(width: 5), // 固定值
                   Text('2024 Swaply. All rights reserved.',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600])), // 固定值
                 ],
               ),
             ),
