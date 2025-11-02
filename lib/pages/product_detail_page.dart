@@ -26,6 +26,9 @@ import 'package:swaply/services/verification_guard.dart'; // ✅ 关键操作守
 
 import 'package:swaply/widgets/verified_avatar.dart';
 
+// ✅ 新增：统一分享工具（iOS/Android 平台分支 + 商店/网页回退）
+import 'package:swaply/utils/share_utils.dart';
+
 // ✅ 新方案：RPC 读取卖家认证（公开）
 import 'package:swaply/services/email_verification_service.dart';
 
@@ -52,7 +55,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   // 顶部右侧按钮 - 再放大
   static const double _topIconSize = 32; // ← 放大
   static const BoxConstraints _topIconConstraints =
-      BoxConstraints(minWidth: 56, minHeight: 56); // ← 热区更大
+  BoxConstraints(minWidth: 56, minHeight: 56); // ← 热区更大
 
   late PageController _pageController;
   late AnimationController _animationController;
@@ -77,7 +80,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   // ========= 👇 新增：举报 / 屏蔽所需状态 =========
   String? _sellerId;
   BlockStatus _blockStatus =
-      const BlockStatus(iBlockedOther: false, otherBlockedMe: false);
+  const BlockStatus(iBlockedOther: false, otherBlockedMe: false);
   bool _loadingBlock = false;
   // ========================================
 
@@ -134,10 +137,10 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         if (args is Map) {
           final map = Map<String, dynamic>.from(args.cast<dynamic, dynamic>());
           idFromArgs = (map['id'] ??
-                  map['listing_id'] ??
-                  map['listingId'] ??
-                  (map['listing']?['id']) ??
-                  (map['data']?['id']))
+              map['listing_id'] ??
+              map['listingId'] ??
+              (map['listing']?['id']) ??
+              (map['data']?['id']))
               ?.toString();
           dataFromArgs = map['data'] is Map
               ? Map<String, dynamic>.from((map['data']))
@@ -241,7 +244,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
 
     try {
       final row =
-          await EmailVerificationService().fetchPublicVerification(sellerId);
+      await EmailVerificationService().fetchPublicVerification(sellerId);
 
       // 调试日志
       // ignore: avoid_print
@@ -406,7 +409,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       final row = await Supabase.instance.client
           .from('listings')
           .select(
-              'id, user_id, phone, title, images, image_urls, city, price, description, created_at, views_count')
+          'id, user_id, phone, title, images, image_urls, city, price, description, created_at, views_count')
           .eq('id', dynamicId)
           .maybeSingle();
 
@@ -416,8 +419,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
 
       bool isBlank(dynamic v) =>
           v == null ||
-          (v is String && v.trim().isEmpty) ||
-          (v is num && v.isNaN);
+              (v is String && v.trim().isEmpty) ||
+              (v is num && v.isNaN);
 
       bool needLoadSeller = false;
 
@@ -514,7 +517,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
         shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
         margin: EdgeInsets.all(12.w),
       ),
     );
@@ -539,7 +542,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       final confirm = await _confirmDialog(
         title: 'Unblock to continue?',
         message:
-            'You have blocked this seller. Do you want to unblock and continue?',
+        'You have blocked this seller. Do you want to unblock and continue?',
         confirmText: 'Unblock',
       );
       if (confirm != true) return false;
@@ -625,7 +628,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
 
     try {
       final connectionTest =
-          await DualFavoritesService.testConnection(userId: user.id);
+      await DualFavoritesService.testConnection(userId: user.id);
       if (!connectionTest) {
         throw Exception('Database connection failed');
       }
@@ -692,9 +695,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     if (!await _ensureAllowedForContact(actionName: 'make a call')) return;
 
     final rawPhone =
-        product['sellerPhone']?.toString().trim().isNotEmpty == true
-            ? product['sellerPhone'].toString()
-            : (product['phone']?.toString() ?? '');
+    product['sellerPhone']?.toString().trim().isNotEmpty == true
+        ? product['sellerPhone'].toString()
+        : (product['phone']?.toString() ?? '');
 
     if (rawPhone.isEmpty) {
       _toast('Phone number not available');
@@ -762,7 +765,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     // ② 不再跳转 wa.me / api.whatsapp.com —— 直接引导安装
     final market = Uri.parse('market://details?id=com.whatsapp');
     final playWeb =
-        Uri.parse('https://play.google.com/store/apps/details?id=com.whatsapp');
+    Uri.parse('https://play.google.com/store/apps/details?id=com.whatsapp');
     if (await _try(market) || await _try(playWeb)) return;
 
     // ③ 兜底：复制消息
@@ -880,10 +883,10 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                   runSpacing: 8.h,
                   children: quickOffers.map((offer) {
                     final percentage =
-                        price > 0 ? ((offer / price) * 100).round() : 0;
+                    price > 0 ? ((offer / price) * 100).round() : 0;
                     return InkWell(
                       onTap: () =>
-                          offerController.text = offer.toStringAsFixed(0),
+                      offerController.text = offer.toStringAsFixed(0),
                       borderRadius: BorderRadius.circular(8.r),
                       child: Container(
                         padding: EdgeInsets.symmetric(
@@ -923,7 +926,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                 decoration: InputDecoration(
                   prefixText: r'$ ',
                   prefixStyle:
-                      TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
+                  TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
                   hintText: 'Enter amount',
                   hintStyle: TextStyle(
                       color: Colors.grey[400],
@@ -944,7 +947,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     borderSide: BorderSide(color: _primaryBlue, width: 2.w),
                   ),
                   contentPadding:
-                      EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+                  EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
                 ),
               ),
               SizedBox(height: 12.h),
@@ -961,7 +964,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                 decoration: InputDecoration(
                   hintText: 'Add a message to the seller...',
                   hintStyle:
-                      TextStyle(color: Colors.grey[400], fontSize: 11.sp),
+                  TextStyle(color: Colors.grey[400], fontSize: 11.sp),
                   filled: true,
                   fillColor: Colors.grey[50],
                   border: OutlineInputBorder(
@@ -977,7 +980,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     borderSide: BorderSide(color: _primaryBlue, width: 2.w),
                   ),
                   contentPadding:
-                      EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                  EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
                 ),
               ),
               SizedBox(height: 16.h),
@@ -1001,42 +1004,42 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     onTap: _isOfferLoading
                         ? null
                         : () async {
-                            final offerText = offerController.text.trim();
-                            if (offerText.isEmpty) {
-                              _toast('Please enter offer amount');
-                              return;
-                            }
-                            final amount = double.tryParse(offerText);
-                            if (amount == null || amount <= 0) {
-                              _toast('Please enter a valid offer amount');
-                              return;
-                            }
-                            Navigator.pop(context);
-                            await _recordInquiry('offer');
-                            await _sendOffer(
-                              amount,
-                              messageController.text.trim().isEmpty
-                                  ? null
-                                  : messageController.text.trim(),
-                            );
-                          },
+                      final offerText = offerController.text.trim();
+                      if (offerText.isEmpty) {
+                        _toast('Please enter offer amount');
+                        return;
+                      }
+                      final amount = double.tryParse(offerText);
+                      if (amount == null || amount <= 0) {
+                        _toast('Please enter a valid offer amount');
+                        return;
+                      }
+                      Navigator.pop(context);
+                      await _recordInquiry('offer');
+                      await _sendOffer(
+                        amount,
+                        messageController.text.trim().isEmpty
+                            ? null
+                            : messageController.text.trim(),
+                      );
+                    },
                     borderRadius: BorderRadius.circular(8.r),
                     child: Center(
                       child: _isOfferLoading
                           ? SizedBox(
-                              width: 16.w,
-                              height: 16.h,
-                              child: const CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
+                        width: 16.w,
+                        height: 16.h,
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor:
+                          AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
                           : Text('Send Offer',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.bold)),
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ),
@@ -1188,7 +1191,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
               text: 'Share to WhatsApp',
               onTap: () async {
                 Navigator.pop(ctx);
-                await _openWhatsAppShare(text);
+                // ✅ 使用 ShareUtils 统一处理（iOS/Android + 商店回退）
+                await ShareUtils.toWhatsApp(text: text);
               },
             ),
             divider,
@@ -1198,7 +1202,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
               text: 'Share to Telegram',
               onTap: () async {
                 Navigator.pop(ctx);
-                await _openTelegramShare(url: url, text: text);
+                await ShareUtils.toTelegram(url: url, text: text);
               },
             ),
             divider,
@@ -1208,7 +1212,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
               text: 'Share to Facebook',
               onTap: () async {
                 Navigator.pop(ctx);
-                await _openFacebookShare(url);
+                await ShareUtils.toFacebook(url: url);
               },
             ),
             SizedBox(height: MediaQuery.of(ctx).padding.bottom + 6),
@@ -1235,11 +1239,11 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       subtitle: (subtitle == null)
           ? null
           : Text(
-              subtitle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: Colors.black.withOpacity(.45)),
-            ),
+        subtitle,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(color: Colors.black.withOpacity(.45)),
+      ),
       minLeadingWidth: 24,
       horizontalTitleGap: 12,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1247,69 +1251,22 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     );
   }
 
-  // 目标 App 定向分享（未安装 -> 跳商店；仍不可用 -> 复制链接并提示）
+  // —— 以下三个方法保留为“薄封装”，实质调用 ShareUtils，保持你原有调用点不变 —— //
   Future<void> _openWhatsAppShare(String text) async {
-    final deep =
-        Uri(scheme: 'whatsapp', host: 'send', queryParameters: {'text': text});
-
-    if (await canLaunchUrl(deep)) {
-      await launchUrl(deep, mode: LaunchMode.externalApplication);
-      return;
-    }
-
-    // 不再使用 wa.me 回退，改为直接引导商店
-    final market = Uri.parse('market://details?id=com.whatsapp');
-    final playWeb =
-        Uri.parse('https://play.google.com/store/apps/details?id=com.whatsapp');
-    if (await canLaunchUrl(market)) {
-      await launchUrl(market, mode: LaunchMode.externalApplication);
-      return;
-    }
-    if (await canLaunchUrl(playWeb)) {
-      await launchUrl(playWeb, mode: LaunchMode.externalApplication);
-      return;
-    }
-
-    // 最后兜底：只复制链接
-    final url = _buildSharePayload()['url']!;
-    await Clipboard.setData(ClipboardData(text: url));
-    _toast('WhatsApp not installed. Link copied.');
+    await ShareUtils.toWhatsApp(text: text);
   }
 
   Future<void> _openTelegramShare({
     required String url,
     required String text,
   }) async {
-    final tg = Uri(
-      scheme: 'tg',
-      host: 'msg_url',
-      queryParameters: {'url': url, 'text': text.replaceAll('\n', ' ')},
-    );
-    if (await canLaunchUrl(tg)) {
-      await launchUrl(tg, mode: LaunchMode.externalApplication);
-    } else {
-      await Clipboard.setData(ClipboardData(text: url));
-      _toast('Telegram not installed. Link copied.');
-    }
+    await ShareUtils.toTelegram(url: url, text: text);
   }
 
   Future<void> _openFacebookShare(String url) async {
-    final fbDeep = Uri(
-      scheme: 'fb',
-      host: 'facewebmodal',
-      path: '/f',
-      queryParameters: {
-        'href':
-            'https://www.facebook.com/sharer/sharer.php?u=${Uri.encodeComponent(url)}'
-      },
-    );
-    if (await canLaunchUrl(fbDeep)) {
-      await launchUrl(fbDeep, mode: LaunchMode.externalApplication);
-      return;
-    }
-    await Clipboard.setData(ClipboardData(text: url));
-    _toast('Facebook not installed. Link copied.');
+    await ShareUtils.toFacebook(url: url);
   }
+  // —— 封装结束 —— //
 
   // ================== UI ==================
 
@@ -1343,27 +1300,27 @@ class _ProductDetailPageState extends State<ProductDetailPage>
               ),
               _isFavoritesLoading
                   ? Padding(
-                      padding: const EdgeInsets.all(10),
-                      child: SizedBox(
-                        width: _topIconSize,
-                        height: _topIconSize,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    )
+                padding: const EdgeInsets.all(10),
+                child: SizedBox(
+                  width: _topIconSize,
+                  height: _topIconSize,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              )
                   : IconButton(
-                      icon: Icon(
-                        _isInFavorites ? Icons.favorite : Icons.favorite_border,
-                        color: _isInFavorites ? Colors.red : Colors.grey[800],
-                      ),
-                      iconSize: _topIconSize, // 放大
-                      onPressed: _toggleFavorites,
-                      tooltip: _isInFavorites ? 'Unfavorite' : 'Favorite',
-                      constraints: _topIconConstraints,
-                      padding: const EdgeInsets.all(10),
-                    ),
+                icon: Icon(
+                  _isInFavorites ? Icons.favorite : Icons.favorite_border,
+                  color: _isInFavorites ? Colors.red : Colors.grey[800],
+                ),
+                iconSize: _topIconSize, // 放大
+                onPressed: _toggleFavorites,
+                tooltip: _isInFavorites ? 'Unfavorite' : 'Favorite',
+                constraints: _topIconConstraints,
+                padding: const EdgeInsets.all(10),
+              ),
               // ========= 👇 新增：更多菜单（举报 / 屏蔽） =========
               if (_sellerId != null)
                 PopupMenuButton<String>(
@@ -1430,7 +1387,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     final isOtherBlockedMe = _blockStatus.otherBlockedMe;
     final color = isOtherBlockedMe ? Colors.red.shade50 : Colors.orange.shade50;
     final textColor =
-        isOtherBlockedMe ? Colors.red.shade700 : Colors.orange.shade700;
+    isOtherBlockedMe ? Colors.red.shade700 : Colors.orange.shade700;
     final icon = isOtherBlockedMe ? Icons.block : Icons.do_not_disturb_alt;
 
     final msg = isOtherBlockedMe
@@ -1566,7 +1523,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                 child: ElevatedButton.icon(
                   onPressed: _showMakeOfferDialog, // ✅ 进入弹窗前守卫（含屏蔽）
                   icon:
-                      Icon(Icons.local_offer, size: 16.sp, color: Colors.white),
+                  Icon(Icons.local_offer, size: 16.sp, color: Colors.white),
                   label: Text('Offer',
                       style: TextStyle(
                           fontSize: 13.sp, fontWeight: FontWeight.w600)),
@@ -1792,7 +1749,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                       tag: 'seller_avatar_${sellerInfo?['id'] ?? 'unknown'}',
                       child: VerifiedAvatar(
                         avatarUrl:
-                            (avatarUrl?.isNotEmpty == true) ? avatarUrl : null,
+                        (avatarUrl?.isNotEmpty == true) ? avatarUrl : null,
                         radius: 18.r,
                         verificationType: _sellerBadge, // ✅ 使用公开 RPC 结果
                         defaultIcon: Icons.person,
@@ -1903,27 +1860,27 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                 tag: 'product_image_$index',
                 child: imageUrl.startsWith('http')
                     ? Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: Colors.grey[100],
-                          child: Center(
-                            child: Icon(Icons.broken_image,
-                                size: 40.sp, color: Colors.grey[400]),
-                          ),
-                        ),
-                      )
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: Colors.grey[100],
+                    child: Center(
+                      child: Icon(Icons.broken_image,
+                          size: 40.sp, color: Colors.grey[400]),
+                    ),
+                  ),
+                )
                     : Image.asset(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          color: Colors.grey[100],
-                          child: Center(
-                            child: Icon(Icons.broken_image,
-                                size: 40.sp, color: Colors.grey[400]),
-                          ),
-                        ),
-                      ),
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: Colors.grey[100],
+                    child: Center(
+                      child: Icon(Icons.broken_image,
+                          size: 40.sp, color: Colors.grey[400]),
+                    ),
+                  ),
+                ),
               ),
             );
           },
@@ -1956,7 +1913,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
                 productImages.length > 5 ? 5 : productImages.length,
-                (index) {
+                    (index) {
                   int actualIndex = index;
                   if (productImages.length > 5) {
                     if (_currentImageIndex < 2) {
@@ -2024,7 +1981,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     : AssetImage(imageUrl) as ImageProvider,
                 initialScale: PhotoViewComputedScale.contained,
                 heroAttributes:
-                    PhotoViewHeroAttributes(tag: 'product_image_$index'),
+                PhotoViewHeroAttributes(tag: 'product_image_$index'),
               );
             },
             itemCount: productImages.length,

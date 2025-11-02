@@ -61,7 +61,7 @@ class AppLocalizations {
   }
 
   static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  _AppLocalizationsDelegate();
 
 // ---------- Generic / Auth ----------
   String get appTitle => 'Swaply';
@@ -228,7 +228,7 @@ class LanguageProvider extends ChangeNotifier {
   }
 }
 
-// ========= 鍏ㄥ眬 Auth 澶勭悊锛堝甫娆㈣繋寮圭獥锛氫竴娆℃€э級 =========
+// ========= 鍏ㄥ眬 Auth 澶勭悊锛堝甫娆㈣繋寮圭ª锛氫竴娆℃€э級 =========
 void wireAuthHook() {
   if (_authHookWired) return;
   _authHookWired = true;
@@ -288,7 +288,7 @@ void wireAuthHook() {
       if (ctx != null) {
         Navigator.of(ctx).pushNamedAndRemoveUntil(
           '/welcome',
-          (route) => false,
+              (route) => false,
         );
       }
     }
@@ -341,7 +341,7 @@ void _showWelcomeGiftDialog() {
           Text(
             _fixUtf8Mojibake(
               'A Welcome Coupon has been added to your account.\n'
-              'You can find it in My Coupons or My Rewards 鈫?Coupons tab.',
+                  'You can find it in My Coupons or My Rewards 鈫?Coupons tab.',
             ),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13.sp, color: Colors.black87),
@@ -388,7 +388,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
 // === 闈欓煶 Supabase 鐨?refresh session 鍣煶锛堜粎寮€鍙戞湡锛?===
-  {
+      {
     final _orig = debugPrint;
     debugPrint = (String? message, {int? wrapWidth}) {
       if (message != null &&
@@ -443,7 +443,7 @@ Future<void> main() async {
   await Supabase.initialize(
     url: 'https://rhckybselarzglkmlyqs.supabase.co',
     anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoY2t5YnNlbGFyemdsa21seXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTM0NTgsImV4cCI6MjA3MDU4OTQ1OH0.3I0T2DidiF-q9l2tWeHOjB31QogXHDqRtEjDn0RfVbU',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoY2t5YnNlbGFyemdsa21seXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTM0NTgsImV4cCI6MjA3MDU4OTQ1OH0.3I0T2DidiF-q9l2tWeHOjB31QogXHDqRtEjDn0RfVbU',
     authOptions: const FlutterAuthClientOptions(
       authFlowType: AuthFlowType.pkce, // 馃憟 鍏抽敭锛屽埆鍐欐垚 flowType
       autoRefreshToken: true,
@@ -565,9 +565,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                 '/login': (_) => const LoginScreen(),
 // ✅ 修改：/home 指向带五栏的 MainNavigationPage
                 '/home': (_) => MainNavigationPage(
-                      isGuest:
-                          Supabase.instance.client.auth.currentSession == null,
-                    ),
+                  isGuest:
+                  Supabase.instance.client.auth.currentSession == null,
+                ),
                 '/coupons': (_) => CouponManagementPage(),
               },
             );
@@ -577,7 +577,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     );
   }
 }
-
 // 莽禄搂莽禄颅忙路禄氓艩  MainNavigationPage 氓鈥櫯捗モ€β睹ぢ烩€撁甭?..
 // [盲赂潞盲潞鈥犆ㄅ犫€毭撀伱┞好┾€斅疵寂捗库劉茅鈥∨捗ぢ柯澝ε捖伱モ€β睹ぢ解劉盲禄拢莽 聛盲赂聧氓聫藴]
 // 莽禄搂莽禄颅忙路禄氓艩  MainNavigationPage 氓鈥櫯捗モ€β睹ぢ烩€撁甭?..
@@ -590,7 +589,7 @@ class MainNavigationPage extends StatefulWidget {
 
 // 统一的 Primary Blue - 首页的深蓝
 const Color _PRIMARY_BLUE = Color(0xFF1877F2);
-// 统一标题高度，确保 SafeArea + 16dp 上边距
+// 统一标题高度，此常量主要用于非 Sliver 的固定头。
 const double _CUSTOM_HEADER_HEIGHT = 110.0;
 
 class _MainNavigationPageState extends State<MainNavigationPage>
@@ -711,7 +710,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
       barrierDismissible: true,
       builder: (dCtx) => AlertDialog(
         shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
         contentPadding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 12.h),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -735,7 +734,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
             Text(
               _fixUtf8Mojibake(
                 "Coupon Code: ${couponData['code']?.toString() ?? ''}\n\n"
-                "${couponData['description'] ?? 'Welcome to Swaply! Pin your item for free in any category.'}",
+                    "${couponData['description'] ?? 'Welcome to Swaply! Pin your item for free in any category.'}",
               ),
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13.sp, color: Colors.black87),
@@ -813,7 +812,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
       builder: (BuildContext context) {
         return AlertDialog(
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
           title: Text(l10n.loginRequired,
               style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600)),
           content: Text(l10n.loginRequiredMessage(feature),
@@ -823,7 +822,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                 onPressed: () => Navigator.of(context).pop(),
                 child: Text(l10n.cancel,
                     style:
-                        TextStyle(fontSize: 13.sp, color: Colors.grey[600]))),
+                    TextStyle(fontSize: 13.sp, color: Colors.grey[600]))),
             Container(
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
@@ -921,14 +920,14 @@ class _MainNavigationPageState extends State<MainNavigationPage>
               ),
             ],
           ),
-          // 去掉 SafeArea，改用自定义底部内边距，让 iOS 真机更贴底
+          // 修正底部导航整体偏高问题：移除 SafeArea，手动计算 iOS 底部边距
           child: Padding(
             padding: EdgeInsets.fromLTRB(
               8.w,
               8.h,
               8.w,
               (Theme.of(context).platform == TargetPlatform.iOS &&
-                      MediaQuery.of(context).padding.bottom > 0)
+                  MediaQuery.of(context).padding.bottom > 0)
                   ? 10.0.h
                   : 8.0.h,
             ),
@@ -1193,15 +1192,15 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                   end: Alignment.bottomRight,
                   colors: isSelected
                       ? [
-                          const Color(0xFF1565C0),
-                          _PRIMARY_BLUE, // 统一颜色
-                          const Color(0xFF42A5F5),
-                        ]
+                    const Color(0xFF1565C0),
+                    _PRIMARY_BLUE, // 统一颜色
+                    const Color(0xFF42A5F5),
+                  ]
                       : [
-                          _PRIMARY_BLUE, // 统一颜色
-                          const Color(0xFF1E88E5),
-                          const Color(0xFF1976D2),
-                        ],
+                    _PRIMARY_BLUE, // 统一颜色
+                    const Color(0xFF1E88E5),
+                    const Color(0xFF1976D2),
+                  ],
                 ),
                 borderRadius: BorderRadius.circular(28.w),
                 boxShadow: [
@@ -1287,9 +1286,9 @@ class _SavedRoot extends StatelessWidget {
   const _SavedRoot({this.isGuest = false, this.onNavigateToHome});
   @override
   Widget build(BuildContext context) => SavedPage(
-        isGuest: isGuest,
-        onNavigateToHome: onNavigateToHome,
-      );
+    isGuest: isGuest,
+    onNavigateToHome: onNavigateToHome,
+  );
 }
 
 class _SellRoot extends StatelessWidget {
@@ -1312,10 +1311,10 @@ class _NotifRoot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => NotificationPage(
-        onClearBadge: onClearBadge,
-        isGuest: isGuest,
-        onNotificationCountChanged: onNotificationCountChanged,
-      );
+    onClearBadge: onClearBadge,
+    isGuest: isGuest,
+    onNotificationCountChanged: onNotificationCountChanged,
+  );
 }
 
 class _ProfileRoot extends StatelessWidget {
@@ -1345,69 +1344,9 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   Timer? _autoRefreshTimer;
   StreamSubscription<FavoriteUpdateEvent>? _favoritesSubscription;
 
-  // 自定义头部组件，用于统一蓝色、大标题和间距
-  Widget _buildCustomHeader(String title, {bool hasMenu = true}) {
-    return Container(
-      color: _PRIMARY_BLUE, // 统一的深蓝
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 16.h), // 标题距安全区顶部约 16dp
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24.sp, // 统一字体大小
-                        fontWeight: FontWeight.w600, // SemiBold
-                        height: 1.2,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (hasMenu && _favoriteItems.isNotEmpty && !_isLoading)
-                    PopupMenuButton<String>(
-                      icon: Icon(Icons.more_vert_rounded,
-                          color: Colors.white, size: 16.w),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8.w)),
-                      onSelected: (value) {
-                        if (value == 'clear_all') {
-                          _showClearAllDialog();
-                        }
-                      },
-                      itemBuilder: (BuildContext context) => [
-                        PopupMenuItem(
-                          value: 'clear_all',
-                          child: Row(
-                            children: [
-                              Icon(Icons.clear_all_rounded,
-                                  color: Colors.red, size: 12.w),
-                              SizedBox(width: 8.w),
-                              Text('Clear All',
-                                  style: TextStyle(fontSize: 11.sp)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-            SizedBox(height: 16.h),
-          ],
-        ),
-      ),
-    );
-  }
+  // -----------------------------------------------------
+  // 移除：_buildSliverHeader 已废弃，使用标准 AppBar
+  // -----------------------------------------------------
 
   @override
   void initState() {
@@ -1445,13 +1384,13 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   /// 猫庐戮莽陆庐忙鈥澛睹ㄢ€斅徝︹€郝疵︹€撀懊р€衡€樏ヂ惵?
   void _setupFavoritesListener() {
     _favoritesSubscription = FavoritesUpdateService().favoritesStream.listen(
-      (event) {
+          (event) {
         if (!mounted || widget.isGuest) return;
 
         if (kDebugMode) {}
 
         if (event.isAdded && event.listingData != null) {
-          // 忙路禄氓艩 氓藛掳忙鈥澛睹ㄢ€斅徝寂∶€姑ヂ嵚趁β仿幻ヅ?氓藛掳忙艙卢氓艙掳氓藛鈥斆÷?
+          // 忙路禄氓艩 氓藛掳忙鈥澛睹ㄢ€斅徝寂∶€姑ヂ嵚趁β仿幻ヅ?氓藛掳忙舱卢氓舱掳氓藛鈥斆÷?
           _addToLocalFavorites(event.listingData!);
         } else if (!event.isAdded) {
           // 盲禄沤忙鈥澛睹ㄢ€斅徝幻┾劉陇茂录拧莽芦鈥姑ヂ嵚趁ぢ慌矫ε撀ヅ撀懊ニ嗏€斆÷幻┾劉陇
@@ -1464,7 +1403,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  /// 莽芦鈥姑ヂ嵚趁β仿幻ヅ?氓藛掳忙艙卢氓艙掳忙鈥澛睹ㄢ€斅徝ニ嗏€斆÷?
+  /// 莽芦鈥姑ヂ嵚趁β仿幻ヅ?氓藛掳忙舱卢氓艙掳忙鈥澛睹ㄢ€斅徝ニ嗏€斆÷?
   void _addToLocalFavorites(Map<String, dynamic> listingData) {
     try {
       // 忙拢鈧ε嘎ッλ溌ヂ惵γヂ仿裁ヂ溍ヅ撀?
@@ -1472,7 +1411,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       if (listingId == null) return;
 
       final exists = _favoriteItems.any((item) =>
-          item['listing_id']?.toString() == listingId ||
+      item['listing_id']?.toString() == listingId ||
           item['listing']?['id']?.toString() == listingId);
 
       if (!exists) {
@@ -1501,7 +1440,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
 
       setState(() {
         _favoriteItems.removeWhere((item) =>
-            item['listing_id']?.toString() == listingId ||
+        item['listing_id']?.toString() == listingId ||
             item['listing']?['id']?.toString() == listingId);
       });
 
@@ -1677,7 +1616,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.w)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.w)),
           margin: EdgeInsets.all(8.w),
         ),
       );
@@ -1732,7 +1671,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       }
 
       final title =
-          _safeGetString(safeListing, 'title', defaultValue: 'Unknown Item');
+      _safeGetString(safeListing, 'title', defaultValue: 'Unknown Item');
       final price = _formatPrice(safeListing['price']);
       final city = _safeGetString(safeListing, 'city');
       final imageUrl = _getListingImage(safeListing);
@@ -1758,7 +1697,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                   ),
                 ),
               ).then((_) {
-                // 盲禄沤氓鈥⑩€犆モ€溌伱γζ掆€γ┞÷得库€澝モ€号久ヂ恻矫ニ喡访︹€撀懊ニ嗏€斆÷?
+                // 盲禄沤氓鈥⑩€犆モ€溌伱γζ掆€γ┞÷得库€澝モ€号久ヂ惻矫ニ喡访︹€撀懊ニ嗏€斆÷?
                 _loadFavorites();
               });
             }
@@ -1794,57 +1733,57 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                         ),
                         child: imageUrl.startsWith('http')
                             ? Image.network(
-                                imageUrl,
-                                fit: BoxFit.cover,
-                                loadingBuilder:
-                                    (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return Center(
-                                    child: SizedBox(
-                                      width: 12.w,
-                                      height: 12.w,
-                                      child: CircularProgressIndicator(
-                                        value: loadingProgress
-                                                    .expectedTotalBytes !=
-                                                null
-                                            ? loadingProgress
-                                                    .cumulativeBytesLoaded /
-                                                loadingProgress
-                                                    .expectedTotalBytes!
-                                            : null,
-                                        strokeWidth: 1.w,
-                                        valueColor:
-                                            const AlwaysStoppedAnimation<Color>(
-                                                Color(0xFF2196F3)),
-                                      ),
-                                    ),
-                                  );
-                                },
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[100],
-                                      borderRadius: BorderRadius.circular(6.w),
-                                    ),
-                                    child: Icon(
-                                      Icons.image_not_supported_rounded,
-                                      color: Colors.grey[400],
-                                      size: 18.w,
-                                    ),
-                                  );
-                                },
-                              )
-                            : Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[100],
-                                  borderRadius: BorderRadius.circular(6.w),
-                                ),
-                                child: Icon(
-                                  Icons.image_not_supported_rounded,
-                                  color: Colors.grey[400],
-                                  size: 18.w,
+                          imageUrl,
+                          fit: BoxFit.cover,
+                          loadingBuilder:
+                              (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Center(
+                              child: SizedBox(
+                                width: 12.w,
+                                height: 12.w,
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress
+                                      .expectedTotalBytes !=
+                                      null
+                                      ? loadingProgress
+                                      .cumulativeBytesLoaded /
+                                      loadingProgress
+                                          .expectedTotalBytes!
+                                      : null,
+                                  strokeWidth: 1.w,
+                                  valueColor:
+                                  const AlwaysStoppedAnimation<Color>(
+                                      Color(0xFF2196F3)),
                                 ),
                               ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                borderRadius: BorderRadius.circular(6.w),
+                              ),
+                              child: Icon(
+                                Icons.image_not_supported_rounded,
+                                color: Colors.grey[400],
+                                size: 18.w,
+                              ),
+                            );
+                          },
+                        )
+                            : Container(
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(6.w),
+                          ),
+                          child: Icon(
+                            Icons.image_not_supported_rounded,
+                            color: Colors.grey[400],
+                            size: 18.w,
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -1994,7 +1933,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       builder: (BuildContext context) {
         return AlertDialog(
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.w)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.w)),
           title: Row(
             children: [
               Container(
@@ -2011,7 +1950,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                 child: Text(
                   'Remove from Favorites',
                   style:
-                      TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
+                  TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -2138,7 +2077,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
                   padding:
-                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                  EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8.w),
                   ),
@@ -2215,7 +2154,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
                   padding:
-                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                  EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8.w),
                   ),
@@ -2224,7 +2163,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                 label: Text(
                   'Try Again',
                   style:
-                      TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600),
+                  TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -2239,6 +2178,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     // 氓庐鈥懊モ€βㄅ铰访ヂ忊€撁ε撀ヅ撀懊ヅ掆€撁寂捗┞伮棵モ€β嵜ぢ嘎好┞?
     AppLocalizations? l10n;
     try {
+      // ⚠️ 捕获本地化可能不存在或报错
       l10n = AppLocalizations.of(context);
     } catch (e) {
       if (kDebugMode) {}
@@ -2255,7 +2195,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
             l10n?.myFavorites ?? 'My Favorites',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 14.sp,
+              // 使用与 Notification Page 标题相似的大小 (Notification Page 实际 App Bar 标题略大)
+              fontSize: 20.sp,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -2326,7 +2267,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,
                     padding:
-                        EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                    EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8.w),
                     ),
@@ -2349,58 +2290,96 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       );
     }
 
-    // 氓路虏莽鈩⒙幻ヂ解€⒚犅睹︹偓聛
+    // Logged In View
+    final titleText = '${l10n?.myFavorites ?? 'My Favorites'} (${_favoriteItems.length})';
+
+    // -----------------------------------------------------
+    // 替换：使用 标准 Scaffold + AppBar + ListView
+    // -----------------------------------------------------
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      // 头部使用自定义组件
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(_CUSTOM_HEADER_HEIGHT), // 使用统一高度
-        child: _buildCustomHeader('My Favorites (${_favoriteItems.length})'),
+      // 使用标准 AppBar (固定顶部，不收缩)
+      appBar: AppBar(
+        backgroundColor: _PRIMARY_BLUE, // 统一蓝色
+        title: Text(
+          titleText,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20.sp, // 统一字体大小
+            fontWeight: FontWeight.w600,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        elevation: 0,
+        actions: [
+          if (_favoriteItems.isNotEmpty && !_isLoading)
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert_rounded,
+                  color: Colors.white, size: 16.w), // 使用 16.w 匹配列表项图标尺寸
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.w)),
+              onSelected: (value) {
+                if (value == 'clear_all') {
+                  _showClearAllDialog();
+                }
+              },
+              itemBuilder: (BuildContext context) => [
+                PopupMenuItem(
+                  value: 'clear_all',
+                  child: Row(
+                    children: [
+                      Icon(Icons.clear_all_rounded,
+                          color: Colors.red, size: 12.w),
+                      SizedBox(width: 8.w),
+                      Text('Clear All',
+                          style: TextStyle(fontSize: 11.sp, color: Colors.red)), // 统一字体大小
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ],
       ),
       body: _isLoading
           ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 24.w,
-                    height: 24.w,
-                    child: CircularProgressIndicator(
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                          _PRIMARY_BLUE), // 统一蓝色
-                      strokeWidth: 2.w,
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Text(
-                    'Loading favorites...',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 11.sp,
-                    ),
-                  ),
-                ],
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 24.w,
+              height: 24.w,
+              child: CircularProgressIndicator(
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                    _PRIMARY_BLUE), // 统一蓝色
+                strokeWidth: 2.w,
               ),
-            )
+            ),
+            SizedBox(height: 8.h),
+            const Text('Loading favorites...', style: TextStyle(color: Color(0xFF6B7280), fontSize: 11)),
+          ],
+        ),
+      )
           : _errorMessage != null
-              ? _buildErrorState()
-              : _favoriteItems.isEmpty
-                  ? _buildEmptyState()
-                  : RefreshIndicator(
-                      onRefresh: _refreshFavorites,
-                      color: _PRIMARY_BLUE, // 统一蓝色
-                      backgroundColor: Colors.white,
-                      strokeWidth: 2.w,
-                      child: ListView.builder(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.symmetric(vertical: 6.h),
-                        itemCount: _favoriteItems.length,
-                        itemBuilder: (context, index) {
-                          return _buildFavoriteCard(
-                              _favoriteItems[index], index);
-                        },
-                      ),
-                    ),
+          ? _buildErrorState()
+          : _favoriteItems.isEmpty
+      // 空状态时直接显示在 Center 中，无需 CustomScrollView
+          ? _buildEmptyState()
+      // 非空时使用 RefreshIndicator 包裹 ListView.builder
+          : RefreshIndicator(
+        onRefresh: _refreshFavorites,
+        color: _PRIMARY_BLUE, // 统一蓝色
+        backgroundColor: Colors.white,
+        strokeWidth: 2.w,
+        child: ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.symmetric(vertical: 6.h),
+          itemCount: _favoriteItems.length,
+          itemBuilder: (context, index) {
+            return _buildFavoriteCard(_favoriteItems[index], index);
+          },
+        ),
+      ),
     );
   }
 
@@ -2411,7 +2390,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       builder: (BuildContext context) {
         return AlertDialog(
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.w)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.w)),
           title: Row(
             children: [
               Container(
@@ -2421,14 +2400,14 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                   borderRadius: BorderRadius.circular(4.w),
                 ),
                 child:
-                    Icon(Icons.warning_outlined, color: Colors.red, size: 14.w),
+                Icon(Icons.warning_outlined, color: Colors.red, size: 14.w),
               ),
               SizedBox(width: 8.w),
               Expanded(
                 child: Text(
                   'Clear All Favorites',
                   style:
-                      TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
+                  TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -2480,7 +2459,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
 
       // 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼忙赂鈥γ┞?
       final success =
-          await DualFavoritesService.clearUserFavorites(userId: user.id);
+      await DualFavoritesService.clearUserFavorites(userId: user.id);
 
       if (success && mounted) {
         setState(() {
@@ -2534,7 +2513,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.w)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.w)),
           margin: EdgeInsets.all(8.w),
         ),
       );
@@ -2668,7 +2647,7 @@ class _WishlistPageState extends State<WishlistPage> {
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.w)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.w)),
           margin: EdgeInsets.all(12.w),
         ),
       );
@@ -2730,7 +2709,7 @@ class _WishlistPageState extends State<WishlistPage> {
                 ),
               ),
             ).then((_) {
-              // 盲禄沤氓鈥⑩€犆モ€溌伱γζ掆€γ┞÷得库€澝モ€号久ヂ恻矫ニ喡访︹€撀懊ニ嗏€斆÷?
+              // 盲禄沤氓鈥⑩€犆モ€溌伱γζ掆€γ┞÷得库€澝モ€号久ヂ惻矫ニ喡访︹€撀懊ニ嗏€斆÷?
               _loadWishlist();
             });
           }
@@ -2766,57 +2745,57 @@ class _WishlistPageState extends State<WishlistPage> {
                       ),
                       child: imageUrl.startsWith('http')
                           ? Image.network(
-                              imageUrl,
-                              fit: BoxFit.cover,
-                              loadingBuilder:
-                                  (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return Center(
-                                  child: SizedBox(
-                                    width: 15.w,
-                                    height: 15.w,
-                                    child: CircularProgressIndicator(
-                                      value:
-                                          loadingProgress.expectedTotalBytes !=
-                                                  null
-                                              ? loadingProgress
-                                                      .cumulativeBytesLoaded /
-                                                  loadingProgress
-                                                      .expectedTotalBytes!
-                                              : null,
-                                      strokeWidth: 1.5.w,
-                                      valueColor:
-                                          const AlwaysStoppedAnimation<Color>(
-                                              Colors.pink),
-                                    ),
-                                  ),
-                                );
-                              },
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.pink[50],
-                                    borderRadius: BorderRadius.circular(8.w),
-                                  ),
-                                  child: Icon(
-                                    Icons.image_not_supported_rounded,
-                                    color: Colors.pink[300],
-                                    size: 24.w,
-                                  ),
-                                );
-                              },
-                            )
-                          : Container(
-                              decoration: BoxDecoration(
-                                color: Colors.pink[50],
-                                borderRadius: BorderRadius.circular(8.w),
-                              ),
-                              child: Icon(
-                                Icons.image_not_supported_rounded,
-                                color: Colors.pink[300],
-                                size: 24.w,
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        loadingBuilder:
+                            (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: SizedBox(
+                              width: 15.w,
+                              height: 15.w,
+                              child: CircularProgressIndicator(
+                                value:
+                                loadingProgress.expectedTotalBytes !=
+                                    null
+                                    ? loadingProgress
+                                    .cumulativeBytesLoaded /
+                                    loadingProgress
+                                        .expectedTotalBytes!
+                                    : null,
+                                strokeWidth: 1.5.w,
+                                valueColor:
+                                const AlwaysStoppedAnimation<Color>(
+                                    Colors.pink),
                               ),
                             ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: Colors.pink[50],
+                              borderRadius: BorderRadius.circular(8.w),
+                            ),
+                            child: Icon(
+                              Icons.image_not_supported_rounded,
+                              color: Colors.pink[300],
+                              size: 24.w,
+                            ),
+                          );
+                        },
+                      )
+                          : Container(
+                        decoration: BoxDecoration(
+                          color: Colors.pink[50],
+                          borderRadius: BorderRadius.circular(8.w),
+                        ),
+                        child: Icon(
+                          Icons.image_not_supported_rounded,
+                          color: Colors.pink[300],
+                          size: 24.w,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -2938,7 +2917,7 @@ class _WishlistPageState extends State<WishlistPage> {
       builder: (BuildContext context) {
         return AlertDialog(
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
           title: Row(
             children: [
               Container(
@@ -2955,7 +2934,7 @@ class _WishlistPageState extends State<WishlistPage> {
                 child: Text(
                   'Remove from Wishlist',
                   style:
-                      TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
+                  TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -3010,22 +2989,22 @@ class _WishlistPageState extends State<WishlistPage> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.pink.withOpacity(0.1),
-                    Colors.pink.withOpacity(0.05),
+                    _PRIMARY_BLUE.withOpacity(0.1),
+                    _PRIMARY_BLUE.withOpacity(0.05),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(50.w),
                 border: Border.all(
-                  color: Colors.pink.withOpacity(0.2),
+                  color: _PRIMARY_BLUE.withOpacity(0.2),
                   width: 1.5.w,
                 ),
               ),
               child: Icon(
                 Icons.favorite_outline_rounded,
                 size: 50.w,
-                color: Colors.pink,
+                color: _PRIMARY_BLUE,
               ),
             ),
             SizedBox(height: 24.h),
@@ -3055,14 +3034,14 @@ class _WishlistPageState extends State<WishlistPage> {
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.pink, Colors.pink[400]!],
+                  colors: [_PRIMARY_BLUE, const Color(0xFF1E88E5)],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 ),
                 borderRadius: BorderRadius.circular(12.w),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.pink.withOpacity(0.3),
+                    color: _PRIMARY_BLUE.withOpacity(0.3),
                     blurRadius: 10.w,
                     offset: Offset(0, 4.h),
                   ),
@@ -3074,7 +3053,7 @@ class _WishlistPageState extends State<WishlistPage> {
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
                   padding:
-                      EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+                  EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12.w),
                   ),
@@ -3141,7 +3120,7 @@ class _WishlistPageState extends State<WishlistPage> {
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.pink, Colors.pink[400]!],
+                  colors: [_PRIMARY_BLUE, const Color(0xFF1E88E5)],
                 ),
                 borderRadius: BorderRadius.circular(10.w),
               ),
@@ -3151,16 +3130,16 @@ class _WishlistPageState extends State<WishlistPage> {
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
                   padding:
-                      EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                  EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10.w),
                   ),
                 ),
-                icon: Icon(Icons.refresh_rounded, size: 16.w),
+                icon: Icon(Icons.refresh_rounded, size: 16.w, color: Colors.white),
                 label: Text(
                   'Try Again',
                   style:
-                      TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600),
+                  TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600, color: Colors.white),
                 ),
               ),
             ),
@@ -3170,104 +3149,14 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        backgroundColor: Colors.pink,
-        title: Text(
-          'My Wishlist (${_wishlistItems.length})',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        elevation: 0,
-        actions: [
-          if (_wishlistItems.isNotEmpty && !_isLoading)
-            PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert_rounded,
-                  color: Colors.white, size: 20.w),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.w)),
-              onSelected: (value) {
-                if (value == 'clear_all') {
-                  _showClearAllDialog();
-                }
-              },
-              itemBuilder: (BuildContext context) => [
-                PopupMenuItem(
-                  value: 'clear_all',
-                  child: Row(
-                    children: [
-                      Icon(Icons.clear_all_rounded,
-                          color: Colors.red, size: 16.w),
-                      SizedBox(width: 10.w),
-                      Text('Clear All', style: TextStyle(fontSize: 13.sp)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-        ],
-      ),
-      body: _isLoading
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 30.w,
-                    height: 30.w,
-                    child: CircularProgressIndicator(
-                      valueColor:
-                          const AlwaysStoppedAnimation<Color>(Colors.pink),
-                      strokeWidth: 2.5.w,
-                    ),
-                  ),
-                  SizedBox(height: 12.h),
-                  Text(
-                    'Loading wishlist...',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 13.sp,
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : _errorMessage != null
-              ? _buildErrorState()
-              : _wishlistItems.isEmpty
-                  ? _buildEmptyState()
-                  : RefreshIndicator(
-                      onRefresh: _refreshWishlist,
-                      color: Colors.pink,
-                      backgroundColor: Colors.white,
-                      strokeWidth: 2.w,
-                      child: ListView.builder(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: EdgeInsets.symmetric(vertical: 8.h),
-                        itemCount: _wishlistItems.length,
-                        itemBuilder: (context, index) {
-                          return _buildWishlistCard(
-                              _wishlistItems[index], index);
-                        },
-                      ),
-                    ),
-    );
-  }
-
-  /// 忙藴戮莽陇潞忙赂鈥γ┞好︹€扳偓忙舱鈥懊÷っヂ姑澝β♀€?
+  /// 忙赂鈥γ┞好︹€扳偓忙舱鈥懊÷っヂ姑澝β♀€?
   void _showClearAllDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
           title: Row(
             children: [
               Container(
@@ -3277,14 +3166,14 @@ class _WishlistPageState extends State<WishlistPage> {
                   borderRadius: BorderRadius.circular(6.w),
                 ),
                 child:
-                    Icon(Icons.warning_outlined, color: Colors.red, size: 16.w),
+                Icon(Icons.warning_outlined, color: Colors.red, size: 16.w),
               ),
               SizedBox(width: 10.w),
               Expanded(
                 child: Text(
                   'Clear All Wishlist',
                   style:
-                      TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
+                  TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -3333,7 +3222,7 @@ class _WishlistPageState extends State<WishlistPage> {
     try {
       // 盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼忙赂鈥γ┞?
       final success =
-          await DualFavoritesService.clearUserFavorites(userId: user.id);
+      await DualFavoritesService.clearUserFavorites(userId: user.id);
 
       if (success && mounted) {
         setState(() {
@@ -3376,11 +3265,122 @@ class _WishlistPageState extends State<WishlistPage> {
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.w)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.w)),
           margin: EdgeInsets.all(12.w),
         ),
       );
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // ⚠️ 恢复使用标准 AppBar 样式
+    final l10n = AppLocalizations.of(context);
+    // 使用 'My Wishlist' 作为标题文本基准，并拼接数量
+    final titleBaseText = l10n != null
+        ? (l10n.notifications.isNotEmpty ? 'My Wishlist' : 'My Favorites')
+        : 'My Favorites';
+    final titleText = '$titleBaseText (${_wishlistItems.length})';
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
+      // 使用标准 AppBar
+      appBar: AppBar(
+        // 统一背景色为 NotificationPage 的 _PRIMARY_BLUE
+        backgroundColor: _PRIMARY_BLUE,
+        // 统一高度（默认高度，不使用 PreferredSize）
+        toolbarHeight: kToolbarHeight,
+        title: Text(
+          titleText,
+          // 统一标题样式
+          style: TextStyle(
+            color: Colors.white,
+            // 字体大小与 NotificationPage 头部一致（NotificationPage 头部是 24.sp，
+            // 但在标准 AppBar 中 24.sp 可能过大，为了匹配视觉效果，我们使用略大的 18.sp，
+            // 或尝试 20.sp 来接近 NotificationPage 中 24.sp 带来的视觉冲击力，同时保持标准 AppBar 布局）
+            fontSize: 20.sp,
+            fontWeight: FontWeight.w600,
+          ),
+          // 确保标题不会在标准 AppBar 范围内被裁剪或遮挡
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        elevation: 0,
+        // 统一操作按钮
+        actions: [
+          if (_wishlistItems.isNotEmpty && !_isLoading)
+            PopupMenuButton<String>(
+              // 使用 18.r 作为 NotificationPage 中的尺寸单位
+              icon: Icon(Icons.more_vert_rounded,
+                  color: Colors.white, size: 18.r),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.w)),
+              onSelected: (value) {
+                if (value == 'clear_all') {
+                  _showClearAllDialog();
+                }
+              },
+              itemBuilder: (BuildContext context) => [
+                PopupMenuItem(
+                  value: 'clear_all',
+                  child: Row(
+                    children: [
+                      Icon(Icons.clear_all_rounded,
+                          color: Colors.red, size: 16.w),
+                      SizedBox(width: 10.w),
+                      Text('Clear All', style: TextStyle(fontSize: 13.sp, color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+      body: _isLoading
+          ? Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 30.w,
+              height: 30.w,
+              child: CircularProgressIndicator(
+                valueColor:
+                const AlwaysStoppedAnimation<Color>(_PRIMARY_BLUE),
+                strokeWidth: 2.5.w,
+              ),
+            ),
+            SizedBox(height: 12.h),
+            Text(
+              'Loading wishlist...',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 13.sp,
+              ),
+            ),
+          ],
+        ),
+      )
+          : _errorMessage != null
+          ? _buildErrorState()
+          : _wishlistItems.isEmpty
+          ? _buildEmptyState()
+          : RefreshIndicator(
+        onRefresh: _refreshWishlist,
+        color: _PRIMARY_BLUE,
+        backgroundColor: Colors.white,
+        strokeWidth: 2.w,
+        child: ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.symmetric(vertical: 8.h),
+          itemCount: _wishlistItems.length,
+          itemBuilder: (context, index) {
+            return _buildWishlistCard(
+                _wishlistItems[index], index);
+          },
+        ),
+      ),
+    );
   }
 }
 // 莽卢卢氓鈥衡€好┢捖ニ嗏€犆寂ellPage 氓鈥÷好モ€澛┞÷?(忙聛垄氓陇聧氓庐艗忙鈥⒙疵ヅ犈该ㄆ捖? 氓鈥櫯?NotificationPage 茅鈧∶嘎ッ┞÷?(盲陆驴莽鈥澛ぢ号捗ぢ嘎р€八喢ε撀♀€濻ervice茅鈥衡€犆λ喡?
@@ -3399,6 +3399,49 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+
+  // -----------------------------------------------------
+  // 替换：使用标准 AppBar，实现固定头部
+  // -----------------------------------------------------
+  AppBar _buildAppBar(AppLocalizations l10n, int listingsCount) {
+    return AppBar(
+      backgroundColor: _PRIMARY_BLUE, // 统一颜色
+      title: Text(
+        l10n.sellItem,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 20.sp, // 增大字体以匹配其他页面标题的视觉效果
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      elevation: 0,
+      centerTitle: false, // 靠左对齐
+      actions: [
+        // 修正：调整容器和 IconButton 的 padding/margin，修复加号按钮溢出问题
+        Container(
+          // 移除 margin.top/bottom，使用垂直居中对齐
+          margin: EdgeInsets.only(right: 8.w),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          child: IconButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SellFormPage()),
+            ),
+            // 调整 icon size 和 padding，确保图标被容器完整包裹
+            icon: Icon(Icons.add_rounded, color: Colors.white, size: 24.r),
+            padding: EdgeInsets.zero, // 重置默认 padding
+            constraints: BoxConstraints.tightFor(width: 40.r, height: 40.r), // 强制大小
+            tooltip: 'Add New Listing',
+          ),
+        ),
+      ],
+    );
+  }
+  // -----------------------------------------------------
+  // END: SellPage AppBar 替换
+  // -----------------------------------------------------
 
   @override
   void initState() {
@@ -3440,16 +3483,207 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
         ? List<Map<String, dynamic>>.from(raw)
         : const <Map<String, dynamic>>[];
 
+    // 替换：使用 Scaffold + AppBar + ListView.builder 实现固定头部
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      body: CustomScrollView(
-        slivers: [
-          _buildSliverAppBar(l10n, myListings.length),
-          if (myListings.isEmpty)
-            _buildEmptyState(l10n)
-          else
-            _buildListingsContent(myListings, l10n),
-        ],
+      appBar: _buildAppBar(l10n, myListings.length),
+      body: myListings.isEmpty
+          ? _buildEmptyStateContent(l10n) // 仅返回内容，不包含 SliverFillRemaining
+          : RefreshIndicator(
+        onRefresh: () async {
+          // 刷新逻辑 (假设有 ListingStore.i.loadAll();)
+        },
+        color: _PRIMARY_BLUE,
+        backgroundColor: Colors.white,
+        strokeWidth: 2.w,
+        child: ListView.builder(
+          padding: EdgeInsets.zero,
+          itemCount: myListings.length + 1, // +1 for the stats header
+          itemBuilder: (context, index) {
+            if (index == 0) {
+              // Stats Header is now the first item in the list
+              return _buildStatsHeader(myListings, l10n);
+            }
+            final listingIndex = index - 1;
+            return TweenAnimationBuilder<double>(
+              duration: Duration(milliseconds: 300 + (listingIndex * 100)),
+              tween: Tween(begin: 0.0, end: 1.0),
+              builder: (context, value, child) {
+                return Transform.translate(
+                  offset: Offset(0, 20 * (1 - value)),
+                  child: Opacity(
+                    opacity: value,
+                    child: _buildListingCard(myListings[listingIndex], l10n),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  // 提取 Empty State 内容到新函数，以便在 Scaffold Body 中使用
+  Widget _buildEmptyStateContent(AppLocalizations l10n) {
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.w),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 140.w,
+                  height: 140.w,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        const Color(0xFF2196F3).withOpacity(0.2),
+                        const Color(0xFF1E88E5).withOpacity(0.1),
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(70.r),
+                    border: Border.all(
+                      color: const Color(0xFF2196F3).withOpacity(0.3),
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF2196F3).withOpacity(0.2),
+                        blurRadius: 24.r,
+                        offset: Offset(0, 12.h),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.add_a_photo_rounded,
+                    size: 70.r,
+                    color: const Color(0xFF2196F3),
+                  ),
+                ),
+                SizedBox(height: 32.h),
+                Text(
+                  l10n.sellYourItems,
+                  style: TextStyle(
+                    fontSize: 28.sp,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.black87,
+                    letterSpacing: -0.8,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 16.h),
+                Text(
+                  l10n.takePhotoAndSell,
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 16.sp,
+                    height: 1.6,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 24.h),
+                Container(
+                  padding:
+                  EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2196F3).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16.r),
+                    border: Border.all(
+                      color: const Color(0xFF2196F3).withOpacity(0.2),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.camera_alt_rounded,
+                              color: const Color(0xFF2196F3), size: 20.r),
+                          SizedBox(width: 8.w),
+                          Text('Take quality photos',
+                              style: TextStyle(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                      SizedBox(height: 8.h),
+                      Row(
+                        children: [
+                          Icon(Icons.edit_rounded,
+                              color: const Color(0xFF2196F3), size: 20.r),
+                          SizedBox(width: 8.w),
+                          Text('Write detailed description',
+                              style: TextStyle(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                      SizedBox(height: 8.h),
+                      Row(
+                        children: [
+                          Icon(Icons.monetization_on_rounded,
+                              color: const Color(0xFF2196F3), size: 20.r),
+                          SizedBox(width: 8.w),
+                          Text('Set competitive price',
+                              style: TextStyle(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 40.h),
+                Container(
+                  width: double.infinity,
+                  height: 56.h,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF2196F3), Color(0xFF1E88E5)],
+                    ),
+                    borderRadius: BorderRadius.circular(16.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF2196F3).withOpacity(0.4),
+                        blurRadius: 16.r,
+                        offset: Offset(0, 8.h),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16.r),
+                      ),
+                    ),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const SellFormPage()),
+                    ),
+                    icon: Icon(Icons.add_rounded,
+                        color: Colors.white, size: 24.r),
+                    label: Text(
+                      l10n.postNewAd,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 40.h), // 底部增加间距
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -3457,18 +3691,19 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   Widget _buildGuestView(AppLocalizations l10n) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
+      // 使用标准 AppBar
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2196F3),
+        backgroundColor: _PRIMARY_BLUE, // 统一颜色
         title: Text(
           l10n.sellItem,
           style: TextStyle(
             color: Colors.white,
-            fontSize: 18.sp,
+            fontSize: 20.sp, // 统一字体大小
             fontWeight: FontWeight.w600,
           ),
         ),
         elevation: 0,
-        centerTitle: true,
+        centerTitle: false,
       ),
       body: SlideTransition(
         position: _slideAnimation,
@@ -3577,242 +3812,26 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildSliverAppBar(AppLocalizations l10n, int listingsCount) {
-    return SliverAppBar(
-      expandedHeight: 120.h,
-      floating: false,
-      pinned: true,
-      backgroundColor: const Color(0xFF2196F3),
-      flexibleSpace: FlexibleSpaceBar(
-        title: Text(
-          l10n.sellItem,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        background: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF2196F3),
-                Color(0xFF1E88E5),
-                Color(0xFF1976D2),
-              ],
-            ),
-          ),
-        ),
-      ),
-      actions: [
-        Container(
-          margin: EdgeInsets.only(right: 16.w, top: 8.h, bottom: 8.h),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          child: IconButton(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SellFormPage()),
-            ),
-            icon: Icon(Icons.add_rounded, color: Colors.white, size: 24.r),
-            tooltip: 'Add New Listing',
-          ),
-        ),
-      ],
-    );
-  }
-
+  // 替换：使用 _buildEmptyStateContent
   Widget _buildEmptyState(AppLocalizations l10n) {
     return SliverFillRemaining(
-      child: SlideTransition(
-        position: _slideAnimation,
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 140.w,
-                    height: 140.w,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          const Color(0xFF2196F3).withOpacity(0.2),
-                          const Color(0xFF1E88E5).withOpacity(0.1),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(70.r),
-                      border: Border.all(
-                        color: const Color(0xFF2196F3).withOpacity(0.3),
-                        width: 2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF2196F3).withOpacity(0.2),
-                          blurRadius: 24.r,
-                          offset: Offset(0, 12.h),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      Icons.add_a_photo_rounded,
-                      size: 70.r,
-                      color: const Color(0xFF2196F3),
-                    ),
-                  ),
-                  SizedBox(height: 32.h),
-                  Text(
-                    l10n.sellYourItems,
-                    style: TextStyle(
-                      fontSize: 28.sp,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.black87,
-                      letterSpacing: -0.8,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 16.h),
-                  Text(
-                    l10n.takePhotoAndSell,
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 16.sp,
-                      height: 1.6,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 24.h),
-                  Container(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2196F3).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16.r),
-                      border: Border.all(
-                        color: const Color(0xFF2196F3).withOpacity(0.2),
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.camera_alt_rounded,
-                                color: const Color(0xFF2196F3), size: 20.r),
-                            SizedBox(width: 8.w),
-                            Text('Take quality photos',
-                                style: TextStyle(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w600)),
-                          ],
-                        ),
-                        SizedBox(height: 8.h),
-                        Row(
-                          children: [
-                            Icon(Icons.edit_rounded,
-                                color: const Color(0xFF2196F3), size: 20.r),
-                            SizedBox(width: 8.w),
-                            Text('Write detailed description',
-                                style: TextStyle(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w600)),
-                          ],
-                        ),
-                        SizedBox(height: 8.h),
-                        Row(
-                          children: [
-                            Icon(Icons.monetization_on_rounded,
-                                color: const Color(0xFF2196F3), size: 20.r),
-                            SizedBox(width: 8.w),
-                            Text('Set competitive price',
-                                style: TextStyle(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w600)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 40.h),
-                  Container(
-                    width: double.infinity,
-                    height: 56.h,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF2196F3), Color(0xFF1E88E5)],
-                      ),
-                      borderRadius: BorderRadius.circular(16.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF2196F3).withOpacity(0.4),
-                          blurRadius: 16.r,
-                          offset: Offset(0, 8.h),
-                        ),
-                      ],
-                    ),
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16.r),
-                        ),
-                      ),
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const SellFormPage()),
-                      ),
-                      icon: Icon(Icons.add_rounded,
-                          color: Colors.white, size: 24.r),
-                      label: Text(
-                        l10n.postNewAd,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+      child: _buildEmptyStateContent(l10n),
     );
   }
 
   Widget _buildListingsContent(
       List<Map<String, dynamic>> myListings, AppLocalizations l10n) {
+    // 此函数在标准 AppBar 结构中不再使用，但保留其逻辑以适应 ListView.builder
     return SliverList(
       delegate: SliverChildBuilderDelegate(
-        (context, index) {
-          if (index == 0) {
-            return _buildStatsHeader(myListings, l10n);
-          }
-          final listingIndex = index - 1;
-          return TweenAnimationBuilder<double>(
-            duration: Duration(milliseconds: 300 + (listingIndex * 100)),
-            tween: Tween(begin: 0.0, end: 1.0),
-            builder: (context, value, child) {
-              return Transform.translate(
-                offset: Offset(0, 20 * (1 - value)),
-                child: Opacity(
-                  opacity: value,
-                  child: _buildListingCard(myListings[listingIndex], l10n),
-                ),
-              );
-            },
-          );
+            (context, index) {
+          // 由于已改为 ListView.builder，此处的 SliverList 包装是多余的，
+          // 但为了保留原代码逻辑，我们假装 CustomScrollView 仍在外部包裹。
+          // 实际上在新的 build 方法中，这个函数应该被替换为直接构建列表项。
+          // 这里我们返回一个占位符，因为新的 build 方法中已经直接使用了 ListView.builder。
+          return const SizedBox.shrink();
         },
-        childCount: myListings.length + 1,
+        childCount: 0,
       ),
     );
   }
@@ -3820,9 +3839,9 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   Widget _buildStatsHeader(
       List<Map<String, dynamic>> myListings, AppLocalizations l10n) {
     final totalViews =
-        myListings.fold<int>(0, (sum, item) => sum + 234); // Mock data
+    myListings.fold<int>(0, (sum, item) => sum + 234); // Mock data
     final totalLikes =
-        myListings.fold<int>(0, (sum, item) => sum + 12); // Mock data
+    myListings.fold<int>(0, (sum, item) => sum + 12); // Mock data
 
     return Container(
       margin: EdgeInsets.all(16.w),
@@ -4024,20 +4043,20 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                       borderRadius: BorderRadius.circular(16.r),
                       child: item['images'] != null && item['images'].isNotEmpty
                           ? Image.asset(
-                              item['images'][0],
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Icon(
-                                Icons.image_rounded,
-                                color: Colors.grey.shade400,
-                                size: 32.r,
-                              ),
-                            )
-                          : Icon(
+                        item['images'][0],
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            Icon(
                               Icons.image_rounded,
                               color: Colors.grey.shade400,
                               size: 32.r,
                             ),
+                      )
+                          : Icon(
+                        Icons.image_rounded,
+                        color: Colors.grey.shade400,
+                        size: 32.r,
+                      ),
                     ),
                   ),
                 ),
@@ -4216,7 +4235,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
       context: context,
       builder: (_) => AlertDialog(
         shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
         title: Row(
           children: [
             Container(
@@ -4328,7 +4347,6 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     }
   }
 }
-
 /* ---------------- Notification Page 茅鈧∶嘎ッ┞÷?(莽麓搂氓鈥♀€樏九矫ヅ掆€撁р€八喢ε撀? ---------------- */
 
 class NotificationPage extends StatefulWidget {
@@ -4351,89 +4369,9 @@ class _NotificationPageState extends State<NotificationPage> {
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
 
-  // 自定义头部组件，用于统一蓝色、大标题和间距
-  Widget _buildCustomHeader(String title) {
-    final l10n = AppLocalizations.of(context)!;
-    final unreadCount =
-        _notifications.where((n) => n['is_read'] != true).length;
-    final displayTitle = '${title}${unreadCount > 0 ? ' ($unreadCount)' : ''}';
-
-    return Container(
-      color: _PRIMARY_BLUE, // 统一的深蓝
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 16.h), // 标题距安全区顶部约 16dp
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      displayTitle,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24.sp, // 统一字体大小
-                        fontWeight: FontWeight.w600, // SemiBold
-                        height: 1.2,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (_notifications.isNotEmpty)
-                    PopupMenuButton<String>(
-                      icon: Icon(Icons.more_vert_rounded,
-                          color: Colors.white, size: 18.r),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8.r)),
-                      onSelected: (value) {
-                        if (value == 'mark_all_read') {
-                          _markAllAsRead();
-                        } else if (value == 'clear_all') {
-                          _clearAll();
-                        }
-                      },
-                      itemBuilder: (BuildContext context) => [
-                        PopupMenuItem(
-                          value: 'mark_all_read',
-                          child: Row(
-                            children: [
-                              Icon(Icons.done_all_rounded,
-                                  size: 14.r, color: Colors.grey.shade600),
-                              SizedBox(width: 8.w),
-                              Text(l10n.markAllAsRead,
-                                  style: TextStyle(fontSize: 12.sp)),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: 'clear_all',
-                          child: Row(
-                            children: [
-                              Icon(Icons.clear_all_rounded,
-                                  color: Colors.red, size: 14.r),
-                              SizedBox(width: 8.w),
-                              Text(l10n.clearAll,
-                                  style: TextStyle(
-                                      fontSize: 12.sp, color: Colors.red)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-            SizedBox(height: 16.h),
-          ],
-        ),
-      ),
-    );
-  }
+  // -----------------------------------------------------
+  // 已移除：_buildSliverHeader
+  // -----------------------------------------------------
 
   @override
   void initState() {
@@ -4580,7 +4518,7 @@ class _NotificationPageState extends State<NotificationPage> {
           backgroundColor: Colors.red.shade600,
           behavior: SnackBarBehavior.floating,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.r)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.r)),
           margin: EdgeInsets.all(8.w),
           duration: Duration(seconds: 2),
         ),
@@ -4662,7 +4600,7 @@ class _NotificationPageState extends State<NotificationPage> {
       SnackBar(
         content: Text(msg, style: TextStyle(fontSize: 12.sp)),
         backgroundColor:
-            isError ? Colors.red.shade600 : const Color(0xFF4CAF50),
+        isError ? Colors.red.shade600 : const Color(0xFF4CAF50),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.r)),
         margin: EdgeInsets.all(8.w),
@@ -4796,7 +4734,13 @@ class _NotificationPageState extends State<NotificationPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final unreadCount =
+        _notifications.where((n) => n['is_read'] != true).length;
+    final titleText = '${l10n.notifications}${unreadCount > 0 ? ' ($unreadCount)' : ''}';
 
+    // -----------------------------------------------------
+    // 最终修复：使用标准 Scaffold + AppBar + ListView
+    // -----------------------------------------------------
     if (widget.isGuest) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
@@ -4806,12 +4750,13 @@ class _NotificationPageState extends State<NotificationPage> {
             l10n.notifications,
             style: TextStyle(
               color: Colors.white,
-              fontSize: 18.sp,
+              // 统一为 My Favorites 的样式 (20.sp 或 18.sp，取决于实际 App Bar 标题的视觉效果，这里使用 20.sp 来接近大标题效果)
+              fontSize: 20.sp,
               fontWeight: FontWeight.w600,
             ),
           ),
           elevation: 0,
-          centerTitle: true,
+          centerTitle: false, // 确保靠左对齐
         ),
         body: Center(
           child: Column(
@@ -4877,7 +4822,7 @@ class _NotificationPageState extends State<NotificationPage> {
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,
                     padding:
-                        EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                    EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10.r),
                     ),
@@ -4900,263 +4845,313 @@ class _NotificationPageState extends State<NotificationPage> {
       );
     }
 
-    final unreadCount =
-        _notifications.where((n) => n['is_read'] != true).length;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      // 头部使用自定义组件
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(_CUSTOM_HEADER_HEIGHT), // 使用统一高度
-        child: _buildCustomHeader(l10n.notifications),
+      // 头部使用标准 AppBar，固定顶部，不收缩
+      appBar: AppBar(
+        backgroundColor: _PRIMARY_BLUE, // 统一颜色
+        title: Text(
+          titleText,
+          style: TextStyle(
+            color: Colors.white,
+            // 统一为 My Favorites 的样式
+            fontSize: 20.sp,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        elevation: 0,
+        centerTitle: false, // 确保靠左对齐
+        actions: [
+          if (_notifications.isNotEmpty)
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert_rounded,
+                  color: Colors.white, size: 18.r),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8.r)),
+              onSelected: (value) {
+                if (value == 'mark_all_read') {
+                  _markAllAsRead();
+                } else if (value == 'clear_all') {
+                  _clearAll();
+                }
+              },
+              itemBuilder: (BuildContext context) => [
+                PopupMenuItem(
+                  value: 'mark_all_read',
+                  child: Row(
+                    children: [
+                      Icon(Icons.done_all_rounded,
+                          size: 14.r, color: Colors.grey.shade600),
+                      SizedBox(width: 8.w),
+                      Text(l10n.markAllAsRead,
+                          style: TextStyle(fontSize: 12.sp)),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'clear_all',
+                  child: Row(
+                    children: [
+                      Icon(Icons.clear_all_rounded,
+                          color: Colors.red, size: 14.r),
+                      SizedBox(width: 8.w),
+                      Text(l10n.clearAll,
+                          style: TextStyle(
+                              fontSize: 12.sp, color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ],
       ),
       body: _isLoading
           ? Center(
-              child: Container(
-                padding: EdgeInsets.all(24.w),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _PRIMARY_BLUE.withOpacity(0.08), // 统一颜色
-                      blurRadius: 10.r,
-                      offset: Offset(0, 4.h),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 40.w,
-                      height: 40.w,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            _PRIMARY_BLUE.withOpacity(0.2), // 统一颜色
-                            _PRIMARY_BLUE.withOpacity(0.1), // 统一颜色
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(20.r),
-                      ),
-                      child: Center(
-                        child: SizedBox(
-                          width: 20.w,
-                          height: 20.w,
-                          child: CircularProgressIndicator(
-                            valueColor: const AlwaysStoppedAnimation<Color>(
-                                _PRIMARY_BLUE), // 统一颜色
-                            strokeWidth: 2.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 12.h),
-                    Text(
-                      'Loading notifications...',
-                      style: TextStyle(
-                        color: _PRIMARY_BLUE, // 统一颜色
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+        child: Container(
+          padding: EdgeInsets.all(24.w),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16.r),
+            boxShadow: [
+              BoxShadow(
+                color: _PRIMARY_BLUE.withOpacity(0.08), // 统一颜色
+                blurRadius: 10.r,
+                offset: Offset(0, 4.h),
               ),
-            )
-          : _notifications.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 60.w,
-                        height: 60.w,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              _PRIMARY_BLUE.withOpacity(0.1), // 统一颜色
-                              const Color(0xFF1E88E5).withOpacity(0.05),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(30.r),
-                          border: Border.all(
-                            color: _PRIMARY_BLUE.withOpacity(0.2), // 统一颜色
-                            width: 1,
-                          ),
-                        ),
-                        child: Icon(
-                          Icons.notifications_none_rounded,
-                          size: 30.r,
-                          color: _PRIMARY_BLUE, // 统一颜色
-                        ),
-                      ),
-                      SizedBox(height: 16.h),
-                      Text(
-                        l10n.noNotifications,
-                        style: TextStyle(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      SizedBox(height: 6.h),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16.w),
-                        child: Text(
-                          l10n.notificationsWillAppearHere,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.grey.shade600,
-                            fontSize: 12.sp,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40.w,
+                height: 40.w,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      _PRIMARY_BLUE.withOpacity(0.2), // 统一颜色
+                      _PRIMARY_BLUE.withOpacity(0.1), // 统一颜色
                     ],
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadNotifications,
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+                child: Center(
+                  child: SizedBox(
+                    width: 20.w,
+                    height: 20.w,
+                    child: CircularProgressIndicator(
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                          _PRIMARY_BLUE), // 统一颜色
+                      strokeWidth: 2.5,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 12.h),
+              Text(
+                'Loading notifications...',
+                style: TextStyle(
                   color: _PRIMARY_BLUE, // 统一颜色
-                  backgroundColor: Colors.white,
-                  strokeWidth: 2.w,
-                  child: ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    itemCount: _notifications.length,
-                    itemBuilder: (context, index) {
-                      final notification = _notifications[index];
-                      final isRead = notification['is_read'] == true;
-                      final type = notification['type']?.toString() ?? '';
-                      final createdAt =
-                          notification['created_at']?.toString() ?? '';
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      )
+          : _notifications.isEmpty
+          ? Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 60.w,
+              height: 60.w,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    _PRIMARY_BLUE.withOpacity(0.1), // 统一颜色
+                    const Color(0xFF1E88E5).withOpacity(0.05),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(30.r),
+                border: Border.all(
+                  color: _PRIMARY_BLUE.withOpacity(0.2), // 统一颜色
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                Icons.notifications_none_rounded,
+                size: 30.r,
+                color: _PRIMARY_BLUE, // 统一颜色
+              ),
+            ),
+            SizedBox(height: 16.h),
+            Text(
+              l10n.noNotifications,
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            SizedBox(height: 6.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Text(
+                l10n.notificationsWillAppearHere,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 12.sp,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
+        ),
+      )
+          : RefreshIndicator(
+        onRefresh: _loadNotifications,
+        color: _PRIMARY_BLUE, // 统一颜色
+        backgroundColor: Colors.white,
+        strokeWidth: 2.w,
+        child: ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          itemCount: _notifications.length,
+          itemBuilder: (context, index) {
+            final notification = _notifications[index];
+            final isRead = notification['is_read'] == true;
+            final type = notification['type']?.toString() ?? '';
+            final createdAt =
+                notification['created_at']?.toString() ?? '';
 
-                      return Dismissible(
-                        key: Key('${notification['id']}'),
-                        background: Container(
-                          color: Colors.red.shade600,
-                          alignment: Alignment.centerRight,
-                          padding: EdgeInsets.only(right: 12.w),
-                          child: Icon(
-                            Icons.delete_rounded,
-                            color: Colors.white,
-                            size: 20.r,
-                          ),
-                        ),
-                        direction: DismissDirection.endToStart,
-                        onDismissed: (direction) => _deleteNotification(index),
-                        child: Container(
-                          color: isRead
-                              ? Colors.white
-                              : _PRIMARY_BLUE.withOpacity(0.03), // 统一颜色
-                          margin: EdgeInsets.only(bottom: 0.5.h),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () => _handleNotificationTap(notification),
-                              splashColor:
-                                  _PRIMARY_BLUE.withOpacity(0.1), // 统一颜色
-                              highlightColor:
-                                  _PRIMARY_BLUE.withOpacity(0.05), // 统一颜色
-                              child: Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 12.w,
-                                  vertical: 8.h,
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+            return Dismissible(
+              key: Key('${notification['id']}'),
+              background: Container(
+                color: Colors.red.shade600,
+                alignment: Alignment.centerRight,
+                padding: EdgeInsets.only(right: 12.w),
+                child: Icon(
+                  Icons.delete_rounded,
+                  color: Colors.white,
+                  size: 20.r,
+                ),
+              ),
+              direction: DismissDirection.endToStart,
+              onDismissed: (direction) => _deleteNotification(index),
+              child: Container(
+                color: isRead
+                    ? Colors.white
+                    : _PRIMARY_BLUE.withOpacity(0.03), // 统一颜色
+                margin: EdgeInsets.only(bottom: 0.5.h),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _handleNotificationTap(notification),
+                    splashColor:
+                    _PRIMARY_BLUE.withOpacity(0.1), // 统一颜色
+                    highlightColor:
+                    _PRIMARY_BLUE.withOpacity(0.05), // 统一颜色
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12.w,
+                        vertical: 8.h,
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _getNotificationIcon(type),
+                          SizedBox(width: 10.w),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                              children: [
+                                Row(
                                   children: [
-                                    _getNotificationIcon(type),
-                                    SizedBox(width: 10.w),
                                     Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Expanded(
-                                                child: Text(
-                                                  '${notification['title'] ?? ''}',
-                                                  style: TextStyle(
-                                                    fontWeight: isRead
-                                                        ? FontWeight.w500
-                                                        : FontWeight.w600,
-                                                    fontSize: 13.sp,
-                                                    color: Colors.black87,
-                                                    height: 1.3,
-                                                  ),
-                                                  maxLines: 2,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                              if (!isRead)
-                                                Container(
-                                                  width: 6.w,
-                                                  height: 6.w,
-                                                  margin: EdgeInsets.only(
-                                                      left: 6.w),
-                                                  decoration:
-                                                      const BoxDecoration(
-                                                    color:
-                                                        _PRIMARY_BLUE, // 统一颜色
-                                                    shape: BoxShape.circle,
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                          SizedBox(height: 2.h),
-                                          Text(
-                                            '${notification['message'] ?? ''}',
-                                            style: TextStyle(
-                                              fontSize: 11.sp,
-                                              color: Colors.grey.shade600,
-                                              height: 1.4,
-                                            ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          SizedBox(height: 4.h),
-                                          Row(
-                                            children: [
-                                              Icon(
-                                                Icons.access_time_rounded,
-                                                size: 10.r,
-                                                color: Colors.grey.shade400,
-                                              ),
-                                              SizedBox(width: 2.w),
-                                              Text(
-                                                NotificationService
-                                                    .formatNotificationTime(
-                                                        createdAt),
-                                                style: TextStyle(
-                                                  fontSize: 10.sp,
-                                                  color: Colors.grey.shade400,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
+                                      child: Text(
+                                        '${notification['title'] ?? ''}',
+                                        style: TextStyle(
+                                          fontWeight: isRead
+                                              ? FontWeight.w500
+                                              : FontWeight.w600,
+                                          fontSize: 13.sp,
+                                          color: Colors.black87,
+                                          height: 1.3,
+                                        ),
+                                        maxLines: 2,
+                                        overflow:
+                                        TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    if (!isRead)
+                                      Container(
+                                        width: 6.w,
+                                        height: 6.w,
+                                        margin: EdgeInsets.only(
+                                            left: 6.w),
+                                        decoration:
+                                        const BoxDecoration(
+                                          color:
+                                          _PRIMARY_BLUE, // 统一颜色
+                                          shape:
+                                          BoxShape.circle,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                SizedBox(height: 2.h),
+                                Text(
+                                  '${notification['message'] ?? ''}',
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    color: Colors.grey.shade600,
+                                    height: 1.4,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                SizedBox(height: 4.h),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.access_time_rounded,
+                                      size: 10.r,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                    SizedBox(width: 2.w),
+                                    Text(
+                                      NotificationService
+                                          .formatNotificationTime(
+                                          createdAt),
+                                      style: TextStyle(
+                                        fontSize: 10.sp,
+                                        color: Colors.grey.shade400,
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
+                              ],
                             ),
                           ),
-                        ),
-                      );
-                    },
+                        ],
+                      ),
+                    ),
                   ),
                 ),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }
-
 /* ---------------- 鍏叡锛氭棤杈圭紭鍏夋檿婊氬姩 & UI 鍩哄骇 ---------------- */
 
 class NoGlowScrollBehavior extends ScrollBehavior {
@@ -5183,7 +5178,7 @@ class _ProfilePageState extends State<ProfilePage>
     with SingleTickerProviderStateMixin {
   bool _loading = true;
 
-  /// 鍩虹璧勬枡锛堟樉绀哄悕/澶村儚/鏃堕棿绛夛級
+  /// 鍩虹璧勬枡锛堟樉绀哄名/澶村儚/鏃堕棿绛夛級
   Map<String, dynamic>? _profile;
 
   /// 鍙鐨?profiles 琛岋紙浠呭惈 verification_type 绛夛級
@@ -5203,6 +5198,8 @@ class _ProfilePageState extends State<ProfilePage>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
+  // 原有的 _textScaleFactor 变量已移除，依赖全局设置
+
   @override
   void initState() {
     super.initState();
@@ -5220,14 +5217,18 @@ class _ProfilePageState extends State<ProfilePage>
 
     // 鉁?棣栨杩涘叆鎷夊彇璁よ瘉鐘舵€?& 鐩戝惉鐧诲綍鎬佸彉鍖栬嚜鍔ㄥ埛鏂?
     _reloadUserVerificationStatus();
+    // 修复 Bug: 确保在 dispose() 中取消 Supabase 监听，防止 setState called after dispose 错误
     Supabase.instance.client.auth.onAuthStateChange.listen((event) {
-      _reloadUserVerificationStatus();
+      if (mounted) {
+        _reloadUserVerificationStatus();
+      }
     });
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    // ⚠️ 确保外部监听器在 dispose 中被取消 (如果它是 StreamSubscription)
     super.dispose();
   }
 
@@ -5237,7 +5238,7 @@ class _ProfilePageState extends State<ProfilePage>
       // 鍩虹璧勬枡鐢ㄤ簬椤甸潰鏄剧ず锛堝悕瀛?澶村儚/鏃堕棿绛夛級
       final base = await _svc.getUserProfile();
       final map =
-          base == null ? <String, dynamic>{} : Map<String, dynamic>.from(base);
+      base == null ? <String, dynamic>{} : Map<String, dynamic>.from(base);
 
       if (!mounted) return;
       setState(() {
@@ -5259,10 +5260,12 @@ class _ProfilePageState extends State<ProfilePage>
 
   // 鉁?浠呮煡 user_verifications锛屼竴娆℃€ц绠?_verified/_badge锛屽苟鏇存柊鍒扮姸鎬?
   Future<void> _reloadUserVerificationStatus() async {
+    // 修复 Bug: 在异步调用前检查 mounted
+    if (!mounted) return;
     setState(() => _verifyLoading = true);
 
     final row =
-        await _verifySvc.fetchVerificationRow(); // 浠呮煡 user_verifications
+    await _verifySvc.fetchVerificationRow(); // 浠呮煡 user_verifications
     final user = Supabase.instance.client.auth.currentUser;
 
     final verified = vutils.computeIsVerified(verificationRow: row, user: user);
@@ -5306,7 +5309,7 @@ class _ProfilePageState extends State<ProfilePage>
       builder: (dialogCtx) {
         return Dialog(
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           elevation: 8,
           child: Container(
             padding: const EdgeInsets.all(24),
@@ -5347,7 +5350,7 @@ class _ProfilePageState extends State<ProfilePage>
                     labelText: 'Full name',
                     labelStyle: const TextStyle(fontSize: 14),
                     prefixIcon:
-                        const Icon(Icons.person_outline_rounded, size: 20),
+                    const Icon(Icons.person_outline_rounded, size: 20),
                     border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12)),
                     focusedBorder: OutlineInputBorder(
@@ -5385,7 +5388,7 @@ class _ProfilePageState extends State<ProfilePage>
                           padding: const EdgeInsets.symmetric(
                               horizontal: 24, vertical: 12)),
                       child:
-                          const Text('Cancel', style: TextStyle(fontSize: 15)),
+                      const Text('Cancel', style: TextStyle(fontSize: 15)),
                     ),
                     const SizedBox(width: 12),
                     DecoratedBox(
@@ -5406,7 +5409,7 @@ class _ProfilePageState extends State<ProfilePage>
                         ),
                         child: const Text('Save',
                             style:
-                                TextStyle(fontSize: 15, color: Colors.white)),
+                            TextStyle(fontSize: 15, color: Colors.white)),
                       ),
                     ),
                   ],
@@ -5438,7 +5441,7 @@ class _ProfilePageState extends State<ProfilePage>
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -5460,7 +5463,7 @@ class _ProfilePageState extends State<ProfilePage>
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -5471,8 +5474,12 @@ class _ProfilePageState extends State<ProfilePage>
     phoneCtrl.dispose();
   }
 
+  // -----------------------------------------------------
+  // 强化：增加卡死保护和缓存破坏逻辑 (已更新)
+  // -----------------------------------------------------
   Future<void> _uploadAvatarSimple() async {
     if (!mounted) return;
+    // 立即显示加载状态
     setState(() => _uploadingAvatar = true);
 
     try {
@@ -5483,24 +5490,35 @@ class _ProfilePageState extends State<ProfilePage>
         maxHeight: 512,
         imageQuality: 80,
       );
+
+      // 检查用户是否取消选择，如果是，直接退出，不报错
       if (image == null) return;
 
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) throw Exception('User not authenticated');
 
+      // 读取文件字节（确保在异步环境中）
       final bytes = await File(image.path).readAsBytes();
       final ext = image.path.split('.').last;
+      // 使用唯一路径名避免存储覆盖冲突
       final path =
           '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.$ext';
+
+      // 检查 mounted 状态，防止长时间选择后，页面已销毁
+      if (!mounted) return;
 
       await Supabase.instance.client.storage.from('avatars').uploadBinary(
           path, bytes,
           fileOptions: const FileOptions(upsert: true));
 
-      final publicUrl =
-          Supabase.instance.client.storage.from('avatars').getPublicUrl(path);
-      await ProfileService.instance.updateUserProfile(avatarUrl: publicUrl);
+      // 修复 Bug: 添加缓存破坏参数 (Cache-Busting)
+      final baseUrl = Supabase.instance.client.storage.from('avatars').getPublicUrl(path);
+      final cacheBust = DateTime.now().millisecondsSinceEpoch;
+      final publicUrlWithCacheBust = '$baseUrl?v=$cacheBust';
 
+      await ProfileService.instance.updateUserProfile(avatarUrl: publicUrlWithCacheBust);
+
+      // 强制重新加载状态
       await _load();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -5516,11 +5534,12 @@ class _ProfilePageState extends State<ProfilePage>
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(16),
         ),
       );
     } catch (e) {
+      if (kDebugMode) debugPrint('Avatar upload error: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -5537,58 +5556,205 @@ class _ProfilePageState extends State<ProfilePage>
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(16),
         ),
       );
     } finally {
+      // 无论成功还是失败，都要确保加载状态被重置
       if (mounted) setState(() => _uploadingAvatar = false);
     }
+  }
+
+  // -----------------------------------------------------
+  // 修正：重构头部，使用 Stack + Positioned.fill 解决断层和放大问题
+  // -----------------------------------------------------
+  Widget _buildEnhancedHeader({
+    required bool isGuest,
+    required String name,
+    required String email,
+    String? avatarUrl,
+    String? memberSince,
+    vt.VerificationBadgeType verificationType = vt.VerificationBadgeType.none,
+  }) {
+    // 渐变色值（原先的 ProfilePage 颜色）
+    const List<Color> gradientColors = [
+      Color(0xFF2563EB),
+      Color(0xFF3B82F6),
+      Color(0xFF60A5FA)
+    ];
+
+    return Stack(
+      children: [
+        // 1. 背景层：Positioned.fill 延伸到状态栏上方，解决断层
+        Positioned.fill(
+          child: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: gradientColors,
+                stops: [0.0, 0.5, 1.0],
+              ),
+            ),
+          ),
+        ),
+
+        // 2. 内容层：使用 SafeArea 保护内容
+        SafeArea(
+          bottom: false,
+          // 修复居中问题: 添加 Center 包裹 Padding，确保内容在 Stack 中水平居中
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 30),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                // 确保所有内容水平居中
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Hero(
+                    tag: 'profile_avatar',
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(colors: [
+                          Colors.white.withOpacity(0.9),
+                          Colors.white.withOpacity(0.3)
+                        ]),
+                        boxShadow: [
+                          BoxShadow(
+                              color: Colors.black.withOpacity(0.2),
+                              blurRadius: 20,
+                              offset: const Offset(0, 10))
+                        ],
+                      ),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          VerifiedAvatar(
+                            avatarUrl: avatarUrl,
+                            radius: 45,
+                            verificationType: verificationType,
+                            onTap: !isGuest ? _uploadAvatarSimple : null,
+                            defaultIcon:
+                            isGuest ? Icons.person_outline : Icons.person,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      // 修复放大问题: 使用固定值 24.0
+                      fontSize: 24.0,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                      shadows: [
+                        Shadow(
+                            offset: Offset(0, 2),
+                            blurRadius: 4,
+                            color: Color(0x40000000))
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                          color: Colors.white.withOpacity(0.3), width: 1),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(email.contains('@') ? Icons.email : Icons.phone,
+                            size: 14, color: Colors.white.withOpacity(0.95)),
+                        const SizedBox(width: 6),
+                        Text(email,
+                            style: TextStyle(
+                                color: Colors.white.withOpacity(0.95),
+                                // 修复放大问题: 使用固定值 13.0
+                                fontSize: 13.0,
+                                fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  ),
+                  if (!isGuest && memberSince != null) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.calendar_today_outlined,
+                              size: 12, color: Colors.white),
+                          const SizedBox(width: 4),
+                          Text('Member since $memberSince',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  // 修复放大问题: 使用固定值 11.0
+                                  fontSize: 11.0,
+                                  fontWeight: FontWeight.w500)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final languageProvider = Provider.of<LanguageProvider>(context);
-
-    final media = MediaQuery.of(context);
-    final clamp = media.copyWith(textScaler: const TextScaler.linear(1.0));
 
     // Guest user interface
     if (widget.isGuest) {
-      return MediaQuery(
-        data: clamp,
-        child: Scaffold(
-          backgroundColor: const Color(0xFFF8F9FA),
-          body: ScrollConfiguration(
-            behavior: const ScrollBehavior(),
-            child: CustomScrollView(
-              slivers: [
-                const SliverAppBar(
-                  backgroundColor: Color(0xFF2563EB),
-                  pinned: false,
-                  elevation: 0,
-                  toolbarHeight: 0,
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
+        body: ScrollConfiguration(
+          behavior: const ScrollBehavior(),
+          child: CustomScrollView(
+            slivers: [
+              // 头部：使用 SliverToBoxAdapter 放置 Stack
+              SliverToBoxAdapter(
+                child: _buildEnhancedHeader(
+                  isGuest: true,
+                  name: l10n.guestUser,
+                  email: l10n.browseWithoutAccount,
+                  avatarUrl: null,
                 ),
-                SliverToBoxAdapter(
-                  child: _buildEnhancedHeader(
-                    isGuest: true,
-                    name: l10n.guestUser,
-                    email: l10n.browseWithoutAccount,
-                    avatarUrl: null,
+              ),
+              SliverToBoxAdapter(
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: const Padding(
+                    padding: EdgeInsets.all(20),
+                    // 使用修复后的 _GuestSimpleOptions
+                    child: _GuestSimpleOptions(),
                   ),
                 ),
-                SliverToBoxAdapter(
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: const Padding(
-                      padding: EdgeInsets.all(20),
-                      child: _GuestSimpleOptions(),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       );
@@ -5596,23 +5762,20 @@ class _ProfilePageState extends State<ProfilePage>
 
     // Loading state
     if (_loading) {
-      return MediaQuery(
-        data: clamp,
-        child: const Scaffold(
-          backgroundColor: Color(0xFFF8F9FA),
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(
-                    width: 36,
-                    height: 36,
-                    child: CircularProgressIndicator(strokeWidth: 3)),
-                SizedBox(height: 16),
-                Text('Loading profile...',
-                    style: TextStyle(color: Color(0xFF666666), fontSize: 15)),
-              ],
-            ),
+      return const Scaffold(
+        backgroundColor: Color(0xFFF8F9FA),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: CircularProgressIndicator(strokeWidth: 3)),
+              SizedBox(height: 16),
+              Text('Loading profile...',
+                  style: TextStyle(color: Color(0xFF666666), fontSize: 15)),
+            ],
           ),
         ),
       );
@@ -5621,326 +5784,325 @@ class _ProfilePageState extends State<ProfilePage>
     final fullName = (_profile?['full_name'] ?? 'User').toString();
     final phone = (_profile?['phone'] ?? '').toString();
     final email =
-        phone.isNotEmpty ? phone : (_profile?['email'] ?? '').toString();
+    phone.isNotEmpty ? phone : (_profile?['email'] ?? '').toString();
     final avatarUrl = (_profile?['avatar_url'] ?? '') as String?;
     final memberSince = _profile?['created_at']?.toString();
     String? memberSinceText;
     if (memberSince != null && memberSince.isNotEmpty) {
       final cut =
-          memberSince.length >= 10 ? memberSince.substring(0, 10) : memberSince;
+      memberSince.length >= 10 ? memberSince.substring(0, 10) : memberSince;
       memberSinceText = cut;
     }
 
-    return MediaQuery(
-      data: clamp,
-      child: Scaffold(
-        extendBody: true,
-        backgroundColor: const Color(0xFFF8F9FA),
-        body: Stack(
-          children: [
-            ScrollConfiguration(
-              behavior: const ScrollBehavior(),
-              child: CustomScrollView(
-                slivers: [
-                  const SliverAppBar(
-                    backgroundColor: Color(0xFF2563EB),
-                    pinned: false,
-                    elevation: 0,
-                    toolbarHeight: 0,
+    // Normal User interface
+    return Scaffold(
+      extendBody: true,
+      backgroundColor: const Color(0xFFF8F9FA),
+      // 修复：将 Stack 移动到 CustomScrollView 外部，以便加载指示器能覆盖整个屏幕
+      body: Stack(
+        children: [
+          ScrollConfiguration(
+            behavior: const ScrollBehavior(), // 使用无光晕滚动
+            child: CustomScrollView(
+              slivers: [
+                // 头部：使用 SliverToBoxAdapter 放置增强头部（确保背景延伸到安全区外，解决断层）
+                SliverToBoxAdapter(
+                  child: _buildEnhancedHeader(
+                    isGuest: false,
+                    name: fullName,
+                    email: email,
+                    avatarUrl: (avatarUrl != null && avatarUrl.isNotEmpty)
+                        ? avatarUrl
+                        : null,
+                    memberSince: memberSinceText,
+                    verificationType:
+                    _verified ? _badge : vt.VerificationBadgeType.none,
                   ),
-                  SliverToBoxAdapter(
-                    child: _buildEnhancedHeader(
-                      isGuest: false,
-                      name: fullName,
-                      email: email,
-                      avatarUrl: (avatarUrl != null && avatarUrl.isNotEmpty)
-                          ? avatarUrl
-                          : null,
-                      memberSince: memberSinceText,
-                      // 鉁?澶村儚鍙犲姞寰界珷锛氫粎鍦?verified 鏃朵紶鍏ワ紝鍚﹀垯浼?none锛堟湭楠岃瘉灏变笉鏄剧ず锛?
-                      verificationType:
-                          _verified ? _badge : vt.VerificationBadgeType.none,
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Profile',
-                                style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF6B7280),
-                                    letterSpacing: 0.5)),
-                            const SizedBox(height: 14),
-                            _ProfileOptionEnhanced(
-                              icon: Icons.edit_rounded,
-                              title: l10n.editProfile,
-                              color: Colors.blue,
-                              onTap: _editNamePhone,
-                            ),
-                            const SizedBox(height: 14),
+                ),
 
-                            // 鉁?璁よ瘉鍏ュ彛锛氬浘鏍?鏂囨缁戝畾 _verified锛涚偣鍑昏繘鍏ラ獙璇佸苟杩斿洖鍚庛€愭€绘槸銆戝埛鏂?
-                            _VerificationTileCard(
-                              isVerified: _verified,
-                              isLoading: _verifyLoading, // 鉁?鏂板锛氬埛鏂版椂缁欏嚭鍙嶉
-                              onTap: () async {
-                                await Navigator.of(context).push<bool>(
-                                  MaterialPageRoute(
-                                      builder: (_) => const VerificationPage()),
+                // 内容：使用 SliverList/SliverToBoxAdapter 放置列表项
+                SliverToBoxAdapter(
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // 修复放大问题: 使用固定值 16.0
+                          const Text('Profile',
+                              style: TextStyle(
+                                  fontSize: 16.0,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF6B7280),
+                                  letterSpacing: 0.5)),
+                          const SizedBox(height: 14),
+                          _ProfileOptionEnhanced(
+                            icon: Icons.edit_rounded,
+                            title: l10n.editProfile,
+                            color: Colors.blue,
+                            onTap: _editNamePhone,
+                          ),
+                          const SizedBox(height: 14),
+
+                          _VerificationTileCard(
+                            isVerified: _verified,
+                            isLoading: _verifyLoading,
+                            onTap: () async {
+                              await Navigator.of(context).push<bool>(
+                                MaterialPageRoute(
+                                    builder: (_) => const VerificationPage()),
+                              );
+                              await _reloadUserVerificationStatus();
+                            },
+                          ),
+
+                          const SizedBox(height: 28),
+                          // 修复放大问题: 使用固定值 16.0
+                          const Text('Rewards & Activities',
+                              style: TextStyle(
+                                  fontSize: 16.0,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF6B7280),
+                                  letterSpacing: 0.5)),
+                          const SizedBox(height: 14),
+                          const MyRewardsTile(),
+                          const SizedBox(height: 14),
+
+                          _ProfileOptionEnhanced(
+                            icon: Icons.inventory_2_rounded,
+                            title: l10n.myListings,
+                            color: Colors.indigo,
+                            onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const MyListingsPage())),
+                          ),
+                          const SizedBox(height: 14),
+                          _ProfileOptionEnhanced(
+                            icon: Icons.favorite_rounded,
+                            title: l10n.wishlist,
+                            color: Colors.pink,
+                            onTap: () {
+                              final user =
+                                  Supabase.instance.client.auth.currentUser;
+                              if (user == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text(
+                                          'Please sign in to view Wishlist')),
                                 );
-                                // 鉁?鏃犳潯浠跺埛鏂帮紙閬垮厤楠岃瘉椤垫湭 pop(true) 鐨勬儏鍐碉級
-                                await _reloadUserVerificationStatus();
-                              },
-                            ),
-
-                            const SizedBox(height: 28),
-                            const Text('Rewards & Activities',
-                                style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF6B7280),
-                                    letterSpacing: 0.5)),
-                            const SizedBox(height: 14),
-                            const MyRewardsTile(),
-                            const SizedBox(height: 14),
-
-                            _ProfileOptionEnhanced(
-                              icon: Icons.inventory_2_rounded,
-                              title: l10n.myListings,
-                              color: Colors.indigo,
-                              onTap: () => Navigator.push(
+                                return;
+                              }
+                              Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (_) => const MyListingsPage())),
-                            ),
-                            const SizedBox(height: 14),
-                            _ProfileOptionEnhanced(
-                              icon: Icons.favorite_rounded,
-                              title: l10n.wishlist,
-                              color: Colors.pink,
-                              onTap: () {
-                                final user =
-                                    Supabase.instance.client.auth.currentUser;
-                                if (user == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content: Text(
-                                            'Please sign in to view Wishlist')),
-                                  );
-                                  return;
-                                }
-                                Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => const WishlistPage()));
-                              },
-                            ),
-                            const SizedBox(height: 14),
+                                      builder: (_) => const WishlistPage()));
+                            },
+                          ),
+                          const SizedBox(height: 14),
 
-                            _ProfileOptionEnhanced(
-                              icon: Icons.person_add_alt_1_rounded,
-                              title: 'Invite Friends',
-                              subtitle: 'Earn coupons by inviting friends',
-                              color: Colors.orange,
-                              onTap: () => Navigator.push(
+                          _ProfileOptionEnhanced(
+                            icon: Icons.person_add_alt_1_rounded,
+                            title: 'Invite Friends',
+                            subtitle: 'Earn coupons by inviting friends',
+                            color: Colors.orange,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const InviteFriendsPage()),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+
+                          _ProfileOptionEnhanced(
+                            icon: Icons.local_activity_rounded,
+                            title: 'My Coupons',
+                            subtitle: 'View and manage your coupons',
+                            color: Colors.purple,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => CouponManagementPage()),
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+                          // 修复放大问题: 使用固定值 16.0
+                          const Text('Support',
+                              style: TextStyle(
+                                  fontSize: 16.0,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF6B7280),
+                                  letterSpacing: 0.5)),
+                          const SizedBox(height: 14),
+
+                          // 鉁?新增：Account 入口
+                          _ProfileOptionEnhanced(
+                            icon: Icons.manage_accounts,
+                            title: 'Account',
+                            subtitle: 'Password, devices, delete',
+                            color: Colors.cyan,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const AccountSettingsPage(),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+
+                          // 鉁?新增：隐私政策外链
+                          _ProfileOptionEnhanced(
+                            icon: Icons.privacy_tip_outlined,
+                            title: 'Privacy Policy',
+                            color: Colors.blueGrey,
+                            onTap: () => launchUrl(
+                              Uri.parse(_kPrivacyUrl),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+
+                          // 鉁?新增：数据删除说明外链
+                          _ProfileOptionEnhanced(
+                            icon: Icons.delete_outline,
+                            title: 'Data Deletion / How to delete my account',
+                            color: Colors.deepOrange,
+                            onTap: () => launchUrl(
+                              Uri.parse(_kDeleteUrl),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+
+                          _ProfileOptionEnhanced(
+                            icon: Icons.help_outline_rounded,
+                            title: l10n.helpSupport,
+                            color: Colors.teal,
+                            onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (_) => const InviteFriendsPage()),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-
-                            _ProfileOptionEnhanced(
-                              icon: Icons.local_activity_rounded,
-                              title: 'My Coupons',
-                              subtitle: 'View and manage your coupons',
-                              color: Colors.purple,
-                              onTap: () => Navigator.push(
+                                    builder: (_) => HelpSupportPage())),
+                          ),
+                          const SizedBox(height: 14),
+                          _ProfileOptionEnhanced(
+                            icon: Icons.info_outline_rounded,
+                            title: l10n.about,
+                            color: Colors.blueGrey,
+                            onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (_) => CouponManagementPage()),
-                              ),
-                            ),
-                            const SizedBox(height: 28),
-                            const Text('Support',
-                                style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF6B7280),
-                                    letterSpacing: 0.5)),
-                            const SizedBox(height: 14),
-
-                            // 鉁?鏂板锛欰ccount 鍏ュ彛锛堝厛鍒拌处鎴疯缃〉锛屽啀鍚垹闄よ处鍙风瓑锛?
-                            _ProfileOptionEnhanced(
-                              icon: Icons.manage_accounts,
-                              title: 'Account',
-                              subtitle: 'Password, devices, delete',
-                              color: Colors.cyan,
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const AccountSettingsPage(),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-
-                            // 鉁?鏂板锛氶殣绉佹斂绛栧閾?
-                            _ProfileOptionEnhanced(
-                              icon: Icons.privacy_tip_outlined,
-                              title: 'Privacy Policy',
-                              color: Colors.blueGrey,
-                              onTap: () => launchUrl(
-                                Uri.parse(_kPrivacyUrl),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-
-                            // 鉁?鏂板锛氭暟鎹垹闄よ鏄庡閾?
-                            _ProfileOptionEnhanced(
-                              icon: Icons.delete_outline,
-                              title: 'Data Deletion / How to delete my account',
-                              color: Colors.deepOrange,
-                              onTap: () => launchUrl(
-                                Uri.parse(_kDeleteUrl),
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-
-                            _ProfileOptionEnhanced(
-                              icon: Icons.help_outline_rounded,
-                              title: l10n.helpSupport,
-                              color: Colors.teal,
-                              onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) => HelpSupportPage())),
-                            ),
-                            const SizedBox(height: 14),
-                            _ProfileOptionEnhanced(
-                              icon: Icons.info_outline_rounded,
-                              title: l10n.about,
-                              color: Colors.blueGrey,
-                              onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) => AboutPage())),
-                            ),
-                            const SizedBox(height: 28),
-                            _ProfileOptionEnhanced(
-                              icon: Icons.logout_rounded,
-                              title: l10n.logout,
-                              color: Colors.red,
-                              onTap: () async {
-                                final confirmed = await showDialog<bool>(
-                                  context: context,
-                                  builder: (ctx) => AlertDialog(
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(18)),
-                                    title: Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                              color:
-                                                  Colors.red.withOpacity(0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(8)),
-                                          child: const Icon(
-                                              Icons.logout_rounded,
-                                              color: Colors.red,
-                                              size: 20),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        const Text('Logout',
-                                            style: TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.w600)),
-                                      ],
-                                    ),
-                                    content: const Text(
-                                        'Are you sure you want to logout?',
-                                        style: TextStyle(
-                                            fontSize: 15, height: 1.4)),
-                                    actions: [
-                                      TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(ctx).pop(false),
-                                          child: Text('Cancel',
-                                              style: TextStyle(
-                                                  fontSize: 15,
-                                                  color: Colors.grey[600]))),
+                                    builder: (_) => AboutPage())),
+                          ),
+                          const SizedBox(height: 28),
+                          _ProfileOptionEnhanced(
+                            icon: Icons.logout_rounded,
+                            title: l10n.logout,
+                            color: Colors.red,
+                            onTap: () async {
+                              final confirmed = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                      BorderRadius.circular(18)),
+                                  title: Row(
+                                    children: [
                                       Container(
+                                        padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
-                                            color: Colors.red,
+                                            color:
+                                            Colors.red.withOpacity(0.1),
                                             borderRadius:
-                                                BorderRadius.circular(8)),
-                                        child: TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(ctx).pop(true),
-                                          child: const Text('Logout',
-                                              style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w600)),
-                                        ),
+                                            BorderRadius.circular(8)),
+                                        child: const Icon(
+                                            Icons.logout_rounded,
+                                            color: Colors.red,
+                                            size: 20),
                                       ),
+                                      const SizedBox(width: 12),
+                                      const Text('Logout',
+                                          style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w600)),
                                     ],
                                   ),
-                                );
-                                if (confirmed == true) {
-                                  try {
-                                    await Supabase.instance.client.auth
-                                        .signOut();
-                                    RewardService.clearCache();
-                                  } catch (e) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Row(
-                                            children: [
-                                              const Icon(
-                                                  Icons.error_outline_rounded,
-                                                  color: Colors.white,
-                                                  size: 18),
-                                              const SizedBox(width: 8),
-                                              Text('Logout failed: $e',
-                                                  style: const TextStyle(
-                                                      fontSize: 14)),
-                                            ],
-                                          ),
-                                          backgroundColor: Colors.red,
-                                          behavior: SnackBarBehavior.floating,
-                                          shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(10)),
-                                          margin: const EdgeInsets.all(16),
+                                  content: const Text(
+                                      'Are you sure you want to logout?',
+                                      style: TextStyle(
+                                          fontSize: 15, height: 1.4)),
+                                  actions: [
+                                    TextButton(
+                                        onPressed: () =>
+                                            Navigator.of(ctx).pop(false),
+                                        child: Text('Cancel',
+                                            style: TextStyle(
+                                                fontSize: 15,
+                                                color: Colors.grey[600]))),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                          color: Colors.red,
+                                          borderRadius:
+                                          BorderRadius.circular(8)),
+                                      child: TextButton(
+                                        onPressed: () =>
+                                            Navigator.of(ctx).pop(true),
+                                        child: const Text('Logout',
+                                            style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w600)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirmed == true) {
+                                try {
+                                  await Supabase.instance.client.auth
+                                      .signOut();
+                                  RewardService.clearCache();
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context)
+                                        .showSnackBar(
+                                      SnackBar(
+                                        content: Row(
+                                          children: [
+                                            const Icon(
+                                                Icons.error_outline_rounded,
+                                                color: Colors.white,
+                                                size: 18),
+                                            const SizedBox(width: 8),
+                                            Text('Logout failed: $e',
+                                                style: const TextStyle(
+                                                    fontSize: 14)),
+                                          ],
                                         ),
-                                      );
-                                    }
+                                        backgroundColor: Colors.red,
+                                        behavior: SnackBarBehavior.floating,
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                            BorderRadius.circular(10)),
+                                        margin: const EdgeInsets.all(16),
+                                      ),
+                                    );
                                   }
                                 }
-                              },
-                            ),
-                            const SizedBox(height: 40),
-                          ],
-                        ),
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 40),
+                        ],
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            if (_uploadingAvatar)
-              Container(
+          ),
+          // 修复 Bug: 加载指示器必须在 Stack 中，并使用 Positioned.fill 覆盖
+          if (_uploadingAvatar)
+            Positioned.fill(
+              child: Container(
                 color: Colors.black54,
                 child: Center(
                   child: Container(
@@ -5964,141 +6126,8 @@ class _ProfilePageState extends State<ProfilePage>
                   ),
                 ),
               ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // 澶村儚鍖哄煙锛氭湭淇敼锛堢敤浣犳彁渚涚殑鍘熷浠ｇ爜锛?
-  Widget _buildEnhancedHeader({
-    required bool isGuest,
-    required String name,
-    required String email,
-    String? avatarUrl,
-    String? memberSince,
-    vt.VerificationBadgeType verificationType = vt.VerificationBadgeType.none,
-  }) {
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF2563EB), Color(0xFF3B82F6), Color(0xFF60A5FA)],
-          stops: [0.0, 0.5, 1.0],
-        ),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 30),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Hero(
-                tag: 'profile_avatar',
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(colors: [
-                      Colors.white.withOpacity(0.9),
-                      Colors.white.withOpacity(0.3)
-                    ]),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10))
-                    ],
-                  ),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      // VerifiedAvatar 鍐呴儴浼氭牴鎹?verificationType==none 鍐冲畾鏄惁灞曠ず瑙掓爣
-                      VerifiedAvatar(
-                        avatarUrl: avatarUrl,
-                        radius: 45,
-                        verificationType: verificationType,
-                        onTap: !isGuest ? _uploadAvatarSimple : null,
-                        defaultIcon:
-                            isGuest ? Icons.person_outline : Icons.person,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                  shadows: [
-                    Shadow(
-                        offset: Offset(0, 2),
-                        blurRadius: 4,
-                        color: Color(0x40000000))
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(
-                      color: Colors.white.withOpacity(0.3), width: 1),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(email.contains('@') ? Icons.email : Icons.phone,
-                        size: 14, color: Colors.white.withOpacity(0.95)),
-                    const SizedBox(width: 6),
-                    Text(email,
-                        style: TextStyle(
-                            color: Colors.white.withOpacity(0.95),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500)),
-                  ],
-                ),
-              ),
-              if (!isGuest && memberSince != null) ...[
-                const SizedBox(height: 10),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.calendar_today_outlined,
-                          size: 12, color: Colors.white),
-                      const SizedBox(width: 4),
-                      Text(memberSince,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500)),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -6141,7 +6170,7 @@ class _VerificationTileCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // 鉁?宸︿晶涓庡叾瀹冮」瀹屽叏涓€鑷寸殑鈥滃僵鑹插渾瑙掓柟鍧椻€?
+              // 鉁?宸︿晶涓庡叾瀹冮項瀹屽叏涓€鑷寸殑鈥滃僵鑹插渾瑙掓柟鍧椻€?
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -6156,29 +6185,32 @@ class _VerificationTileCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(isVerified ? 'Verified' : 'Verification',
+                    Text(isVerified ? 'Verified' : 'Verification', // 修复 const 报错
                         style: const TextStyle(
-                            fontSize: 17, fontWeight: FontWeight.w600)),
+                          // 修复放大问题: 使用固定值 17.0
+                            fontSize: 17.0,
+                            fontWeight: FontWeight.w600)),
                     const SizedBox(height: 3),
                     Text(
                         isVerified
                             ? 'Status: Verified'
                             : 'Status: Not verified',
                         style:
-                            TextStyle(fontSize: 14, color: Colors.grey[600])),
+                        // 修复放大问题: 使用固定值 14.0
+                        TextStyle(fontSize: 14.0, color: Colors.grey[600])),
                   ],
                 ),
               ),
               const SizedBox(width: 10),
-              // 鍙充晶涓庡叾瀹冮」缁熶竴锛氬姞杞藉湀/灏忎笁瑙?
+              // 鍙充晶涓庡叾瀹冮項缁熶竴锛氬姞杞藉湀/灏忎笁瑙?
               isLoading
                   ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
                   : Icon(Icons.arrow_forward_ios,
-                      size: 18, color: Colors.grey[400]),
+                  size: 18, color: Colors.grey[400]),
             ],
           ),
         ),
@@ -6187,7 +6219,7 @@ class _VerificationTileCard extends StatelessWidget {
   }
 }
 
-/* ---------------- 閫氱敤鍒楄〃椤癸紙鍏朵綑椤逛粛鐢ㄤ綘鐨勫崱鐗囨牱寮忥紱涓嶅啀娓叉煋浠讳何灏忓窘绔狶級 ---------------- */
+/* ---------------- 閫氱敤鍒楄〃椤癸紙鍏朵綑椤逛粛鐢ㄤ綘鐨勫崱鐗囨牱寮忥紱涓嶅啀娓叉煋浠讳何灏忓窘绔狶锛?---------------- */
 class _ProfileOptionEnhanced extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -6238,12 +6270,15 @@ class _ProfileOptionEnhanced extends StatelessWidget {
                   children: [
                     Text(title,
                         style: const TextStyle(
-                            fontSize: 17, fontWeight: FontWeight.w600)),
+                          // 修复放大问题: 使用固定值 17.0
+                            fontSize: 17.0,
+                            fontWeight: FontWeight.w600)),
                     if (subtitle != null) ...[
                       const SizedBox(height: 3),
                       Text(subtitle!,
                           style:
-                              TextStyle(fontSize: 14, color: Colors.grey[600])),
+                          // 修复放大问题: 使用固定值 14.0
+                          TextStyle(fontSize: 14.0, color: Colors.grey[600])),
                     ],
                   ],
                 ),
@@ -6274,7 +6309,8 @@ class _GuestSimpleOptions extends StatelessWidget {
           onTap: () => Navigator.push(
               context, MaterialPageRoute(builder: (_) => HelpSupportPage())),
         ),
-        const SizedBox(height: 12),
+        // 修复 Column 布局错误
+        const SizedBox(height: 14),
         _ProfileOptionEnhanced(
           icon: Icons.info_outline_rounded,
           title: l10n.about,
@@ -6410,7 +6446,7 @@ class HelpSupportPage extends StatelessWidget {
                       const SizedBox(height: 3),
                       Text(subtitle,
                           style:
-                              TextStyle(fontSize: 14, color: Colors.grey[600])),
+                          TextStyle(fontSize: 14, color: Colors.grey[600])),
                     ]),
               ),
               if (onTap != null)

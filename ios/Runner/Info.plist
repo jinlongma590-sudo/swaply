@@ -91,5 +91,23 @@
         </array>
       </dict>
     </array>
+
+    <!-- 允许 canLaunchUrl 查询的外部 App 白名单（iOS 9+ 必须） -->
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+      <!-- WhatsApp -->
+      <string>whatsapp</string>
+      <string>whatsapp-business</string>
+
+      <!-- Telegram -->
+      <string>tg</string>
+      <string>telegram</string>
+
+      <!-- Facebook / Messenger（按需保留） -->
+      <string>fb</string>
+      <string>fbapi</string>
+      <string>fbauth2</string>
+      <string>fb-messenger</string>
+    </array>
   </dict>
 </plist>
