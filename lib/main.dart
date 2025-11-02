@@ -546,6 +546,17 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   backgroundColor: Color(0xFF2196F3),
                   foregroundColor: Colors.white,
                   elevation: 0,
+                  // 修复全局标题样式和布局问题
+                  centerTitle: false, // 强制标题靠左对齐 (Android/iOS 统一)
+                  toolbarHeight: kToolbarHeight,
+                  // 调整标题样式，使用固定值 20.0
+                  titleTextStyle: TextStyle(
+                    fontSize: 20.0,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                  // 修复 Bug: 移除 titleSpacing: 0，恢复默认左边距
+                  // titleSpacing: 0,
                 ),
                 elevatedButtonTheme: ElevatedButtonThemeData(
                   style: ElevatedButton.styleFrom(
@@ -557,7 +568,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   ),
                 ),
               ),
-// 鉁?浠呬娇鐢?initialRoute锛岄伩鍏嶅悓鏃惰缃?home 閫犳垚璺敱鍐茬獊
+// 鉁?浠呬娇鐢?initialRoute锛岄伩鍏嶅悓鏃惰缃?home 閫犳垚璺敱鍐茬窊
               initialRoute: hasSession ? '/home' : '/welcome',
               routes: {
 // 鉁?Welcome 鈫?Startup
@@ -2536,6 +2547,9 @@ class _WishlistPageState extends State<WishlistPage> {
   bool _isRefreshing = false;
   String? _errorMessage;
 
+  // 移除 _PRIMARY_PINK 的常量定义，直接使用 Colors.pink
+  // static const Color _PRIMARY_PINK = Colors.pink; // ❌ 移除此行
+
   @override
   void initState() {
     super.initState();
@@ -2740,7 +2754,7 @@ class _WishlistPageState extends State<WishlistPage> {
                       width: 65.w,
                       height: 65.w,
                       decoration: BoxDecoration(
-                        color: Colors.pink[50],
+                        color: Colors.pink[50], // 使用 Colors.pink[50]
                         borderRadius: BorderRadius.circular(8.w),
                       ),
                       child: imageUrl.startsWith('http')
@@ -2766,7 +2780,7 @@ class _WishlistPageState extends State<WishlistPage> {
                                 strokeWidth: 1.5.w,
                                 valueColor:
                                 const AlwaysStoppedAnimation<Color>(
-                                    Colors.pink),
+                                    Colors.pink), // 使用 Colors.pink
                               ),
                             ),
                           );
@@ -2774,12 +2788,12 @@ class _WishlistPageState extends State<WishlistPage> {
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
                             decoration: BoxDecoration(
-                              color: Colors.pink[50],
+                              color: Colors.pink[50], // 使用 Colors.pink[50]
                               borderRadius: BorderRadius.circular(8.w),
                             ),
                             child: Icon(
                               Icons.image_not_supported_rounded,
-                              color: Colors.pink[300],
+                              color: Colors.pink[300], // 使用 Colors.pink[300]
                               size: 24.w,
                             ),
                           );
@@ -2787,12 +2801,12 @@ class _WishlistPageState extends State<WishlistPage> {
                       )
                           : Container(
                         decoration: BoxDecoration(
-                          color: Colors.pink[50],
+                          color: Colors.pink[50], // 使用 Colors.pink[50]
                           borderRadius: BorderRadius.circular(8.w),
                         ),
                         child: Icon(
                           Icons.image_not_supported_rounded,
-                          color: Colors.pink[300],
+                          color: Colors.pink[300], // 使用 Colors.pink[300]
                           size: 24.w,
                         ),
                       ),
@@ -2822,7 +2836,7 @@ class _WishlistPageState extends State<WishlistPage> {
                         padding: EdgeInsets.symmetric(
                             horizontal: 6.w, vertical: 2.h),
                         decoration: BoxDecoration(
-                          color: Colors.pink.withOpacity(0.1),
+                          color: Colors.pink.withOpacity(0.1), // 使用 Colors.pink
                           borderRadius: BorderRadius.circular(6.w),
                         ),
                         child: Text(
@@ -2830,7 +2844,7 @@ class _WishlistPageState extends State<WishlistPage> {
                           style: TextStyle(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.bold,
-                            color: Colors.pink[600],
+                            color: Colors.pink[600], // 使用 Colors.pink[600]
                           ),
                         ),
                       ),
@@ -2883,7 +2897,7 @@ class _WishlistPageState extends State<WishlistPage> {
                 Container(
                   margin: EdgeInsets.only(left: 6.w),
                   decoration: BoxDecoration(
-                    color: Colors.pink.withOpacity(0.1),
+                    color: Colors.pink.withOpacity(0.1), // 使用 Colors.pink
                     borderRadius: BorderRadius.circular(8.w),
                   ),
                   child: Material(
@@ -2895,7 +2909,7 @@ class _WishlistPageState extends State<WishlistPage> {
                         padding: EdgeInsets.all(8.w),
                         child: Icon(
                           Icons.favorite_rounded,
-                          color: Colors.pink[600],
+                          color: Colors.pink[600], // 使用 Colors.pink[600]
                           size: 18.w,
                         ),
                       ),
@@ -2989,22 +3003,22 @@ class _WishlistPageState extends State<WishlistPage> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    _PRIMARY_BLUE.withOpacity(0.1),
-                    _PRIMARY_BLUE.withOpacity(0.05),
+                    Colors.pink.withOpacity(0.1), // 使用 Colors.pink
+                    Colors.pink.withOpacity(0.05), // 使用 Colors.pink
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(50.w),
                 border: Border.all(
-                  color: _PRIMARY_BLUE.withOpacity(0.2),
+                  color: Colors.pink.withOpacity(0.2), // 使用 Colors.pink
                   width: 1.5.w,
                 ),
               ),
               child: Icon(
                 Icons.favorite_outline_rounded,
                 size: 50.w,
-                color: _PRIMARY_BLUE,
+                color: Colors.pink, // 使用 Colors.pink
               ),
             ),
             SizedBox(height: 24.h),
@@ -3034,14 +3048,14 @@ class _WishlistPageState extends State<WishlistPage> {
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [_PRIMARY_BLUE, const Color(0xFF1E88E5)],
+                  colors: [Colors.pink, Colors.pink.shade400!], // 使用 Colors.pink
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 ),
                 borderRadius: BorderRadius.circular(12.w),
                 boxShadow: [
                   BoxShadow(
-                    color: _PRIMARY_BLUE.withOpacity(0.3),
+                    color: Colors.pink.withOpacity(0.3), // 使用 Colors.pink
                     blurRadius: 10.w,
                     offset: Offset(0, 4.h),
                   ),
@@ -3120,7 +3134,7 @@ class _WishlistPageState extends State<WishlistPage> {
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [_PRIMARY_BLUE, const Color(0xFF1E88E5)],
+                  colors: [Colors.pink, Colors.pink.shade400!], // 使用 Colors.pink
                 ),
                 borderRadius: BorderRadius.circular(10.w),
               ),
@@ -3199,7 +3213,7 @@ class _WishlistPageState extends State<WishlistPage> {
                   _clearAllWishlist();
                 },
                 child: Text(
-                  'Clear All',
+                  'Remove',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 13.sp,
@@ -3286,8 +3300,8 @@ class _WishlistPageState extends State<WishlistPage> {
       backgroundColor: const Color(0xFFF8F9FA),
       // 使用标准 AppBar
       appBar: AppBar(
-        // 统一背景色为 NotificationPage 的 _PRIMARY_BLUE
-        backgroundColor: _PRIMARY_BLUE,
+        // 统一背景色为 Colors.pink
+        backgroundColor: Colors.pink,
         // 统一高度（默认高度，不使用 PreferredSize）
         toolbarHeight: kToolbarHeight,
         title: Text(
@@ -3295,9 +3309,6 @@ class _WishlistPageState extends State<WishlistPage> {
           // 统一标题样式
           style: TextStyle(
             color: Colors.white,
-            // 字体大小与 NotificationPage 头部一致（NotificationPage 头部是 24.sp，
-            // 但在标准 AppBar 中 24.sp 可能过大，为了匹配视觉效果，我们使用略大的 18.sp，
-            // 或尝试 20.sp 来接近 NotificationPage 中 24.sp 带来的视觉冲击力，同时保持标准 AppBar 布局）
             fontSize: 20.sp,
             fontWeight: FontWeight.w600,
           ),
@@ -3346,7 +3357,7 @@ class _WishlistPageState extends State<WishlistPage> {
               height: 30.w,
               child: CircularProgressIndicator(
                 valueColor:
-                const AlwaysStoppedAnimation<Color>(_PRIMARY_BLUE),
+                const AlwaysStoppedAnimation<Color>(Colors.pink), // 统一颜色
                 strokeWidth: 2.5.w,
               ),
             ),
@@ -3367,7 +3378,7 @@ class _WishlistPageState extends State<WishlistPage> {
           ? _buildEmptyState()
           : RefreshIndicator(
         onRefresh: _refreshWishlist,
-        color: _PRIMARY_BLUE,
+        color: Colors.pink, // 统一颜色
         backgroundColor: Colors.white,
         strokeWidth: 2.w,
         child: ListView.builder(
@@ -5568,6 +5579,7 @@ class _ProfilePageState extends State<ProfilePage>
 
   // -----------------------------------------------------
   // 修正：重构头部，使用 Stack + Positioned.fill 解决断层和放大问题
+  // 核心修复：使用固定 double 值，以保证跨平台尺寸稳定。
   // -----------------------------------------------------
   Widget _buildEnhancedHeader({
     required bool isGuest,
@@ -5606,6 +5618,7 @@ class _ProfilePageState extends State<ProfilePage>
           // 修复居中问题: 添加 Center 包裹 Padding，确保内容在 Stack 中水平居中
           child: Center(
             child: Padding(
+              // 统一使用固定值 (基于 Android 视觉效果)
               padding: const EdgeInsets.fromLTRB(24, 20, 24, 30),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -5615,18 +5628,18 @@ class _ProfilePageState extends State<ProfilePage>
                   Hero(
                     tag: 'profile_avatar',
                     child: Container(
-                      padding: const EdgeInsets.all(4),
+                      padding: const EdgeInsets.all(4), // 固定值
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: LinearGradient(colors: [
                           Colors.white.withOpacity(0.9),
                           Colors.white.withOpacity(0.3)
                         ]),
-                        boxShadow: [
+                        boxShadow: const [
                           BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10))
+                              color: Color.fromRGBO(0, 0, 0, 0.2),
+                              blurRadius: 20, // 固定值
+                              offset: Offset(0, 10)) // 固定值
                         ],
                       ),
                       child: Stack(
@@ -5634,7 +5647,7 @@ class _ProfilePageState extends State<ProfilePage>
                         children: [
                           VerifiedAvatar(
                             avatarUrl: avatarUrl,
-                            radius: 45,
+                            radius: 45, // 修复放大问题: 使用固定值
                             verificationType: verificationType,
                             onTap: !isGuest ? _uploadAvatarSimple : null,
                             defaultIcon:
@@ -5644,7 +5657,7 @@ class _ProfilePageState extends State<ProfilePage>
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 16), // 固定值
                   Text(
                     name,
                     maxLines: 1,
@@ -5652,8 +5665,7 @@ class _ProfilePageState extends State<ProfilePage>
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white,
-                      // 修复放大问题: 使用固定值 24.0
-                      fontSize: 24.0,
+                      fontSize: 22.0, // 微调字体，使用固定值
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.5,
                       shadows: [
@@ -5664,51 +5676,50 @@ class _ProfilePageState extends State<ProfilePage>
                       ],
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 8), // 固定值
                   Container(
                     padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // 固定值
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(24), // 固定值
                       border: Border.all(
-                          color: Colors.white.withOpacity(0.3), width: 1),
+                          color: Colors.white.withOpacity(0.3), width: 1), // 固定值
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(email.contains('@') ? Icons.email : Icons.phone,
-                            size: 14, color: Colors.white.withOpacity(0.95)),
-                        const SizedBox(width: 6),
+                            size: 14, color: Colors.white.withOpacity(0.95)), // 固定值
+                        const SizedBox(width: 6), // 固定值
+                        // 修复 Bug: 直接从 profile 数据显示，防止解析错误
                         Text(email,
                             style: TextStyle(
                                 color: Colors.white.withOpacity(0.95),
-                                // 修复放大问题: 使用固定值 13.0
-                                fontSize: 13.0,
+                                fontSize: 13.0, // 固定值
                                 fontWeight: FontWeight.w500)),
                       ],
                     ),
                   ),
                   if (!isGuest && memberSince != null) ...[
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 10), // 固定值
                     Container(
                       padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6), // 固定值
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(16), // 固定值
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(Icons.calendar_today_outlined,
-                              size: 12, color: Colors.white),
-                          const SizedBox(width: 4),
+                              size: 12, color: Colors.white), // 固定值
+                          const SizedBox(width: 4), // 固定值
                           Text('Member since $memberSince',
                               style: const TextStyle(
                                   color: Colors.white,
-                                  // 修复放大问题: 使用固定值 11.0
-                                  fontSize: 11.0,
+                                  fontSize: 11.0, // 固定值
                                   fontWeight: FontWeight.w500)),
                         ],
                       ),
@@ -5783,8 +5794,8 @@ class _ProfilePageState extends State<ProfilePage>
 
     final fullName = (_profile?['full_name'] ?? 'User').toString();
     final phone = (_profile?['phone'] ?? '').toString();
-    final email =
-    phone.isNotEmpty ? phone : (_profile?['email'] ?? '').toString();
+    // 修复 Bug: 确保 phone/email 显示逻辑正确
+    final displayContact = phone.isNotEmpty ? phone : (_profile?['email'] ?? '').toString();
     final avatarUrl = (_profile?['avatar_url'] ?? '') as String?;
     final memberSince = _profile?['created_at']?.toString();
     String? memberSinceText;
@@ -5810,7 +5821,7 @@ class _ProfilePageState extends State<ProfilePage>
                   child: _buildEnhancedHeader(
                     isGuest: false,
                     name: fullName,
-                    email: email,
+                    email: displayContact, // 使用修正后的联系方式
                     avatarUrl: (avatarUrl != null && avatarUrl.isNotEmpty)
                         ? avatarUrl
                         : null,
@@ -6155,7 +6166,7 @@ class _VerificationTileCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          // 涓庡叾瀹冮€氱敤椤逛繚鎸佷竴鑷寸殑鍐呰竟璺濅笌闃村奖
+          // 涓庡叾瀹冮項缁熶竴鐨勫昂瀵?
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -6219,7 +6230,7 @@ class _VerificationTileCard extends StatelessWidget {
   }
 }
 
-/* ---------------- 閫氱敤鍒楄〃椤癸紙鍏朵綑椤逛粛鐢ㄤ綘鐨勫崱鐗囨牱寮忥紱涓嶅啀娓叉煋浠讳何灏忓窘绔狶锛?---------------- */
+/* ---------------- 閫氱敤鍒楄〃椤癸紙鍏朵綑椤逛粛鐢ㄤ綘鐨勫崱鐗囨牱寮忥紱涓嶅啀娓叉煋浠讳何灏忓窘绔綶锛?---------------- */
 class _ProfileOptionEnhanced extends StatelessWidget {
   final IconData icon;
   final String title;
