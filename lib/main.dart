@@ -5628,119 +5628,123 @@ class _ProfilePageState extends State<ProfilePage>
             // 如果没有刘海，取 20；有刘海，则 statusBar + 12，保证不被遮挡，但不拉高整体
             padding: EdgeInsets.fromLTRB(
                 24, (statusBar > 0 ? statusBar + 12 : 20), 24, 30),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Hero(
-                  tag: 'profile_avatar',
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.white.withOpacity(0.9),
-                          Colors.white.withOpacity(0.3),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Hero(
+                    tag: 'profile_avatar',
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.white.withOpacity(0.9),
+                            Colors.white.withOpacity(0.3),
+                          ],
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color.fromRGBO(0, 0, 0, 0.2),
+                            blurRadius: 20,
+                            offset: Offset(0, 10),
+                          ),
                         ],
                       ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color.fromRGBO(0, 0, 0, 0.2),
-                          blurRadius: 20,
-                          offset: Offset(0, 10),
+                      child: VerifiedAvatar(
+                        avatarUrl: avatarUrl,
+                        radius: 45, // 固定值，跨平台一致
+                        verificationType: verificationType,
+                        onTap: !isGuest ? _uploadAvatarSimple : null,
+                        defaultIcon:
+                        isGuest ? Icons.person_outline : Icons.person,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20.0, // ← 头像区标题 22.0 -> 20.0
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                      shadows: [
+                        Shadow(
+                          offset: Offset(0, 2),
+                          blurRadius: 4,
+                          color: Color(0x40000000),
                         ),
                       ],
                     ),
-                    child: VerifiedAvatar(
-                      avatarUrl: avatarUrl,
-                      radius: 45, // 固定值，跨平台一致
-                      verificationType: verificationType,
-                      onTap: !isGuest ? _uploadAvatarSimple : null,
-                      defaultIcon:
-                      isGuest ? Icons.person_outline : Icons.person,
-                    ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22.0,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
-                    shadows: [
-                      Shadow(
-                        offset: Offset(0, 2),
-                        blurRadius: 4,
-                        color: Color(0x40000000),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                        color: Colors.white.withOpacity(0.3), width: 1),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        email.contains('@') ? Icons.email : Icons.phone,
-                        size: 14,
-                        color: Colors.white.withOpacity(0.95),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        email,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.95),
-                          fontSize: 13.0,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (!isGuest && memberSince != null) ...[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(16),
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                          color: Colors.white.withOpacity(0.3), width: 1),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.calendar_today_outlined,
-                            size: 12, color: Colors.white),
-                        const SizedBox(width: 4),
-                        // 文本保持原有拼接逻辑
+                        Icon(
+                          email.contains('@') ? Icons.email : Icons.phone,
+                          size: 14,
+                          color: Colors.white.withOpacity(0.95),
+                        ),
+                        const SizedBox(width: 6),
                         Text(
-                          'Member since $memberSince',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11.0,
+                          email,
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.95),
+                            fontSize: 13.0,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
                     ),
                   ),
+                  if (!isGuest && memberSince != null) ...[
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.calendar_today_outlined,
+                              size: 12, color: Colors.white),
+                          const SizedBox(width: 4),
+                          // 文本保持原有拼接逻辑
+                          Text(
+                            'Member since $memberSince',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11.0,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ],
@@ -5754,32 +5758,36 @@ class _ProfilePageState extends State<ProfilePage>
 
     // Guest user interface
     if (widget.isGuest) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFF8F9FA),
-        body: ScrollConfiguration(
-          behavior: const ScrollBehavior(),
-          child: CustomScrollView(
-            slivers: [
-              // 头部：使用 SliverToBoxAdapter 放置 Stack
-              SliverToBoxAdapter(
-                child: _buildEnhancedHeader(
-                  isGuest: true,
-                  name: l10n.guestUser,
-                  email: l10n.browseWithoutAccount,
-                  avatarUrl: null,
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: const Padding(
-                    padding: EdgeInsets.all(20),
-                    // 使用修复后的 _GuestSimpleOptions
-                    child: _GuestSimpleOptions(),
+      return MediaQuery(
+        data: MediaQuery.of(context)
+            .copyWith(textScaler: const TextScaler.linear(1.0)),
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF8F9FA),
+          body: ScrollConfiguration(
+            behavior: const ScrollBehavior(),
+            child: CustomScrollView(
+              slivers: [
+                // 头部：使用 SliverToBoxAdapter 放置 Stack
+                SliverToBoxAdapter(
+                  child: _buildEnhancedHeader(
+                    isGuest: true,
+                    name: l10n.guestUser,
+                    email: l10n.browseWithoutAccount,
+                    avatarUrl: null,
                   ),
                 ),
-              ),
-            ],
+                SliverToBoxAdapter(
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: const Padding(
+                      padding: EdgeInsets.all(20),
+                      // 使用修复后的 _GuestSimpleOptions
+                      child: _GuestSimpleOptions(),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -5787,20 +5795,24 @@ class _ProfilePageState extends State<ProfilePage>
 
     // Loading state
     if (_loading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFF8F9FA),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(
-                  width: 36,
-                  height: 36,
-                  child: CircularProgressIndicator(strokeWidth: 3)),
-              SizedBox(height: 16),
-              Text('Loading profile...',
-                  style: TextStyle(color: Color(0xFF666666), fontSize: 15)),
-            ],
+      return MediaQuery(
+        data: MediaQuery.of(context)
+            .copyWith(textScaler: const TextScaler.linear(1.0)),
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF8F9FA),
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                SizedBox(
+                    width: 36,
+                    height: 36,
+                    child: CircularProgressIndicator(strokeWidth: 3)),
+                SizedBox(height: 16),
+                Text('Loading profile...',
+                    style: TextStyle(color: Color(0xFF666666), fontSize: 15)),
+              ],
+            ),
           ),
         ),
       );
@@ -5821,340 +5833,344 @@ class _ProfilePageState extends State<ProfilePage>
     }
 
     // Normal User interface
-    return Scaffold(
-      extendBody: true,
-      backgroundColor: const Color(0xFFF8F9FA),
-      // 修复：将 Stack 移动到 CustomScrollView 外部，以便加载指示器能覆盖整个屏幕
-      body: Stack(
-        children: [
-          ScrollConfiguration(
-            behavior: const ScrollBehavior(), // 使用无光晕滚动
-            child: CustomScrollView(
-              slivers: [
-                // 头部：使用 SliverToBoxAdapter 放置增强头部（确保背景延伸到安全区外，解决断层）
-                SliverToBoxAdapter(
-                  child: _buildEnhancedHeader(
-                    isGuest: false,
-                    name: fullName,
-                    email: displayContact, // 使用修正后的联系方式
-                    avatarUrl:
-                    (avatarUrl != null && avatarUrl.isNotEmpty)
-                        ? avatarUrl
-                        : null,
-                    memberSince: memberSinceText,
-                    verificationType:
-                    _verified ? _badge : vt.VerificationBadgeType.none,
+    return MediaQuery(
+      data: MediaQuery.of(context)
+          .copyWith(textScaler: const TextScaler.linear(1.0)),
+      child: Scaffold(
+        extendBody: true,
+        backgroundColor: const Color(0xFFF8F9FA),
+        // 修复：将 Stack 移动到 CustomScrollView 外部，以便加载指示器能覆盖整个屏幕
+        body: Stack(
+          children: [
+            ScrollConfiguration(
+              behavior: const ScrollBehavior(), // 使用无光晕滚动
+              child: CustomScrollView(
+                slivers: [
+                  // 头部：使用 SliverToBoxAdapter 放置增强头部（确保背景延伸到安全区外，解决断层）
+                  SliverToBoxAdapter(
+                    child: _buildEnhancedHeader(
+                      isGuest: false,
+                      name: fullName,
+                      email: displayContact, // 使用修正后的联系方式
+                      avatarUrl:
+                      (avatarUrl != null && avatarUrl.isNotEmpty)
+                          ? avatarUrl
+                          : null,
+                      memberSince: memberSinceText,
+                      verificationType:
+                      _verified ? _badge : vt.VerificationBadgeType.none,
+                    ),
                   ),
-                ),
 
-                // 内容：使用 SliverList/SliverToBoxAdapter 放置列表项
-                SliverToBoxAdapter(
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // 修复放大问题: 使用固定值 16.0
-                          const Text('Profile',
-                              style: TextStyle(
-                                  fontSize: 16.0,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF6B7280),
-                                  letterSpacing: 0.5)),
-                          const SizedBox(height: 14),
-                          _ProfileOptionEnhanced(
-                            icon: Icons.edit_rounded,
-                            title: l10n.editProfile,
-                            color: Colors.blue,
-                            onTap: _editNamePhone,
-                          ),
-                          const SizedBox(height: 14),
+                  // 内容：使用 SliverList/SliverToBoxAdapter 放置列表项
+                  SliverToBoxAdapter(
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // 修复放大问题: 使用固定值 16.0
+                            const Text('Profile',
+                                style: TextStyle(
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF6B7280),
+                                    letterSpacing: 0.5)),
+                            const SizedBox(height: 14),
+                            _ProfileOptionEnhanced(
+                              icon: Icons.edit_rounded,
+                              title: l10n.editProfile,
+                              color: Colors.blue,
+                              onTap: _editNamePhone,
+                            ),
+                            const SizedBox(height: 14),
 
-                          _VerificationTileCard(
-                            isVerified: _verified,
-                            isLoading: _verifyLoading,
-                            onTap: () async {
-                              await Navigator.of(context).push<bool>(
-                                MaterialPageRoute(
-                                    builder: (_) => const VerificationPage()),
-                              );
-                              await _reloadUserVerificationStatus();
-                            },
-                          ),
-
-                          const SizedBox(height: 28),
-                          // 修复放大问题: 使用固定值 16.0
-                          const Text('Rewards & Activities',
-                              style: TextStyle(
-                                  fontSize: 16.0,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF6B7280),
-                                  letterSpacing: 0.5)),
-                          const SizedBox(height: 14),
-                          const MyRewardsTile(),
-                          const SizedBox(height: 14),
-
-                          _ProfileOptionEnhanced(
-                            icon: Icons.inventory_2_rounded,
-                            title: l10n.myListings,
-                            color: Colors.indigo,
-                            onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (_) => const MyListingsPage())),
-                          ),
-                          const SizedBox(height: 14),
-                          _ProfileOptionEnhanced(
-                            icon: Icons.favorite_rounded,
-                            title: l10n.wishlist,
-                            color: Colors.pink,
-                            onTap: () {
-                              final user =
-                                  Supabase.instance.client.auth.currentUser;
-                              if (user == null) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text(
-                                          'Please sign in to view Wishlist')),
+                            _VerificationTileCard(
+                              isVerified: _verified,
+                              isLoading: _verifyLoading,
+                              onTap: () async {
+                                await Navigator.of(context).push<bool>(
+                                  MaterialPageRoute(
+                                      builder: (_) => const VerificationPage()),
                                 );
-                                return;
-                              }
-                              Navigator.push(
+                                await _reloadUserVerificationStatus();
+                              },
+                            ),
+
+                            const SizedBox(height: 28),
+                            // 修复放大问题: 使用固定值 16.0
+                            const Text('Rewards & Activities',
+                                style: TextStyle(
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF6B7280),
+                                    letterSpacing: 0.5)),
+                            const SizedBox(height: 14),
+                            const MyRewardsTile(),
+                            const SizedBox(height: 14),
+
+                            _ProfileOptionEnhanced(
+                              icon: Icons.inventory_2_rounded,
+                              title: l10n.myListings,
+                              color: Colors.indigo,
+                              onTap: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (_) => const WishlistPage()));
-                            },
-                          ),
-                          const SizedBox(height: 14),
-
-                          _ProfileOptionEnhanced(
-                            icon: Icons.person_add_alt_1_rounded,
-                            title: 'Invite Friends',
-                            subtitle: 'Earn coupons by inviting friends',
-                            color: Colors.orange,
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => const InviteFriendsPage()),
+                                      builder: (_) => const MyListingsPage())),
                             ),
-                          ),
-                          const SizedBox(height: 14),
-
-                          _ProfileOptionEnhanced(
-                            icon: Icons.local_activity_rounded,
-                            title: 'My Coupons',
-                            subtitle: 'View and manage your coupons',
-                            color: Colors.purple,
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => CouponManagementPage()),
+                            const SizedBox(height: 14),
+                            _ProfileOptionEnhanced(
+                              icon: Icons.favorite_rounded,
+                              title: l10n.wishlist,
+                              color: Colors.pink,
+                              onTap: () {
+                                final user =
+                                    Supabase.instance.client.auth.currentUser;
+                                if (user == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content: Text(
+                                            'Please sign in to view Wishlist')),
+                                  );
+                                  return;
+                                }
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) => const WishlistPage()));
+                              },
                             ),
-                          ),
-                          const SizedBox(height: 28),
-                          // 修复放大问题: 使用固定值 16.0
-                          const Text('Support',
-                              style: TextStyle(
-                                  fontSize: 16.0,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF6B7280),
-                                  letterSpacing: 0.5)),
-                          const SizedBox(height: 14),
+                            const SizedBox(height: 14),
 
-                          // 鉁?新增：Account 入口
-                          _ProfileOptionEnhanced(
-                            icon: Icons.manage_accounts,
-                            title: 'Account',
-                            subtitle: 'Password, devices, delete',
-                            color: Colors.cyan,
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const AccountSettingsPage(),
+                            _ProfileOptionEnhanced(
+                              icon: Icons.person_add_alt_1_rounded,
+                              title: 'Invite Friends',
+                              subtitle: 'Earn coupons by inviting friends',
+                              color: Colors.orange,
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const InviteFriendsPage()),
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 14),
+                            const SizedBox(height: 14),
 
-                          // 鉁?新增：隐私政策外链
-                          _ProfileOptionEnhanced(
-                            icon: Icons.privacy_tip_outlined,
-                            title: 'Privacy Policy',
-                            color: Colors.blueGrey,
-                            onTap: () => launchUrl(
-                              Uri.parse(_kPrivacyUrl),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-
-                          // 鉁?新增：数据删除说明外链
-                          _ProfileOptionEnhanced(
-                            icon: Icons.delete_outline,
-                            title: 'Data Deletion / How to delete my account',
-                            color: Colors.deepOrange,
-                            onTap: () => launchUrl(
-                              Uri.parse(_kDeleteUrl),
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-
-                          _ProfileOptionEnhanced(
-                            icon: Icons.help_outline_rounded,
-                            title: l10n.helpSupport,
-                            color: Colors.teal,
-                            onTap: () => Navigator.push(
+                            _ProfileOptionEnhanced(
+                              icon: Icons.local_activity_rounded,
+                              title: 'My Coupons',
+                              subtitle: 'View and manage your coupons',
+                              color: Colors.purple,
+                              onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (_) => HelpSupportPage())),
-                          ),
-                          const SizedBox(height: 14),
-                          _ProfileOptionEnhanced(
-                            icon: Icons.info_outline_rounded,
-                            title: l10n.about,
-                            color: Colors.blueGrey,
-                            onTap: () => Navigator.push(
+                                    builder: (_) => CouponManagementPage()),
+                              ),
+                            ),
+                            const SizedBox(height: 28),
+                            // 修复放大问题: 使用固定值 16.0
+                            const Text('Support',
+                                style: TextStyle(
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF6B7280),
+                                    letterSpacing: 0.5)),
+                            const SizedBox(height: 14),
+
+                            // 鉁?新增：Account 入口
+                            _ProfileOptionEnhanced(
+                              icon: Icons.manage_accounts,
+                              title: 'Account',
+                              subtitle: 'Password, devices, delete',
+                              color: Colors.cyan,
+                              onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (_) => AboutPage())),
-                          ),
-                          const SizedBox(height: 28),
-                          _ProfileOptionEnhanced(
-                            icon: Icons.logout_rounded,
-                            title: l10n.logout,
-                            color: Colors.red,
-                            onTap: () async {
-                              final confirmed = await showDialog<bool>(
-                                context: context,
-                                builder: (ctx) => AlertDialog(
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                      BorderRadius.circular(18)),
-                                  title: Row(
-                                    children: [
+                                  builder: (_) => const AccountSettingsPage(),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+
+                            // 鉁?新增：隐私政策外链
+                            _ProfileOptionEnhanced(
+                              icon: Icons.privacy_tip_outlined,
+                              title: 'Privacy Policy',
+                              color: Colors.blueGrey,
+                              onTap: () => launchUrl(
+                                Uri.parse(_kPrivacyUrl),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+
+                            // 鉁?新增：数据删除说明外链
+                            _ProfileOptionEnhanced(
+                              icon: Icons.delete_outline,
+                              title: 'Data Deletion / How to delete my account',
+                              color: Colors.deepOrange,
+                              onTap: () => launchUrl(
+                                Uri.parse(_kDeleteUrl),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+
+                            _ProfileOptionEnhanced(
+                              icon: Icons.help_outline_rounded,
+                              title: l10n.helpSupport,
+                              color: Colors.teal,
+                              onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => HelpSupportPage())),
+                            ),
+                            const SizedBox(height: 14),
+                            _ProfileOptionEnhanced(
+                              icon: Icons.info_outline_rounded,
+                              title: l10n.about,
+                              color: Colors.blueGrey,
+                              onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => AboutPage())),
+                            ),
+                            const SizedBox(height: 28),
+                            _ProfileOptionEnhanced(
+                              icon: Icons.logout_rounded,
+                              title: l10n.logout,
+                              color: Colors.red,
+                              onTap: () async {
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                        BorderRadius.circular(18)),
+                                    title: Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                              color:
+                                              Colors.red.withOpacity(0.1),
+                                              borderRadius:
+                                              BorderRadius.circular(8)),
+                                          child: const Icon(
+                                              Icons.logout_rounded,
+                                              color: Colors.red,
+                                              size: 20),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        const Text('Logout',
+                                            style: TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w600)),
+                                      ],
+                                    ),
+                                    content: const Text(
+                                        'Are you sure you want to logout?',
+                                        style: TextStyle(
+                                            fontSize: 15, height: 1.4)),
+                                    actions: [
+                                      TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(false),
+                                          child: Text('Cancel',
+                                              style: TextStyle(
+                                                  fontSize: 15,
+                                                  color: Colors.grey[600]))),
                                       Container(
-                                        padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
-                                            color:
-                                            Colors.red.withOpacity(0.1),
+                                            color: Colors.red,
                                             borderRadius:
                                             BorderRadius.circular(8)),
-                                        child: const Icon(
-                                            Icons.logout_rounded,
-                                            color: Colors.red,
-                                            size: 20),
+                                        child: TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(true),
+                                          child: const Text('Logout',
+                                              style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w600)),
+                                        ),
                                       ),
-                                      const SizedBox(width: 12),
-                                      const Text('Logout',
-                                          style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.w600)),
                                     ],
                                   ),
-                                  content: const Text(
-                                      'Are you sure you want to logout?',
-                                      style: TextStyle(
-                                          fontSize: 15, height: 1.4)),
-                                  actions: [
-                                    TextButton(
-                                        onPressed: () =>
-                                            Navigator.of(ctx).pop(false),
-                                        child: Text('Cancel',
-                                            style: TextStyle(
-                                                fontSize: 15,
-                                                color: Colors.grey[600]))),
-                                    Container(
-                                      decoration: BoxDecoration(
-                                          color: Colors.red,
-                                          borderRadius:
-                                          BorderRadius.circular(8)),
-                                      child: TextButton(
-                                        onPressed: () =>
-                                            Navigator.of(ctx).pop(true),
-                                        child: const Text('Logout',
-                                            style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.w600)),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                              if (confirmed == true) {
-                                try {
-                                  await Supabase.instance.client.auth
-                                      .signOut();
-                                  RewardService.clearCache();
-                                } catch (e) {
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context)
-                                        .showSnackBar(
-                                      SnackBar(
-                                        content: Row(
-                                          children: [
-                                            const Icon(
-                                                Icons.error_outline_rounded,
-                                                color: Colors.white,
-                                                size: 18),
-                                            const SizedBox(width: 8),
-                                            Text('Logout failed: $e',
-                                                style: const TextStyle(
-                                                    fontSize: 14)),
-                                          ],
+                                );
+                                if (confirmed == true) {
+                                  try {
+                                    await Supabase.instance.client.auth
+                                        .signOut();
+                                    RewardService.clearCache();
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Row(
+                                            children: [
+                                              const Icon(
+                                                  Icons.error_outline_rounded,
+                                                  color: Colors.white,
+                                                  size: 18),
+                                              const SizedBox(width: 8),
+                                              Text('Logout failed: $e',
+                                                  style: const TextStyle(
+                                                      fontSize: 14)),
+                                            ],
+                                          ),
+                                          backgroundColor: Colors.red,
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                              BorderRadius.circular(10)),
+                                          margin: const EdgeInsets.all(16),
                                         ),
-                                        backgroundColor: Colors.red,
-                                        behavior: SnackBarBehavior.floating,
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                            BorderRadius.circular(10)),
-                                        margin: const EdgeInsets.all(16),
-                                      ),
-                                    );
+                                      );
+                                    }
                                   }
                                 }
-                              }
-                            },
-                          ),
-                          const SizedBox(height: 40),
+                              },
+                            ),
+                            const SizedBox(height: 40),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // 修复 Bug: 加载指示器必须在 Stack 中，并使用 Positioned.fill 覆盖
+            if (_uploadingAvatar)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black54,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16)),
+                      child: const Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
+                              width: 36,
+                              height: 36,
+                              child: CircularProgressIndicator()),
+                          SizedBox(height: 16),
+                          Text('Uploading avatar...',
+                              style: TextStyle(
+                                  color: Color(0xFF616161), fontSize: 15)),
                         ],
                       ),
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
-          // 修复 Bug: 加载指示器必须在 Stack 中，并使用 Positioned.fill 覆盖
-          if (_uploadingAvatar)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black54,
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16)),
-                    child: const Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                            width: 36,
-                            height: 36,
-                            child: CircularProgressIndicator()),
-                        SizedBox(height: 16),
-                        Text('Uploading avatar...',
-                            style: TextStyle(
-                                color: Color(0xFF616161), fontSize: 15)),
-                      ],
-                    ),
-                  ),
-                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -6183,7 +6199,7 @@ class _VerificationTileCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         child: Container(
           // 涓庡叾瀹冮項缁熶竴鐨勫昂瀵?
-          padding: const EdgeInsets.all(18), // 固定值
+          padding: const EdgeInsets.all(16), // 卡片内边距 18 -> 16
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16), // 固定值
@@ -6204,7 +6220,9 @@ class _VerificationTileCard extends StatelessWidget {
                   color: badgeColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(14), // 固定值
                 ),
-                child: const Icon(Icons.verified, color: Colors.green, size: 26), // 修复：使用 Icons.verified
+                // ✅ 正确：未认证灰色、已认证绿色
+                child: Icon(Icons.verified, color: badgeColor, size: 26),
+                // 修复：使用 Icons.verified
               ),
               const SizedBox(width: 18), // 固定值
               // 鏂囨
@@ -6212,10 +6230,10 @@ class _VerificationTileCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(isVerified ? 'Verified' : 'Verification', // 修复 const 报错，移除 const
+                    Text(isVerified ? 'Verified' : 'Verification',
                         style: const TextStyle(
-                          // 修复放大问题: 使用固定值 17.0
-                            fontSize: 17.0,
+                          // 标题 17.0 -> 16.0
+                            fontSize: 16.0,
                             fontWeight: FontWeight.w600)),
                     const SizedBox(height: 3), // 固定值
                     Text(
@@ -6223,8 +6241,8 @@ class _VerificationTileCard extends StatelessWidget {
                             ? 'Status: Verified'
                             : 'Status: Not verified',
                         style:
-                        // 修复放大问题: 使用固定值 14.0
-                        TextStyle(fontSize: 14.0, color: Colors.grey[600])), // 固定值
+                        // 副标题 14.0 -> 13.0
+                        TextStyle(fontSize: 13.0, color: Colors.grey[600])), // 固定值
                   ],
                 ),
               ),
@@ -6270,7 +6288,7 @@ class _ProfileOptionEnhanced extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.all(18), // 固定值
+          padding: const EdgeInsets.all(16), // 卡片内边距 18 -> 16
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16), // 固定值
@@ -6297,15 +6315,15 @@ class _ProfileOptionEnhanced extends StatelessWidget {
                   children: [
                     Text(title,
                         style: const TextStyle(
-                          // 修复放大问题: 使用固定值 17.0
-                            fontSize: 17.0,
+                          // 标题 17.0 -> 16.0
+                            fontSize: 16.0,
                             fontWeight: FontWeight.w600)),
                     if (subtitle != null) ...[
                       const SizedBox(height: 3), // 固定值
                       Text(subtitle!,
                           style:
-                          // 修复放大问题: 使用固定值 14.0
-                          TextStyle(fontSize: 14.0, color: Colors.grey[600])), // 固定值
+                          // 副标题 14.0 -> 13.0
+                          TextStyle(fontSize: 13.0, color: Colors.grey[600])), // 固定值
                     ],
                   ],
                 ),
