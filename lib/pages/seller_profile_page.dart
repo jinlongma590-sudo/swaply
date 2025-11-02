@@ -197,89 +197,90 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
       backgroundColor: Colors.grey[50],
       body: CustomScrollView(
         slivers: [
+          // ✅ 样式不变：仍然是蓝色头部 + 居中头像/姓名/入驻时间
+          // 仅把 flexibleSpace 改为 FlexibleSpaceBar(background: …)
+          // 这样在折叠时会自动裁剪，避免 Column 高度溢出导致的 BOTTOM OVERFLOWED。
           SliverAppBar(
             expandedHeight: 200.h,
             pinned: true,
             backgroundColor: _primaryBlue,
-            flexibleSpace: LayoutBuilder(
-              builder: (context, constraints) {
-                return Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [_primaryBlue, _primaryBlue.withOpacity(0.8)],
-                    ),
-                  ),
-                  child: SafeArea(
-                    top: true,
-                    bottom: false,
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.only(bottom: 8.h),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(height: 28.h),
-                            Container(
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border:
-                                    Border.all(color: Colors.white, width: 3),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: VerifiedAvatar(
-                                avatarUrl: avatarUrl,
-                                radius: 40.r,
-                                verificationType:
-                                    badgeType, // ✅ 使用 _isVerified 映射
-                                defaultIcon: Icons.person,
-                              ),
-                            ),
-                            SizedBox(height: 10.h),
-                            Text(
-                              sellerName,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20.sp,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            SizedBox(height: 4.h),
-                            if (memberSince.isNotEmpty)
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 12.w, vertical: 4.h),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(12.r),
-                                ),
-                                child: Text(
-                                  'Member for $memberSince',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11.sp,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () => Navigator.pop(context),
+            ),
+            flexibleSpace: FlexibleSpaceBar(
+              collapseMode: CollapseMode.pin,
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [_primaryBlue, _primaryBlue.withOpacity(0.8)],
+                  ),
+                ),
+                child: SafeArea(
+                  top: true,
+                  bottom: false,
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.only(bottom: 8.h),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(height: 28.h),
+                          Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 3),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: VerifiedAvatar(
+                              avatarUrl: avatarUrl,
+                              radius: 40.r,
+                              verificationType:
+                                  badgeType, // ✅ 使用 _isVerified 映射
+                              defaultIcon: Icons.person,
+                            ),
+                          ),
+                          SizedBox(height: 10.h),
+                          Text(
+                            sellerName,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20.sp,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 4.h),
+                          if (memberSince.isNotEmpty)
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 12.w, vertical: 4.h),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              child: Text(
+                                'Member for $memberSince',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11.sp,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
 
@@ -334,7 +335,7 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
             ),
           ),
 
-          // 列表/网格
+          // 列表/网格（保持你的布局与比例不变）
           if (_sellerListings.isEmpty)
             SliverToBoxAdapter(
               child: SizedBox(
@@ -432,7 +433,7 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 图片
+            // 图片（保持你的固定高度与 cover）
             Container(
               height: 120.h,
               decoration: BoxDecoration(
@@ -459,7 +460,7 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
                       ),
               ),
             ),
-            // 信息
+            // 信息（与你原来的布局一致）
             Expanded(
               child: Padding(
                 padding: EdgeInsets.all(10.w),
