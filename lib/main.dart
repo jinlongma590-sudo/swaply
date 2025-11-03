@@ -5772,9 +5772,9 @@ class _ProfilePageState extends State<ProfilePage>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    // iOS 上把列表入口卡片整体再缩小 20%；Android 保持 1.0
+    // iOS 上把列表入口卡片整体在当前基础上再缩小 5%；Android 保持 1.0
     final bool _isIOS = Theme.of(context).platform == TargetPlatform.iOS;
-    const double _iosTileScale = 0.80; // 再缩 20%
+    const double _iosTileScale = 0.75; // 从 0.80 → 0.75（再缩 5%）
     final double _tileScale = _isIOS ? _iosTileScale : 1.0;
 
     // Guest user interface
@@ -5890,7 +5890,7 @@ class _ProfilePageState extends State<ProfilePage>
                       child: Padding(
                         padding: const EdgeInsets.all(20),
                         child: Theme(
-                          // 让内部 ListTile 更紧凑（对 MyRewardsTile 也生效）
+                          // 让内部 ListTile 更紧凑（对统一卡片也生效）
                           data: Theme.of(context).copyWith(
                             visualDensity: _isIOS
                                 ? const VisualDensity(
@@ -5931,8 +5931,8 @@ class _ProfilePageState extends State<ProfilePage>
                                 scale: _tileScale,
                               ),
 
-                              // 分区间距：更紧凑
-                              const SizedBox(height: 18),
+                              // 分区间距：再紧凑一些（从 18 → 10）
+                              const SizedBox(height: 10),
                               const Text('Rewards & Activities',
                                   style: TextStyle(
                                       fontSize: 16.0,
@@ -5941,10 +5941,17 @@ class _ProfilePageState extends State<ProfilePage>
                                       letterSpacing: 0.5)),
                               const SizedBox(height: 10),
 
-                              // 统一宽度 + 压缩留白（修复右侧不齐&高度过大）
-                              SizedBox(
-                                width: double.infinity,
-                                child: const MyRewardsTile(),
+                              // 统一宽高样式的 My Rewards 卡片
+                              _RewardsTileUnified(
+                                scale: _tileScale,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (_) =>
+                                            CouponManagementPage()),
+                                  );
+                                },
                               ),
                               const SizedBox(height: 12),
 
@@ -6014,8 +6021,8 @@ class _ProfilePageState extends State<ProfilePage>
                                 scale: _tileScale,
                               ),
 
-                              // 分区间距：更紧凑
-                              const SizedBox(height: 18),
+                              // 分区间距：再紧凑一些（从 18 → 10）
+                              const SizedBox(height: 10),
                               const Text('Support',
                                   style: TextStyle(
                                       fontSize: 16.0,
@@ -6390,6 +6397,69 @@ class _ProfileOptionEnhanced extends StatelessWidget {
               SizedBox(width: 10 * s),
               Icon(Icons.arrow_forward_ios,
                   size: 18 * s, color: Colors.grey[400]),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/* ---------------- My Rewards（统一样式版） ---------------- */
+class _RewardsTileUnified extends StatelessWidget {
+  final double scale;
+  final VoidCallback? onTap;
+  const _RewardsTileUnified({this.scale = 1.0, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = scale;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16 * s),
+        child: Container(
+          padding: EdgeInsets.all(16 * s),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16 * s),
+            boxShadow: [
+              BoxShadow(
+                color: const Color.fromRGBO(0, 0, 0, 0.04),
+                blurRadius: 12 * s,
+                offset: Offset(0, 2 * s),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(12 * s),
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(14 * s),
+                ),
+                child: Icon(Icons.emoji_events_rounded,
+                    color: Colors.deepPurple, size: 26 * s),
+              ),
+              SizedBox(width: 18 * s),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('My Rewards',
+                        style: TextStyle(
+                            fontSize: 16.0, fontWeight: FontWeight.w600)),
+                    SizedBox(height: 3),
+                    Text('Points: 0 · Coupons: 1',
+                        style:
+                        TextStyle(fontSize: 13.0, color: Color(0xFF6B7280))),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Icon(Icons.arrow_forward_ios, size: 18, color: Color(0xFFBDBDBD)),
             ],
           ),
         ),
