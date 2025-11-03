@@ -5931,7 +5931,7 @@ class _ProfilePageState extends State<ProfilePage>
                                     color: Color(0xFF6B7280),
                                     letterSpacing: 0.5)),
                             const SizedBox(height: 14),
-                            const MyRewardsTile(),
+                            _MyRewardsTileScaled(scale: _tileScale),
                             const SizedBox(height: 14),
 
                             _ProfileOptionEnhanced(
@@ -6606,14 +6606,29 @@ class AboutPage extends StatelessWidget {
                       size: 18, color: Colors.grey[600]), // 固定值
                   const SizedBox(width: 5), // 固定值
                   Text('2024 Swaply. All rights reserved.',
-                      style: TextStyle(
-                          fontSize: 14, color: Colors.grey[600])), // 固定值
+                      style:
+                      TextStyle(fontSize: 14, color: Colors.grey[600])), // 固定值
                 ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/* ---------------- MyRewardsTile 缩放包裹（仅在本页统一视觉尺寸） ---------------- */
+class _MyRewardsTileScaled extends StatelessWidget {
+  final double scale;
+  const _MyRewardsTileScaled({required this.scale});
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.scale(
+      scale: scale,
+      alignment: Alignment.centerLeft,
+      child: const MyRewardsTile(),
     );
   }
 }
