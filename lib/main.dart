@@ -50,7 +50,14 @@ import 'startup_screen.dart';
 // ========= 鍏ㄥ眬 Auth 浜嬩欢璁㈤槄锛堝彧娉ㄥ唽涓€娆★級=========
 bool _authHookWired = false;
 StreamSubscription<AuthState>? _globalAuthSub;
+
+// 全局导航 Key（MaterialApp 会用到）
 final GlobalKey<NavigatorState> appNavKey = GlobalKey<NavigatorState>();
+
+// —— Auth 路由防重入锁 —— //
+bool _authRouting = false;
+DateTime _lastAuthRouteAt = DateTime.fromMillisecondsSinceEpoch(0);
+StreamSubscription? _authSub;
 
 class AppLocalizations {
   final Locale locale;
@@ -229,6 +236,7 @@ class LanguageProvider extends ChangeNotifier {
 }
 
 // ========= 鍏ㄥ眬 Auth 澶勭悊锛堝甫娆㈣繋寮圭ª锛氫竴娆℃€э級 =========
+// 说明：仅做业务处理（订阅/欢迎券/清缓存），不做任何导航；导航统一交给 _authSub。
 void wireAuthHook() {
   if (_authHookWired) return;
   _authHookWired = true;
@@ -252,7 +260,7 @@ void wireAuthHook() {
       if (u != null) {
         await NotificationService.subscribeUser(u.id);
 
-// 鉁?鏂伴€昏緫锛氱敱鏈嶅姟绔箓绛?RPC 鍐冲畾鏄惁闇€瑕佸脊涓€娆℃杩庡埜
+        // 鉁?鏂伴€昏緫锛氱敱鏈嶅姟绔箓绛?RPC 鍐冲畾鏄惁闇€瑕佸脊涓€娆℃杩庡埜
         try {
           final res = await RewardService.ensureWelcomeForCurrentUser();
           if (res.shouldPopup) {
@@ -263,18 +271,7 @@ void wireAuthHook() {
           debugPrint('[Auth] ensureWelcomeForCurrentUser error: $e');
         }
 
-        final ctx = appNavKey.currentContext;
-        if (ctx != null) {
-// ✅ 修复：冷启动(initialSession)不再导航，避免二次 push；
-// 仅在真正登录(signedIn)且当前不在 /home 时导航到首页
-          if (event == AuthChangeEvent.signedIn) {
-            final current = ModalRoute.of(ctx)?.settings.name;
-            if (current != '/home') {
-              Navigator.of(ctx)
-                  .pushNamedAndRemoveUntil('/home', (route) => false);
-            }
-          }
-        }
+        // ❌ 不在此处做任何导航
       }
     }
 
@@ -283,14 +280,7 @@ void wireAuthHook() {
       CouponService.clearCache();
       DualFavoritesService.clearCache();
       RewardService.clearCache();
-
-      final ctx = appNavKey.currentContext;
-      if (ctx != null) {
-        Navigator.of(ctx).pushNamedAndRemoveUntil(
-          '/welcome',
-              (route) => false,
-        );
-      }
+      // ❌ 不在此处做任何导航
     }
   });
 }
@@ -473,11 +463,36 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // —— 注册唯一的 onAuthStateChange（含节流 + 防重入） —— //
+    _authSub?.cancel();
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+      final event = data.event;
+      final now = DateTime.now();
+
+      // 800ms 节流 + 防重入
+      if (_authRouting || now.difference(_lastAuthRouteAt) < const Duration(milliseconds: 800)) {
+        return;
+      }
+      _authRouting = true;
+      _lastAuthRouteAt = now;
+
+      final nav = appNavKey.currentState;
+      if (nav != null && (event == AuthChangeEvent.signedIn || event == AuthChangeEvent.signedOut)) {
+        // 统一在这里导航到首页，其他地方不要再导航到首页
+        nav.pushNamedAndRemoveUntil('/home', (route) => false);
+      }
+
+      // 微小延时后释放锁，防抖更稳
+      await Future.delayed(const Duration(milliseconds: 300));
+      _authRouting = false;
+    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _authSub?.cancel();
     super.dispose();
   }
 
@@ -519,7 +534,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             return MaterialApp(
               title: 'Swaply',
               debugShowCheckedModeBanner: false,
-              navigatorKey: appNavKey,
+              navigatorKey: appNavKey,   // <<—— 全局 navigatorKey 绑定
               locale: languageProvider.currentLocale,
               localizationsDelegates: const [
                 AppLocalizations.delegate,
@@ -574,7 +589,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 // 鉁?Welcome 鈫?Startup
                 '/welcome': (_) => const WelcomeScreen(),
                 '/login': (_) => const LoginScreen(),
-// ✅ 修改：/home 指向带五栏的 MainNavigationPage
+// ✅ /home 指向带五栏的 MainNavigationPage（未登录时 isGuest = true）
                 '/home': (_) => MainNavigationPage(
                   isGuest:
                   Supabase.instance.client.auth.currentSession == null,
@@ -588,6 +603,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     );
   }
 }
+
 // 莽禄搂莽禄颅忙路禄氓艩  MainNavigationPage 氓鈥櫯捗モ€β睹ぢ烩€撁甭?..
 // [盲赂潞盲潞鈥犆ㄅ犫€毭撀伱┞好┾€斅疵寂捗库劉茅鈥∨捗ぢ柯澝ε捖伱モ€β睹ぢ解劉盲禄拢莽 聛盲赂聧氓聫藴]
 // 莽禄搂莽禄颅忙路禄氓艩  MainNavigationPage 氓鈥櫯捗モ€β睹ぢ烩€撁甭?..
@@ -5469,7 +5485,7 @@ class _ProfilePageState extends State<ProfilePage>
                     color: Colors.white, size: 18),
                 const SizedBox(width: 8),
                 Expanded(
-                    child: Text('Update failed: $e',
+                    child: Text('Upload failed: $e',
                         style: const TextStyle(fontSize: 14))),
               ],
             ),
@@ -5756,6 +5772,11 @@ class _ProfilePageState extends State<ProfilePage>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
+    // iOS 上把列表入口卡片整体缩小一点；Android 保持 1.0
+    final bool _isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+    const double _iosTileScale = 0.90; // 想再小一点就改成 0.88/0.85
+    final double _tileScale = _isIOS ? _iosTileScale : 1.0;
+
     // Guest user interface
     if (widget.isGuest) {
       return MediaQuery(
@@ -5884,6 +5905,7 @@ class _ProfilePageState extends State<ProfilePage>
                               title: l10n.editProfile,
                               color: Colors.blue,
                               onTap: _editNamePhone,
+                              scale: _tileScale,
                             ),
                             const SizedBox(height: 14),
 
@@ -5897,6 +5919,7 @@ class _ProfilePageState extends State<ProfilePage>
                                 );
                                 await _reloadUserVerificationStatus();
                               },
+                              scale: _tileScale,
                             ),
 
                             const SizedBox(height: 28),
@@ -5919,6 +5942,7 @@ class _ProfilePageState extends State<ProfilePage>
                                   context,
                                   MaterialPageRoute(
                                       builder: (_) => const MyListingsPage())),
+                              scale: _tileScale,
                             ),
                             const SizedBox(height: 14),
                             _ProfileOptionEnhanced(
@@ -5941,6 +5965,7 @@ class _ProfilePageState extends State<ProfilePage>
                                     MaterialPageRoute(
                                         builder: (_) => const WishlistPage()));
                               },
+                              scale: _tileScale,
                             ),
                             const SizedBox(height: 14),
 
@@ -5954,6 +5979,7 @@ class _ProfilePageState extends State<ProfilePage>
                                 MaterialPageRoute(
                                     builder: (_) => const InviteFriendsPage()),
                               ),
+                              scale: _tileScale,
                             ),
                             const SizedBox(height: 14),
 
@@ -5967,6 +5993,7 @@ class _ProfilePageState extends State<ProfilePage>
                                 MaterialPageRoute(
                                     builder: (_) => CouponManagementPage()),
                               ),
+                              scale: _tileScale,
                             ),
                             const SizedBox(height: 28),
                             // 修复放大问题: 使用固定值 16.0
@@ -5990,6 +6017,7 @@ class _ProfilePageState extends State<ProfilePage>
                                   builder: (_) => const AccountSettingsPage(),
                                 ),
                               ),
+                              scale: _tileScale,
                             ),
                             const SizedBox(height: 14),
 
@@ -6001,6 +6029,7 @@ class _ProfilePageState extends State<ProfilePage>
                               onTap: () => launchUrl(
                                 Uri.parse(_kPrivacyUrl),
                               ),
+                              scale: _tileScale,
                             ),
                             const SizedBox(height: 14),
 
@@ -6012,6 +6041,7 @@ class _ProfilePageState extends State<ProfilePage>
                               onTap: () => launchUrl(
                                 Uri.parse(_kDeleteUrl),
                               ),
+                              scale: _tileScale,
                             ),
                             const SizedBox(height: 14),
 
@@ -6023,6 +6053,7 @@ class _ProfilePageState extends State<ProfilePage>
                                   context,
                                   MaterialPageRoute(
                                       builder: (_) => HelpSupportPage())),
+                              scale: _tileScale,
                             ),
                             const SizedBox(height: 14),
                             _ProfileOptionEnhanced(
@@ -6033,6 +6064,7 @@ class _ProfilePageState extends State<ProfilePage>
                                   context,
                                   MaterialPageRoute(
                                       builder: (_) => AboutPage())),
+                              scale: _tileScale,
                             ),
                             const SizedBox(height: 28),
                             _ProfileOptionEnhanced(
@@ -6131,6 +6163,7 @@ class _ProfilePageState extends State<ProfilePage>
                                   }
                                 }
                               },
+                              scale: _tileScale,
                             ),
                             const SizedBox(height: 40),
                           ],
@@ -6181,33 +6214,36 @@ class _VerificationTileCard extends StatelessWidget {
   final bool isVerified;
   final bool isLoading; // 鉁?鏂板锛氬埛鏂颁腑鐨勫彲瑙嗗弽棣?
   final VoidCallback? onTap;
+  final double scale; // 新增
 
   const _VerificationTileCard({
     required this.isVerified,
     required this.isLoading, // 鉁?鏂板
     this.onTap,
+    this.scale = 1.0, // 新增默认值
   });
 
   @override
   Widget build(BuildContext context) {
+    final s = scale; // 缩放系数
     final Color badgeColor = isVerified ? Colors.green : Colors.grey;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16 * s),
         child: Container(
           // 涓庡叾瀹冮項缁熶竴鐨勫昂瀵?
-          padding: const EdgeInsets.all(16), // 卡片内边距 18 -> 16
+          padding: EdgeInsets.all(16 * s), // 卡片内边距按比例缩放
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16), // 固定值
-            boxShadow: const [
-              BoxShadow( // 修复：移除 const 以外的动态 opacity/color
-                color: Color.fromRGBO(0, 0, 0, 0.04), // 转换为 const color
-                blurRadius: 12, // 固定值
-                offset: Offset(0, 2), // 固定值
+            borderRadius: BorderRadius.circular(16 * s),
+            boxShadow: [
+              BoxShadow(
+                color: const Color.fromRGBO(0, 0, 0, 0.04),
+                blurRadius: 12 * s,
+                offset: Offset(0, 2 * s),
               ),
             ],
           ),
@@ -6215,16 +6251,15 @@ class _VerificationTileCard extends StatelessWidget {
             children: [
               // 鉁?宸︿晶涓庡叾瀹冮項瀹屽叏涓€鑷寸殑鈥滃僵鑹插渾瑙掓柟鍧椻€?
               Container(
-                padding: const EdgeInsets.all(12), // 固定值
+                padding: EdgeInsets.all(12 * s),
                 decoration: BoxDecoration(
                   color: badgeColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(14), // 固定值
+                  borderRadius: BorderRadius.circular(14 * s),
                 ),
                 // ✅ 正确：未认证灰色、已认证绿色
-                child: Icon(Icons.verified, color: badgeColor, size: 26),
-                // 修复：使用 Icons.verified
+                child: Icon(Icons.verified, color: badgeColor, size: 26 * s),
               ),
-              const SizedBox(width: 18), // 固定值
+              SizedBox(width: 18 * s),
               // 鏂囨
               Expanded(
                 child: Column(
@@ -6232,30 +6267,27 @@ class _VerificationTileCard extends StatelessWidget {
                   children: [
                     Text(isVerified ? 'Verified' : 'Verification',
                         style: const TextStyle(
-                          // 标题 17.0 -> 16.0
-                            fontSize: 16.0,
-                            fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 3), // 固定值
+                            fontSize: 16.0, fontWeight: FontWeight.w600)),
+                    SizedBox(height: 3 * s),
                     Text(
                         isVerified
                             ? 'Status: Verified'
                             : 'Status: Not verified',
                         style:
-                        // 副标题 14.0 -> 13.0
-                        TextStyle(fontSize: 13.0, color: Colors.grey[600])), // 固定值
+                        TextStyle(fontSize: 13.0, color: Colors.grey[600])),
                   ],
                 ),
               ),
-              const SizedBox(width: 10), // 固定值
+              SizedBox(width: 10 * s),
               // 鍙充晶涓庡叾瀹冮項缁熶竴锛氬姞杞藉湀/灏忎笁瑙?
               isLoading
-                  ? const SizedBox(
-                width: 18, // 固定值
-                height: 18, // 固定值
-                child: CircularProgressIndicator(strokeWidth: 2),
+                  ? SizedBox(
+                width: 18 * s,
+                height: 18 * s,
+                child: const CircularProgressIndicator(strokeWidth: 2),
               )
                   : Icon(Icons.arrow_forward_ios,
-                  size: 18, color: Colors.grey[400]), // 固定值
+                  size: 18 * s, color: Colors.grey[400]),
             ],
           ),
         ),
@@ -6271,6 +6303,7 @@ class _ProfileOptionEnhanced extends StatelessWidget {
   final String? subtitle;
   final Color color;
   final VoidCallback? onTap;
+  final double scale; // 新增
 
   const _ProfileOptionEnhanced({
     required this.icon,
@@ -6278,58 +6311,59 @@ class _ProfileOptionEnhanced extends StatelessWidget {
     required this.color,
     this.subtitle,
     this.onTap,
+    this.scale = 1.0, // 新增默认值
   });
 
   @override
   Widget build(BuildContext context) {
+    final s = scale; // 缩放系数
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(16 * s),
         child: Container(
-          padding: const EdgeInsets.all(16), // 卡片内边距 18 -> 16
+          padding: EdgeInsets.all(16 * s), // 卡片内边距按比例缩放
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16), // 固定值
-            boxShadow: const [
-              BoxShadow( // 修复：移除 const 以外的动态 opacity/color
-                  color: Color.fromRGBO(0, 0, 0, 0.04), // 转换为 const color
-                  blurRadius: 12, // 固定值
-                  offset: Offset(0, 2)) // 固定值
+            borderRadius: BorderRadius.circular(16 * s),
+            boxShadow: [
+              BoxShadow(
+                  color: const Color.fromRGBO(0, 0, 0, 0.04),
+                  blurRadius: 12 * s,
+                  offset: Offset(0, 2 * s))
             ],
           ),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12), // 固定值
+                padding: EdgeInsets.all(12 * s),
                 decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(14)), // 固定值
-                child: Icon(icon, color: color, size: 26), // 固定值
+                    borderRadius: BorderRadius.circular(14 * s)),
+                child: Icon(icon, color: color, size: 26 * s),
               ),
-              const SizedBox(width: 18), // 固定值
+              SizedBox(width: 18 * s),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title,
                         style: const TextStyle(
-                          // 标题 17.0 -> 16.0
-                            fontSize: 16.0,
-                            fontWeight: FontWeight.w600)),
+                            fontSize: 16.0, fontWeight: FontWeight.w600)),
                     if (subtitle != null) ...[
-                      const SizedBox(height: 3), // 固定值
+                      SizedBox(height: 3 * s),
                       Text(subtitle!,
-                          style:
-                          // 副标题 14.0 -> 13.0
-                          TextStyle(fontSize: 13.0, color: Colors.grey[600])), // 固定值
+                          style: TextStyle(
+                              fontSize: 13.0, color: Colors.grey[600])),
                     ],
                   ],
                 ),
               ),
-              const SizedBox(width: 10), // 固定值
-              Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey[400]), // 固定值
+              SizedBox(width: 10 * s),
+              Icon(Icons.arrow_forward_ios,
+                  size: 18 * s, color: Colors.grey[400]),
             ],
           ),
         ),
@@ -6412,7 +6446,8 @@ class HelpSupportPage extends StatelessWidget {
                   const SizedBox(height: 10), // 固定值
                   Text('Our support team is here to help you 24/7',
                       style: TextStyle(
-                          color: Colors.white.withOpacity(0.9), fontSize: 15)), // 固定值
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 15)), // 固定值
                 ],
               ),
             ),
@@ -6571,8 +6606,8 @@ class AboutPage extends StatelessWidget {
                       size: 18, color: Colors.grey[600]), // 固定值
                   const SizedBox(width: 5), // 固定值
                   Text('2024 Swaply. All rights reserved.',
-                      style:
-                      TextStyle(fontSize: 14, color: Colors.grey[600])), // 固定值
+                      style: TextStyle(
+                          fontSize: 14, color: Colors.grey[600])), // 固定值
                 ],
               ),
             ),

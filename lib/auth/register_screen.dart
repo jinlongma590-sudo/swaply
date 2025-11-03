@@ -1,20 +1,11 @@
-// lib/auth/register_screen.dart  鈥?Updated: add Sign in with Apple (iOS only) + Google helper (PKCE)
+// lib/auth/register_screen.dart — Updated: no navigation on success; uses sf.* namespace; unified OAuth redirect
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'login_screen.dart';
-import 'package:swaply/services/auth_service.dart';
-import 'package:swaply/services/oauth_service.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/reward_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as sf;
 
-// 鉁?Google 鐧诲綍鏀逛负浣跨敤鎴戜滑灏佽鐨?helper锛圥KCE + 娣遍摼鍥炶皟锛?
-import 'package:swaply/auth/google_signin.dart' as gauth;
-
-// 鉁?Apple 鐧诲綍鐩稿叧
-import 'package:flutter/foundation.dart'
-    show kIsWeb, defaultTargetPlatform, TargetPlatform;
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
-import 'package:swaply/services/apple_auth_service.dart';
+// 统一的 OAuth 回调常量（与 Dashboard / iOS URL Types / AndroidManifest 保持一致）
+const String kAuthRedirectUri = 'cc.swaply.app://login-callback';
 
 class RegisterScreen extends StatefulWidget {
   final String? invitationCode;
@@ -23,7 +14,7 @@ class RegisterScreen extends StatefulWidget {
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
 
-  /// 鐧诲綍鍚庣敱鍏ㄥ眬鐩戝惉鍣ㄨ鍙栧苟澶勭悊锛堢ぞ浜ょ櫥褰曚篃閫傜敤锛?
+  /// 登录后由全局 onAuthStateChange 读取并处理（绑定邀请码奖励等）
   static String? pendingInvitationCode;
   static void clearPendingCode() => pendingInvitationCode = null;
 }
@@ -42,11 +33,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isLoading = false;
   bool _agreeToTerms = false;
   bool _showInvitationCode = false;
-
-  final _auth = AuthService();
-
-  // 鉁?浠呭湪 iOS 鏄剧ず Apple 鎸夐挳
-  bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
   @override
   void initState() {
@@ -69,23 +55,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  /// 缁熶竴澶勭悊锛氫繚瀛橀個璇风爜缁欏叏灞€鐩戝惉鍣紝骞跺湪宸茬櫥褰曟椂绔嬪嵆缁戝畾
+  /// 统一处理：缓存邀请码供全局监听用；若已登录则立刻尝试绑定
   Future<void> _maybeBindInviteCode(String? code) async {
     if (code == null || code.trim().isEmpty) return;
     final normalized = code.trim().toUpperCase();
 
-    // 鍏滃簳淇濆瓨锛氭棤璁烘槸鍚﹀凡鐧诲綍
+    // 永久化到静态字段，供 signedIn 后的全局监听读取
     RegisterScreen.pendingInvitationCode = normalized;
 
-    // 濡傛灉姝ゆ椂宸茬粡鏈変細璇濓紝灏辩洿鎺ヨ皟鐢?RPC 缁戝畾锛坰ubmitInviteCode 杩斿洖 void锛屼笉鑳藉綋琛ㄨ揪寮忎娇鐢級
-    final user = Supabase.instance.client.auth.currentUser;
+    // 若此刻已登录，则尝试立即绑定（失败则保留 pending，等待后续重试）
+    final user = sf.Supabase.instance.client.auth.currentUser;
     if (user != null) {
       try {
         await RewardService.submitInviteCode(normalized);
-        // 缁戝畾璋冪敤瀹屾垚鍚庢竻绌哄厹搴曪紙RPC 鍐呴儴搴斾繚璇佸箓绛夛級
         RegisterScreen.clearPendingCode();
       } catch (_) {
-        // 淇濈暀 pending锛屼氦缁欏叏灞€鐩戝惉鍣ㄥ湪鍚庣画 signedIn 鏃跺啀璇曚竴娆?
+        // 忽略错误，后续由全局监听在 signedIn 时再尝试一次
       }
     }
   }
@@ -100,20 +85,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return null;
   }
 
+  // ===== 注册：只提交，不导航 =====
   Future<void> _register() async {
     final valid = _formKey.currentState?.validate() ?? false;
     if (!valid || !_agreeToTerms) {
       if (!_agreeToTerms) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-                'Please agree to Terms of Service and Privacy Policy'),
-            backgroundColor: Colors.red[400],
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.r)),
-          ),
-        );
+        _showError('Please agree to Terms of Service and Privacy Policy');
       }
       return;
     }
@@ -121,172 +98,163 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
     try {
       final code = _pickCodeFromUI();
+      await _maybeBindInviteCode(code); // 先缓存邀请码，避免竞态
 
-      // 鍏堟妸閭€璇风爜鍐欏埌 pending锛岄伩鍏嶆敞鍐?浼氳瘽寤虹珛鐨勬椂闂村樊涓㈠け
-      await _maybeBindInviteCode(code);
-
-      await _auth.signUpWithEmailPassword(
+      final res = await sf.Supabase.instance.client.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
-        fullName: _nameController.text.trim(),
+        emailRedirectTo: kAuthRedirectUri,
       );
 
-      // 鍐嶅皾璇曚竴娆＄珛鍗崇粦瀹氾紙杩欐椂閫氬父宸?signed in锛?
-      await _maybeBindInviteCode(code);
-
-      if (!mounted) return;
-      _showSuccessDialog();
-      await Future.delayed(const Duration(milliseconds: 1200));
-      if (mounted) Navigator.pop(context); // 鍏冲脊绐?
-      // 鍏跺畠锛氬垱寤?profile / 娆㈣繋鍒?/ 瀵艰埅锛岀敱浣犵殑鍏ㄥ眬 Auth 鐩戝惉鍣ㄥ仛
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-          backgroundColor: Colors.red[400],
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
-        ),
-      );
+      // 如已直接登录（部分策略下可能返回 session）
+      if (res.session != null) {
+        // ✅ 不做任何导航；交由 main.dart 的 onAuthStateChange -> signedIn 统一处理
+        _showInfo('Account created.');
+        await _maybeBindInviteCode(code); // 再尝试一次绑定（如果已登录）
+      } else {
+        // 常见流程：需要邮箱验证
+        _showInfo('Verification email sent. Please check your inbox.');
+      }
+    } on sf.AuthException catch (e) {
+      _showError(e.message);
+    } catch (_) {
+      _showError('Registration failed. Please try again.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // 鉁?Google 娉ㄥ唽锛氭敼涓轰娇鐢?helper锛堜笌鐧诲綍椤典竴鑷达級
+  // ===== Google：只提交，不导航（仅替换函数体，其他勿动） =====
   Future<void> _googleRegister() async {
+    if (_isLoading) return;
     setState(() => _isLoading = true);
+
     try {
+      // 可选：先把邀请码缓存到 pending，供全局 signedIn 后绑定
       final code = _pickCodeFromUI();
       await _maybeBindInviteCode(code);
 
-      await gauth.signInWithGoogle(context);
-
-      await _maybeBindInviteCode(code);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Google 娉ㄥ唽澶辫触锛?e'),
-          backgroundColor: Colors.red[400],
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
-        ),
+      // 关键：只发起 OAuth，不在这里做“失败”吐司，等待回调处理
+      await sf.Supabase.instance.client.auth.signInWithOAuth(
+        sf.OAuthProvider.google,
+        redirectTo: kAuthRedirectUri,                    // 你项目里的常量
+        queryParams: const {'prompt': 'select_account'}, // 可保留
       );
+      // 不要在这里导航、不提示“失败/成功”，交给 onAuthStateChange
+    } on sf.AuthException catch (e) {
+      final msg = e.message.toLowerCase();
+      // 用户取消/关闭页面这类错误直接吞掉，避免“已登录却提示失败”
+      if (msg.contains('cancel') ||
+          msg.contains('canceled') ||
+          msg.contains('popup_closed')) {
+        // no-op
+      } else {
+        // 真异常再提示
+        _showError('Google sign-in error: ${e.message}');
+      }
+    } catch (_) {
+      // 极少数机型启动页面抛异常，但回调可能仍会到达；延迟 1s 检查是否真的没登录
+      Future.delayed(const Duration(seconds: 1), () {
+        final user = sf.Supabase.instance.client.auth.currentUser;
+        if (mounted && user == null) {
+          _showError('Failed to start Google sign-in. Please try again.');
+        }
+      });
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  // ===== Facebook：只提交，不导航 =====
   Future<void> _facebookRegister() async {
     setState(() => _isLoading = true);
     try {
       final code = _pickCodeFromUI();
       await _maybeBindInviteCode(code);
 
-      await OAuthService.signInWithFacebook();
+      await sf.Supabase.instance.client.auth.signInWithOAuth(
+        sf.OAuthProvider.facebook,
+        redirectTo: kAuthRedirectUri,
+      );
 
       await _maybeBindInviteCode(code);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Facebook 娉ㄥ唽澶辫触锛?e'),
-          backgroundColor: Colors.red[400],
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
-        ),
-      );
+    } on sf.AuthException catch (e) {
+      _showError(e.message);
+    } catch (_) {
+      _showError('Facebook 登录启动失败，请稍后再试');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  // 鉁?Apple 娉ㄥ唽锛氫笌鍏跺畠绀句氦閫昏緫涓€鑷达紝鏀寔閭€璇风爜鍏滃簳
+  // ===== Apple：只提交，不导航 =====
   Future<void> _appleRegister() async {
     setState(() => _isLoading = true);
     try {
       final code = _pickCodeFromUI();
       await _maybeBindInviteCode(code);
 
-      final ok = await AppleAuthService().signIn();
-      if (!mounted) return;
-
-      if (!ok) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Apple 鐧诲綍琚彇娑堟垨澶辫触')),
-        );
-      }
+      await sf.Supabase.instance.client.auth.signInWithOAuth(
+        sf.OAuthProvider.apple,
+        redirectTo: kAuthRedirectUri,
+      );
 
       await _maybeBindInviteCode(code);
-      // 鎴愬姛鍚庣殑瀵艰埅/濂栧姳浠嶇敱浣犵殑鍏ㄥ眬 Auth 鐩戝惉鍣ㄥ鐞?
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Apple 娉ㄥ唽澶辫触锛?e'),
-          backgroundColor: Colors.red[400],
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
-        ),
-      );
+    } on sf.AuthException catch (e) {
+      _showError(e.message);
+    } catch (_) {
+      _showError('Apple 登录启动失败，请稍后再试');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _showSuccessDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: EdgeInsets.all(24.r),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16.r),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TweenAnimationBuilder<double>(
-                tween: Tween<double>(begin: 0, end: 1),
-                duration: const Duration(milliseconds: 600),
-                builder: (context, value, child) {
-                  return Transform.scale(
-                    scale: value,
-                    child: Container(
-                      width: 60.r,
-                      height: 60.r,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
-                        ),
-                      ),
-                      child: Icon(Icons.check, color: Colors.white, size: 30.r),
-                    ),
-                  );
-                },
-              ),
-              SizedBox(height: 16.h),
-              Text('Registration Success!',
-                  style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF2196F3))),
-              SizedBox(height: 8.h),
-              Text('Welcome to Swaply!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 13.sp, color: Colors.grey[600])),
-            ],
-          ),
+  // （可选）若你集成了邮箱 OTP 验证，可用此方法提交验证码；同样不导航
+  Future<void> verifyEmailOtp({
+    required String email,
+    required String code,
+  }) async {
+    setState(() => _isLoading = true);
+    try {
+      await sf.Supabase.instance.client.auth.verifyOTP(
+        email: email,
+        token: code,
+        type: sf.OtpType.email,
+      );
+      // ✅ 不导航。等待 onAuthStateChange -> signedIn
+      _showInfo('Email verified.');
+    } on sf.AuthException catch (e) {
+      _showError(e.message);
+    } catch (_) {
+      _showError('Verification failed. Please try again.');
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showError(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: Colors.red[400],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.r),
+        ),
+      ),
+    );
+  }
+
+  void _showInfo(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: Colors.black87,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.r),
         ),
       ),
     );
@@ -300,25 +268,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: Container(
-          margin: EdgeInsets.all(8.r),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.9),
-            borderRadius: BorderRadius.circular(10.r),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 6.r,
-                offset: Offset(0, 2.h),
-              )
-            ],
-          ),
-          child: IconButton(
-            icon: Icon(Icons.arrow_back_ios_rounded,
-                color: Colors.black87, size: 18.r),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
+        // ✅ 为避免本页产生任何路由副作用，不提供返回键（与登录页保持一致）
+        leading: const SizedBox.shrink(),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -330,15 +281,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(height: 16.h),
-                Text('Create Account',
-                    style: TextStyle(
-                        fontSize: 24.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black87,
-                        letterSpacing: -0.5)),
+                Text(
+                  'Create Account',
+                  style: TextStyle(
+                    fontSize: 24.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                    letterSpacing: -0.5,
+                  ),
+                ),
                 SizedBox(height: 6.h),
-                Text('Join Swaply and start trading',
-                    style: TextStyle(fontSize: 14.sp, color: Colors.grey[600])),
+                Text(
+                  'Join Swaply and start trading',
+                  style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
+                ),
                 SizedBox(height: 28.h),
 
                 _input(
@@ -346,9 +302,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   label: 'Full Name *',
                   hint: 'Enter your full name',
                   icon: Icons.person_outline,
-                  validator: (v) => (v == null || v.isEmpty)
-                      ? 'Please enter your full name'
-                      : null,
+                  validator: (v) =>
+                  (v == null || v.isEmpty) ? 'Please enter your full name' : null,
                 ),
                 SizedBox(height: 14.h),
 
@@ -359,9 +314,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                   validator: (v) {
-                    if (v == null || v.isEmpty) {
-                      return 'Please enter your email';
-                    }
+                    if (v == null || v.isEmpty) return 'Please enter your email';
                     if (!RegExp(r'^[\w\.-]+@[\w\.-]+\.\w{2,}$').hasMatch(v)) {
                       return 'Please enter a valid email';
                     }
@@ -395,8 +348,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   icon: Icons.lock_outline,
                   obscureText: !_isPasswordVisible,
                   suffixIcon: IconButton(
-                    onPressed: () => setState(
-                        () => _isPasswordVisible = !_isPasswordVisible),
+                    onPressed: () =>
+                        setState(() => _isPasswordVisible = !_isPasswordVisible),
                     icon: Icon(
                       _isPasswordVisible
                           ? Icons.visibility_off_outlined
@@ -425,7 +378,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   obscureText: !_isConfirmPasswordVisible,
                   suffixIcon: IconButton(
                     onPressed: () => setState(() =>
-                        _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
+                    _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
                     icon: Icon(
                       _isConfirmPasswordVisible
                           ? Icons.visibility_off_outlined
@@ -458,15 +411,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             setState(() => _agreeToTerms = v ?? false),
                         activeColor: const Color(0xFF2196F3),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(3.r)),
+                          borderRadius: BorderRadius.circular(3.r),
+                        ),
                       ),
                     ),
                     SizedBox(width: 10.w),
                     Expanded(
                       child: RichText(
                         text: TextSpan(
-                          style: TextStyle(
-                              fontSize: 12.sp, color: Colors.grey[700]),
+                          style: TextStyle(fontSize: 12.sp, color: Colors.grey[700]),
                           children: const [
                             TextSpan(text: 'I agree to the '),
                             TextSpan(
@@ -501,25 +454,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF2196F3),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.r)),
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
                       elevation: 0,
                     ),
                     child: _isLoading
                         ? Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(
-                                width: 20.r,
-                                height: 20.r,
-                                child: const CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              ),
-                              SizedBox(width: 10.w),
-                              const Text('Creating Account...'),
-                            ],
-                          )
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 20.r,
+                          height: 20.r,
+                          child: const CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        ),
+                        SizedBox(width: 10.w),
+                        const Text('Creating Account...'),
+                      ],
+                    )
                         : const Text('Create Account'),
                   ),
                 ),
@@ -530,9 +484,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     Expanded(child: Divider(color: Colors.grey[300])),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 12.w),
-                      child: Text('OR',
-                          style: TextStyle(
-                              color: Colors.grey[500], fontSize: 12.sp)),
+                      child: Text(
+                        'OR',
+                        style: TextStyle(color: Colors.grey[500], fontSize: 12.sp),
+                      ),
                     ),
                     Expanded(child: Divider(color: Colors.grey[300])),
                   ],
@@ -561,58 +516,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ],
                 ),
 
-                // 鉁?Apple 瀹樻柟鎸夐挳锛堜粎 iOS 灞曠ず锛屾暣琛屽搴︼級
-                if (_isIOS) ...[
-                  SizedBox(height: 12.h),
-                  SizedBox(
-                    width: double.infinity,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        AbsorbPointer(
-                          absorbing: _isLoading,
-                          child: SignInWithAppleButton(
-                            onPressed: _appleRegister,
-                            style: SignInWithAppleButtonStyle.black,
-                            borderRadius:
-                                const BorderRadius.all(Radius.circular(12)),
-                          ),
-                        ),
-                        if (_isLoading)
-                          const Positioned.fill(
-                            child: IgnorePointer(
-                              ignoring: true,
-                              child: Center(
-                                child: SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
+                SizedBox(height: 12.h),
+                SizedBox(
+                  width: double.infinity,
+                  height: 42.h,
+                  child: OutlinedButton.icon(
+                    onPressed: _isLoading ? null : _appleRegister,
+                    icon: const Icon(Icons.apple),
+                    label: const Text('Continue with Apple'),
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
                     ),
                   ),
-                ],
+                ),
 
                 SizedBox(height: 22.h),
 
+                // 不导航：只提示
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text("Already have an account? ",
-                        style: TextStyle(
-                            color: Colors.grey[600], fontSize: 12.sp)),
+                    Text(
+                      "Already have an account? ",
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12.sp),
+                    ),
                     GestureDetector(
-                      onTap: () => Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const LoginScreen(),
-                        ),
-                      ),
+                      onTap: () {
+                        _showInfo('Sign-in navigation is handled elsewhere.');
+                      },
                       child: Text(
                         'Sign In',
                         style: TextStyle(
@@ -651,8 +584,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       child: Column(
         children: [
           InkWell(
-            onTap: () =>
-                setState(() => _showInvitationCode = !_showInvitationCode),
+            onTap: () => setState(() => _showInvitationCode = !_showInvitationCode),
             borderRadius: BorderRadius.vertical(
               top: Radius.circular(12.r),
               bottom: _showInvitationCode ? Radius.zero : Radius.circular(12.r),
@@ -677,12 +609,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       children: [
                         Text('Have an invitation code?',
                             style: TextStyle(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87)),
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                            )),
                         Text("Get extra rewards with friend's invitation",
-                            style: TextStyle(
-                                fontSize: 11.sp, color: Colors.grey[600])),
+                            style: TextStyle(fontSize: 11.sp, color: Colors.grey[600])),
                       ],
                     ),
                   ),
@@ -704,24 +636,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: TextFormField(
                     controller: _invitationCodeController,
                     style: TextStyle(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 2),
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 2,
+                    ),
                     textAlign: TextAlign.center,
                     textCapitalization: TextCapitalization.characters,
                     decoration: InputDecoration(
                       hintText: 'Enter invitation code',
-                      hintStyle:
-                          TextStyle(fontSize: 12.sp, color: Colors.grey[400]),
+                      hintStyle: TextStyle(fontSize: 12.sp, color: Colors.grey[400]),
                       prefixIcon: Icon(Icons.vpn_key,
                           size: 18.r, color: const Color(0xFF2196F3)),
                       filled: true,
                       fillColor: const Color(0xFF2196F3).withOpacity(0.05),
                       border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10.r),
-                          borderSide: BorderSide.none),
-                      contentPadding: EdgeInsets.symmetric(
-                          horizontal: 12.w, vertical: 10.h),
+                        borderRadius: BorderRadius.circular(10.r),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding:
+                      EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
                     ),
                     validator: (v) {
                       if (v != null && v.isNotEmpty && v.length < 6) {
@@ -775,29 +708,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
           filled: true,
           fillColor: Colors.white,
           border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide.none),
+            borderRadius: BorderRadius.circular(12.r),
+            borderSide: BorderSide.none,
+          ),
           enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12.r),
-              borderSide: BorderSide(color: Colors.grey[200]!, width: 1)),
+            borderRadius: BorderRadius.circular(12.r),
+            borderSide: BorderSide(color: Colors.grey[200]!, width: 1),
+          ),
           focusedBorder: const OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(12)),
-              borderSide: BorderSide(color: Color(0xFF2196F3), width: 1.5)),
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+            borderSide: BorderSide(color: Color(0xFF2196F3), width: 1.5),
+          ),
           errorBorder: const OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(12)),
-              borderSide: BorderSide(color: Colors.red, width: 1)),
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+            borderSide: BorderSide(color: Colors.red, width: 1),
+          ),
           focusedErrorBorder: const OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(12)),
-              borderSide: BorderSide(color: Colors.red, width: 1.5)),
-          contentPadding:
-              EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+            borderSide: BorderSide(color: Colors.red, width: 1.5),
+          ),
+          contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
         ),
       ),
     );
   }
 
   Widget _socialBtn(
-      String text, Color color, IconData icon, Future<void> Function() onTap) {
+      String text,
+      Color color,
+      IconData icon,
+      Future<void> Function() onTap,
+      ) {
     return SizedBox(
       height: 42.h,
       child: OutlinedButton(
@@ -805,8 +746,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: Colors.grey[200]!),
           backgroundColor: Colors.white,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.r),
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,

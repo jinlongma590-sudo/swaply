@@ -1,19 +1,15 @@
-// lib/pages/login_screen.dart - Updated Version (with Sign in with Apple & Google helper)
+// lib/pages/login_screen.dart - Updated Version (no internal navigation; single onAuthStateChange in main.dart)
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+// 保留：如需继续使用注册/找回密码页，请在别处触发导航，这里不再导航
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
-import 'package:swaply/services/auth_service.dart';
-import 'package:swaply/services/oauth_service.dart'; // 鉁?Facebook 浠嶇敤姝ゆ湇鍔?
 
-// 鉁?Google 鐧诲綍鏀逛负浣跨敤鎴戜滑灏佽鐨?helper锛圥KCE + 娣遍摼鍥炶皟锛?
-import 'package:swaply/auth/google_signin.dart' as gauth;
+// 仅保留 Supabase 直接调用，避免任何服务内隐藏导航（使用命名空间避免与 provider 混淆）
+import 'package:supabase_flutter/supabase_flutter.dart' as sf;
 
-// 鉁?Apple 鐧诲綍鐩稿叧
-import 'package:flutter/foundation.dart'
-    show kIsWeb, defaultTargetPlatform, TargetPlatform;
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
-import 'package:swaply/services/apple_auth_service.dart';
+// 统一的 OAuth 回调常量（与 Dashboard / iOS URL Types / AndroidManifest 对齐）
+const String kAuthRedirectUri = 'cc.swaply.app://login-callback';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -26,14 +22,12 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+
   bool _isPasswordVisible = false;
-  bool _isLoading = false;
   bool _rememberMe = false;
 
-  final _auth = AuthService();
-
-  // 鉁?浠?iOS 鏄剧ず Apple 鎸夐挳
-  bool get _isIOS => !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+  // ✅ 防双击 / 防二次提交
+  bool _busy = false;
 
   @override
   void dispose() {
@@ -42,135 +36,125 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _login() async {
+  // ======== Email / Password 登录：只提交请求，不导航 ========
+  Future<void> _loginEmailPassword() async {
     final isFormValid = _formKey.currentState?.validate() ?? false;
-    if (!isFormValid) return;
+    if (!isFormValid || _busy) return;
 
-    setState(() => _isLoading = true);
+    setState(() => _busy = true);
     try {
-      await _auth.signInWithEmailPassword(
+      await sf.Supabase.instance.client.auth.signInWithPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-
-      if (!mounted) return;
-      // 璁よ瘉鐩戝惉鍣ㄤ細鑷姩澶勭悊瀵艰埅涓庡鍔?
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-          backgroundColor: Colors.red[400],
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.r),
-          ),
-        ),
-      );
+      // ✅ 成功后不做任何导航/弹窗，交给 main.dart 的 onAuthStateChange(signedIn)
+    } on sf.AuthException catch (e) {
+      _showError(e.message);
+    } catch (_) {
+      _showError('Login failed. Please try again.');
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _busy = false);
     }
   }
 
-  // 鉁?Google 鐧诲綍锛氭敼涓鸿蛋 helper 涓殑 signInWithGoogle(context)
+  // ======== Google 登录：只提交请求，不导航 ========
   Future<void> _handleGoogleLogin() async {
-    setState(() => _isLoading = true);
-    try {
-      await gauth.signInWithGoogle(context); // 浜ょ粰璁よ瘉鐩戝惉鍣ㄥ鐞嗗悗缁烦杞?
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Google 鐧诲綍澶辫触锛?e'),
-          backgroundColor: Colors.red[400],
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.r),
-          ),
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
+    if (_busy) return;
+    setState(() => _busy = true);
 
-  Future<void> _handleFacebookLogin() async {
-    setState(() => _isLoading = true);
     try {
-      await OAuthService.signInWithFacebook(); // 浜ょ粰璁よ瘉鐩戝惉鍣?
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Facebook 鐧诲綍澶辫触锛?e'),
-          backgroundColor: Colors.red[400],
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.r),
-          ),
-        ),
+      // 关键：只发起 OAuth，不在这里做“失败”吐司，等待回调处理
+      await sf.Supabase.instance.client.auth.signInWithOAuth(
+        sf.OAuthProvider.google,
+        redirectTo: kAuthRedirectUri,                    // 你项目里的常量
+        queryParams: const {'prompt': 'select_account'}, // 可保留
       );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  // 鉁?Apple 鐧诲綍锛堜笌 Google/Facebook 鍚屼竴椋庢牸锛氫緷璧栬璇佺洃鍚櫒锛屼笉鎵嬪姩瀵艰埅锛?
-  Future<void> _handleAppleLogin() async {
-    setState(() => _isLoading = true);
-    try {
-      final ok = await AppleAuthService().signIn();
-      if (!mounted) return;
-      if (!ok) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Apple 鐧诲綍琚彇娑堟垨澶辫触')),
-        );
+      // 不要在这里导航、不提示“失败/成功”，交给 onAuthStateChange
+    } on sf.AuthException catch (e) {
+      final msg = e.message.toLowerCase();
+      // 用户取消/关闭页面这类错误直接吞掉，避免“已登录却提示失败”
+      if (msg.contains('cancel') ||
+          msg.contains('canceled') ||
+          msg.contains('popup_closed')) {
+        // no-op
+      } else {
+        // 真异常再提示
+        _showError('Google sign-in error: ${e.message}');
       }
-      // 鎴愬姛鍒欑敱璁よ瘉鐩戝惉鍣ㄥ鐞嗗悗缁烦杞?濂栧姳
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Apple 鐧诲綍澶辫触锛?e'),
-          backgroundColor: Colors.red[400],
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10.r),
-          ),
-        ),
-      );
+    } catch (_) {
+      // 极少数机型启动页面抛异常，但回调可能仍会到达；延迟 1s 检查是否真的没登录
+      Future.delayed(const Duration(seconds: 1), () {
+        final user = sf.Supabase.instance.client.auth.currentUser;
+        if (mounted && user == null) {
+          _showError('Failed to start Google sign-in. Please try again.');
+        }
+      });
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _busy = false);
     }
+  }
+
+  // ======== Facebook 登录（如需保留）：只提交请求，不导航 ========
+  Future<void> _handleFacebookLogin() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await sf.Supabase.instance.client.auth.signInWithOAuth(
+        sf.OAuthProvider.facebook,
+        redirectTo: kAuthRedirectUri,
+      );
+    } on sf.AuthException catch (e) {
+      _showError(e.message);
+    } catch (_) {
+      _showError('Facebook 登录启动失败，请稍后再试');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  // ======== Apple 登录：只提交请求，不导航（iOS 生效） ========
+  Future<void> _handleAppleLogin() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await sf.Supabase.instance.client.auth.signInWithOAuth(
+        sf.OAuthProvider.apple,
+        redirectTo: kAuthRedirectUri,
+      );
+    } on sf.AuthException catch (e) {
+      _showError(e.message);
+    } catch (_) {
+      _showError('Apple 登录启动失败，请稍后再试');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _showError(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: Colors.red[400],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.r),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // ✅ 不做任何自动关闭/返回；不展示会触发导航的按钮
       backgroundColor: Colors.grey[50],
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: Container(
-          margin: EdgeInsets.all(8.r),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.9),
-            borderRadius: BorderRadius.circular(10.r),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 6.r,
-                offset: Offset(0, 2.h),
-              ),
-            ],
-          ),
-          child: IconButton(
-            icon: Icon(Icons.arrow_back_ios_rounded,
-                color: Colors.black87, size: 18.r),
-            onPressed: () => Navigator.pop(context),
-          ),
-        ),
+        // ❌ 去掉返回按钮里的 Navigator.pop
+        leading: const SizedBox.shrink(),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -182,8 +166,6 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(height: 16.h),
-
-                // Welcome header - Smaller
                 Text(
                   'Welcome Back!',
                   style: TextStyle(
@@ -204,7 +186,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 SizedBox(height: 32.h),
 
-                // Email Field
+                // Email
                 _buildTextField(
                   controller: _emailController,
                   label: 'Email Address',
@@ -224,7 +206,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 SizedBox(height: 16.h),
 
-                // Password Field
+                // Password
                 _buildTextField(
                   controller: _passwordController,
                   label: 'Password',
@@ -240,9 +222,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       size: 18.r,
                     ),
                     onPressed: () {
-                      setState(() {
-                        _isPasswordVisible = !_isPasswordVisible;
-                      });
+                      setState(() => _isPasswordVisible = !_isPasswordVisible);
                     },
                   ),
                   validator: (value) {
@@ -257,7 +237,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 SizedBox(height: 12.h),
 
-                // Remember & Forgot row
+                // Remember row（不做导航）
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -270,9 +250,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: Checkbox(
                               value: _rememberMe,
                               onChanged: (value) {
-                                setState(() {
-                                  _rememberMe = value ?? false;
-                                });
+                                setState(() => _rememberMe = value ?? false);
                               },
                               activeColor: const Color(0xFF2196F3),
                               shape: RoundedRectangleBorder(
@@ -293,16 +271,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         ],
                       ),
                     ),
+                    // ❌ 不再跳“找回密码页”，仅提示。若需跳转，请在别处统一处理。
                     Flexible(
                       child: GestureDetector(
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const ForgotPasswordScreen(),
-                            ),
-                          );
+                          _showError('Forgot Password 暂不在此页导航，请在统一入口处理');
                         },
                         child: Text(
                           'Forgot Password?',
@@ -318,7 +291,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 SizedBox(height: 24.h),
 
-                // Sign In Button - Smaller
+                // Sign In Button
                 Container(
                   width: double.infinity,
                   height: 48.h,
@@ -340,34 +313,34 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: _isLoading ? null : _login,
+                      onTap: _busy ? null : _loginEmailPassword,
                       borderRadius: BorderRadius.circular(12.r),
                       child: Center(
-                        child: _isLoading
+                        child: _busy
                             ? SizedBox(
-                                width: 20.r,
-                                height: 20.r,
-                                child: const CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2.0,
-                                ),
-                              )
+                          width: 20.r,
+                          height: 20.r,
+                          child: const CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.0,
+                          ),
+                        )
                             : Text(
-                                'Sign In',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
+                          'Sign In',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
                 SizedBox(height: 20.h),
 
-                // OR Divider
+                // OR
                 Row(
                   children: [
                     Expanded(child: Divider(color: Colors.grey[300])),
@@ -387,7 +360,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 SizedBox(height: 20.h),
 
-                // Social buttons (Google / Facebook)
+                // Social buttons
                 Row(
                   children: [
                     Expanded(
@@ -410,46 +383,26 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
 
-                // 鉁?Apple 瀹樻柟鎸夐挳锛堜粎 iOS 灞曠ず锛屾暣琛屽搴︼級
-                if (_isIOS) ...[
-                  SizedBox(height: 12.h),
-                  SizedBox(
-                    width: double.infinity,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        AbsorbPointer(
-                          absorbing: _isLoading,
-                          child: SignInWithAppleButton(
-                            onPressed: _handleAppleLogin,
-                            style: SignInWithAppleButtonStyle.black,
-                            borderRadius:
-                                const BorderRadius.all(Radius.circular(12)),
-                          ),
-                        ),
-                        if (_isLoading)
-                          const Positioned.fill(
-                            child: IgnorePointer(
-                              ignoring: true,
-                              child: Center(
-                                child: SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
+                // Apple（iOS 的情况下也可显示普通按钮，这里用文字按钮以避免额外依赖）
+                SizedBox(height: 12.h),
+                SizedBox(
+                  width: double.infinity,
+                  height: 42.h,
+                  child: OutlinedButton.icon(
+                    onPressed: _busy ? null : _handleAppleLogin,
+                    icon: const Icon(Icons.apple),
+                    label: const Text('Sign in with Apple'),
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
                     ),
                   ),
-                ],
+                ),
 
                 SizedBox(height: 24.h),
 
-                // Sign up link
+                // Sign up link（不导航，仅提示）
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -462,12 +415,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     GestureDetector(
                       onTap: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const RegisterScreen(),
-                          ),
-                        );
+                        _showError('注册跳转不在登录页处理，请在统一入口处理');
                       },
                       child: Text(
                         'Sign Up',
@@ -561,9 +509,9 @@ class _LoginScreenState extends State<LoginScreen> {
               width: 1.0.r,
             ),
           ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.r),
-            borderSide: const BorderSide(
+          focusedErrorBorder: const OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+            borderSide: BorderSide(
               color: Colors.red,
               width: 1.5,
             ),
@@ -579,11 +527,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _socialLoginButton(
-    String text,
-    Color color,
-    IconData icon,
-    VoidCallback onPressed,
-  ) {
+      String text,
+      Color color,
+      IconData icon,
+      VoidCallback onPressed,
+      ) {
     return Container(
       height: 42.h,
       decoration: BoxDecoration(
@@ -601,7 +549,7 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onPressed,
+          onTap: _busy ? null : onPressed,
           borderRadius: BorderRadius.circular(10.r),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
