@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
-
+import 'dart:async';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/foundation.dart' show SynchronousFuture;
 import 'package:flutter/material.dart';
@@ -48,8 +49,8 @@ import 'package:swaply/widgets/ios_insets_guard.dart';
 import 'startup_screen.dart';
 
 // ========= 鍏ㄥ眬 Auth 浜嬩欢璁㈤槄锛堝彧娉ㄥ唽涓€娆★級=========
-bool _authHookWired = false;
-StreamSubscription<AuthState>? _globalAuthSub;
+bool _authHookWired = false; // 保留标记
+// （已删除）StreamSubscription<AuthState>? _globalAuthSub;
 
 // 全局导航 Key（MaterialApp 会用到）
 final GlobalKey<NavigatorState> appNavKey = GlobalKey<NavigatorState>();
@@ -236,53 +237,11 @@ class LanguageProvider extends ChangeNotifier {
 }
 
 // ========= 鍏ㄥ眬 Auth 澶勭悊锛堝甫娆㈣繋寮圭ª锛氫竴娆℃€э級 =========
-// 说明：仅做业务处理（订阅/欢迎券/清缓存），不做任何导航；导航统一交给 _authSub。
+// 说明：此函数已改为 no-op，避免创建第二个监听；导航与业务统一交给 _authSub。
 void wireAuthHook() {
   if (_authHookWired) return;
   _authHookWired = true;
-
-  final auth = Supabase.instance.client.auth;
-  _globalAuthSub?.cancel();
-  _globalAuthSub = auth.onAuthStateChange.listen((data) async {
-    final event = data.event;
-
-    if (event == AuthChangeEvent.tokenRefreshed ||
-        event == AuthChangeEvent.userUpdated) {
-      debugPrint('[Auth] $event - skipping business logic');
-      return;
-    }
-
-    debugPrint('[Auth] Event: $event');
-
-    if (event == AuthChangeEvent.signedIn ||
-        event == AuthChangeEvent.initialSession) {
-      final u = auth.currentUser;
-      if (u != null) {
-        await NotificationService.subscribeUser(u.id);
-
-        // 鉁?鏂伴€昏緫锛氱敱鏈嶅姟绔箓绛?RPC 鍐冲畾鏄惁闇€瑕佸脊涓€娆℃杩庡埜
-        try {
-          final res = await RewardService.ensureWelcomeForCurrentUser();
-          if (res.shouldPopup) {
-            final prefs = await SharedPreferences.getInstance();
-            await prefs.setBool('new_user_welcome_pending_${u.id}', true);
-          }
-        } catch (e) {
-          debugPrint('[Auth] ensureWelcomeForCurrentUser error: $e');
-        }
-
-        // ❌ 不在此处做任何导航
-      }
-    }
-
-    if (event == AuthChangeEvent.signedOut) {
-      await NotificationService.unsubscribe();
-      CouponService.clearCache();
-      DualFavoritesService.clearCache();
-      RewardService.clearCache();
-      // ❌ 不在此处做任何导航
-    }
-  });
+  // （已移除 _globalAuthSub 监听及其业务逻辑，避免重复订阅）
 }
 
 // 鈥斺€?浠呬緵鏈枃浠朵娇鐢ㄧ殑 UTF-8 涔辩爜淇锛堟妸鈥溍芭糕€?/ 脙 / 芒 鈥︹€濈被杩樺師锛夛紝涓嶄緷璧?dart:convert 鈥斺€?
@@ -377,7 +336,7 @@ void _showWelcomeGiftDialog() {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-// === 闈欓煶 Supabase 鐨?refresh session 鍣煶锛堜粎寮€鍙戞湡锛?===
+  // === 闈欓煶 Supabase 鐨?refresh session 鍣煶锛堜粎寮€鍙戞湡锛?===
       {
     final _orig = debugPrint;
     debugPrint = (String? message, {int? wrapWidth}) {
@@ -388,9 +347,9 @@ Future<void> main() async {
       _orig(message, wrapWidth: wrapWidth);
     };
   }
-// =====================================================
+  // =====================================================
 
-// ========= 鍏ㄥ眬閿欒鍏滃簳 =========
+  // ========= 鍏ㄥ眬閿欒鍏滃簳 =========
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
   };
@@ -429,7 +388,7 @@ Future<void> main() async {
     );
   };
 
-// 鉁?鍚敤 PKCE OAuth锛堢Щ鍔ㄧ蹇呴』锛?
+  // 鉁?鍚敤 PKCE OAuth锛堢Щ鍔ㄧ蹇呴』锛?
   await Supabase.initialize(
     url: 'https://rhckybselarzglkmlyqs.supabase.co',
     anonKey:
@@ -440,7 +399,7 @@ Future<void> main() async {
     ),
   );
 
-// 鉁?鍦?Supabase 鍒濆鍖栧悗锛宺unApp 涔嬪墠璋冪敤鍏ㄥ眬鐩戝惉鍣?
+  // 鉁?鍦?Supabase 鍒濆鍖栧悗锛宺unApp 涔嬪墠璋冪敤鍏ㄥ眬鐩戝惉鍣?
   wireAuthHook();
 
   runApp(
@@ -466,27 +425,34 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     // —— 注册唯一的 onAuthStateChange（含节流 + 防重入） —— //
     _authSub?.cancel();
-    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
-      final event = data.event;
-      final now = DateTime.now();
+    _authSub =
+        Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+          final event = data.event;
+          final now = DateTime.now();
 
-      // 800ms 节流 + 防重入
-      if (_authRouting || now.difference(_lastAuthRouteAt) < const Duration(milliseconds: 800)) {
-        return;
-      }
-      _authRouting = true;
-      _lastAuthRouteAt = now;
+          // 800ms 节流 + 防重入
+          if (_authRouting ||
+              now.difference(_lastAuthRouteAt) <
+                  const Duration(milliseconds: 800)) {
+            return;
+          }
+          _authRouting = true;
+          _lastAuthRouteAt = now;
 
-      final nav = appNavKey.currentState;
-      if (nav != null && (event == AuthChangeEvent.signedIn || event == AuthChangeEvent.signedOut)) {
-        // 统一在这里导航到首页，其他地方不要再导航到首页
-        nav.pushNamedAndRemoveUntil('/home', (route) => false);
-      }
+          final nav = appNavKey.currentState;
+          if (nav != null) {
+            // 🔄 统一在这里做路由：登录 → /home；退出 → /welcome
+            if (event == AuthChangeEvent.signedIn) {
+              nav.pushNamedAndRemoveUntil('/home', (route) => false);
+            } else if (event == AuthChangeEvent.signedOut) {
+              nav.pushNamedAndRemoveUntil('/welcome', (route) => false);
+            }
+          }
 
-      // 微小延时后释放锁，防抖更稳
-      await Future.delayed(const Duration(milliseconds: 300));
-      _authRouting = false;
-    });
+          // 微小延时后释放锁，防抖更稳
+          await Future.delayed(const Duration(milliseconds: 300));
+          _authRouting = false;
+        });
   }
 
   @override
@@ -534,7 +500,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             return MaterialApp(
               title: 'Swaply',
               debugShowCheckedModeBanner: false,
-              navigatorKey: appNavKey,   // <<—— 全局 navigatorKey 绑定
+              navigatorKey: appNavKey, // <<—— 全局 navigatorKey 绑定
               locale: languageProvider.currentLocale,
               localizationsDelegates: const [
                 AppLocalizations.delegate,
@@ -5192,7 +5158,7 @@ class NoGlowScrollBehavior extends ScrollBehavior {
 const _kPrivacyUrl = 'https://www.swaply.cc/privacy';
 const _kDeleteUrl = 'https://www.swaply.cc/delete-account';
 
-/* ---------------- Profile Page 涓汉璧勬枡椤?---------------- */
+/* ---------------- Profile Page 个人资料页 ---------------- */
 class ProfilePage extends StatefulWidget {
   final bool isGuest;
   const ProfilePage({Key? key, this.isGuest = false}) : super(key: key);
@@ -5205,15 +5171,15 @@ class _ProfilePageState extends State<ProfilePage>
     with SingleTickerProviderStateMixin {
   bool _loading = true;
 
-  /// 鍩虹璧勬枡锛堟樉绀哄名/澶村儚/鏃堕棿绛夛級
+  /// 基础资料（显示名/头像/时间等）
   Map<String, dynamic>? _profile;
 
-  /// 鍙鐨?profiles 琛岋紙浠呭惈 verification_type 绛夛級
+  /// 只读 profiles 行（含 verification_type 等）
   Map<String, dynamic>? _profileRow;
 
   final _svc = ProfileService();
 
-  // 鉁?鏂板锛氳璇佹湇鍔′笌鐘舵€侊紙浠呯湅 user_verifications锛?
+  // 验证服务与状态（看 user_verifications）
   final _verifySvc = EmailVerificationService();
   bool _verified = false;
   vt.VerificationBadgeType _badge = vt.VerificationBadgeType.none;
@@ -5225,8 +5191,6 @@ class _ProfilePageState extends State<ProfilePage>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
-  // 原有的 _textScaleFactor 变量已移除，依赖全局设置
-
   @override
   void initState() {
     super.initState();
@@ -5235,34 +5199,25 @@ class _ProfilePageState extends State<ProfilePage>
     _fadeAnimation =
         CurvedAnimation(parent: _animationController, curve: Curves.easeInOut);
 
-    // 鍩虹璧勬枡
     if (!widget.isGuest) {
       _load();
     } else {
       _animationController.forward();
     }
 
-    // 鉁?棣栨杩涘叆鎷夊彇璁よ瘉鐘舵€?& 鐩戝惉鐧诲綍鎬佸彉鍖栬嚜鍔ㄥ埛鏂?
+    // 首次拉取认证状态
     _reloadUserVerificationStatus();
-    // 修复 Bug: 确保在 dispose() 中取消 Supabase 监听，防止 setState called after dispose 错误
-    Supabase.instance.client.auth.onAuthStateChange.listen((event) {
-      if (mounted) {
-        _reloadUserVerificationStatus();
-      }
-    });
   }
 
   @override
   void dispose() {
     _animationController.dispose();
-    // ⚠️ 确保外部监听器在 dispose 中被取消 (如果它是 StreamSubscription)
     super.dispose();
   }
 
-  /// 鉁?鍙鍔犺浇锛氫粎鍔犺浇璧勬枡锛堢敤浜庢樉绀猴級锛屼笉鍐嶇敤 profiles/appMetadata 璁＄畻璁よ瘉
+  /// 只读加载：用于页面展示
   Future<void> _load() async {
     try {
-      // 鍩虹璧勬枡鐢ㄤ簬椤甸潰鏄剧ず锛堝悕瀛?澶村儚/鏃堕棿绛夛級
       final base = await _svc.getUserProfile();
       final map =
       base == null ? <String, dynamic>{} : Map<String, dynamic>.from(base);
@@ -5285,18 +5240,15 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
-  // 鉁?浠呮煡 user_verifications锛屼竴娆℃€ц绠?_verified/_badge锛屽苟鏇存柊鍒扮姸鎬?
+  /// 读取 user_verifications 并计算 _verified/_badge
   Future<void> _reloadUserVerificationStatus() async {
-    // 修复 Bug: 在异步调用前检查 mounted
     if (!mounted) return;
     setState(() => _verifyLoading = true);
 
-    final row =
-    await _verifySvc.fetchVerificationRow(); // 浠呮煡 user_verifications
+    final row = await _verifySvc.fetchVerificationRow();
     final user = Supabase.instance.client.auth.currentUser;
 
-    final verified =
-    vutils.computeIsVerified(verificationRow: row, user: user);
+    final verified = vutils.computeIsVerified(verificationRow: row, user: user);
     final badge = vutils.computeBadgeType(verificationRow: row, user: user);
 
     if (!mounted) return;
@@ -5504,11 +5456,10 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   // -----------------------------------------------------
-  // 强化：增加卡死保护和缓存破坏逻辑 (已更新)
+  // 头像上传：卡死保护 + 缓存破坏
   // -----------------------------------------------------
   Future<void> _uploadAvatarSimple() async {
     if (!mounted) return;
-    // 立即显示加载状态
     setState(() => _uploadingAvatar = true);
 
     try {
@@ -5519,28 +5470,22 @@ class _ProfilePageState extends State<ProfilePage>
         maxHeight: 512,
         imageQuality: 80,
       );
-
-      // 检查用户是否取消选择，如果是，直接退出，不报错
       if (image == null) return;
 
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) throw Exception('User not authenticated');
 
-      // 读取文件字节（确保在异步环境中）
       final bytes = await File(image.path).readAsBytes();
       final ext = image.path.split('.').last;
-      // 使用唯一路径名避免存储覆盖冲突
       final path =
           '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.$ext';
 
-      // 检查 mounted 状态，防止长时间选择后，页面已销毁
       if (!mounted) return;
 
-      await Supabase.instance.client.storage.from('avatars').uploadBinary(
-          path, bytes,
-          fileOptions: const FileOptions(upsert: true));
+      await Supabase.instance.client.storage
+          .from('avatars')
+          .uploadBinary(path, bytes, fileOptions: const FileOptions(upsert: true));
 
-      // 修复 Bug: 添加缓存破坏参数 (Cache-Busting)
       final baseUrl =
       Supabase.instance.client.storage.from('avatars').getPublicUrl(path);
       final cacheBust = DateTime.now().millisecondsSinceEpoch;
@@ -5549,7 +5494,6 @@ class _ProfilePageState extends State<ProfilePage>
       await ProfileService.instance
           .updateUserProfile(avatarUrl: publicUrlWithCacheBust);
 
-      // 强制重新加载状态
       await _load();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -5592,14 +5536,12 @@ class _ProfilePageState extends State<ProfilePage>
         ),
       );
     } finally {
-      // 无论成功还是失败，都要确保加载状态被重置
       if (mounted) setState(() => _uploadingAvatar = false);
     }
   }
 
   // -----------------------------------------------------
-  // 修正：重构头部，固定高度 + 内消化状态栏；跨平台观感一致
-  // 核心修复：使用固定 double 值，以保证跨平台尺寸稳定。
+  // 头部：固定高度 + 内部消化状态栏
   // -----------------------------------------------------
   Widget _buildEnhancedHeader({
     required bool isGuest,
@@ -5609,10 +5551,7 @@ class _ProfilePageState extends State<ProfilePage>
     String? memberSince,
     vt.VerificationBadgeType verificationType = vt.VerificationBadgeType.none,
   }) {
-    // 固定一个视觉高度；数值按你安卓那张图的观感定，280~320 都可以
     const double kHeaderHeight = 300;
-
-    // iOS 刘海/状态栏高度，我们在固定高度里“内部消化”，而不是让 SafeArea 拉高整体
     final double statusBar = MediaQuery.of(context).padding.top;
 
     const List<Color> gradientColors = [
@@ -5622,10 +5561,9 @@ class _ProfilePageState extends State<ProfilePage>
     ];
 
     return SizedBox(
-      height: kHeaderHeight, // ← 关键：头部整体高度固定
+      height: kHeaderHeight,
       child: Stack(
         children: [
-          // 背景渐变铺满
           Positioned.fill(
             child: Container(
               decoration: const BoxDecoration(
@@ -5638,10 +5576,7 @@ class _ProfilePageState extends State<ProfilePage>
               ),
             ),
           ),
-
-          // 不再用 SafeArea(top:true)。我们自己加一个“内容内边距 = 状态栏 + 额外间距”
           Padding(
-            // 如果没有刘海，取 20；有刘海，则 statusBar + 12，保证不被遮挡，但不拉高整体
             padding: EdgeInsets.fromLTRB(
                 24, (statusBar > 0 ? statusBar + 12 : 20), 24, 30),
             child: Align(
@@ -5673,7 +5608,7 @@ class _ProfilePageState extends State<ProfilePage>
                       ),
                       child: VerifiedAvatar(
                         avatarUrl: avatarUrl,
-                        radius: 45, // 固定值，跨平台一致
+                        radius: 45,
                         verificationType: verificationType,
                         onTap: !isGuest ? _uploadAvatarSimple : null,
                         defaultIcon:
@@ -5689,7 +5624,7 @@ class _ProfilePageState extends State<ProfilePage>
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 20.0, // ← 头像区标题 22.0 -> 20.0
+                      fontSize: 20.0,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0.5,
                       shadows: [
@@ -5742,14 +5677,13 @@ class _ProfilePageState extends State<ProfilePage>
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.calendar_today_outlined,
+                        children: const [
+                          Icon(Icons.calendar_today_outlined,
                               size: 12, color: Colors.white),
-                          const SizedBox(width: 4),
-                          // 文本保持原有拼接逻辑
+                          SizedBox(width: 4),
                           Text(
-                            'Member since $memberSince',
-                            style: const TextStyle(
+                            'Member since ',
+                            style: TextStyle(
                               color: Colors.white,
                               fontSize: 11.0,
                               fontWeight: FontWeight.w500,
@@ -5772,12 +5706,11 @@ class _ProfilePageState extends State<ProfilePage>
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    // iOS 上把列表入口卡片整体在当前基础上再缩小 5%；Android 保持 1.0
     final bool _isIOS = Theme.of(context).platform == TargetPlatform.iOS;
-    const double _iosTileScale = 0.75; // 从 0.80 → 0.75（再缩 5%）
+    const double _iosTileScale = 0.75;
     final double _tileScale = _isIOS ? _iosTileScale : 1.0;
 
-    // Guest user interface
+    // Guest
     if (widget.isGuest) {
       return MediaQuery(
         data: MediaQuery.of(context)
@@ -5788,7 +5721,6 @@ class _ProfilePageState extends State<ProfilePage>
             behavior: const ScrollBehavior(),
             child: CustomScrollView(
               slivers: [
-                // 头部：使用 SliverToBoxAdapter 放置 Stack
                 SliverToBoxAdapter(
                   child: _buildEnhancedHeader(
                     isGuest: true,
@@ -5802,7 +5734,6 @@ class _ProfilePageState extends State<ProfilePage>
                     opacity: _fadeAnimation,
                     child: const Padding(
                       padding: EdgeInsets.all(20),
-                      // 使用修复后的 _GuestSimpleOptions
                       child: _GuestSimpleOptions(),
                     ),
                   ),
@@ -5814,7 +5745,7 @@ class _ProfilePageState extends State<ProfilePage>
       );
     }
 
-    // Loading state
+    // Loading
     if (_loading) {
       return MediaQuery(
         data: MediaQuery.of(context)
@@ -5841,7 +5772,6 @@ class _ProfilePageState extends State<ProfilePage>
 
     final fullName = (_profile?['full_name'] ?? 'User').toString();
     final phone = (_profile?['phone'] ?? '').toString();
-    // 修复 Bug: 确保 phone/email 显示逻辑正确
     final displayContact =
     phone.isNotEmpty ? phone : (_profile?['email'] ?? '').toString();
     final avatarUrl = (_profile?['avatar_url'] ?? '') as String?;
@@ -5853,26 +5783,24 @@ class _ProfilePageState extends State<ProfilePage>
       memberSinceText = cut;
     }
 
-    // Normal User interface
+    // Normal User
     return MediaQuery(
       data: MediaQuery.of(context)
           .copyWith(textScaler: const TextScaler.linear(1.0)),
       child: Scaffold(
         extendBody: true,
         backgroundColor: const Color(0xFFF8F9FA),
-        // 修复：将 Stack 移动到 CustomScrollView 外部，以便加载指示器能覆盖整个屏幕
         body: Stack(
           children: [
             ScrollConfiguration(
-              behavior: const ScrollBehavior(), // 使用无光晕滚动
+              behavior: const ScrollBehavior(),
               child: CustomScrollView(
                 slivers: [
-                  // 头部：使用 SliverToBoxAdapter 放置增强头部（确保背景延伸到安全区外，解决断层）
                   SliverToBoxAdapter(
                     child: _buildEnhancedHeader(
                       isGuest: false,
                       name: fullName,
-                      email: displayContact, // 使用修正后的联系方式
+                      email: displayContact,
                       avatarUrl:
                       (avatarUrl != null && avatarUrl.isNotEmpty)
                           ? avatarUrl
@@ -5882,15 +5810,12 @@ class _ProfilePageState extends State<ProfilePage>
                       _verified ? _badge : vt.VerificationBadgeType.none,
                     ),
                   ),
-
-                  // 内容：使用 SliverList/SliverToBoxAdapter 放置列表项
                   SliverToBoxAdapter(
                     child: FadeTransition(
                       opacity: _fadeAnimation,
                       child: Padding(
                         padding: const EdgeInsets.all(20),
                         child: Theme(
-                          // 让内部 ListTile 更紧凑（对统一卡片也生效）
                           data: Theme.of(context).copyWith(
                             visualDensity: _isIOS
                                 ? const VisualDensity(
@@ -5900,7 +5825,6 @@ class _ProfilePageState extends State<ProfilePage>
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // 修复放大问题: 使用固定值 16.0
                               const Text('Profile',
                                   style: TextStyle(
                                       fontSize: 16.0,
@@ -5931,7 +5855,6 @@ class _ProfilePageState extends State<ProfilePage>
                                 scale: _tileScale,
                               ),
 
-                              // 分区间距：再紧凑一些（从 18 → 10）
                               const SizedBox(height: 10),
                               const Text('Rewards & Activities',
                                   style: TextStyle(
@@ -5941,7 +5864,6 @@ class _ProfilePageState extends State<ProfilePage>
                                       letterSpacing: 0.5)),
                               const SizedBox(height: 10),
 
-                              // 统一宽高样式的 My Rewards 卡片
                               _RewardsTileUnified(
                                 scale: _tileScale,
                                 onTap: () {
@@ -6021,7 +5943,6 @@ class _ProfilePageState extends State<ProfilePage>
                                 scale: _tileScale,
                               ),
 
-                              // 分区间距：再紧凑一些（从 18 → 10）
                               const SizedBox(height: 10),
                               const Text('Support',
                                   style: TextStyle(
@@ -6031,7 +5952,6 @@ class _ProfilePageState extends State<ProfilePage>
                                       letterSpacing: 0.5)),
                               const SizedBox(height: 10),
 
-                              // 鉁?新增：Account 入口
                               _ProfileOptionEnhanced(
                                 icon: Icons.manage_accounts,
                                 title: 'Account',
@@ -6048,7 +5968,6 @@ class _ProfilePageState extends State<ProfilePage>
                               ),
                               const SizedBox(height: 12),
 
-                              // 鉁?新增：隐私政策外链
                               _ProfileOptionEnhanced(
                                 icon: Icons.privacy_tip_outlined,
                                 title: 'Privacy Policy',
@@ -6060,7 +5979,6 @@ class _ProfilePageState extends State<ProfilePage>
                               ),
                               const SizedBox(height: 12),
 
-                              // 鉁?新增：数据删除说明外链
                               _ProfileOptionEnhanced(
                                 icon: Icons.delete_outline,
                                 title:
@@ -6162,9 +6080,26 @@ class _ProfilePageState extends State<ProfilePage>
                                   );
                                   if (confirmed == true) {
                                     try {
+                                      // —— 关键改动：先抑制全局导航一次 —— //
+                                      _authRouting = true;
+                                      _lastAuthRouteAt = DateTime.now();
+
                                       await Supabase.instance.client.auth
                                           .signOut();
                                       RewardService.clearCache();
+
+                                      // 清栈进欢迎页
+                                      (appNavKey.currentState ??
+                                          Navigator.of(context))
+                                          .pushNamedAndRemoveUntil(
+                                          '/welcome', (r) => false);
+
+                                      // 小延时后释放抑制标志，避免 race
+                                      Future.delayed(
+                                          const Duration(milliseconds: 600),
+                                              () {
+                                            _authRouting = false;
+                                          });
                                     } catch (e) {
                                       if (mounted) {
                                         ScaffoldMessenger.of(context)
@@ -6207,7 +6142,6 @@ class _ProfilePageState extends State<ProfilePage>
                 ],
               ),
             ),
-            // 修复 Bug: 加载指示器必须在 Stack 中，并使用 Positioned.fill 覆盖
             if (_uploadingAvatar)
               Positioned.fill(
                 child: Container(
@@ -6242,23 +6176,23 @@ class _ProfilePageState extends State<ProfilePage>
   }
 }
 
-/* ---------------- Verification Tile锛堢簿绠€鐗堬細鐏?缁?+ chevron锛?---------------- */
+/* ---------------- Verification Tile（紧凑卡片 + chevron） ---------------- */
 class _VerificationTileCard extends StatelessWidget {
   final bool isVerified;
-  final bool isLoading; // 鉁?鏂板锛氬埛鏂颁腑鐨勫彲瑙嗗弽棣?
+  final bool isLoading;
   final VoidCallback? onTap;
-  final double scale; // 新增
+  final double scale;
 
   const _VerificationTileCard({
     required this.isVerified,
-    required this.isLoading, // 鉁?鏂板
+    required this.isLoading,
     this.onTap,
-    this.scale = 1.0, // 新增默认值
+    this.scale = 1.0,
   });
 
   @override
   Widget build(BuildContext context) {
-    final s = scale; // 缩放系数
+    final s = scale;
     final Color badgeColor = isVerified ? Colors.green : Colors.grey;
 
     return Material(
@@ -6267,8 +6201,7 @@ class _VerificationTileCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16 * s),
         child: Container(
-          // 涓庡叾瀹冮項缁熶竴鐨勫昂瀵?
-          padding: EdgeInsets.all(16 * s), // 卡片内边距按比例缩放
+          padding: EdgeInsets.all(16 * s),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16 * s),
@@ -6282,18 +6215,15 @@ class _VerificationTileCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // 鉁?宸︿晶涓庡叾瀹冮項瀹屽叏涓€鑷寸殑鈥滃僵鑹插渾瑙掓柟鍧椻€?
               Container(
                 padding: EdgeInsets.all(12 * s),
                 decoration: BoxDecoration(
                   color: badgeColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(14 * s),
                 ),
-                // ✅ 正确：未认证灰色、已认证绿色
                 child: Icon(Icons.verified, color: badgeColor, size: 26 * s),
               ),
               SizedBox(width: 18 * s),
-              // 鏂囨
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -6312,7 +6242,6 @@ class _VerificationTileCard extends StatelessWidget {
                 ),
               ),
               SizedBox(width: 10 * s),
-              // 鍙充晶涓庡叾瀹冮項缁熶竴锛氬姞杞藉湀/灏忎笁瑙?
               isLoading
                   ? SizedBox(
                 width: 18 * s,
@@ -6329,14 +6258,14 @@ class _VerificationTileCard extends StatelessWidget {
   }
 }
 
-/* ---------------- 閫氱敤鍒楄〃椤癸紙鍏朵綑椤逛粛鐢ㄤ綘鐨勫崱鐗囨牱寮忥紱涓嶅啀娓叉煋浠讳何灏忓窘绔綶锛?---------------- */
+/* ---------------- 通用列表项（统一卡片样式） ---------------- */
 class _ProfileOptionEnhanced extends StatelessWidget {
   final IconData icon;
   final String title;
   final String? subtitle;
   final Color color;
   final VoidCallback? onTap;
-  final double scale; // 新增
+  final double scale;
 
   const _ProfileOptionEnhanced({
     required this.icon,
@@ -6344,12 +6273,12 @@ class _ProfileOptionEnhanced extends StatelessWidget {
     required this.color,
     this.subtitle,
     this.onTap,
-    this.scale = 1.0, // 新增默认值
+    this.scale = 1.0,
   });
 
   @override
   Widget build(BuildContext context) {
-    final s = scale; // 缩放系数
+    final s = scale;
 
     return Material(
       color: Colors.transparent,
@@ -6357,7 +6286,7 @@ class _ProfileOptionEnhanced extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16 * s),
         child: Container(
-          padding: EdgeInsets.all(16 * s), // 卡片内边距按比例缩放
+          padding: EdgeInsets.all(16 * s),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16 * s),
@@ -6468,7 +6397,7 @@ class _RewardsTileUnified extends StatelessWidget {
   }
 }
 
-/* ---------------- Guest 閫夐」锛堢畝鐗堬級 ---------------- */
+/* ---------------- Guest 简化入口 ---------------- */
 class _GuestSimpleOptions extends StatelessWidget {
   const _GuestSimpleOptions();
 
@@ -6484,8 +6413,7 @@ class _GuestSimpleOptions extends StatelessWidget {
           onTap: () => Navigator.push(
               context, MaterialPageRoute(builder: (_) => HelpSupportPage())),
         ),
-        // 修复 Column 布局错误
-        const SizedBox(height: 14), // 固定值
+        const SizedBox(height: 14),
         _ProfileOptionEnhanced(
           icon: Icons.info_outline_rounded,
           title: l10n.about,
@@ -6512,23 +6440,23 @@ class HelpSupportPage extends StatelessWidget {
         elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20), // 固定值
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(20), // 固定值
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [Color(0xFF60A5FA), Color(0xFF3B82F6)]),
-                borderRadius: BorderRadius.circular(18), // 固定值
+                borderRadius: BorderRadius.circular(18),
                 boxShadow: const [
                   BoxShadow(
                       color: Color.fromRGBO(37, 99, 235, 0.3),
-                      blurRadius: 24, // 固定值
-                      offset: Offset(0, 12)) // 固定值
+                      blurRadius: 24,
+                      offset: Offset(0, 12))
                 ],
               ),
               child: Column(
@@ -6537,23 +6465,22 @@ class HelpSupportPage extends StatelessWidget {
                   const Text('Need Help?',
                       style: TextStyle(
                           color: Colors.white,
-                          fontSize: 20, // 固定值
+                          fontSize: 20,
                           fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 10), // 固定值
+                  const SizedBox(height: 10),
                   Text('Our support team is here to help you 24/7',
                       style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
-                          fontSize: 15)), // 固定值
+                          color: Colors.white.withOpacity(0.9), fontSize: 15)),
                 ],
               ),
             ),
-            const SizedBox(height: 24), // 固定值
+            const SizedBox(height: 24),
             Text('Contact Information',
                 style: TextStyle(
-                    fontSize: 18, // 固定值
+                    fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: Colors.grey[800])),
-            const SizedBox(height: 14), // 固定值
+            const SizedBox(height: 14),
             _buildContactCard(
               icon: Icons.email_outlined,
               title: 'Email Support',
@@ -6562,7 +6489,7 @@ class HelpSupportPage extends StatelessWidget {
               onTap: () =>
                   launchUrl(Uri(scheme: 'mailto', path: 'swaply@swaply.cc')),
             ),
-            const SizedBox(height: 12), // 固定值
+            const SizedBox(height: 12),
             _buildContactCard(
               icon: Icons.language,
               title: 'Website',
@@ -6587,47 +6514,47 @@ class HelpSupportPage extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(14), // 固定值
+        borderRadius: BorderRadius.circular(14),
         child: Container(
-          padding: const EdgeInsets.all(18), // 固定值
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(14), // 固定值
+            borderRadius: BorderRadius.circular(14),
             boxShadow: const [
               BoxShadow(
                   color: Color.fromRGBO(0, 0, 0, 0.04),
-                  blurRadius: 10, // 固定值
-                  offset: Offset(0, 2)) // 固定值
+                  blurRadius: 10,
+                  offset: Offset(0, 2))
             ],
           ),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12), // 固定值
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12)), // 固定值
-                child: Icon(icon, color: color, size: 26), // 固定值
+                    borderRadius: BorderRadius.circular(12)),
+                child: Icon(icon, color: color, size: 26),
               ),
-              const SizedBox(width: 18), // 固定值
+              const SizedBox(width: 18),
               Expanded(
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(title,
                           style: TextStyle(
-                              fontSize: 16, // 固定值
+                              fontSize: 16,
                               fontWeight: FontWeight.w600,
                               color: Colors.grey[800])),
-                      const SizedBox(height: 3), // 固定值
+                      const SizedBox(height: 3),
                       Text(subtitle,
-                          style: TextStyle(
-                              fontSize: 14, color: Colors.grey[600])), // 固定值
+                          style:
+                          TextStyle(fontSize: 14, color: Colors.grey[600])),
                     ]),
               ),
               if (onTap != null)
                 Icon(Icons.arrow_forward_ios,
-                    size: 16, color: Colors.grey[400]), // 固定值
+                    size: 16, color: Colors.grey[400]),
             ],
           ),
         ),
@@ -6648,19 +6575,19 @@ class AboutPage extends StatelessWidget {
         elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20), // 固定值
+        padding: const EdgeInsets.all(20),
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(20), // 固定值
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16), // 固定值
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: const [
                   BoxShadow(
                       color: Color.fromRGBO(0, 0, 0, 0.05),
-                      blurRadius: 12, // 固定值
-                      offset: Offset(0, 4)) // 固定值
+                      blurRadius: 12,
+                      offset: Offset(0, 4))
                 ],
               ),
               child: Column(
@@ -6668,42 +6595,42 @@ class AboutPage extends StatelessWidget {
                   Text('Trade What You Have\nFor What You Need',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                          fontSize: 20, // 固定值
+                          fontSize: 20,
                           fontWeight: FontWeight.w700,
                           color: Color(0xFF2F2F2F),
                           height: 1.3)),
-                  SizedBox(height: 14), // 固定值
+                  SizedBox(height: 14),
                   Text(
                     'Swaply is your community marketplace for trading items you no longer need for things you actually want.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                        fontSize: 15, color: Color(0xFF6B7280), height: 1.5), // 固定值
+                        fontSize: 15, color: Color(0xFF6B7280), height: 1.5),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24), // 固定值
+            const SizedBox(height: 24),
             Container(
-              padding: const EdgeInsets.all(20), // 固定值
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16), // 固定值
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: const [
                   BoxShadow(
                       color: Color.fromRGBO(0, 0, 0, 0.05),
-                      blurRadius: 12, // 固定值
-                      offset: Offset(0, 4)) // 固定值
+                      blurRadius: 12,
+                      offset: Offset(0, 4))
                 ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.copyright_rounded,
-                      size: 18, color: Colors.grey[600]), // 固定值
-                  const SizedBox(width: 5), // 固定值
+                      size: 18, color: Colors.grey[600]),
+                  const SizedBox(width: 5),
                   Text('2024 Swaply. All rights reserved.',
                       style:
-                      TextStyle(fontSize: 14, color: Colors.grey[600])), // 固定值
+                      TextStyle(fontSize: 14, color: Colors.grey[600])),
                 ],
               ),
             ),

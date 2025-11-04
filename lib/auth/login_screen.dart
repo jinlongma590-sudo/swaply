@@ -1,15 +1,19 @@
-// lib/pages/login_screen.dart - Updated Version (no internal navigation; single onAuthStateChange in main.dart)
+// lib/auth/login_screen.dart - no authFlowType, use OAuthProvider.*, iOS-only Apple button
+// ignore_for_file: unused_import
+
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-// 保留：如需继续使用注册/找回密码页，请在别处触发导航，这里不再导航
+
+// 如需注册/找回密码页，请在别处跳转；这里不做任何路由
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
 
-// 仅保留 Supabase 直接调用，避免任何服务内隐藏导航（使用命名空间避免与 provider 混淆）
 import 'package:supabase_flutter/supabase_flutter.dart' as sf;
 
-// 统一的 OAuth 回调常量（与 Dashboard / iOS URL Types / AndroidManifest 对齐）
-const String kAuthRedirectUri = 'cc.swaply.app://login-callback';
+// 与 Supabase Dashboard / AndroidManifest / iOS URL Types 对齐
+const String kAuthRedirectUri = 'swaply://login-callback';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -25,8 +29,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _isPasswordVisible = false;
   bool _rememberMe = false;
-
-  // ✅ 防双击 / 防二次提交
   bool _busy = false;
 
   @override
@@ -36,10 +38,9 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // ======== Email / Password 登录：只提交请求，不导航 ========
   Future<void> _loginEmailPassword() async {
-    final isFormValid = _formKey.currentState?.validate() ?? false;
-    if (!isFormValid || _busy) return;
+    final valid = _formKey.currentState?.validate() ?? false;
+    if (!valid || _busy) return;
 
     setState(() => _busy = true);
     try {
@@ -47,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      // ✅ 成功后不做任何导航/弹窗，交给 main.dart 的 onAuthStateChange(signedIn)
+      // 交给全局 onAuthStateChange 处理路由
     } on sf.AuthException catch (e) {
       _showError(e.message);
     } catch (_) {
@@ -57,32 +58,25 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ======== Google 登录：只提交请求，不导航 ========
   Future<void> _handleGoogleLogin() async {
     if (_busy) return;
     setState(() => _busy = true);
-
     try {
-      // 关键：只发起 OAuth，不在这里做“失败”吐司，等待回调处理
       await sf.Supabase.instance.client.auth.signInWithOAuth(
         sf.OAuthProvider.google,
-        redirectTo: kAuthRedirectUri,                    // 你项目里的常量
-        queryParams: const {'prompt': 'select_account'}, // 可保留
+        redirectTo: kAuthRedirectUri,
+        queryParams: const {'prompt': 'select_account'},
       );
-      // 不要在这里导航、不提示“失败/成功”，交给 onAuthStateChange
     } on sf.AuthException catch (e) {
       final msg = e.message.toLowerCase();
-      // 用户取消/关闭页面这类错误直接吞掉，避免“已登录却提示失败”
       if (msg.contains('cancel') ||
           msg.contains('canceled') ||
           msg.contains('popup_closed')) {
-        // no-op
+        // 用户手动关闭，不提示
       } else {
-        // 真异常再提示
         _showError('Google sign-in error: ${e.message}');
       }
     } catch (_) {
-      // 极少数机型启动页面抛异常，但回调可能仍会到达；延迟 1s 检查是否真的没登录
       Future.delayed(const Duration(seconds: 1), () {
         final user = sf.Supabase.instance.client.auth.currentUser;
         if (mounted && user == null) {
@@ -94,7 +88,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ======== Facebook 登录（如需保留）：只提交请求，不导航 ========
   Future<void> _handleFacebookLogin() async {
     if (_busy) return;
     setState(() => _busy = true);
@@ -112,7 +105,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // ======== Apple 登录：只提交请求，不导航（iOS 生效） ========
   Future<void> _handleAppleLogin() async {
     if (_busy) return;
     setState(() => _busy = true);
@@ -137,23 +129,21 @@ class _LoginScreenState extends State<LoginScreen> {
         content: Text(msg),
         backgroundColor: Colors.red[400],
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.r),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool showApple = !kIsWeb && Platform.isIOS;
+
     return Scaffold(
-      // ✅ 不做任何自动关闭/返回；不展示会触发导航的按钮
       backgroundColor: Colors.grey[50],
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        // ❌ 去掉返回按钮里的 Navigator.pop
         leading: const SizedBox.shrink(),
       ),
       body: SafeArea(
@@ -178,27 +168,19 @@ class _LoginScreenState extends State<LoginScreen> {
                 SizedBox(height: 6.h),
                 Text(
                   'Sign in to continue to Swaply',
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    color: Colors.grey[600],
-                    letterSpacing: 0.2,
-                  ),
+                  style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
                 ),
                 SizedBox(height: 32.h),
 
-                // Email
                 _buildTextField(
                   controller: _emailController,
                   label: 'Email Address',
                   hint: 'Enter your email',
                   icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!RegExp(r'^[\w\.-]+@[\w\.-]+\.\w{2,}$')
-                        .hasMatch(value)) {
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Please enter your email';
+                    if (!RegExp(r'^[\w\.-]+@[\w\.-]+\.\w{2,}$').hasMatch(v)) {
                       return 'Please enter a valid email';
                     }
                     return null;
@@ -206,7 +188,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 SizedBox(height: 16.h),
 
-                // Password
                 _buildTextField(
                   controller: _passwordController,
                   label: 'Password',
@@ -221,23 +202,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Colors.grey[500],
                       size: 18.r,
                     ),
-                    onPressed: () {
-                      setState(() => _isPasswordVisible = !_isPasswordVisible);
-                    },
+                    onPressed: () =>
+                        setState(() => _isPasswordVisible = !_isPasswordVisible),
                   ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    if (value.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
+                  validator: (v) {
+                    if (v == null || v.isEmpty) return 'Please enter your password';
+                    if (v.length < 6) return 'Password must be at least 6 characters';
                     return null;
                   },
                 ),
                 SizedBox(height: 12.h),
 
-                // Remember row（不做导航）
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -249,9 +224,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             width: 18.r,
                             child: Checkbox(
                               value: _rememberMe,
-                              onChanged: (value) {
-                                setState(() => _rememberMe = value ?? false);
-                              },
+                              onChanged: (v) =>
+                                  setState(() => _rememberMe = v ?? false),
                               activeColor: const Color(0xFF2196F3),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(3.r),
@@ -262,21 +236,16 @@ class _LoginScreenState extends State<LoginScreen> {
                           Flexible(
                             child: Text(
                               'Remember me',
-                              style: TextStyle(
-                                fontSize: 12.sp,
-                                color: Colors.grey[700],
-                              ),
+                              style:
+                              TextStyle(fontSize: 12.sp, color: Colors.grey[700]),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    // ❌ 不再跳“找回密码页”，仅提示。若需跳转，请在别处统一处理。
                     Flexible(
                       child: GestureDetector(
-                        onTap: () {
-                          _showError('Forgot Password 暂不在此页导航，请在统一入口处理');
-                        },
+                        onTap: () => _showError('Forgot Password 统一入口处理'),
                         child: Text(
                           'Forgot Password?',
                           style: TextStyle(
@@ -291,7 +260,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 SizedBox(height: 24.h),
 
-                // Sign In Button
                 Container(
                   width: double.infinity,
                   height: 48.h,
@@ -304,7 +272,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.circular(12.r),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF2196F3).withValues(alpha: 0.3),
+                        color: const Color(0xFF2196F3).withOpacity(0.3),
                         blurRadius: 10.r,
                         offset: Offset(0, 6.h),
                       ),
@@ -322,7 +290,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           height: 20.r,
                           child: const CircularProgressIndicator(
                             color: Colors.white,
-                            strokeWidth: 2.0,
+                            strokeWidth: 2,
                           ),
                         )
                             : Text(
@@ -340,7 +308,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 SizedBox(height: 20.h),
 
-                // OR
                 Row(
                   children: [
                     Expanded(child: Divider(color: Colors.grey[300])),
@@ -360,7 +327,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 SizedBox(height: 20.h),
 
-                // Social buttons
                 Row(
                   children: [
                     Expanded(
@@ -383,40 +349,20 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
 
-                // Apple（iOS 的情况下也可显示普通按钮，这里用文字按钮以避免额外依赖）
                 SizedBox(height: 12.h),
-                SizedBox(
-                  width: double.infinity,
-                  height: 42.h,
-                  child: OutlinedButton.icon(
-                    onPressed: _busy ? null : _handleAppleLogin,
-                    icon: const Icon(Icons.apple),
-                    label: const Text('Sign in with Apple'),
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                    ),
-                  ),
-                ),
+                if (showApple) _appleSignInButton(),
 
                 SizedBox(height: 24.h),
 
-                // Sign up link（不导航，仅提示）
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       "Don't have an account? ",
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 12.sp,
-                      ),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12.sp),
                     ),
                     GestureDetector(
-                      onTap: () {
-                        _showError('注册跳转不在登录页处理，请在统一入口处理');
-                      },
+                      onTap: () => _showError('注册跳转不在登录页处理'),
                       child: Text(
                         'Sign Up',
                         style: TextStyle(
@@ -437,6 +383,27 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  // --- UI helpers ---
+
+  Widget _appleSignInButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 44.h,
+      child: ElevatedButton.icon(
+        onPressed: _busy ? null : _handleAppleLogin,
+        icon: const Icon(Icons.apple, color: Colors.white),
+        label: const Text('Sign in with Apple', overflow: TextOverflow.ellipsis),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+          textStyle: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -451,7 +418,7 @@ class _LoginScreenState extends State<LoginScreen> {
       decoration: BoxDecoration(
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10.r,
             offset: Offset(0, 3.h),
           ),
@@ -464,22 +431,12 @@ class _LoginScreenState extends State<LoginScreen> {
         style: TextStyle(fontSize: 14.sp),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 12.sp,
-          ),
           hintText: hint,
-          hintStyle: TextStyle(
-            color: Colors.grey[400],
-            fontSize: 12.sp,
-          ),
+          labelStyle: TextStyle(color: Colors.grey[600], fontSize: 12.sp),
+          hintStyle: TextStyle(color: Colors.grey[400], fontSize: 12.sp),
           prefixIcon: Container(
             padding: EdgeInsets.all(10.r),
-            child: Icon(
-              icon,
-              color: const Color(0xFF2196F3),
-              size: 18.r,
-            ),
+            child: Icon(icon, color: const Color(0xFF2196F3), size: 18.r),
           ),
           suffixIcon: suffixIcon,
           filled: true,
@@ -490,36 +447,21 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12.r),
-            borderSide: BorderSide(
-              color: Colors.grey[200]!,
-              width: 1.0.r,
-            ),
+            borderSide: BorderSide(color: Colors.grey[200]!, width: 1.0),
           ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12.r),
-            borderSide: BorderSide(
-              color: const Color(0xFF2196F3),
-              width: 1.5.r,
-            ),
+          focusedBorder: const OutlineInputBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+            borderSide: BorderSide(color: Color(0xFF2196F3), width: 1.5),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12.r),
-            borderSide: BorderSide(
-              color: Colors.red[300]!,
-              width: 1.0.r,
-            ),
+            borderSide: BorderSide(color: Colors.red[300]!, width: 1.0),
           ),
           focusedErrorBorder: const OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(12)),
-            borderSide: BorderSide(
-              color: Colors.red,
-              width: 1.5,
-            ),
+            borderSide: BorderSide(color: Colors.red, width: 1.5),
           ),
-          contentPadding: EdgeInsets.symmetric(
-            horizontal: 16.w,
-            vertical: 14.h,
-          ),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
         ),
         validator: validator,
       ),
@@ -540,7 +482,7 @@ class _LoginScreenState extends State<LoginScreen> {
         borderRadius: BorderRadius.circular(10.r),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 8.r,
             offset: Offset(0, 2.h),
           ),

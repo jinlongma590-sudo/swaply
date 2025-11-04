@@ -1,11 +1,12 @@
-// lib/auth/register_screen.dart — Updated: no navigation on success; uses sf.* namespace; unified OAuth redirect
+// lib/auth/register_screen.dart — no authFlowType, use OAuthProvider.*, iOS-only Apple button
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:swaply/services/reward_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sf;
 
-// 统一的 OAuth 回调常量（与 Dashboard / iOS URL Types / AndroidManifest 保持一致）
-const String kAuthRedirectUri = 'cc.swaply.app://login-callback';
+const String kAuthRedirectUri = 'swaply://login-callback';
 
 class RegisterScreen extends StatefulWidget {
   final String? invitationCode;
@@ -14,7 +15,6 @@ class RegisterScreen extends StatefulWidget {
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
 
-  /// 登录后由全局 onAuthStateChange 读取并处理（绑定邀请码奖励等）
   static String? pendingInvitationCode;
   static void clearPendingCode() => pendingInvitationCode = null;
 }
@@ -55,22 +55,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  /// 统一处理：缓存邀请码供全局监听用；若已登录则立刻尝试绑定
   Future<void> _maybeBindInviteCode(String? code) async {
     if (code == null || code.trim().isEmpty) return;
     final normalized = code.trim().toUpperCase();
-
-    // 永久化到静态字段，供 signedIn 后的全局监听读取
     RegisterScreen.pendingInvitationCode = normalized;
 
-    // 若此刻已登录，则尝试立即绑定（失败则保留 pending，等待后续重试）
     final user = sf.Supabase.instance.client.auth.currentUser;
     if (user != null) {
       try {
         await RewardService.submitInviteCode(normalized);
         RegisterScreen.clearPendingCode();
       } catch (_) {
-        // 忽略错误，后续由全局监听在 signedIn 时再尝试一次
+        // ignore, wait for signedIn listener
       }
     }
   }
@@ -85,7 +81,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return null;
   }
 
-  // ===== 注册：只提交，不导航 =====
   Future<void> _register() async {
     final valid = _formKey.currentState?.validate() ?? false;
     if (!valid || !_agreeToTerms) {
@@ -98,7 +93,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
     try {
       final code = _pickCodeFromUI();
-      await _maybeBindInviteCode(code); // 先缓存邀请码，避免竞态
+      await _maybeBindInviteCode(code);
 
       final res = await sf.Supabase.instance.client.auth.signUp(
         email: _emailController.text.trim(),
@@ -106,13 +101,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         emailRedirectTo: kAuthRedirectUri,
       );
 
-      // 如已直接登录（部分策略下可能返回 session）
       if (res.session != null) {
-        // ✅ 不做任何导航；交由 main.dart 的 onAuthStateChange -> signedIn 统一处理
         _showInfo('Account created.');
-        await _maybeBindInviteCode(code); // 再尝试一次绑定（如果已登录）
+        await _maybeBindInviteCode(code);
       } else {
-        // 常见流程：需要邮箱验证
         _showInfo('Verification email sent. Please check your inbox.');
       }
     } on sf.AuthException catch (e) {
@@ -124,36 +116,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // ===== Google：只提交，不导航（仅替换函数体，其他勿动） =====
   Future<void> _googleRegister() async {
     if (_isLoading) return;
     setState(() => _isLoading = true);
-
     try {
-      // 可选：先把邀请码缓存到 pending，供全局 signedIn 后绑定
       final code = _pickCodeFromUI();
       await _maybeBindInviteCode(code);
 
-      // 关键：只发起 OAuth，不在这里做“失败”吐司，等待回调处理
       await sf.Supabase.instance.client.auth.signInWithOAuth(
         sf.OAuthProvider.google,
-        redirectTo: kAuthRedirectUri,                    // 你项目里的常量
-        queryParams: const {'prompt': 'select_account'}, // 可保留
+        redirectTo: kAuthRedirectUri,
+        queryParams: const {'prompt': 'select_account'},
       );
-      // 不要在这里导航、不提示“失败/成功”，交给 onAuthStateChange
     } on sf.AuthException catch (e) {
       final msg = e.message.toLowerCase();
-      // 用户取消/关闭页面这类错误直接吞掉，避免“已登录却提示失败”
       if (msg.contains('cancel') ||
           msg.contains('canceled') ||
           msg.contains('popup_closed')) {
-        // no-op
       } else {
-        // 真异常再提示
         _showError('Google sign-in error: ${e.message}');
       }
     } catch (_) {
-      // 极少数机型启动页面抛异常，但回调可能仍会到达；延迟 1s 检查是否真的没登录
       Future.delayed(const Duration(seconds: 1), () {
         final user = sf.Supabase.instance.client.auth.currentUser;
         if (mounted && user == null) {
@@ -165,7 +148,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // ===== Facebook：只提交，不导航 =====
   Future<void> _facebookRegister() async {
     setState(() => _isLoading = true);
     try {
@@ -187,7 +169,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // ===== Apple：只提交，不导航 =====
   Future<void> _appleRegister() async {
     setState(() => _isLoading = true);
     try {
@@ -209,7 +190,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // （可选）若你集成了邮箱 OTP 验证，可用此方法提交验证码；同样不导航
   Future<void> verifyEmailOtp({
     required String email,
     required String code,
@@ -221,7 +201,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
         token: code,
         type: sf.OtpType.email,
       );
-      // ✅ 不导航。等待 onAuthStateChange -> signedIn
       _showInfo('Email verified.');
     } on sf.AuthException catch (e) {
       _showError(e.message);
@@ -239,9 +218,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         content: Text(msg),
         backgroundColor: Colors.red[400],
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.r),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
       ),
     );
   }
@@ -253,22 +230,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
         content: Text(msg),
         backgroundColor: Colors.black87,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.r),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool isIOS = !kIsWeb && Platform.isIOS;
+
     return Scaffold(
       backgroundColor: Colors.grey[50],
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        // ✅ 为避免本页产生任何路由副作用，不提供返回键（与登录页保持一致）
         leading: const SizedBox.shrink(),
       ),
       body: SafeArea(
@@ -291,10 +267,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 SizedBox(height: 6.h),
-                Text(
-                  'Join Swaply and start trading',
-                  style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
-                ),
+                Text('Join Swaply and start trading',
+                    style: TextStyle(fontSize: 14.sp, color: Colors.grey[600])),
                 SizedBox(height: 28.h),
 
                 _input(
@@ -359,12 +333,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   validator: (v) {
-                    if (v == null || v.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    if (v.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
+                    if (v == null || v.isEmpty) return 'Please enter your password';
+                    if (v.length < 6) return 'Password must be at least 6 characters';
                     return null;
                   },
                 ),
@@ -377,8 +347,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   icon: Icons.lock_outline,
                   obscureText: !_isConfirmPasswordVisible,
                   suffixIcon: IconButton(
-                    onPressed: () => setState(() =>
-                    _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
+                    onPressed: () => setState(
+                            () => _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
                     icon: Icon(
                       _isConfirmPasswordVisible
                           ? Icons.visibility_off_outlined
@@ -388,12 +358,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   validator: (v) {
-                    if (v == null || v.isEmpty) {
-                      return 'Please confirm your password';
-                    }
-                    if (v != _passwordController.text) {
-                      return 'Passwords do not match';
-                    }
+                    if (v == null || v.isEmpty) return 'Please confirm your password';
+                    if (v != _passwordController.text) return 'Passwords do not match';
                     return null;
                   },
                 ),
@@ -407,8 +373,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       width: 18.r,
                       child: Checkbox(
                         value: _agreeToTerms,
-                        onChanged: (v) =>
-                            setState(() => _agreeToTerms = v ?? false),
+                        onChanged: (v) => setState(() => _agreeToTerms = v ?? false),
                         activeColor: const Color(0xFF2196F3),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(3.r),
@@ -419,7 +384,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     Expanded(
                       child: RichText(
                         text: TextSpan(
-                          style: TextStyle(fontSize: 12.sp, color: Colors.grey[700]),
+                          style:
+                          TextStyle(fontSize: 12.sp, color: Colors.grey[700]),
                           children: const [
                             TextSpan(text: 'I agree to the '),
                             TextSpan(
@@ -445,7 +411,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 SizedBox(height: 20.h),
 
-                // Sign Up
                 SizedBox(
                   height: 48.h,
                   width: double.infinity,
@@ -484,10 +449,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     Expanded(child: Divider(color: Colors.grey[300])),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 12.w),
-                      child: Text(
-                        'OR',
-                        style: TextStyle(color: Colors.grey[500], fontSize: 12.sp),
-                      ),
+                      child: Text('OR',
+                          style: TextStyle(color: Colors.grey[500], fontSize: 12.sp)),
                     ),
                     Expanded(child: Divider(color: Colors.grey[300])),
                   ],
@@ -517,24 +480,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
 
                 SizedBox(height: 12.h),
-                SizedBox(
-                  width: double.infinity,
-                  height: 42.h,
-                  child: OutlinedButton.icon(
-                    onPressed: _isLoading ? null : _appleRegister,
-                    icon: const Icon(Icons.apple),
-                    label: const Text('Continue with Apple'),
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12.r),
-                      ),
-                    ),
-                  ),
-                ),
+                if (isIOS) _appleSignInButtonIOS(),
 
                 SizedBox(height: 22.h),
 
-                // 不导航：只提示
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -543,9 +492,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: TextStyle(color: Colors.grey[600], fontSize: 12.sp),
                     ),
                     GestureDetector(
-                      onTap: () {
-                        _showInfo('Sign-in navigation is handled elsewhere.');
-                      },
+                      onTap: () => _showInfo('Sign-in navigation is handled elsewhere.'),
                       child: Text(
                         'Sign In',
                         style: TextStyle(
@@ -566,7 +513,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  // ===== UI =====
+  // ----- UI helpers -----
+
   Widget _invitationCodeBox() {
     return Container(
       decoration: BoxDecoration(
@@ -578,7 +526,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             color: Colors.black.withOpacity(0.05),
             blurRadius: 8.r,
             offset: Offset(0, 2.h),
-          )
+          ),
         ],
       ),
       child: Column(
@@ -607,14 +555,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Have an invitation code?',
-                            style: TextStyle(
+                        Text(
+                          'Have an invitation code?',
+                          style: TextStyle(
                               fontSize: 14.sp,
                               fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                            )),
-                        Text("Get extra rewards with friend's invitation",
-                            style: TextStyle(fontSize: 11.sp, color: Colors.grey[600])),
+                              color: Colors.black87),
+                        ),
+                        Text(
+                          "Get extra rewards with friend's invitation",
+                          style:
+                          TextStyle(fontSize: 11.sp, color: Colors.grey[600]),
+                        ),
                       ],
                     ),
                   ),
@@ -644,7 +596,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     textCapitalization: TextCapitalization.characters,
                     decoration: InputDecoration(
                       hintText: 'Enter invitation code',
-                      hintStyle: TextStyle(fontSize: 12.sp, color: Colors.grey[400]),
+                      hintStyle:
+                      TextStyle(fontSize: 12.sp, color: Colors.grey[400]),
                       prefixIcon: Icon(Icons.vpn_key,
                           size: 18.r, color: const Color(0xFF2196F3)),
                       filled: true,
@@ -682,13 +635,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     Widget? suffixIcon,
   }) {
     return Container(
-      decoration: BoxDecoration(boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.05),
-          blurRadius: 10.r,
-          offset: Offset(0, 3.h),
-        )
-      ]),
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10.r,
+            offset: Offset(0, 3.h),
+          ),
+        ],
+      ),
       child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
@@ -761,6 +716,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 style: TextStyle(fontSize: 12.sp, color: Colors.grey[700]),
                 overflow: TextOverflow.ellipsis,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _appleSignInButtonIOS() {
+    return SizedBox(
+      width: double.infinity,
+      height: 44.h,
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _appleRegister,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+          padding: EdgeInsets.symmetric(horizontal: 12.w),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.apple, size: 20),
+            SizedBox(width: 8.w),
+            const Text(
+              'Sign in with Apple',
+              style: TextStyle(fontWeight: FontWeight.w600, letterSpacing: 0.2),
             ),
           ],
         ),

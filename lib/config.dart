@@ -19,12 +19,19 @@ class SupabaseConfig {
 class AppConfig {
   static const String appName = 'Swaply';
   static const String version = '1.0.0';
+  // 注意：Android 包名与 iOS Bundle ID 可能不同；此处为应用内部展示/默认值
   static const String packageName = 'com.swaply.app';
 
-  // OAuth 回调
-  static const String oauthRedirectUrl = 'io.supabase.swaply://login-callback/';
-  static const String resetPasswordRedirectUrl =
-      'io.supabase.swaply://reset-password/';
+  // ===== OAuth / Deep Link 回调统一 =====
+  // 统一自定义 Scheme：swaply://login-callback
+  // 与 AndroidManifest.xml 的 <data android:scheme="swaply" android:host="login-callback" />
+  // 以及 iOS Info.plist 的 CFBundleURLTypes 保持一致
+  static const String authRedirectUri = 'swaply://login-callback';
+  // 兼容旧字段：保持与 authRedirectUri 一致，避免其他文件仍引用旧名字时报错
+  static const String oauthRedirectUrl = authRedirectUri;
+
+  // 重置密码回调（如在邮件中使用）
+  static const String resetPasswordRedirectUrl = 'swaply://reset-password';
 }
 
 /// 上传配置

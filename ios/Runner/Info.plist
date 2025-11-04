@@ -17,7 +17,6 @@
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
 
-    <!-- 应用内部名称 -->
     <key>CFBundleName</key>
     <string>Swaply</string>
 
@@ -69,22 +68,22 @@
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <false/>
 
-    <!-- 隐私权限说明 -->
+    <!-- 隐私权限 -->
     <key>NSCameraUsageDescription</key>
     <string>This app needs camera access to take photos for your listing.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>This app needs access to your photo library to upload listing images.</string>
 
-    <!-- Flutter 深链转发（推荐开启） -->
+    <!-- Flutter 深链转发 -->
     <key>FlutterDeepLinkingEnabled</key>
     <true/>
 
-    <!-- 自定义 URL Scheme：用于 Supabase OAuth 回调  swaply://login-callback -->
+    <!-- 自定义 URL Scheme：用于 Supabase OAuth 回调（iOS 只匹配 scheme） -->
     <key>CFBundleURLTypes</key>
     <array>
       <dict>
         <key>CFBundleURLName</key>
-        <string>swaply</string>
+        <string>swaply.login</string>
         <key>CFBundleURLSchemes</key>
         <array>
           <string>swaply</string>
@@ -92,22 +91,19 @@
       </dict>
     </array>
 
-    <!-- 允许 canLaunchUrl 查询的外部 App 白名单（iOS 9+ 必须） -->
+    <!-- 允许 canOpenURL 的外部 App 白名单（按需） -->
     <key>LSApplicationQueriesSchemes</key>
     <array>
-      <!-- WhatsApp -->
       <string>whatsapp</string>
       <string>whatsapp-business</string>
-
-      <!-- Telegram -->
       <string>tg</string>
       <string>telegram</string>
-
-      <!-- Facebook / Messenger（按需保留） -->
       <string>fb</string>
       <string>fbapi</string>
       <string>fbauth2</string>
       <string>fb-messenger</string>
+      <string>fb-messenger-share-api</string>
+      <string>facebook</string>
     </array>
   </dict>
 </plist>

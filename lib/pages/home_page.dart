@@ -29,11 +29,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   String _selectedLocation = 'All Zimbabwe';
 
-// 趋势数据
+  // 趋势数据
   List<Map<String, dynamic>> _trendingRemote = [];
   bool _loadingTrending = false;
 
-// Facebook亮蓝色配色方案
+  // Facebook亮蓝色配色方案
   static const Color _primaryBlue = Color(0xFF1877F2); // Facebook亮蓝色
   static const Color _lightBlue = Color(0xFFE3F2FD);
   static const Color _successGreen = Color(0xFF4CAF50);
@@ -120,7 +120,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-/* ===================== 数据加载 ===================== */
+  /* ===================== 数据加载 ===================== */
 
   /// 修复的价格格式化函数
   String _formatPrice(dynamic priceData) {
@@ -132,8 +132,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
 
     if (priceData is String) {
-      if (priceData.toLowerCase().contains('free') || priceData == '0')
+      if (priceData.toLowerCase().contains('free') || priceData == '0') {
         return 'Free';
+      }
 
       final cleanPrice = priceData.replaceAll(RegExp(r'[^\d.]'), '');
       final parsedPrice = num.tryParse(cleanPrice);
@@ -160,7 +161,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     int latestLimit = 36,
     int total = 12,
   }) async {
-// 1) 置顶广告 -> 列表（仅趋势类型）
+    // 1) 置顶广告 -> 列表（仅趋势类型）
     final pinnedAds = await CouponService.getTrendingPinnedAds(
       city: city,
       limit: pinnedLimit,
@@ -183,7 +184,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       });
     }
 
-// 2) 最新列表
+    // 2) 最新列表
     final latest = await ListingApi.fetchListings(
       city: city,
       limit: latestLimit,
@@ -193,7 +194,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       status: 'active',
     );
 
-// 3) 去重并填充
+    // 3) 去重并填充
     final seen = <String>{...list.map((x) => x['id'].toString())};
     for (final r in latest) {
       final id = r['id']?.toString();
@@ -219,7 +220,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     setState(() => _loadingTrending = true);
     try {
       final city =
-          _selectedLocation == 'All Zimbabwe' ? null : _selectedLocation;
+      _selectedLocation == 'All Zimbabwe' ? null : _selectedLocation;
       final rows = await _fetchTrendingMixed(
         city: city,
         pinnedLimit: 6,
@@ -237,7 +238,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
   }
 
-/* ===================== 导航 ===================== */
+  /* ===================== 导航 ===================== */
 
   void _navigateToCategory(String categoryId, String categoryName) {
     if (categoryId == "trending") {
@@ -290,7 +291,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         context: context,
         builder: (ctx) => AlertDialog(
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
           title: const Text('Login Required'),
           content: const Text('Please login to post listings.'),
           actions: [
@@ -304,7 +305,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         ),
       );
       if (goLogin == true && mounted) {
-        await Navigator.of(context).pushNamed('/login');
+        // ✅ 关键修复：把登录页推到“根 Navigator”，避免落到 Tab 的子 Navigator 里
+        await Navigator.of(context, rootNavigator: true).pushNamed('/login');
       }
       if (Supabase.instance.client.auth.currentUser == null) return;
     }
@@ -313,7 +315,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         .push(MaterialPageRoute(builder: (_) => const SellFormPage()));
   }
 
-/* ===================== UI构建 ===================== */
+  /* ===================== UI构建 ===================== */
 
   @override
   Widget build(BuildContext context) {
@@ -325,17 +327,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             controller: _scrollController,
             padding: EdgeInsets.zero,
             children: [
-// 紧凑头部区域
+              // 紧凑头部区域
               _buildCompactHeader(),
 
-// 趋势区域
+              // 趋势区域
               _buildTrendingSection(),
 
               SizedBox(height: 80.h), // 底部FAB的间距
             ],
           ),
 
-// 紧凑FAB
+          // 紧凑FAB
           Positioned(
             right: 16.w,
             bottom: 16.h,
@@ -366,14 +368,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   Widget _buildCompactHeader() {
     return Stack(
       children: [
-// 简化的头部背景
+        // 简化的头部背景
         Container(
           height: 140.h,
           color: _primaryBlue,
         ),
         Column(
           children: [
-// 紧凑Logo区域
+            // 紧凑Logo区域
             Container(
               padding: EdgeInsets.only(top: 35.h, bottom: 16.h),
               child: Row(
@@ -410,7 +412,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               ),
             ),
 
-// 紧凑白色卡片
+            // 紧凑白色卡片
             Container(
               margin: EdgeInsets.symmetric(horizontal: 12.w),
               decoration: BoxDecoration(
@@ -429,7 +431,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 children: [
                   Padding(
                     padding:
-                        EdgeInsets.only(left: 16.w, top: 12.h, bottom: 10.h),
+                    EdgeInsets.only(left: 16.w, top: 12.h, bottom: 10.h),
                     child: Text(
                       'What are you looking for?',
                       style: TextStyle(
@@ -440,10 +442,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     ),
                   ),
 
-// 紧凑搜索区域
+                  // 紧凑搜索区域
                   _buildCompactSearchSection(),
 
-// 紧凑分类网格
+                  // 紧凑分类网格
                   _buildCompactCategoriesGrid(),
                 ],
               ),
@@ -482,11 +484,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     },
                     items: _locations
                         .map((loc) => DropdownMenuItem(
-                              value: loc,
-                              child: Text(loc,
-                                  style: TextStyle(fontSize: 11.sp),
-                                  overflow: TextOverflow.ellipsis),
-                            ))
+                      value: loc,
+                      child: Text(loc,
+                          style: TextStyle(fontSize: 11.sp),
+                          overflow: TextOverflow.ellipsis),
+                    ))
                         .toList(),
                   ),
                 ),
@@ -527,7 +529,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     child: Container(
                       padding: EdgeInsets.all(6.w),
                       child:
-                          Icon(Icons.search, size: 18.sp, color: _primaryBlue),
+                      Icon(Icons.search, size: 18.sp, color: _primaryBlue),
                     ),
                   ),
                 ],
@@ -564,7 +566,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 borderRadius: BorderRadius.circular(10.r),
                 border: Border.all(
                   color:
-                      isTrending ? Colors.orange.shade200 : Colors.transparent,
+                  isTrending ? Colors.orange.shade200 : Colors.transparent,
                   width: 1,
                 ),
                 boxShadow: [
@@ -645,7 +647,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-// 紧凑趋势标题
+        // 紧凑趋势标题
         Padding(
           key: _trendingKey,
           padding: EdgeInsets.fromLTRB(16.w, 20.h, 16.w, 10.h),
@@ -669,11 +671,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
         ),
 
-// 趋势内容
+        // 趋势内容
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 12.w),
           child:
-              _loadingTrending ? _buildTrendingLoading() : _buildTrendingGrid(),
+          _loadingTrending ? _buildTrendingLoading() : _buildTrendingGrid(),
         ),
       ],
     );
@@ -709,7 +711,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 decoration: BoxDecoration(
                   color: Colors.grey[300],
                   borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(10.r)),
+                  BorderRadius.vertical(top: Radius.circular(10.r)),
                 ),
                 child: Center(
                   child: CircularProgressIndicator(
@@ -785,14 +787,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-// 分离置顶广告和普通内容
+          // 分离置顶广告和普通内容
           if (_trendingRemote.where((r) => r['pinned'] == true).isNotEmpty) ...[
-// 置顶广告部分
+            // 置顶广告部分
             _buildFeaturedTrendingSection(),
             SizedBox(height: 16.h),
           ],
 
-// 普通trending内容
+          // 普通trending内容
           if (_trendingRemote.where((r) => r['pinned'] != true).isNotEmpty) ...[
             Padding(
               padding: EdgeInsets.only(bottom: 8.h),
@@ -814,12 +816,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Widget _buildFeaturedTrendingSection() {
     final pinnedItems =
-        _trendingRemote.where((r) => r['pinned'] == true).toList();
+    _trendingRemote.where((r) => r['pinned'] == true).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-// 特色标题
+        // 特色标题
         Padding(
           padding: EdgeInsets.only(bottom: 8.h),
           child: Row(
@@ -862,7 +864,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           ),
         ),
 
-// 特色广告网格
+        // 特色广告网格
         GridView.builder(
           physics: const NeverScrollableScrollPhysics(),
           shrinkWrap: true,
@@ -879,7 +881,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
           },
         ),
 
-// 分隔线
+        // 分隔线
         Container(
           margin: EdgeInsets.symmetric(vertical: 12.h),
           height: 1.h,
@@ -899,7 +901,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   Widget _buildRegularTrendingGrid() {
     final regularItems =
-        _trendingRemote.where((r) => r['pinned'] != true).toList();
+    _trendingRemote.where((r) => r['pinned'] != true).toList();
 
     return GridView.builder(
       physics: const NeverScrollableScrollPhysics(),
@@ -941,18 +943,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-// 图片区域
+            // 图片区域
             Expanded(
               child: Stack(
                 children: [
                   _buildImageWidget(img),
-// 置顶标签
+                  // 置顶标签
                   Positioned(
                     top: 6.h,
                     left: 6.w,
                     child: Container(
                       padding:
-                          EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                      EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
                       decoration: BoxDecoration(
                         color: Colors.orange[600],
                         borderRadius: BorderRadius.circular(8.r),
@@ -979,7 +981,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               ),
             ),
 
-// 内容区域
+            // 内容区域
             Container(
               padding: EdgeInsets.all(8.w),
               child: Column(
@@ -989,12 +991,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   if (priceText.isNotEmpty)
                     Container(
                       padding:
-                          EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                      EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
                       decoration: BoxDecoration(
                         color: _successGreen.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(4.r),
                         border:
-                            Border.all(color: _successGreen.withOpacity(0.3)),
+                        Border.all(color: _successGreen.withOpacity(0.3)),
                       ),
                       child: Text(
                         priceText,
@@ -1065,12 +1067,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-// 图片区域
+            // 图片区域
             Expanded(
               child: _buildImageWidget(img),
             ),
 
-// 内容区域
+            // 内容区域
             Padding(
               padding: EdgeInsets.all(6.w),
               child: Column(
@@ -1082,7 +1084,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       priceText,
                       style: TextStyle(
                         color:
-                            priceText == 'Free' ? _successGreen : _successGreen,
+                        priceText == 'Free' ? _successGreen : _successGreen,
                         fontWeight: FontWeight.bold,
                         fontSize: 12.sp,
                       ),
@@ -1140,90 +1142,90 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       );
     }
 
-// Jiji风格的自动图片调整 - 完全填充容器
+    // Jiji风格的自动图片调整 - 完全填充容器
     final imgWidget = src.startsWith('http')
         ? Image.network(
-            src,
-            width: double.infinity,
-            height: double.infinity,
-            fit: BoxFit.cover, // 完全覆盖容器
-            alignment: Alignment.center,
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return Container(
-                width: double.infinity,
-                height: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(10.r)),
-                ),
-                child: Center(
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: _primaryBlue,
-                    value: loadingProgress.expectedTotalBytes != null
-                        ? loadingProgress.cumulativeBytesLoaded /
-                            loadingProgress.expectedTotalBytes!
-                        : null,
-                  ),
-                ),
-              );
-            },
-            errorBuilder: (_, __, ___) => Container(
-              width: double.infinity,
-              height: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.vertical(top: Radius.circular(10.r)),
-              ),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.broken_image,
-                        size: 20.sp, color: Colors.grey[400]),
-                    SizedBox(height: 2.h),
-                    Text(
-                      'Image failed to load',
-                      style: TextStyle(fontSize: 8.sp, color: Colors.grey[500]),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
+      src,
+      width: double.infinity,
+      height: double.infinity,
+      fit: BoxFit.cover, // 完全覆盖容器
+      alignment: Alignment.center,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius:
+            BorderRadius.vertical(top: Radius.circular(10.r)),
+          ),
+          child: Center(
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: _primaryBlue,
+              value: loadingProgress.expectedTotalBytes != null
+                  ? loadingProgress.cumulativeBytesLoaded /
+                  loadingProgress.expectedTotalBytes!
+                  : null,
             ),
-          )
+          ),
+        );
+      },
+      errorBuilder: (_, __, ___) => Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.vertical(top: Radius.circular(10.r)),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.broken_image,
+                  size: 20.sp, color: Colors.grey[400]),
+              SizedBox(height: 2.h),
+              Text(
+                'Image failed to load',
+                style: TextStyle(fontSize: 8.sp, color: Colors.grey[500]),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    )
         : Image.asset(
-            src,
-            width: double.infinity,
-            height: double.infinity,
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
-            errorBuilder: (_, __, ___) => Container(
-              width: double.infinity,
-              height: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.vertical(top: Radius.circular(10.r)),
+      src,
+      width: double.infinity,
+      height: double.infinity,
+      fit: BoxFit.cover,
+      alignment: Alignment.center,
+      errorBuilder: (_, __, ___) => Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.vertical(top: Radius.circular(10.r)),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.broken_image,
+                  size: 20.sp, color: Colors.grey[400]),
+              SizedBox(height: 2.h),
+              Text(
+                'Image not found',
+                style: TextStyle(fontSize: 8.sp, color: Colors.grey[500]),
+                textAlign: TextAlign.center,
               ),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.broken_image,
-                        size: 20.sp, color: Colors.grey[400]),
-                    SizedBox(height: 2.h),
-                    Text(
-                      'Image not found',
-                      style: TextStyle(fontSize: 8.sp, color: Colors.grey[500]),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
+            ],
+          ),
+        ),
+      ),
+    );
 
     return ClipRRect(
       borderRadius: BorderRadius.vertical(top: Radius.circular(10.r)),

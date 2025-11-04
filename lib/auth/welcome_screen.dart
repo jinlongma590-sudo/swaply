@@ -23,9 +23,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   late Animation<double> _scaleAnimation;
   late Animation<double> _floatAnimation;
 
-  StreamSubscription<AuthState>? _authSub;
-  Timer? _bootTimeout;
-
   @override
   void initState() {
     super.initState();
@@ -73,43 +70,16 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     _bootAuth();
   }
 
+  // 仅用于“已存在会话时”直接进入首页；其余登录/登出导航交给 main.dart 的全局监听
   Future<void> _bootAuth() async {
     final auth = Supabase.instance.client.auth;
-
-    // ✅ 你的版本使用 currentSession（同步 getter）
     final s = auth.currentSession;
     if (mounted && s != null) {
       _goHome();
-      return;
     }
-
-    _authSub = auth.onAuthStateChange.listen((state) {
-      if (!mounted) return;
-      switch (state.event) {
-        case AuthChangeEvent.initialSession:
-          if (state.session != null) _goHome();
-          break;
-        case AuthChangeEvent.signedIn:
-          _goHome();
-          break;
-        case AuthChangeEvent.signedOut:
-          break;
-        default:
-          break;
-      }
-    });
-
-    _bootTimeout?.cancel();
-    _bootTimeout = Timer(const Duration(seconds: 4), () async {
-      if (!mounted) return;
-      final s2 = auth.currentSession; // ✅ 同样改这里
-      if (s2 != null) _goHome();
-    });
   }
 
   void _goHome() {
-    _bootTimeout?.cancel();
-    _authSub?.cancel();
     if (!mounted) return;
     Navigator.of(context).pushReplacementNamed('/home');
   }
@@ -118,8 +88,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   void dispose() {
     _animationController.dispose();
     _floatController.dispose();
-    _bootTimeout?.cancel();
-    _authSub?.cancel();
     super.dispose();
   }
 
@@ -350,7 +318,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     physics: const ClampingScrollPhysics(),
                     child: ConstrainedBox(
                       constraints:
-                          BoxConstraints(minHeight: constraints.maxHeight),
+                      BoxConstraints(minHeight: constraints.maxHeight),
                       child: IntrinsicHeight(
                         child: Padding(
                           padding: EdgeInsets.symmetric(horizontal: 24.w),
@@ -384,7 +352,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                               ],
                                             ),
                                             borderRadius:
-                                                BorderRadius.circular(24.r),
+                                            BorderRadius.circular(24.r),
                                             boxShadow: [
                                               BoxShadow(
                                                 color: Colors.black
@@ -404,11 +372,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                             child: ShaderMask(
                                               shaderCallback: (bounds) =>
                                                   const LinearGradient(
-                                                colors: [
-                                                  Color(0xFF2196F3),
-                                                  Color(0xFF1565C0)
-                                                ],
-                                              ).createShader(bounds),
+                                                    colors: [
+                                                      Color(0xFF2196F3),
+                                                      Color(0xFF1565C0)
+                                                    ],
+                                                  ).createShader(bounds),
                                               child: Text(
                                                 'S',
                                                 style: TextStyle(
@@ -424,9 +392,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                         ShaderMask(
                                           shaderCallback: (bounds) =>
                                               const LinearGradient(colors: [
-                                            Colors.white,
-                                            Colors.white70
-                                          ]).createShader(bounds),
+                                                Colors.white,
+                                                Colors.white70
+                                              ]).createShader(bounds),
                                           child: Text(
                                             'Swaply',
                                             style: TextStyle(
@@ -451,7 +419,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                           style: TextStyle(
                                             fontSize: 16.sp,
                                             color:
-                                                Colors.white.withOpacity(0.95),
+                                            Colors.white.withOpacity(0.95),
                                             fontWeight: FontWeight.w500,
                                             letterSpacing: 1.2,
                                           ),
@@ -468,7 +436,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                   opacity: _fadeAnimation,
                                   child: Row(
                                     mainAxisAlignment:
-                                        MainAxisAlignment.spaceEvenly,
+                                    MainAxisAlignment.spaceEvenly,
                                     children: [
                                       _buildFeature(Icons.shopping_cart_rounded,
                                           'Shop Smart'),
@@ -498,7 +466,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                             ],
                                           ),
                                           borderRadius:
-                                              BorderRadius.circular(16.r),
+                                          BorderRadius.circular(16.r),
                                           boxShadow: [
                                             BoxShadow(
                                               color: Colors.black
@@ -516,15 +484,15 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                                 context,
                                                 MaterialPageRoute(
                                                     builder: (context) =>
-                                                        const RegisterScreen()),
+                                                    const RegisterScreen()),
                                               );
                                             },
                                             borderRadius:
-                                                BorderRadius.circular(16.r),
+                                            BorderRadius.circular(16.r),
                                             child: Center(
                                               child: Row(
                                                 mainAxisAlignment:
-                                                    MainAxisAlignment.center,
+                                                MainAxisAlignment.center,
                                                 children: [
                                                   Icon(
                                                       Icons
@@ -540,7 +508,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                                           0xFF1565C0),
                                                       fontSize: 16.sp,
                                                       fontWeight:
-                                                          FontWeight.bold,
+                                                      FontWeight.bold,
                                                     ),
                                                   ),
                                                 ],
@@ -556,10 +524,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                         decoration: BoxDecoration(
                                           color: Colors.white.withOpacity(0.15),
                                           borderRadius:
-                                              BorderRadius.circular(16.r),
+                                          BorderRadius.circular(16.r),
                                           border: Border.all(
                                             color:
-                                                Colors.white.withOpacity(0.3),
+                                            Colors.white.withOpacity(0.3),
                                             width: 1.5,
                                           ),
                                         ),
@@ -571,11 +539,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                                 context,
                                                 MaterialPageRoute(
                                                     builder: (context) =>
-                                                        const LoginScreen()),
+                                                    const LoginScreen()),
                                               );
                                             },
                                             borderRadius:
-                                                BorderRadius.circular(16.r),
+                                            BorderRadius.circular(16.r),
                                             child: Center(
                                               child: Text(
                                                 'Sign In',
@@ -610,7 +578,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                                 fontSize: 14.sp,
                                                 fontWeight: FontWeight.w500,
                                                 decoration:
-                                                    TextDecoration.underline,
+                                                TextDecoration.underline,
                                                 decorationColor: Colors.white30,
                                               ),
                                             ),
@@ -626,7 +594,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                 opacity: _fadeAnimation,
                                 child: Padding(
                                   padding:
-                                      EdgeInsets.symmetric(horizontal: 20.w),
+                                  EdgeInsets.symmetric(horizontal: 20.w),
                                   child: Text(
                                     'By continuing, you agree to our\nTerms of Service and Privacy Policy',
                                     textAlign: TextAlign.center,

@@ -118,7 +118,7 @@ class AuthService {
         email: user.email,
         fullName: user.userMetadata?['full_name'] ?? user.userMetadata?['name'],
         avatarUrl:
-            user.userMetadata?['avatar_url'] ?? user.userMetadata?['picture'],
+        user.userMetadata?['avatar_url'] ?? user.userMetadata?['picture'],
       );
 
       return isNew;
@@ -147,7 +147,7 @@ class AuthService {
         email: user.email,
         fullName: user.userMetadata?['name'] ?? user.userMetadata?['full_name'],
         avatarUrl:
-            user.userMetadata?['avatar_url'] ?? user.userMetadata?['picture'],
+        user.userMetadata?['avatar_url'] ?? user.userMetadata?['picture'],
       );
 
       return isNew;
@@ -200,7 +200,7 @@ class AuthService {
   }) async {
     try {
       // 只检查是否存在
-      final existing = await supabase
+      await supabase
           .from('profiles')
           .select('id')
           .eq('id', userId)
@@ -224,7 +224,7 @@ class AuthService {
     }
   }
 
-  // 仍保留：通用的 profile 部分更新（仅在不涉及认证字段时使用）
+  // 通用的 profile 部分更新（仅在不涉及认证字段时使用）
   Future<void> _upsertProfilePartial(Map<String, dynamic> patch) async {
     final u = currentUser;
     if (u == null) return;
@@ -259,8 +259,9 @@ class AuthService {
   Future<void> signInAnonymously() async {
     try {
       await supabase.auth.signInAnonymously();
-      if (supabase.auth.currentUser == null)
+      if (supabase.auth.currentUser == null) {
         throw Exception('Anonymous login failed');
+      }
     } on AuthException catch (e) {
       throw Exception('Anonymous login failed: ${e.message}');
     }
@@ -378,151 +379,6 @@ class AuthService {
     }
   }
 
+  // 对外暴露 Supabase 的原始事件流（不在本文件内自建监听）
   Stream<AuthState> get authStateChanges => supabase.auth.onAuthStateChange;
-
-  // ====== 重复监听治理：单例化订阅 ======
-  static StreamSubscription<AuthState>? _authSub;
-  static bool _authListenerWired = false;
-
-  /// 监听认证状态变化（仅记录日志，不做业务逻辑；可安全重复调用）
-  void setupAuthListener() {
-    if (_authListenerWired && _authSub != null) return; // 已经连过，直接返回
-    _authListenerWired = true;
-
-    // 如已有旧订阅，先取消再重建（防止热重载后重复）
-    _authSub?.cancel();
-    _authSub = supabase.auth.onAuthStateChange.listen((data) async {
-      final event = data.event;
-      if (kDebugMode) {
-        print('[AuthService] Auth event: $event');
-      }
-      // ⚠️ 不在这里放业务逻辑（欢迎券、导航、弹窗等）
-      // 这些放到 main.dart 的 wireAuthHook() 里统一处理，避免重复触发
-    });
-  }
-
-  /// 可选：在退出应用或需要重绑时调用
-  void disposeAuthListener() {
-    _authSub?.cancel();
-    _authSub = null;
-    _authListenerWired = false;
-  }
-  // =====================================
-
-  Future<Map<String, dynamic>?> getUserProfile() async {
-    try {
-      final user = currentUser;
-      if (user == null) return null;
-      final row = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .maybeSingle();
-      return row == null ? null : Map<String, dynamic>.from(row);
-    } catch (e) {
-      throw Exception('Failed to get user profile: $e');
-    }
-  }
-
-  Future<bool> isEmailRegistered(String email) async {
-    try {
-      final row = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('email', email.trim().toLowerCase())
-          .maybeSingle();
-      return row != null;
-    } catch (e) {
-      if (kDebugMode) print('Email check failed: $e');
-      return false;
-    }
-  }
-
-  Future<Map<String, dynamic>?> getUserProfileWithStats() async {
-    try {
-      final user = currentUser;
-      if (user == null) return null;
-
-      final fs = await Future.wait<dynamic>([
-        supabase.from('profiles').select('*').eq('id', user.id).maybeSingle(),
-        supabase.from('coupons').select('id').eq('user_id', user.id),
-        supabase
-            .from('user_tasks')
-            .select('id')
-            .eq('user_id', user.id)
-            .eq('status', 'completed'),
-        supabase
-            .from('user_invitations')
-            .select('id')
-            .eq('inviter_id', user.id)
-            .eq('status', 'completed'),
-      ]);
-
-      final profile = fs[0] as Map<String, dynamic>?;
-      final coupons = fs[1] as List<dynamic>;
-      final completedTasks = fs[2] as List<dynamic>;
-      final successfulInvitations = fs[3] as List<dynamic>;
-
-      if (profile == null) return null;
-      profile['stats'] = {
-        'total_coupons': coupons.length,
-        'completed_tasks': completedTasks.length,
-        'successful_invitations': successfulInvitations.length,
-        'member_since': profile['created_at'],
-      };
-      return profile;
-    } catch (e) {
-      throw Exception('Failed to get user profile with stats: $e');
-    }
-  }
-
-  Future<bool> verifyUserIdentity(String password) async {
-    try {
-      final user = currentUser;
-      if (user == null || user.email == null) return false;
-      try {
-        await supabase.auth
-            .signInWithPassword(email: user.email!, password: password);
-        return true;
-      } catch (_) {
-        return false;
-      }
-    } catch (_) {
-      return false;
-    }
-  }
-
-  Future<Map<String, int>> getInvitationStats() async {
-    try {
-      final user = currentUser;
-      if (user == null) {
-        return {
-          'total_invitations': 0,
-          'pending_invitations': 0,
-          'successful_invitations': 0
-        };
-      }
-
-      final res = await supabase
-          .from('user_invitations')
-          .select('status')
-          .eq('inviter_id', user.id);
-      final list = List<Map<String, dynamic>>.from(
-          (res as List).map((e) => Map<String, dynamic>.from(e)));
-      return {
-        'total_invitations': list.length,
-        'pending_invitations':
-            list.where((i) => i['status'] == 'pending').length,
-        'successful_invitations':
-            list.where((i) => i['status'] == 'completed').length,
-      };
-    } catch (e) {
-      if (kDebugMode) print('Failed to get invitation stats: $e');
-      return {
-        'total_invitations': 0,
-        'pending_invitations': 0,
-        'successful_invitations': 0
-      };
-    }
-  }
 }

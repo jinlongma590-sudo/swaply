@@ -1,5 +1,6 @@
 // lib/pages/search_results_page.dart
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/listing_service.dart';
 import 'package:swaply/pages/product_detail_page.dart';
 
@@ -19,6 +20,8 @@ class SearchResultsPage extends StatefulWidget {
 
 class _SearchResultsPageState extends State<SearchResultsPage> {
   final List<Map<String, dynamic>> _items = [];
+  Set<String> _pinnedIds = <String>{};
+
   bool _loading = false;
   String? _error;
 
@@ -33,6 +36,7 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
       _loading = true;
       _error = null;
       _items.clear();
+      _pinnedIds = {};
     });
 
     try {
@@ -43,12 +47,12 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
       }
 
       final city = (widget.location != null &&
-              widget.location!.isNotEmpty &&
-              widget.location != 'All Zimbabwe')
+          widget.location!.isNotEmpty &&
+          widget.location != 'All Zimbabwe')
           ? widget.location
           : null;
 
-      // 只云端搜索：后端 title/description ilike，已对齐你项目的 API
+      // 1) 列表检索
       final rows = await ListingService.search(
         keyword: kw,
         city: city,
@@ -56,6 +60,10 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
         offset: 0,
       );
 
+      // 2) 取当前关键字/城市下的置顶项（search_pins_active 已是“只包含有效期内”的视图）
+      _pinnedIds = await _fetchPinnedIds(kw, city);
+
+      // 3) 合并 & 映射
       _items.addAll(rows.map(_mapRowToCard));
     } catch (e) {
       _error = e.toString();
@@ -64,22 +72,51 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
     }
   }
 
+  /// 读取置顶的 listing_id 集合（使用 filter，避免 eq/ilike 等扩展方法）
+  Future<Set<String>> _fetchPinnedIds(String kw, String? city) async {
+    final sb = Supabase.instance.client;
+
+    // 关键字用 %kw% 模糊；城市若指定则后面在 Dart 里再过滤
+    final data = await sb
+        .from('search_pins_active')
+        .select('listing_id, keyword, city')
+        .filter('keyword', 'ilike', '%$kw%');
+
+    final list = (data as List?)?.cast<Map<String, dynamic>>() ?? const [];
+    final filtered = city == null
+        ? list
+        : list.where((r) {
+      final c = (r['city'] ?? '').toString();
+      // 允许 city 为空（全津巴布韦生效）或精确匹配
+      return c.isEmpty || c == city;
+    });
+
+    final ids = <String>{};
+    for (final r in filtered) {
+      final id = r['listing_id']?.toString();
+      if (id != null && id.isNotEmpty) ids.add(id);
+    }
+    return ids;
+  }
+
   Map<String, dynamic> _mapRowToCard(Map<String, dynamic> r) {
     final num? priceNum = r['price'] is num ? (r['price'] as num) : null;
     final priceText = priceNum != null
         ? '\$${priceNum.toStringAsFixed(0)}'
         : (r['price']?.toString() ?? '');
 
-    // 统一读取图片（兼容 images / image_urls）
     final imgs = ListingService.readImages(r);
+    final idStr = r['id']?.toString() ?? '';
+    final isPinned = _pinnedIds.contains(idStr);
 
     return {
-      'id': r['id'],
+      'id': idStr,
       'title': r['title'] ?? '',
       'price': priceText,
       'location': r['city'] ?? '',
       'images': imgs,
       'postedDate': r['created_at'] ?? r['posted_at'],
+      'pinned': isPinned,
       'full': r,
     };
   }
@@ -101,7 +138,6 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
       'category': full['category'] ?? '',
     };
 
-    // ✅ 跳转逻辑保持不变
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -130,141 +166,191 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Text('Load failed: $_error',
-                      style: const TextStyle(color: Colors.red)),
-                )
-              : _items.isEmpty
-                  ? const Center(child: Text('No results'))
-                  : Column(
+          ? Center(
+        child: Text('Load failed: $_error',
+            style: const TextStyle(color: Colors.red)),
+      )
+          : _items.isEmpty
+          ? const Center(child: Text('No results'))
+          : Column(
+        children: [
+          Container(
+            alignment: Alignment.centerLeft,
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+                horizontal: 16, vertical: 12),
+            color: Colors.grey[50],
+            child: Text(
+              '${_items.length} ads found',
+              style: const TextStyle(
+                  color: Colors.grey, fontSize: 14),
+            ),
+          ),
+          Expanded(
+            child: GridView.builder(
+              padding: const EdgeInsets.all(16),
+              gridDelegate:
+              const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.75,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+              ),
+              itemCount: _items.length,
+              itemBuilder: (_, i) {
+                final p = _items[i];
+                final bool pinned = p['pinned'] == true;
+
+                return GestureDetector(
+                  onTap: () => _openDetail(p),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: pinned
+                          ? Border.all(
+                        color: const Color(0xFFFFA000),
+                        width: 2,
+                      )
+                          : null,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(20),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment:
+                      CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          alignment: Alignment.centerLeft,
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          color: Colors.grey[50],
-                          child: Text(
-                            '${_items.length} ads found',
-                            style: const TextStyle(
-                                color: Colors.grey, fontSize: 14),
+                        // 顶部图：强制铺满
+                        AspectRatio(
+                          aspectRatio: 1.0, // 方形展示，视觉更稳定
+                          child: ClipRRect(
+                            borderRadius:
+                            const BorderRadius.vertical(
+                                top: Radius.circular(14)),
+                            child: Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: _thumb(p),
+                                ),
+                                if (pinned) _pinnedRibbon(),
+                              ],
+                            ),
                           ),
                         ),
-                        Expanded(
-                          child: GridView.builder(
-                            padding: const EdgeInsets.all(16),
-                            gridDelegate:
-                                const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              childAspectRatio: 0.75,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                            ),
-                            itemCount: _items.length,
-                            itemBuilder: (_, i) {
-                              final p = _items[i];
-                              return GestureDetector(
-                                onTap: () => _openDetail(p),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(14),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withAlpha(20),
-                                        blurRadius: 6,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Expanded(
-                                        child: ClipRRect(
-                                          borderRadius:
-                                              const BorderRadius.vertical(
-                                                  top: Radius.circular(14)),
-                                          child: _thumb(p),
-                                        ),
-                                      ),
-                                      Padding(
-                                        padding: const EdgeInsets.all(12),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              p['price']?.toString() ?? '',
-                                              style: const TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.green,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              p['title']?.toString() ?? '',
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style:
-                                                  const TextStyle(fontSize: 14),
-                                            ),
-                                            const SizedBox(height: 3),
-                                            Row(
-                                              children: [
-                                                const Icon(Icons.location_on,
-                                                    size: 12,
-                                                    color: Colors.grey),
-                                                const SizedBox(width: 2),
-                                                Expanded(
-                                                  child: Text(
-                                                    p['location']?.toString() ??
-                                                        '',
-                                                    maxLines: 1,
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                    style: const TextStyle(
-                                                        fontSize: 12,
-                                                        color: Colors.grey),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                        // 文本区域
+                        Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment:
+                            CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                p['price']?.toString() ?? '',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green,
                                 ),
-                              );
-                            },
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                p['title']?.toString() ?? '',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style:
+                                const TextStyle(fontSize: 14),
+                              ),
+                              const SizedBox(height: 3),
+                              Row(
+                                children: [
+                                  const Icon(Icons.location_on,
+                                      size: 12,
+                                      color: Colors.grey),
+                                  const SizedBox(width: 2),
+                                  Expanded(
+                                    child: Text(
+                                      p['location']?.toString() ??
+                                          '',
+                                      maxLines: 1,
+                                      overflow:
+                                      TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
+  /// 铺满容器（网络/本地都可），失败时灰底占位
   Widget _thumb(Map<String, dynamic> p) {
     final imgs = p['images'];
     if (imgs is List && imgs.isNotEmpty) {
       final first = imgs.first.toString();
       if (first.startsWith('http')) {
-        return Image.network(first,
-            fit: BoxFit.cover, errorBuilder: (_, __, ___) => _imgPlaceholder());
+        return Image.network(
+          first,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _imgPlaceholder(),
+        );
       } else {
-        return Image.asset(first,
-            fit: BoxFit.cover, errorBuilder: (_, __, ___) => _imgPlaceholder());
+        return Image.asset(
+          first,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _imgPlaceholder(),
+        );
       }
     }
     return _imgPlaceholder();
   }
 
   Widget _imgPlaceholder() => Container(
-        color: Colors.grey[300],
-        child: const Icon(Icons.image, size: 50, color: Colors.grey),
-      );
+    color: Colors.grey[300],
+    alignment: Alignment.center,
+    child: const Icon(Icons.image, size: 50, color: Colors.grey),
+  );
+
+  /// 左上角 PINNED 徽标（与你首页风格一致的橙色）
+  Widget _pinnedRibbon() {
+    return Positioned(
+      left: 8,
+      top: 8,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFA000),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: const Text(
+          'PINNED',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+    );
+  }
 }

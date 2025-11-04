@@ -154,17 +154,11 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
 
       final data = (res.data is Map) ? (res.data as Map) : {};
       if (data['ok'] == true) {
+        // 仅登出，不在本页做任何导航；交给 main.dart 的 onAuthStateChange -> signedOut 统一路由到 /welcome
         await client.auth.signOut();
+
         if (!mounted) return;
-        bool pushed = false;
-        try {
-          Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
-          pushed = true;
-        } catch (_) {}
-        if (!pushed && mounted) {
-          Navigator.of(context).popUntil((r) => r.isFirst);
-        }
-        if (mounted) _showSuccessSnack('Account deleted.');
+        _showSuccessSnack('Account deleted.');
       } else {
         final msg = data['error']?.toString() ?? 'Delete failed';
         throw Exception(msg);
@@ -274,7 +268,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                     onPressed: _canSubmit ? _deleteAccount : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor:
-                          _canSubmit ? danger : danger.withOpacity(.5),
+                      _canSubmit ? danger : danger.withOpacity(.5),
                       textStyle: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -283,10 +277,10 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                     ),
                     child: _deleting
                         ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                         : const Text('Delete My Account'),
                   ),
                 ),
