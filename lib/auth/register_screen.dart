@@ -1,19 +1,18 @@
-// lib/auth/register_screen.dart — iOS/Android/Web 平台兼容修复版
+// lib/auth/register_screen.dart — iOS/Android 平台分离回调 最终修复版
 
-// ❌ 移除了 'dart:io'
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform; // ✅ 添加了 defaultTargetPlatform
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform; // ✅ 移除 dart:io, 使用 defaultTargetPlatform
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:url_launcher/url_launcher.dart' show LaunchMode; // ✅ 用于 authScreenLaunchMode
+import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 import 'package:swaply/services/reward_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sf;
 
 // 仅保留全局配置（用于 emailRedirectTo 等）
 import 'package:swaply/config/auth_config.dart';
 
-// 与 supabase_flutter 官方默认回调保持一致（iOS 必须携带这个或你的自定义 Scheme）
+// ✅ 恢复 iOS 默认回调 (您的 Apple 登录之前依赖此设置)
 const String _kIOSRedirect = 'io.supabase.flutter://callback';
-// ✅ 新增：定义 Android 的回调 URL（与你的 Manifest 一致）
+// ✅ 保留 Android 专用回调 (您的 Android 侧依赖此设置)
 const String _kAndroidRedirect = 'swaply://login-callback';
 
 class RegisterScreen extends StatefulWidget {
@@ -63,7 +62,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // ✅ 修复：使用 defaultTargetPlatform 替换 Platform.isIOS
+  // ✅ 最终修复：根据平台动态选择正确的回调
   Future<void> _oauthSignIn(
       sf.OAuthProvider provider, {
         String? scopes,
@@ -76,17 +75,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } else {
       // 非 Web 平台（Android, iOS 等）
       if (defaultTargetPlatform == TargetPlatform.iOS) {
-        redirectUrl = _kIOSRedirect; // iOS 使用 specific redirect
+        redirectUrl = _kIOSRedirect; // ✅ iOS 必须使用这个
       } else if (defaultTargetPlatform == TargetPlatform.android) {
-        redirectUrl = _kAndroidRedirect; // Android 使用 specific redirect
+        redirectUrl = _kAndroidRedirect; // ✅ Android 必须使用这个
       }
       // 其他平台 (macOS, Windows...) 将使用 null
     }
 
     await sf.Supabase.instance.client.auth.signInWithOAuth(
       provider,
-      redirectTo: redirectUrl, // ✅ 使用动态决定的 URL
-      authScreenLaunchMode: LaunchMode.externalApplication, // ✅ 强制外部浏览器
+      redirectTo: redirectUrl, // ✅ 使用平台特定的 URL
+      authScreenLaunchMode: LaunchMode.externalApplication,
       scopes: scopes,
       queryParams: queryParams,
     );
@@ -135,8 +134,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final res = await sf.Supabase.instance.client.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
-        // 邮件验证回调走你的配置常量；如需 iOS 也回跳 App，可改成：
-        // emailRedirectTo: Platform.isIOS ? _kIOSRedirect : kAuthRedirectUri,
         emailRedirectTo: kAuthRedirectUri,
       );
 
@@ -165,7 +162,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await _oauthSignIn(
         sf.OAuthProvider.google,
         queryParams: const {'prompt': 'select_account'},
-        // 可选：scopes: 'email profile',
       );
 
       await _maybeBindInviteCode(code);
@@ -174,7 +170,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (msg.contains('cancel') ||
           msg.contains('canceled') ||
           msg.contains('popup_closed')) {
-        // 用户手动关闭，不提示
       } else {
         _showError('Google sign-in error: ${e.message}');
       }
@@ -199,7 +194,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       await _oauthSignIn(
         sf.OAuthProvider.facebook,
-        // 可选：scopes: 'email public_profile',
       );
 
       await _maybeBindInviteCode(code);
@@ -219,6 +213,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final code = _pickCodeFromUI();
       await _maybeBindInviteCode(code);
 
+      // ✅ 最终修复：恢复到您之前能正常工作的 _oauthSignIn 方法
       await _oauthSignIn(
         sf.OAuthProvider.apple,
         scopes: 'name email', // Apple 推荐

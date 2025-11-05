@@ -1,10 +1,9 @@
-// lib/auth/login_screen.dart - iOS/Android/Web 平台兼容修复版
+// lib/auth/login_screen.dart - iOS/Android 平台分离回调 最终修复版
 
-// ❌ 移除了 'dart:io'
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform; // ✅ 添加了 defaultTargetPlatform
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform; // ✅ 移除 dart:io, 使用 defaultTargetPlatform
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:url_launcher/url_launcher.dart' show LaunchMode; // ✅ 用于 authScreenLaunchMode
+import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 
 // 如需注册/找回密码页，请在别处跳转；这里不做任何路由
 import 'register_screen.dart';
@@ -12,9 +11,9 @@ import 'forgot_password_screen.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart' as sf;
 
-// 与 supabase_flutter 官方默认回调保持一致（iOS 必须携带这个或你的自定义 Scheme）
+// ✅ 恢复 iOS 默认回调 (您的 Apple 登录之前依赖此设置)
 const String _kIOSRedirect = 'io.supabase.flutter://callback';
-// ✅ 新增：定义 Android 的回调 URL（与你的 Manifest 一致）
+// ✅ 保留 Android 专用回调 (您的 Android 侧依赖此设置)
 const String _kAndroidRedirect = 'swaply://login-callback';
 
 class LoginScreen extends StatefulWidget {
@@ -40,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // ✅ 修复：使用 defaultTargetPlatform 替换 Platform.isIOS
+  // ✅ 最终修复：根据平台动态选择正确的回调
   Future<void> _oauthSignIn(
       sf.OAuthProvider provider, {
         String? scopes,
@@ -53,17 +52,17 @@ class _LoginScreenState extends State<LoginScreen> {
     } else {
       // 非 Web 平台（Android, iOS 等）
       if (defaultTargetPlatform == TargetPlatform.iOS) {
-        redirectUrl = _kIOSRedirect; // iOS 使用 specific redirect
+        redirectUrl = _kIOSRedirect; // ✅ iOS 必须使用这个
       } else if (defaultTargetPlatform == TargetPlatform.android) {
-        redirectUrl = _kAndroidRedirect; // Android 使用 specific redirect
+        redirectUrl = _kAndroidRedirect; // ✅ Android 必须使用这个
       }
       // 其他平台 (macOS, Windows...) 将使用 null
     }
 
     await sf.Supabase.instance.client.auth.signInWithOAuth(
       provider,
-      redirectTo: redirectUrl, // ✅ 使用动态决定的 URL
-      authScreenLaunchMode: LaunchMode.externalApplication, // ✅ 强制外部浏览器
+      redirectTo: redirectUrl, // ✅ 使用平台特定的 URL
+      authScreenLaunchMode: LaunchMode.externalApplication,
       scopes: scopes,
       queryParams: queryParams,
     );
@@ -141,6 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
+      // ✅ 最终修复：恢复到您之前能正常工作的 _oauthSignIn 方法
       await _oauthSignIn(
         sf.OAuthProvider.apple,
         // Apple 推荐 scopes: name email（首次授权才会返回姓名）
