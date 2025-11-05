@@ -73,6 +73,9 @@
     <string>This app needs camera access to take photos for your listing.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>This app needs access to your photo library to upload listing images.</string>
+    <!-- 新增：部分机型/场景保存到相册需要这个权限，更稳 -->
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>This app needs permission to save photos to your library when you save or export images.</string>
 
     <!-- Flutter 深链转发 -->
     <key>FlutterDeepLinkingEnabled</key>
@@ -104,6 +107,9 @@
       <string>fb-messenger</string>
       <string>fb-messenger-share-api</string>
       <string>facebook</string>
+      <!-- 新增：你的页面会用到 -->
+      <string>tel</string>
+      <string>mailto</string>
     </array>
   </dict>
 </plist>

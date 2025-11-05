@@ -204,22 +204,22 @@ class GoogleUserInfo {
   });
 
   Map<String, dynamic> toMap() => {
-        'id': id,
-        'email': email,
-        'displayName': displayName,
-        'photoUrl': photoUrl,
-        'accessToken': accessToken,
-        'idToken': idToken,
-      };
+    'id': id,
+    'email': email,
+    'displayName': displayName,
+    'photoUrl': photoUrl,
+    'accessToken': accessToken,
+    'idToken': idToken,
+  };
 
   factory GoogleUserInfo.fromMap(Map<String, dynamic> m) => GoogleUserInfo(
-        id: m['id'] ?? '',
-        email: m['email'] ?? '',
-        displayName: m['displayName'],
-        photoUrl: m['photoUrl'],
-        accessToken: m['accessToken'],
-        idToken: m['idToken'],
-      );
+    id: m['id'] ?? '',
+    email: m['email'] ?? '',
+    displayName: m['displayName'],
+    photoUrl: m['photoUrl'],
+    accessToken: m['accessToken'],
+    idToken: m['idToken'],
+  );
 
   String get displayNameOrEmail =>
       (displayName != null && displayName!.isNotEmpty)
@@ -238,7 +238,7 @@ class GoogleUserInfo {
   @override
   bool operator ==(Object o) =>
       identical(this, o) ||
-      (o is GoogleUserInfo && o.id == id && o.email == email);
+          (o is GoogleUserInfo && o.id == id && o.email == email);
 
   @override
   int get hashCode => id.hashCode ^ email.hashCode;

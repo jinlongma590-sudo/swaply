@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:async';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/foundation.dart' show SynchronousFuture;
 import 'package:flutter/material.dart';
@@ -49,16 +48,9 @@ import 'package:swaply/widgets/ios_insets_guard.dart';
 import 'startup_screen.dart';
 
 // ========= 鍏ㄥ眬 Auth 浜嬩欢璁㈤槄锛堝彧娉ㄥ唽涓€娆★級=========
-bool _authHookWired = false; // 保留标记
-// （已删除）StreamSubscription<AuthState>? _globalAuthSub;
-
-// 全局导航 Key（MaterialApp 会用到）
+bool _authHookWired = false;
+StreamSubscription<AuthState>? _globalAuthSub;
 final GlobalKey<NavigatorState> appNavKey = GlobalKey<NavigatorState>();
-
-// —— Auth 路由防重入锁 —— //
-bool _authRouting = false;
-DateTime _lastAuthRouteAt = DateTime.fromMillisecondsSinceEpoch(0);
-StreamSubscription? _authSub;
 
 class AppLocalizations {
   final Locale locale;
@@ -236,12 +228,71 @@ class LanguageProvider extends ChangeNotifier {
   }
 }
 
-// ========= 鍏ㄥ眬 Auth 澶勭悊锛堝甫娆㈣繋寮圭ª锛氫竴娆℃€э級 =========
-// 说明：此函数已改为 no-op，避免创建第二个监听；导航与业务统一交给 _authSub。
+// ========= 鍏ㄥ眬 Auth 澶勭悊锛堝甫娆㈣繋寮圭獥锛氫竴娆℃€э級 =========
 void wireAuthHook() {
   if (_authHookWired) return;
   _authHookWired = true;
-  // （已移除 _globalAuthSub 监听及其业务逻辑，避免重复订阅）
+
+  final auth = Supabase.instance.client.auth;
+  _globalAuthSub?.cancel();
+  _globalAuthSub = auth.onAuthStateChange.listen((data) async {
+    final event = data.event;
+
+    if (event == AuthChangeEvent.tokenRefreshed ||
+        event == AuthChangeEvent.userUpdated) {
+      debugPrint('[Auth] $event - skipping business logic');
+      return;
+    }
+
+    debugPrint('[Auth] Event: $event');
+
+    if (event == AuthChangeEvent.signedIn ||
+        event == AuthChangeEvent.initialSession) {
+      final u = auth.currentUser;
+      if (u != null) {
+        await NotificationService.subscribeUser(u.id);
+
+// 鉁?鏂伴€昏緫锛氱敱鏈嶅姟绔箓绛?RPC 鍐冲畾鏄惁闇€瑕佸脊涓€娆℃杩庡埜
+        try {
+          final res = await RewardService.ensureWelcomeForCurrentUser();
+          if (res.shouldPopup) {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('new_user_welcome_pending_${u.id}', true);
+          }
+        } catch (e) {
+          debugPrint('[Auth] ensureWelcomeForCurrentUser error: $e');
+        }
+
+        final ctx = appNavKey.currentContext;
+        if (ctx != null) {
+// ✅ 修复：冷启动(initialSession)不再导航，避免二次 push；
+// 仅在真正登录(signedIn)且当前不在 /home 时导航到首页
+          if (event == AuthChangeEvent.signedIn) {
+            final current = ModalRoute.of(ctx)?.settings.name;
+            if (current != '/home') {
+              Navigator.of(ctx)
+                  .pushNamedAndRemoveUntil('/home', (route) => false);
+            }
+          }
+        }
+      }
+    }
+
+    if (event == AuthChangeEvent.signedOut) {
+      await NotificationService.unsubscribe();
+      CouponService.clearCache();
+      DualFavoritesService.clearCache();
+      RewardService.clearCache();
+
+      final ctx = appNavKey.currentContext;
+      if (ctx != null) {
+        Navigator.of(ctx).pushNamedAndRemoveUntil(
+          '/welcome',
+              (route) => false,
+        );
+      }
+    }
+  });
 }
 
 // 鈥斺€?浠呬緵鏈枃浠朵娇鐢ㄧ殑 UTF-8 涔辩爜淇锛堟妸鈥溍芭糕€?/ 脙 / 芒 鈥︹€濈被杩樺師锛夛紝涓嶄緷璧?dart:convert 鈥斺€?
@@ -336,7 +387,7 @@ void _showWelcomeGiftDialog() {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // === 闈欓煶 Supabase 鐨?refresh session 鍣煶锛堜粎寮€鍙戞湡锛?===
+// === 闈欓煶 Supabase 鐨?refresh session 鍣煶锛堜粎寮€鍙戞湡锛?===
       {
     final _orig = debugPrint;
     debugPrint = (String? message, {int? wrapWidth}) {
@@ -347,9 +398,9 @@ Future<void> main() async {
       _orig(message, wrapWidth: wrapWidth);
     };
   }
-  // =====================================================
+// =====================================================
 
-  // ========= 鍏ㄥ眬閿欒鍏滃簳 =========
+// ========= 鍏ㄥ眬閿欒鍏滃簳 =========
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
   };
@@ -388,7 +439,7 @@ Future<void> main() async {
     );
   };
 
-  // 鉁?鍚敤 PKCE OAuth锛堢Щ鍔ㄧ蹇呴』锛?
+// 鉁?鍚敤 PKCE OAuth锛堢Щ鍔ㄧ蹇呴』锛?
   await Supabase.initialize(
     url: 'https://rhckybselarzglkmlyqs.supabase.co',
     anonKey:
@@ -399,7 +450,7 @@ Future<void> main() async {
     ),
   );
 
-  // 鉁?鍦?Supabase 鍒濆鍖栧悗锛宺unApp 涔嬪墠璋冪敤鍏ㄥ眬鐩戝惉鍣?
+// 鉁?鍦?Supabase 鍒濆鍖栧悗锛宺unApp 涔嬪墠璋冪敤鍏ㄥ眬鐩戝惉鍣?
   wireAuthHook();
 
   runApp(
@@ -422,43 +473,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-
-    // —— 注册唯一的 onAuthStateChange（含节流 + 防重入） —— //
-    _authSub?.cancel();
-    _authSub =
-        Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
-          final event = data.event;
-          final now = DateTime.now();
-
-          // 800ms 节流 + 防重入
-          if (_authRouting ||
-              now.difference(_lastAuthRouteAt) <
-                  const Duration(milliseconds: 800)) {
-            return;
-          }
-          _authRouting = true;
-          _lastAuthRouteAt = now;
-
-          final nav = appNavKey.currentState;
-          if (nav != null) {
-            // 🔄 统一在这里做路由：登录 → /home；退出 → /welcome
-            if (event == AuthChangeEvent.signedIn) {
-              nav.pushNamedAndRemoveUntil('/home', (route) => false);
-            } else if (event == AuthChangeEvent.signedOut) {
-              nav.pushNamedAndRemoveUntil('/welcome', (route) => false);
-            }
-          }
-
-          // 微小延时后释放锁，防抖更稳
-          await Future.delayed(const Duration(milliseconds: 300));
-          _authRouting = false;
-        });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _authSub?.cancel();
     super.dispose();
   }
 
@@ -500,7 +519,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             return MaterialApp(
               title: 'Swaply',
               debugShowCheckedModeBanner: false,
-              navigatorKey: appNavKey, // <<—— 全局 navigatorKey 绑定
+              navigatorKey: appNavKey,
               locale: languageProvider.currentLocale,
               localizationsDelegates: const [
                 AppLocalizations.delegate,
@@ -527,17 +546,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   backgroundColor: Color(0xFF2196F3),
                   foregroundColor: Colors.white,
                   elevation: 0,
-                  // 修复全局标题样式和布局问题
-                  centerTitle: false, // 强制标题靠左对齐 (Android/iOS 统一)
-                  toolbarHeight: kToolbarHeight,
-                  // 调整标题样式，使用固定值 20.0
-                  titleTextStyle: TextStyle(
-                    fontSize: 20.0,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                  // 修复 Bug: 移除 titleSpacing: 0，恢复默认左边距
-                  // titleSpacing: 0,
                 ),
                 elevatedButtonTheme: ElevatedButtonThemeData(
                   style: ElevatedButton.styleFrom(
@@ -549,13 +557,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   ),
                 ),
               ),
-// 鉁?浠呬娇鐢?initialRoute锛岄伩鍏嶅悓鏃惰缃?home 閫犳垚璺敱鍐茬窊
+// 鉁?浠呬娇鐢?initialRoute锛岄伩鍏嶅悓鏃惰缃?home 閫犳垚璺敱鍐茬獊
               initialRoute: hasSession ? '/home' : '/welcome',
               routes: {
 // 鉁?Welcome 鈫?Startup
                 '/welcome': (_) => const WelcomeScreen(),
                 '/login': (_) => const LoginScreen(),
-// ✅ /home 指向带五栏的 MainNavigationPage（未登录时 isGuest = true）
+// ✅ 修改：/home 指向带五栏的 MainNavigationPage
                 '/home': (_) => MainNavigationPage(
                   isGuest:
                   Supabase.instance.client.auth.currentSession == null,
@@ -582,7 +590,7 @@ class MainNavigationPage extends StatefulWidget {
 
 // 统一的 Primary Blue - 首页的深蓝
 const Color _PRIMARY_BLUE = Color(0xFF1877F2);
-// 统一标题高度，此常量主要用于非 Sliver 的固定头。
+// 统一标题高度，确保 SafeArea + 16dp 上边距
 const double _CUSTOM_HEADER_HEIGHT = 110.0;
 
 class _MainNavigationPageState extends State<MainNavigationPage>
@@ -913,7 +921,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
               ),
             ],
           ),
-          // 修正底部导航整体偏高问题：移除 SafeArea，手动计算 iOS 底部边距
+          // 去掉 SafeArea，改用自定义底部内边距，让 iOS 真机更贴底
           child: Padding(
             padding: EdgeInsets.fromLTRB(
               8.w,
@@ -1337,9 +1345,69 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   Timer? _autoRefreshTimer;
   StreamSubscription<FavoriteUpdateEvent>? _favoritesSubscription;
 
-  // -----------------------------------------------------
-  // 移除：_buildSliverHeader 已废弃，使用标准 AppBar
-  // -----------------------------------------------------
+  // 自定义头部组件，用于统一蓝色、大标题和间距
+  Widget _buildCustomHeader(String title, {bool hasMenu = true}) {
+    return Container(
+      color: _PRIMARY_BLUE, // 统一的深蓝
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: 16.h), // 标题距安全区顶部约 16dp
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24.sp, // 统一字体大小
+                        fontWeight: FontWeight.w600, // SemiBold
+                        height: 1.2,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (hasMenu && _favoriteItems.isNotEmpty && !_isLoading)
+                    PopupMenuButton<String>(
+                      icon: Icon(Icons.more_vert_rounded,
+                          color: Colors.white, size: 16.w),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.w)),
+                      onSelected: (value) {
+                        if (value == 'clear_all') {
+                          _showClearAllDialog();
+                        }
+                      },
+                      itemBuilder: (BuildContext context) => [
+                        PopupMenuItem(
+                          value: 'clear_all',
+                          child: Row(
+                            children: [
+                              Icon(Icons.clear_all_rounded,
+                                  color: Colors.red, size: 12.w),
+                              SizedBox(width: 8.w),
+                              Text('Clear All',
+                                  style: TextStyle(fontSize: 11.sp)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+            SizedBox(height: 16.h),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -1383,7 +1451,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         if (kDebugMode) {}
 
         if (event.isAdded && event.listingData != null) {
-          // 忙路禄氓艩 氓藛掳忙鈥澛睹ㄢ€斅徝寂∶€姑ヂ嵚趁β仿幻ヅ?氓藛掳忙舱卢氓舱掳氓藛鈥斆÷?
+          // 忙路禄氓艩 氓藛掳忙鈥澛睹ㄢ€斅徝寂∶€姑ヂ嵚趁β仿幻ヅ?氓藛掳忙艙卢氓艙掳氓藛鈥斆÷?
           _addToLocalFavorites(event.listingData!);
         } else if (!event.isAdded) {
           // 盲禄沤忙鈥澛睹ㄢ€斅徝幻┾劉陇茂录拧莽芦鈥姑ヂ嵚趁ぢ慌矫ε撀ヅ撀懊ニ嗏€斆÷幻┾劉陇
@@ -1396,7 +1464,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  /// 莽芦鈥姑ヂ嵚趁β仿幻ヅ?氓藛掳忙舱卢氓艙掳忙鈥澛睹ㄢ€斅徝ニ嗏€斆÷?
+  /// 莽芦鈥姑ヂ嵚趁β仿幻ヅ?氓藛掳忙艙卢氓艙掳忙鈥澛睹ㄢ€斅徝ニ嗏€斆÷?
   void _addToLocalFavorites(Map<String, dynamic> listingData) {
     try {
       // 忙拢鈧ε嘎ッλ溌ヂ惵γヂ仿裁ヂ溍ヅ撀?
@@ -1690,7 +1758,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                   ),
                 ),
               ).then((_) {
-                // 盲禄沤氓鈥⑩€犆モ€溌伱γζ掆€γ┞÷得库€澝モ€号久ヂ惻矫ニ喡访︹€撀懊ニ嗏€斆÷?
+                // 盲禄沤氓鈥⑩€犆モ€溌伱γζ掆€γ┞÷得库€澝モ€号久ヂ恻矫ニ喡访︹€撀懊ニ嗏€斆÷?
                 _loadFavorites();
               });
             }
@@ -2171,7 +2239,6 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     // 氓庐鈥懊モ€βㄅ铰访ヂ忊€撁ε撀ヅ撀懊ヅ掆€撁寂捗┞伮棵モ€β嵜ぢ嘎好┞?
     AppLocalizations? l10n;
     try {
-      // ⚠️ 捕获本地化可能不存在或报错
       l10n = AppLocalizations.of(context);
     } catch (e) {
       if (kDebugMode) {}
@@ -2188,8 +2255,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
             l10n?.myFavorites ?? 'My Favorites',
             style: TextStyle(
               color: Colors.white,
-              // 使用与 Notification Page 标题相似的大小 (Notification Page 实际 App Bar 标题略大)
-              fontSize: 20.sp,
+              fontSize: 14.sp,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -2283,56 +2349,13 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       );
     }
 
-    // Logged In View
-    final titleText = '${l10n?.myFavorites ?? 'My Favorites'} (${_favoriteItems.length})';
-
-    // -----------------------------------------------------
-    // 替换：使用 标准 Scaffold + AppBar + ListView
-    // -----------------------------------------------------
+    // 氓路虏莽鈩⒙幻ヂ解€⒚犅睹︹偓聛
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      // 使用标准 AppBar (固定顶部，不收缩)
-      appBar: AppBar(
-        backgroundColor: _PRIMARY_BLUE, // 统一蓝色
-        title: Text(
-          titleText,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20.sp, // 统一字体大小
-            fontWeight: FontWeight.w600,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        elevation: 0,
-        actions: [
-          if (_favoriteItems.isNotEmpty && !_isLoading)
-            PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert_rounded,
-                  color: Colors.white, size: 16.w), // 使用 16.w 匹配列表项图标尺寸
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.w)),
-              onSelected: (value) {
-                if (value == 'clear_all') {
-                  _showClearAllDialog();
-                }
-              },
-              itemBuilder: (BuildContext context) => [
-                PopupMenuItem(
-                  value: 'clear_all',
-                  child: Row(
-                    children: [
-                      Icon(Icons.clear_all_rounded,
-                          color: Colors.red, size: 12.w),
-                      SizedBox(width: 8.w),
-                      Text('Clear All',
-                          style: TextStyle(fontSize: 11.sp, color: Colors.red)), // 统一字体大小
-                    ],
-                  ),
-                ),
-              ],
-            ),
-        ],
+      // 头部使用自定义组件
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(_CUSTOM_HEADER_HEIGHT), // 使用统一高度
+        child: _buildCustomHeader('My Favorites (${_favoriteItems.length})'),
       ),
       body: _isLoading
           ? Center(
@@ -2349,16 +2372,20 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
               ),
             ),
             SizedBox(height: 8.h),
-            const Text('Loading favorites...', style: TextStyle(color: Color(0xFF6B7280), fontSize: 11)),
+            Text(
+              'Loading favorites...',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 11.sp,
+              ),
+            ),
           ],
         ),
       )
           : _errorMessage != null
           ? _buildErrorState()
           : _favoriteItems.isEmpty
-      // 空状态时直接显示在 Center 中，无需 CustomScrollView
           ? _buildEmptyState()
-      // 非空时使用 RefreshIndicator 包裹 ListView.builder
           : RefreshIndicator(
         onRefresh: _refreshFavorites,
         color: _PRIMARY_BLUE, // 统一蓝色
@@ -2369,7 +2396,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           padding: EdgeInsets.symmetric(vertical: 6.h),
           itemCount: _favoriteItems.length,
           itemBuilder: (context, index) {
-            return _buildFavoriteCard(_favoriteItems[index], index);
+            return _buildFavoriteCard(
+                _favoriteItems[index], index);
           },
         ),
       ),
@@ -2528,9 +2556,6 @@ class _WishlistPageState extends State<WishlistPage> {
   bool _isLoading = true;
   bool _isRefreshing = false;
   String? _errorMessage;
-
-  // 移除 _PRIMARY_PINK 的常量定义，直接使用 Colors.pink
-  // static const Color _PRIMARY_PINK = Colors.pink; // ❌ 移除此行
 
   @override
   void initState() {
@@ -2705,7 +2730,7 @@ class _WishlistPageState extends State<WishlistPage> {
                 ),
               ),
             ).then((_) {
-              // 盲禄沤氓鈥⑩€犆モ€溌伱γζ掆€γ┞÷得库€澝モ€号久ヂ惻矫ニ喡访︹€撀懊ニ嗏€斆÷?
+              // 盲禄沤氓鈥⑩€犆モ€溌伱γζ掆€γ┞÷得库€澝モ€号久ヂ恻矫ニ喡访︹€撀懊ニ嗏€斆÷?
               _loadWishlist();
             });
           }
@@ -2736,7 +2761,7 @@ class _WishlistPageState extends State<WishlistPage> {
                       width: 65.w,
                       height: 65.w,
                       decoration: BoxDecoration(
-                        color: Colors.pink[50], // 使用 Colors.pink[50]
+                        color: Colors.pink[50],
                         borderRadius: BorderRadius.circular(8.w),
                       ),
                       child: imageUrl.startsWith('http')
@@ -2762,7 +2787,7 @@ class _WishlistPageState extends State<WishlistPage> {
                                 strokeWidth: 1.5.w,
                                 valueColor:
                                 const AlwaysStoppedAnimation<Color>(
-                                    Colors.pink), // 使用 Colors.pink
+                                    Colors.pink),
                               ),
                             ),
                           );
@@ -2770,12 +2795,12 @@ class _WishlistPageState extends State<WishlistPage> {
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
                             decoration: BoxDecoration(
-                              color: Colors.pink[50], // 使用 Colors.pink[50]
+                              color: Colors.pink[50],
                               borderRadius: BorderRadius.circular(8.w),
                             ),
                             child: Icon(
                               Icons.image_not_supported_rounded,
-                              color: Colors.pink[300], // 使用 Colors.pink[300]
+                              color: Colors.pink[300],
                               size: 24.w,
                             ),
                           );
@@ -2783,12 +2808,12 @@ class _WishlistPageState extends State<WishlistPage> {
                       )
                           : Container(
                         decoration: BoxDecoration(
-                          color: Colors.pink[50], // 使用 Colors.pink[50]
+                          color: Colors.pink[50],
                           borderRadius: BorderRadius.circular(8.w),
                         ),
                         child: Icon(
                           Icons.image_not_supported_rounded,
-                          color: Colors.pink[300], // 使用 Colors.pink[300]
+                          color: Colors.pink[300],
                           size: 24.w,
                         ),
                       ),
@@ -2818,7 +2843,7 @@ class _WishlistPageState extends State<WishlistPage> {
                         padding: EdgeInsets.symmetric(
                             horizontal: 6.w, vertical: 2.h),
                         decoration: BoxDecoration(
-                          color: Colors.pink.withOpacity(0.1), // 使用 Colors.pink
+                          color: Colors.pink.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(6.w),
                         ),
                         child: Text(
@@ -2826,7 +2851,7 @@ class _WishlistPageState extends State<WishlistPage> {
                           style: TextStyle(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.bold,
-                            color: Colors.pink[600], // 使用 Colors.pink[600]
+                            color: Colors.pink[600],
                           ),
                         ),
                       ),
@@ -2879,7 +2904,7 @@ class _WishlistPageState extends State<WishlistPage> {
                 Container(
                   margin: EdgeInsets.only(left: 6.w),
                   decoration: BoxDecoration(
-                    color: Colors.pink.withOpacity(0.1), // 使用 Colors.pink
+                    color: Colors.pink.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8.w),
                   ),
                   child: Material(
@@ -2891,7 +2916,7 @@ class _WishlistPageState extends State<WishlistPage> {
                         padding: EdgeInsets.all(8.w),
                         child: Icon(
                           Icons.favorite_rounded,
-                          color: Colors.pink[600], // 使用 Colors.pink[600]
+                          color: Colors.pink[600],
                           size: 18.w,
                         ),
                       ),
@@ -2985,22 +3010,22 @@ class _WishlistPageState extends State<WishlistPage> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.pink.withOpacity(0.1), // 使用 Colors.pink
-                    Colors.pink.withOpacity(0.05), // 使用 Colors.pink
+                    Colors.pink.withOpacity(0.1),
+                    Colors.pink.withOpacity(0.05),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(50.w),
                 border: Border.all(
-                  color: Colors.pink.withOpacity(0.2), // 使用 Colors.pink
+                  color: Colors.pink.withOpacity(0.2),
                   width: 1.5.w,
                 ),
               ),
               child: Icon(
                 Icons.favorite_outline_rounded,
                 size: 50.w,
-                color: Colors.pink, // 使用 Colors.pink
+                color: Colors.pink,
               ),
             ),
             SizedBox(height: 24.h),
@@ -3030,14 +3055,14 @@ class _WishlistPageState extends State<WishlistPage> {
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.pink, Colors.pink.shade400!], // 使用 Colors.pink
+                  colors: [Colors.pink, Colors.pink[400]!],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                 ),
                 borderRadius: BorderRadius.circular(12.w),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.pink.withOpacity(0.3), // 使用 Colors.pink
+                    color: Colors.pink.withOpacity(0.3),
                     blurRadius: 10.w,
                     offset: Offset(0, 4.h),
                   ),
@@ -3116,7 +3141,7 @@ class _WishlistPageState extends State<WishlistPage> {
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.pink, Colors.pink.shade400!], // 使用 Colors.pink
+                  colors: [Colors.pink, Colors.pink[400]!],
                 ),
                 borderRadius: BorderRadius.circular(10.w),
               ),
@@ -3131,11 +3156,11 @@ class _WishlistPageState extends State<WishlistPage> {
                     borderRadius: BorderRadius.circular(10.w),
                   ),
                 ),
-                icon: Icon(Icons.refresh_rounded, size: 16.w, color: Colors.white),
+                icon: Icon(Icons.refresh_rounded, size: 16.w),
                 label: Text(
                   'Try Again',
                   style:
-                  TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600, color: Colors.white),
+                  TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
@@ -3145,7 +3170,97 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  /// 忙赂鈥γ┞好︹€扳偓忙舱鈥懊÷っヂ姑澝β♀€?
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
+      appBar: AppBar(
+        backgroundColor: Colors.pink,
+        title: Text(
+          'My Wishlist (${_wishlistItems.length})',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        elevation: 0,
+        actions: [
+          if (_wishlistItems.isNotEmpty && !_isLoading)
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert_rounded,
+                  color: Colors.white, size: 20.w),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.w)),
+              onSelected: (value) {
+                if (value == 'clear_all') {
+                  _showClearAllDialog();
+                }
+              },
+              itemBuilder: (BuildContext context) => [
+                PopupMenuItem(
+                  value: 'clear_all',
+                  child: Row(
+                    children: [
+                      Icon(Icons.clear_all_rounded,
+                          color: Colors.red, size: 16.w),
+                      SizedBox(width: 10.w),
+                      Text('Clear All', style: TextStyle(fontSize: 13.sp)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
+      body: _isLoading
+          ? Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 30.w,
+              height: 30.w,
+              child: CircularProgressIndicator(
+                valueColor:
+                const AlwaysStoppedAnimation<Color>(Colors.pink),
+                strokeWidth: 2.5.w,
+              ),
+            ),
+            SizedBox(height: 12.h),
+            Text(
+              'Loading wishlist...',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 13.sp,
+              ),
+            ),
+          ],
+        ),
+      )
+          : _errorMessage != null
+          ? _buildErrorState()
+          : _wishlistItems.isEmpty
+          ? _buildEmptyState()
+          : RefreshIndicator(
+        onRefresh: _refreshWishlist,
+        color: Colors.pink,
+        backgroundColor: Colors.white,
+        strokeWidth: 2.w,
+        child: ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.symmetric(vertical: 8.h),
+          itemCount: _wishlistItems.length,
+          itemBuilder: (context, index) {
+            return _buildWishlistCard(
+                _wishlistItems[index], index);
+          },
+        ),
+      ),
+    );
+  }
+
+  /// 忙藴戮莽陇潞忙赂鈥γ┞好︹€扳偓忙舱鈥懊÷っヂ姑澝β♀€?
   void _showClearAllDialog() {
     showDialog(
       context: context,
@@ -3195,7 +3310,7 @@ class _WishlistPageState extends State<WishlistPage> {
                   _clearAllWishlist();
                 },
                 child: Text(
-                  'Remove',
+                  'Clear All',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 13.sp,
@@ -3267,114 +3382,6 @@ class _WishlistPageState extends State<WishlistPage> {
       );
     }
   }
-
-  @override
-  Widget build(BuildContext context) {
-    // ⚠️ 恢复使用标准 AppBar 样式
-    final l10n = AppLocalizations.of(context);
-    // 使用 'My Wishlist' 作为标题文本基准，并拼接数量
-    final titleBaseText = l10n != null
-        ? (l10n.notifications.isNotEmpty ? 'My Wishlist' : 'My Favorites')
-        : 'My Favorites';
-    final titleText = '$titleBaseText (${_wishlistItems.length})';
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      // 使用标准 AppBar
-      appBar: AppBar(
-        // 统一背景色为 Colors.pink
-        backgroundColor: Colors.pink,
-        // 统一高度（默认高度，不使用 PreferredSize）
-        toolbarHeight: kToolbarHeight,
-        title: Text(
-          titleText,
-          // 统一标题样式
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20.sp,
-            fontWeight: FontWeight.w600,
-          ),
-          // 确保标题不会在标准 AppBar 范围内被裁剪或遮挡
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        elevation: 0,
-        // 统一操作按钮
-        actions: [
-          if (_wishlistItems.isNotEmpty && !_isLoading)
-            PopupMenuButton<String>(
-              // 使用 18.r 作为 NotificationPage 中的尺寸单位
-              icon: Icon(Icons.more_vert_rounded,
-                  color: Colors.white, size: 18.r),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.w)),
-              onSelected: (value) {
-                if (value == 'clear_all') {
-                  _showClearAllDialog();
-                }
-              },
-              itemBuilder: (BuildContext context) => [
-                PopupMenuItem(
-                  value: 'clear_all',
-                  child: Row(
-                    children: [
-                      Icon(Icons.clear_all_rounded,
-                          color: Colors.red, size: 16.w),
-                      SizedBox(width: 10.w),
-                      Text('Clear All', style: TextStyle(fontSize: 13.sp, color: Colors.red)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-        ],
-      ),
-      body: _isLoading
-          ? Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 30.w,
-              height: 30.w,
-              child: CircularProgressIndicator(
-                valueColor:
-                const AlwaysStoppedAnimation<Color>(Colors.pink), // 统一颜色
-                strokeWidth: 2.5.w,
-              ),
-            ),
-            SizedBox(height: 12.h),
-            Text(
-              'Loading wishlist...',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 13.sp,
-              ),
-            ),
-          ],
-        ),
-      )
-          : _errorMessage != null
-          ? _buildErrorState()
-          : _wishlistItems.isEmpty
-          ? _buildEmptyState()
-          : RefreshIndicator(
-        onRefresh: _refreshWishlist,
-        color: Colors.pink, // 统一颜色
-        backgroundColor: Colors.white,
-        strokeWidth: 2.w,
-        child: ListView.builder(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.symmetric(vertical: 8.h),
-          itemCount: _wishlistItems.length,
-          itemBuilder: (context, index) {
-            return _buildWishlistCard(
-                _wishlistItems[index], index);
-          },
-        ),
-      ),
-    );
-  }
 }
 // 莽卢卢氓鈥衡€好┢捖ニ嗏€犆寂ellPage 氓鈥÷好モ€澛┞÷?(忙聛垄氓陇聧氓庐艗忙鈥⒙疵ヅ犈该ㄆ捖? 氓鈥櫯?NotificationPage 茅鈧∶嘎ッ┞÷?(盲陆驴莽鈥澛ぢ号捗ぢ嘎р€八喢ε撀♀€濻ervice茅鈥衡€犆λ喡?
 
@@ -3392,49 +3399,6 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-
-  // -----------------------------------------------------
-  // 替换：使用标准 AppBar，实现固定头部
-  // -----------------------------------------------------
-  AppBar _buildAppBar(AppLocalizations l10n, int listingsCount) {
-    return AppBar(
-      backgroundColor: _PRIMARY_BLUE, // 统一颜色
-      title: Text(
-        l10n.sellItem,
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 20.sp, // 增大字体以匹配其他页面标题的视觉效果
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      elevation: 0,
-      centerTitle: false, // 靠左对齐
-      actions: [
-        // 修正：调整容器和 IconButton 的 padding/margin，修复加号按钮溢出问题
-        Container(
-          // 移除 margin.top/bottom，使用垂直居中对齐
-          margin: EdgeInsets.only(right: 8.w),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          child: IconButton(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SellFormPage()),
-            ),
-            // 调整 icon size 和 padding，确保图标被容器完整包裹
-            icon: Icon(Icons.add_rounded, color: Colors.white, size: 24.r),
-            padding: EdgeInsets.zero, // 重置默认 padding
-            constraints: BoxConstraints.tightFor(width: 40.r, height: 40.r), // 强制大小
-            tooltip: 'Add New Listing',
-          ),
-        ),
-      ],
-    );
-  }
-  // -----------------------------------------------------
-  // END: SellPage AppBar 替换
-  // -----------------------------------------------------
 
   @override
   void initState() {
@@ -3476,207 +3440,16 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
         ? List<Map<String, dynamic>>.from(raw)
         : const <Map<String, dynamic>>[];
 
-    // 替换：使用 Scaffold + AppBar + ListView.builder 实现固定头部
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      appBar: _buildAppBar(l10n, myListings.length),
-      body: myListings.isEmpty
-          ? _buildEmptyStateContent(l10n) // 仅返回内容，不包含 SliverFillRemaining
-          : RefreshIndicator(
-        onRefresh: () async {
-          // 刷新逻辑 (假设有 ListingStore.i.loadAll();)
-        },
-        color: _PRIMARY_BLUE,
-        backgroundColor: Colors.white,
-        strokeWidth: 2.w,
-        child: ListView.builder(
-          padding: EdgeInsets.zero,
-          itemCount: myListings.length + 1, // +1 for the stats header
-          itemBuilder: (context, index) {
-            if (index == 0) {
-              // Stats Header is now the first item in the list
-              return _buildStatsHeader(myListings, l10n);
-            }
-            final listingIndex = index - 1;
-            return TweenAnimationBuilder<double>(
-              duration: Duration(milliseconds: 300 + (listingIndex * 100)),
-              tween: Tween(begin: 0.0, end: 1.0),
-              builder: (context, value, child) {
-                return Transform.translate(
-                  offset: Offset(0, 20 * (1 - value)),
-                  child: Opacity(
-                    opacity: value,
-                    child: _buildListingCard(myListings[listingIndex], l10n),
-                  ),
-                );
-              },
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  // 提取 Empty State 内容到新函数，以便在 Scaffold Body 中使用
-  Widget _buildEmptyStateContent(AppLocalizations l10n) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Center(
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24.w),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 140.w,
-                  height: 140.w,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        const Color(0xFF2196F3).withOpacity(0.2),
-                        const Color(0xFF1E88E5).withOpacity(0.1),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(70.r),
-                    border: Border.all(
-                      color: const Color(0xFF2196F3).withOpacity(0.3),
-                      width: 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF2196F3).withOpacity(0.2),
-                        blurRadius: 24.r,
-                        offset: Offset(0, 12.h),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.add_a_photo_rounded,
-                    size: 70.r,
-                    color: const Color(0xFF2196F3),
-                  ),
-                ),
-                SizedBox(height: 32.h),
-                Text(
-                  l10n.sellYourItems,
-                  style: TextStyle(
-                    fontSize: 28.sp,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.black87,
-                    letterSpacing: -0.8,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 16.h),
-                Text(
-                  l10n.takePhotoAndSell,
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 16.sp,
-                    height: 1.6,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 24.h),
-                Container(
-                  padding:
-                  EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2196F3).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16.r),
-                    border: Border.all(
-                      color: const Color(0xFF2196F3).withOpacity(0.2),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.camera_alt_rounded,
-                              color: const Color(0xFF2196F3), size: 20.r),
-                          SizedBox(width: 8.w),
-                          Text('Take quality photos',
-                              style: TextStyle(
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                      SizedBox(height: 8.h),
-                      Row(
-                        children: [
-                          Icon(Icons.edit_rounded,
-                              color: const Color(0xFF2196F3), size: 20.r),
-                          SizedBox(width: 8.w),
-                          Text('Write detailed description',
-                              style: TextStyle(
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                      SizedBox(height: 8.h),
-                      Row(
-                        children: [
-                          Icon(Icons.monetization_on_rounded,
-                              color: const Color(0xFF2196F3), size: 20.r),
-                          SizedBox(width: 8.w),
-                          Text('Set competitive price',
-                              style: TextStyle(
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.w600)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 40.h),
-                Container(
-                  width: double.infinity,
-                  height: 56.h,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF2196F3), Color(0xFF1E88E5)],
-                    ),
-                    borderRadius: BorderRadius.circular(16.r),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF2196F3).withOpacity(0.4),
-                        blurRadius: 16.r,
-                        offset: Offset(0, 8.h),
-                      ),
-                    ],
-                  ),
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16.r),
-                      ),
-                    ),
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const SellFormPage()),
-                    ),
-                    icon: Icon(Icons.add_rounded,
-                        color: Colors.white, size: 24.r),
-                    label: Text(
-                      l10n.postNewAd,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 40.h), // 底部增加间距
-              ],
-            ),
-          ),
-        ),
+      body: CustomScrollView(
+        slivers: [
+          _buildSliverAppBar(l10n, myListings.length),
+          if (myListings.isEmpty)
+            _buildEmptyState(l10n)
+          else
+            _buildListingsContent(myListings, l10n),
+        ],
       ),
     );
   }
@@ -3684,19 +3457,18 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   Widget _buildGuestView(AppLocalizations l10n) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      // 使用标准 AppBar
       appBar: AppBar(
-        backgroundColor: _PRIMARY_BLUE, // 统一颜色
+        backgroundColor: const Color(0xFF2196F3),
         title: Text(
           l10n.sellItem,
           style: TextStyle(
             color: Colors.white,
-            fontSize: 20.sp, // 统一字体大小
+            fontSize: 18.sp,
             fontWeight: FontWeight.w600,
           ),
         ),
         elevation: 0,
-        centerTitle: false,
+        centerTitle: true,
       ),
       body: SlideTransition(
         position: _slideAnimation,
@@ -3805,26 +3577,242 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     );
   }
 
-  // 替换：使用 _buildEmptyStateContent
+  Widget _buildSliverAppBar(AppLocalizations l10n, int listingsCount) {
+    return SliverAppBar(
+      expandedHeight: 120.h,
+      floating: false,
+      pinned: true,
+      backgroundColor: const Color(0xFF2196F3),
+      flexibleSpace: FlexibleSpaceBar(
+        title: Text(
+          l10n.sellItem,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        background: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF2196F3),
+                Color(0xFF1E88E5),
+                Color(0xFF1976D2),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        Container(
+          margin: EdgeInsets.only(right: 16.w, top: 8.h, bottom: 8.h),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          child: IconButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SellFormPage()),
+            ),
+            icon: Icon(Icons.add_rounded, color: Colors.white, size: 24.r),
+            tooltip: 'Add New Listing',
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildEmptyState(AppLocalizations l10n) {
     return SliverFillRemaining(
-      child: _buildEmptyStateContent(l10n),
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24.w),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 140.w,
+                    height: 140.w,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFF2196F3).withOpacity(0.2),
+                          const Color(0xFF1E88E5).withOpacity(0.1),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(70.r),
+                      border: Border.all(
+                        color: const Color(0xFF2196F3).withOpacity(0.3),
+                        width: 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF2196F3).withOpacity(0.2),
+                          blurRadius: 24.r,
+                          offset: Offset(0, 12.h),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.add_a_photo_rounded,
+                      size: 70.r,
+                      color: const Color(0xFF2196F3),
+                    ),
+                  ),
+                  SizedBox(height: 32.h),
+                  Text(
+                    l10n.sellYourItems,
+                    style: TextStyle(
+                      fontSize: 28.sp,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black87,
+                      letterSpacing: -0.8,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 16.h),
+                  Text(
+                    l10n.takePhotoAndSell,
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 16.sp,
+                      height: 1.6,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 24.h),
+                  Container(
+                    padding:
+                    EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2196F3).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(
+                        color: const Color(0xFF2196F3).withOpacity(0.2),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.camera_alt_rounded,
+                                color: const Color(0xFF2196F3), size: 20.r),
+                            SizedBox(width: 8.w),
+                            Text('Take quality photos',
+                                style: TextStyle(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                        SizedBox(height: 8.h),
+                        Row(
+                          children: [
+                            Icon(Icons.edit_rounded,
+                                color: const Color(0xFF2196F3), size: 20.r),
+                            SizedBox(width: 8.w),
+                            Text('Write detailed description',
+                                style: TextStyle(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                        SizedBox(height: 8.h),
+                        Row(
+                          children: [
+                            Icon(Icons.monetization_on_rounded,
+                                color: const Color(0xFF2196F3), size: 20.r),
+                            SizedBox(width: 8.w),
+                            Text('Set competitive price',
+                                style: TextStyle(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 40.h),
+                  Container(
+                    width: double.infinity,
+                    height: 56.h,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF2196F3), Color(0xFF1E88E5)],
+                      ),
+                      borderRadius: BorderRadius.circular(16.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF2196F3).withOpacity(0.4),
+                          blurRadius: 16.r,
+                          offset: Offset(0, 8.h),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16.r),
+                        ),
+                      ),
+                      onPressed: () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const SellFormPage()),
+                      ),
+                      icon: Icon(Icons.add_rounded,
+                          color: Colors.white, size: 24.r),
+                      label: Text(
+                        l10n.postNewAd,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildListingsContent(
       List<Map<String, dynamic>> myListings, AppLocalizations l10n) {
-    // 此函数在标准 AppBar 结构中不再使用，但保留其逻辑以适应 ListView.builder
     return SliverList(
       delegate: SliverChildBuilderDelegate(
             (context, index) {
-          // 由于已改为 ListView.builder，此处的 SliverList 包装是多余的，
-          // 但为了保留原代码逻辑，我们假装 CustomScrollView 仍在外部包裹。
-          // 实际上在新的 build 方法中，这个函数应该被替换为直接构建列表项。
-          // 这里我们返回一个占位符，因为新的 build 方法中已经直接使用了 ListView.builder。
-          return const SizedBox.shrink();
+          if (index == 0) {
+            return _buildStatsHeader(myListings, l10n);
+          }
+          final listingIndex = index - 1;
+          return TweenAnimationBuilder<double>(
+            duration: Duration(milliseconds: 300 + (listingIndex * 100)),
+            tween: Tween(begin: 0.0, end: 1.0),
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(0, 20 * (1 - value)),
+                child: Opacity(
+                  opacity: value,
+                  child: _buildListingCard(myListings[listingIndex], l10n),
+                ),
+              );
+            },
+          );
         },
-        childCount: 0,
+        childCount: myListings.length + 1,
       ),
     );
   }
@@ -4340,6 +4328,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     }
   }
 }
+
 /* ---------------- Notification Page 茅鈧∶嘎ッ┞÷?(莽麓搂氓鈥♀€樏九矫ヅ掆€撁р€八喢ε撀? ---------------- */
 
 class NotificationPage extends StatefulWidget {
@@ -4362,9 +4351,89 @@ class _NotificationPageState extends State<NotificationPage> {
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
 
-  // -----------------------------------------------------
-  // 已移除：_buildSliverHeader
-  // -----------------------------------------------------
+  // 自定义头部组件，用于统一蓝色、大标题和间距
+  Widget _buildCustomHeader(String title) {
+    final l10n = AppLocalizations.of(context)!;
+    final unreadCount =
+        _notifications.where((n) => n['is_read'] != true).length;
+    final displayTitle = '${title}${unreadCount > 0 ? ' ($unreadCount)' : ''}';
+
+    return Container(
+      color: _PRIMARY_BLUE, // 统一的深蓝
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: 16.h), // 标题距安全区顶部约 16dp
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      displayTitle,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24.sp, // 统一字体大小
+                        fontWeight: FontWeight.w600, // SemiBold
+                        height: 1.2,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (_notifications.isNotEmpty)
+                    PopupMenuButton<String>(
+                      icon: Icon(Icons.more_vert_rounded,
+                          color: Colors.white, size: 18.r),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.r)),
+                      onSelected: (value) {
+                        if (value == 'mark_all_read') {
+                          _markAllAsRead();
+                        } else if (value == 'clear_all') {
+                          _clearAll();
+                        }
+                      },
+                      itemBuilder: (BuildContext context) => [
+                        PopupMenuItem(
+                          value: 'mark_all_read',
+                          child: Row(
+                            children: [
+                              Icon(Icons.done_all_rounded,
+                                  size: 14.r, color: Colors.grey.shade600),
+                              SizedBox(width: 8.w),
+                              Text(l10n.markAllAsRead,
+                                  style: TextStyle(fontSize: 12.sp)),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'clear_all',
+                          child: Row(
+                            children: [
+                              Icon(Icons.clear_all_rounded,
+                                  color: Colors.red, size: 14.r),
+                              SizedBox(width: 8.w),
+                              Text(l10n.clearAll,
+                                  style: TextStyle(
+                                      fontSize: 12.sp, color: Colors.red)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+            SizedBox(height: 16.h),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -4727,13 +4796,7 @@ class _NotificationPageState extends State<NotificationPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final unreadCount =
-        _notifications.where((n) => n['is_read'] != true).length;
-    final titleText = '${l10n.notifications}${unreadCount > 0 ? ' ($unreadCount)' : ''}';
 
-    // -----------------------------------------------------
-    // 最终修复：使用标准 Scaffold + AppBar + ListView
-    // -----------------------------------------------------
     if (widget.isGuest) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
@@ -4743,13 +4806,12 @@ class _NotificationPageState extends State<NotificationPage> {
             l10n.notifications,
             style: TextStyle(
               color: Colors.white,
-              // 统一为 My Favorites 的样式 (20.sp 或 18.sp，取决于实际 App Bar 标题的视觉效果，这里使用 20.sp 来接近大标题效果)
-              fontSize: 20.sp,
+              fontSize: 18.sp,
               fontWeight: FontWeight.w600,
             ),
           ),
           elevation: 0,
-          centerTitle: false, // 确保靠左对齐
+          centerTitle: true,
         ),
         body: Center(
           child: Column(
@@ -4838,65 +4900,15 @@ class _NotificationPageState extends State<NotificationPage> {
       );
     }
 
+    final unreadCount =
+        _notifications.where((n) => n['is_read'] != true).length;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      // 头部使用标准 AppBar，固定顶部，不收缩
-      appBar: AppBar(
-        backgroundColor: _PRIMARY_BLUE, // 统一颜色
-        title: Text(
-          titleText,
-          style: TextStyle(
-            color: Colors.white,
-            // 统一为 My Favorites 的样式
-            fontSize: 20.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        elevation: 0,
-        centerTitle: false, // 确保靠左对齐
-        actions: [
-          if (_notifications.isNotEmpty)
-            PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert_rounded,
-                  color: Colors.white, size: 18.r),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.r)),
-              onSelected: (value) {
-                if (value == 'mark_all_read') {
-                  _markAllAsRead();
-                } else if (value == 'clear_all') {
-                  _clearAll();
-                }
-              },
-              itemBuilder: (BuildContext context) => [
-                PopupMenuItem(
-                  value: 'mark_all_read',
-                  child: Row(
-                    children: [
-                      Icon(Icons.done_all_rounded,
-                          size: 14.r, color: Colors.grey.shade600),
-                      SizedBox(width: 8.w),
-                      Text(l10n.markAllAsRead,
-                          style: TextStyle(fontSize: 12.sp)),
-                    ],
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'clear_all',
-                  child: Row(
-                    children: [
-                      Icon(Icons.clear_all_rounded,
-                          color: Colors.red, size: 14.r),
-                      SizedBox(width: 8.w),
-                      Text(l10n.clearAll,
-                          style: TextStyle(
-                              fontSize: 12.sp, color: Colors.red)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-        ],
+      // 头部使用自定义组件
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(_CUSTOM_HEADER_HEIGHT), // 使用统一高度
+        child: _buildCustomHeader(l10n.notifications),
       ),
       body: _isLoading
           ? Center(
@@ -5092,8 +5104,7 @@ class _NotificationPageState extends State<NotificationPage> {
                                         const BoxDecoration(
                                           color:
                                           _PRIMARY_BLUE, // 统一颜色
-                                          shape:
-                                          BoxShape.circle,
+                                          shape: BoxShape.circle,
                                         ),
                                       ),
                                   ],
@@ -5145,7 +5156,7 @@ class _NotificationPageState extends State<NotificationPage> {
     );
   }
 }
-/* ---------------- 鍏叡锛氭棤杈圭紭鍏夋檿婊氬姩 & UI 鍩哄骇 ---------------- */
+
 
 class NoGlowScrollBehavior extends ScrollBehavior {
   @override
@@ -5158,7 +5169,7 @@ class NoGlowScrollBehavior extends ScrollBehavior {
 const _kPrivacyUrl = 'https://www.swaply.cc/privacy';
 const _kDeleteUrl = 'https://www.swaply.cc/delete-account';
 
-/* ---------------- Profile Page 个人资料页 ---------------- */
+/* ---------------- Profile Page 涓汉璧勬枡椤?---------------- */
 class ProfilePage extends StatefulWidget {
   final bool isGuest;
   const ProfilePage({Key? key, this.isGuest = false}) : super(key: key);
@@ -5174,12 +5185,12 @@ class _ProfilePageState extends State<ProfilePage>
   /// 基础资料（显示名/头像/时间等）
   Map<String, dynamic>? _profile;
 
-  /// 只读 profiles 行（含 verification_type 等）
+  /// 只读的 profiles 行（若有需要）
   Map<String, dynamic>? _profileRow;
 
   final _svc = ProfileService();
 
-  // 验证服务与状态（看 user_verifications）
+  // ✅ 新增：邮件验证服务与状态
   final _verifySvc = EmailVerificationService();
   bool _verified = false;
   vt.VerificationBadgeType _badge = vt.VerificationBadgeType.none;
@@ -5191,31 +5202,45 @@ class _ProfilePageState extends State<ProfilePage>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
+  // ✅ 新增：监听句柄（需要 import 'dart:async';）
+  StreamSubscription<AuthState>? _authSub;
+
+  // ✅ 新增：并发防抖，避免短时间重复触发导致竞态
+  bool _verifyBusy = false;
+
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-        duration: const Duration(milliseconds: 800), vsync: this);
+    _animationController =
+        AnimationController(duration: const Duration(milliseconds: 800), vsync: this);
     _fadeAnimation =
         CurvedAnimation(parent: _animationController, curve: Curves.easeInOut);
 
+    // 基础资料
     if (!widget.isGuest) {
       _load();
     } else {
       _animationController.forward();
     }
 
-    // 首次拉取认证状态
+    // ✅ 首次进入拉取一次验证状态
     _reloadUserVerificationStatus();
+
+    // ✅ 监听登录态变化，记得在 dispose 里 cancel
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((event) {
+      if (!mounted) return;
+      _reloadUserVerificationStatus();
+    });
   }
 
   @override
   void dispose() {
+    _authSub?.cancel();           // ✅ 防止页面销毁后仍然收到回调
     _animationController.dispose();
     super.dispose();
   }
 
-  /// 只读加载：用于页面展示
+  /// 只读加载：仅加载用于展示的基础资料
   Future<void> _load() async {
     try {
       final base = await _svc.getUserProfile();
@@ -5240,28 +5265,49 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
-  /// 读取 user_verifications 并计算 _verified/_badge
+  // ✅ 只查 user_verifications，计算 _verified/_badge，并更新到状态
   Future<void> _reloadUserVerificationStatus() async {
-    if (!mounted) return;
+    // 并发保护
+    if (_verifyBusy) return;
+    _verifyBusy = true;
+
+    if (!mounted) {
+      _verifyBusy = false;
+      return;
+    }
     setState(() => _verifyLoading = true);
 
-    final row = await _verifySvc.fetchVerificationRow();
-    final user = Supabase.instance.client.auth.currentUser;
+    try {
+      // 查 user_verifications
+      final row = await _verifySvc.fetchVerificationRow();
 
-    final verified = vutils.computeIsVerified(verificationRow: row, user: user);
-    final badge = vutils.computeBadgeType(verificationRow: row, user: user);
+      // ✅ 用 getUser() 拿最新 user（而不是 currentUser 的旧缓存）
+      final user = (await Supabase.instance.client.auth.getUser()).user;
 
-    if (!mounted) return;
-    setState(() {
-      _verificationRow = row;
-      _verified = verified;
-      _badge = badge;
-      _verifyLoading = false;
-    });
+      final verified =
+      vutils.computeIsVerified(verificationRow: row, user: user);
+      final badge = vutils.computeBadgeType(verificationRow: row, user: user);
 
-    if (kDebugMode) {
-      debugPrint('[ProfilePage] _reloadUserVerificationStatus(): '
-          'verified=$_verified badge=$_badge row=${_verificationRow?['verification_type']}');
+      if (!mounted) return;
+      setState(() {
+        _verificationRow = row;
+        _verified = verified;
+        _badge = badge;
+      });
+
+      if (kDebugMode) {
+        debugPrint('[ProfilePage] _reloadUserVerificationStatus(): '
+            'verified=$_verified badge=$_badge row=${_verificationRow?['verification_type']}');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[ProfilePage] _reloadUserVerificationStatus error: $e');
+      }
+    } finally {
+      _verifyBusy = false;
+      if (mounted) {
+        setState(() => _verifyLoading = false);
+      }
     }
   }
 
@@ -5272,8 +5318,7 @@ class _ProfilePageState extends State<ProfilePage>
     try {
       final p = await ProfileService.instance.getUserProfile();
       if (p != null) {
-        nameCtrl.text =
-            (p['display_name'] ?? p['full_name'] ?? '').toString();
+        nameCtrl.text = (p['display_name'] ?? p['full_name'] ?? '').toString();
         phoneCtrl.text = (p['phone'] ?? '').toString();
       }
     } catch (_) {}
@@ -5289,8 +5334,7 @@ class _ProfilePageState extends State<ProfilePage>
       barrierDismissible: true,
       builder: (dialogCtx) {
         return Dialog(
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           elevation: 8,
           child: Container(
             padding: const EdgeInsets.all(24),
@@ -5319,8 +5363,8 @@ class _ProfilePageState extends State<ProfilePage>
                     ),
                     const SizedBox(width: 12),
                     const Text('Edit Profile',
-                        style: TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.w600)),
+                        style:
+                        TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -5368,8 +5412,7 @@ class _ProfilePageState extends State<ProfilePage>
                       style: TextButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 24, vertical: 12)),
-                      child:
-                      const Text('Cancel', style: TextStyle(fontSize: 15)),
+                      child: const Text('Cancel', style: TextStyle(fontSize: 15)),
                     ),
                     const SizedBox(width: 12),
                     DecoratedBox(
@@ -5389,8 +5432,7 @@ class _ProfilePageState extends State<ProfilePage>
                               borderRadius: BorderRadius.circular(12)),
                         ),
                         child: const Text('Save',
-                            style:
-                            TextStyle(fontSize: 15, color: Colors.white)),
+                            style: TextStyle(fontSize: 15, color: Colors.white)),
                       ),
                     ),
                   ],
@@ -5437,7 +5479,7 @@ class _ProfilePageState extends State<ProfilePage>
                     color: Colors.white, size: 18),
                 const SizedBox(width: 8),
                 Expanded(
-                    child: Text('Upload failed: $e',
+                    child: Text('Update failed: $e',
                         style: const TextStyle(fontSize: 14))),
               ],
             ),
@@ -5455,9 +5497,6 @@ class _ProfilePageState extends State<ProfilePage>
     phoneCtrl.dispose();
   }
 
-  // -----------------------------------------------------
-  // 头像上传：卡死保护 + 缓存破坏
-  // -----------------------------------------------------
   Future<void> _uploadAvatarSimple() async {
     if (!mounted) return;
     setState(() => _uploadingAvatar = true);
@@ -5480,19 +5519,13 @@ class _ProfilePageState extends State<ProfilePage>
       final path =
           '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.$ext';
 
-      if (!mounted) return;
-
       await Supabase.instance.client.storage
           .from('avatars')
           .uploadBinary(path, bytes, fileOptions: const FileOptions(upsert: true));
 
-      final baseUrl =
+      final publicUrl =
       Supabase.instance.client.storage.from('avatars').getPublicUrl(path);
-      final cacheBust = DateTime.now().millisecondsSinceEpoch;
-      final publicUrlWithCacheBust = '$baseUrl?v=$cacheBust';
-
-      await ProfileService.instance
-          .updateUserProfile(avatarUrl: publicUrlWithCacheBust);
+      await ProfileService.instance.updateUserProfile(avatarUrl: publicUrl);
 
       await _load();
       if (!mounted) return;
@@ -5514,7 +5547,6 @@ class _ProfilePageState extends State<ProfilePage>
         ),
       );
     } catch (e) {
-      if (kDebugMode) debugPrint('Avatar upload error: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -5540,187 +5572,30 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
-  // -----------------------------------------------------
-  // 头部：固定高度 + 内部消化状态栏
-  // -----------------------------------------------------
-  Widget _buildEnhancedHeader({
-    required bool isGuest,
-    required String name,
-    required String email,
-    String? avatarUrl,
-    String? memberSince,
-    vt.VerificationBadgeType verificationType = vt.VerificationBadgeType.none,
-  }) {
-    const double kHeaderHeight = 300;
-    final double statusBar = MediaQuery.of(context).padding.top;
-
-    const List<Color> gradientColors = [
-      Color(0xFF2563EB),
-      Color(0xFF3B82F6),
-      Color(0xFF60A5FA),
-    ];
-
-    return SizedBox(
-      height: kHeaderHeight,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: gradientColors,
-                  stops: [0.0, 0.5, 1.0],
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.fromLTRB(
-                24, (statusBar > 0 ? statusBar + 12 : 20), 24, 30),
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Hero(
-                    tag: 'profile_avatar',
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.white.withOpacity(0.9),
-                            Colors.white.withOpacity(0.3),
-                          ],
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Color.fromRGBO(0, 0, 0, 0.2),
-                            blurRadius: 20,
-                            offset: Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: VerifiedAvatar(
-                        avatarUrl: avatarUrl,
-                        radius: 45,
-                        verificationType: verificationType,
-                        onTap: !isGuest ? _uploadAvatarSimple : null,
-                        defaultIcon:
-                        isGuest ? Icons.person_outline : Icons.person,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20.0,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                      shadows: [
-                        Shadow(
-                          offset: Offset(0, 2),
-                          blurRadius: 4,
-                          color: Color(0x40000000),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(
-                          color: Colors.white.withOpacity(0.3), width: 1),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          email.contains('@') ? Icons.email : Icons.phone,
-                          size: 14,
-                          color: Colors.white.withOpacity(0.95),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          email,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.95),
-                            fontSize: 13.0,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (!isGuest && memberSince != null) ...[
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(Icons.calendar_today_outlined,
-                              size: 12, color: Colors.white),
-                          SizedBox(width: 4),
-                          Text(
-                            'Member since ',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11.0,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final languageProvider = Provider.of<LanguageProvider>(context);
 
-    final bool _isIOS = Theme.of(context).platform == TargetPlatform.iOS;
-    const double _iosTileScale = 0.75;
-    final double _tileScale = _isIOS ? _iosTileScale : 1.0;
+    final media = MediaQuery.of(context);
+    final clamp = media.copyWith(textScaler: const TextScaler.linear(1.0));
 
-    // Guest
+    // Guest user interface
     if (widget.isGuest) {
       return MediaQuery(
-        data: MediaQuery.of(context)
-            .copyWith(textScaler: const TextScaler.linear(1.0)),
+        data: clamp,
         child: Scaffold(
           backgroundColor: const Color(0xFFF8F9FA),
           body: ScrollConfiguration(
             behavior: const ScrollBehavior(),
             child: CustomScrollView(
               slivers: [
+                const SliverAppBar(
+                  backgroundColor: Color(0xFF2563EB),
+                  pinned: false,
+                  elevation: 0,
+                  toolbarHeight: 0,
+                ),
                 SliverToBoxAdapter(
                   child: _buildEnhancedHeader(
                     isGuest: true,
@@ -5745,17 +5620,16 @@ class _ProfilePageState extends State<ProfilePage>
       );
     }
 
-    // Loading
+    // Loading state
     if (_loading) {
       return MediaQuery(
-        data: MediaQuery.of(context)
-            .copyWith(textScaler: const TextScaler.linear(1.0)),
-        child: Scaffold(
-          backgroundColor: const Color(0xFFF8F9FA),
+        data: clamp,
+        child: const Scaffold(
+          backgroundColor: Color(0xFFF8F9FA),
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
+              children: [
                 SizedBox(
                     width: 36,
                     height: 36,
@@ -5772,21 +5646,18 @@ class _ProfilePageState extends State<ProfilePage>
 
     final fullName = (_profile?['full_name'] ?? 'User').toString();
     final phone = (_profile?['phone'] ?? '').toString();
-    final displayContact =
+    final email =
     phone.isNotEmpty ? phone : (_profile?['email'] ?? '').toString();
     final avatarUrl = (_profile?['avatar_url'] ?? '') as String?;
     final memberSince = _profile?['created_at']?.toString();
     String? memberSinceText;
     if (memberSince != null && memberSince.isNotEmpty) {
-      final cut =
-      memberSince.length >= 10 ? memberSince.substring(0, 10) : memberSince;
+      final cut = memberSince.length >= 10 ? memberSince.substring(0, 10) : memberSince;
       memberSinceText = cut;
     }
 
-    // Normal User
     return MediaQuery(
-      data: MediaQuery.of(context)
-          .copyWith(textScaler: const TextScaler.linear(1.0)),
+      data: clamp,
       child: Scaffold(
         extendBody: true,
         backgroundColor: const Color(0xFFF8F9FA),
@@ -5796,16 +5667,21 @@ class _ProfilePageState extends State<ProfilePage>
               behavior: const ScrollBehavior(),
               child: CustomScrollView(
                 slivers: [
+                  const SliverAppBar(
+                    backgroundColor: Color(0xFF2563EB),
+                    pinned: false,
+                    elevation: 0,
+                    toolbarHeight: 0,
+                  ),
                   SliverToBoxAdapter(
                     child: _buildEnhancedHeader(
                       isGuest: false,
                       name: fullName,
-                      email: displayContact,
+                      email: email,
                       avatarUrl:
-                      (avatarUrl != null && avatarUrl.isNotEmpty)
-                          ? avatarUrl
-                          : null,
+                      (avatarUrl != null && avatarUrl.isNotEmpty) ? avatarUrl : null,
                       memberSince: memberSinceText,
+                      // ✅ 仅在 verified 时传入徽章；否则 none 不显示
                       verificationType:
                       _verified ? _badge : vt.VerificationBadgeType.none,
                     ),
@@ -5815,326 +5691,253 @@ class _ProfilePageState extends State<ProfilePage>
                       opacity: _fadeAnimation,
                       child: Padding(
                         padding: const EdgeInsets.all(20),
-                        child: Theme(
-                          data: Theme.of(context).copyWith(
-                            visualDensity: _isIOS
-                                ? const VisualDensity(
-                                horizontal: 0, vertical: -2)
-                                : Theme.of(context).visualDensity,
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Profile',
-                                  style: TextStyle(
-                                      fontSize: 16.0,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF6B7280),
-                                      letterSpacing: 0.5)),
-                              const SizedBox(height: 10),
-                              _ProfileOptionEnhanced(
-                                icon: Icons.edit_rounded,
-                                title: l10n.editProfile,
-                                color: Colors.blue,
-                                onTap: _editNamePhone,
-                                scale: _tileScale,
-                              ),
-                              const SizedBox(height: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Profile',
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF6B7280),
+                                    letterSpacing: 0.5)),
+                            const SizedBox(height: 14),
+                            _ProfileOptionEnhanced(
+                              icon: Icons.edit_rounded,
+                              title: l10n.editProfile,
+                              color: Colors.blue,
+                              onTap: _editNamePhone,
+                            ),
+                            const SizedBox(height: 14),
 
-                              _VerificationTileCard(
-                                isVerified: _verified,
-                                isLoading: _verifyLoading,
-                                onTap: () async {
-                                  await Navigator.of(context).push<bool>(
-                                    MaterialPageRoute(
-                                        builder: (_) =>
-                                        const VerificationPage()),
+                            // ✅ 验证入口：绑定 _verified；点击后返回刷新一次
+                            _VerificationTileCard(
+                              isVerified: _verified,
+                              isLoading: _verifyLoading,
+                              onTap: () async {
+                                await Navigator.of(context).push<bool>(
+                                  MaterialPageRoute(
+                                      builder: (_) => const VerificationPage()),
+                                );
+                                await _reloadUserVerificationStatus();
+                              },
+                            ),
+
+                            const SizedBox(height: 28),
+                            const Text('Rewards & Activities',
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF6B7280),
+                                    letterSpacing: 0.5)),
+                            const SizedBox(height: 14),
+                            const MyRewardsTile(),
+                            const SizedBox(height: 14),
+
+                            _ProfileOptionEnhanced(
+                              icon: Icons.inventory_2_rounded,
+                              title: l10n.myListings,
+                              color: Colors.indigo,
+                              onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (_) => const MyListingsPage())),
+                            ),
+                            const SizedBox(height: 14),
+                            _ProfileOptionEnhanced(
+                              icon: Icons.favorite_rounded,
+                              title: l10n.wishlist,
+                              color: Colors.pink,
+                              onTap: () {
+                                final user =
+                                    Supabase.instance.client.auth.currentUser;
+                                if (user == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content:
+                                        Text('Please sign in to view Wishlist')),
                                   );
-                                  await _reloadUserVerificationStatus();
-                                },
-                                scale: _tileScale,
-                              ),
-
-                              const SizedBox(height: 10),
-                              const Text('Rewards & Activities',
-                                  style: TextStyle(
-                                      fontSize: 16.0,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF6B7280),
-                                      letterSpacing: 0.5)),
-                              const SizedBox(height: 10),
-
-                              _RewardsTileUnified(
-                                scale: _tileScale,
-                                onTap: () {
-                                  Navigator.push(
+                                  return;
+                                }
+                                Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                        builder: (_) =>
-                                            CouponManagementPage()),
-                                  );
-                                },
-                              ),
-                              const SizedBox(height: 12),
+                                        builder: (_) => const WishlistPage()));
+                              },
+                            ),
+                            const SizedBox(height: 14),
 
-                              _ProfileOptionEnhanced(
-                                icon: Icons.inventory_2_rounded,
-                                title: l10n.myListings,
-                                color: Colors.indigo,
-                                onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) =>
-                                        const MyListingsPage())),
-                                scale: _tileScale,
+                            _ProfileOptionEnhanced(
+                              icon: Icons.person_add_alt_1_rounded,
+                              title: 'Invite Friends',
+                              subtitle: 'Earn coupons by inviting friends',
+                              color: Colors.orange,
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => const InviteFriendsPage()),
                               ),
-                              const SizedBox(height: 12),
-                              _ProfileOptionEnhanced(
-                                icon: Icons.favorite_rounded,
-                                title: l10n.wishlist,
-                                color: Colors.pink,
-                                onTap: () {
-                                  final user = Supabase
-                                      .instance.client.auth.currentUser;
-                                  if (user == null) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text(
-                                              'Please sign in to view Wishlist')),
-                                    );
-                                    return;
-                                  }
-                                  Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (_) =>
-                                          const WishlistPage()));
-                                },
-                                scale: _tileScale,
-                              ),
-                              const SizedBox(height: 12),
+                            ),
+                            const SizedBox(height: 14),
 
-                              _ProfileOptionEnhanced(
-                                icon: Icons.person_add_alt_1_rounded,
-                                title: 'Invite Friends',
-                                subtitle: 'Earn coupons by inviting friends',
-                                color: Colors.orange,
-                                onTap: () => Navigator.push(
+                            _ProfileOptionEnhanced(
+                              icon: Icons.local_activity_rounded,
+                              title: 'My Coupons',
+                              subtitle: 'View and manage your coupons',
+                              color: Colors.purple,
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (_) => CouponManagementPage()),
+                              ),
+                            ),
+                            const SizedBox(height: 28),
+                            const Text('Support',
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF6B7280),
+                                    letterSpacing: 0.5)),
+                            const SizedBox(height: 14),
+
+                            _ProfileOptionEnhanced(
+                              icon: Icons.manage_accounts,
+                              title: 'Account',
+                              subtitle: 'Password, devices, delete',
+                              color: Colors.cyan,
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const AccountSettingsPage(),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+
+                            _ProfileOptionEnhanced(
+                              icon: Icons.privacy_tip_outlined,
+                              title: 'Privacy Policy',
+                              color: Colors.blueGrey,
+                              onTap: () => launchUrl(Uri.parse(_kPrivacyUrl)),
+                            ),
+                            const SizedBox(height: 14),
+
+                            _ProfileOptionEnhanced(
+                              icon: Icons.delete_outline,
+                              title: 'Data Deletion / How to delete my account',
+                              color: Colors.deepOrange,
+                              onTap: () => launchUrl(Uri.parse(_kDeleteUrl)),
+                            ),
+                            const SizedBox(height: 14),
+
+                            _ProfileOptionEnhanced(
+                              icon: Icons.help_outline_rounded,
+                              title: l10n.helpSupport,
+                              color: Colors.teal,
+                              onTap: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (_) =>
-                                      const InviteFriendsPage()),
-                                ),
-                                scale: _tileScale,
-                              ),
-                              const SizedBox(height: 12),
-
-                              _ProfileOptionEnhanced(
-                                icon: Icons.local_activity_rounded,
-                                title: 'My Coupons',
-                                subtitle: 'View and manage your coupons',
-                                color: Colors.purple,
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) =>
-                                          CouponManagementPage()),
-                                ),
-                                scale: _tileScale,
-                              ),
-
-                              const SizedBox(height: 10),
-                              const Text('Support',
-                                  style: TextStyle(
-                                      fontSize: 16.0,
-                                      fontWeight: FontWeight.w600,
-                                      color: Color(0xFF6B7280),
-                                      letterSpacing: 0.5)),
-                              const SizedBox(height: 10),
-
-                              _ProfileOptionEnhanced(
-                                icon: Icons.manage_accounts,
-                                title: 'Account',
-                                subtitle: 'Password, devices, delete',
-                                color: Colors.cyan,
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                    const AccountSettingsPage(),
-                                  ),
-                                ),
-                                scale: _tileScale,
-                              ),
-                              const SizedBox(height: 12),
-
-                              _ProfileOptionEnhanced(
-                                icon: Icons.privacy_tip_outlined,
-                                title: 'Privacy Policy',
-                                color: Colors.blueGrey,
-                                onTap: () => launchUrl(
-                                  Uri.parse(_kPrivacyUrl),
-                                ),
-                                scale: _tileScale,
-                              ),
-                              const SizedBox(height: 12),
-
-                              _ProfileOptionEnhanced(
-                                icon: Icons.delete_outline,
-                                title:
-                                'Data Deletion / How to delete my account',
-                                color: Colors.deepOrange,
-                                onTap: () => launchUrl(
-                                  Uri.parse(_kDeleteUrl),
-                                ),
-                                scale: _tileScale,
-                              ),
-                              const SizedBox(height: 12),
-
-                              _ProfileOptionEnhanced(
-                                icon: Icons.help_outline_rounded,
-                                title: l10n.helpSupport,
-                                color: Colors.teal,
-                                onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => HelpSupportPage())),
-                                scale: _tileScale,
-                              ),
-                              const SizedBox(height: 12),
-                              _ProfileOptionEnhanced(
-                                icon: Icons.info_outline_rounded,
-                                title: l10n.about,
-                                color: Colors.blueGrey,
-                                onTap: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => AboutPage())),
-                                scale: _tileScale,
-                              ),
-                              const SizedBox(height: 18),
-
-                              _ProfileOptionEnhanced(
-                                icon: Icons.logout_rounded,
-                                title: l10n.logout,
-                                color: Colors.red,
-                                onTap: () async {
-                                  final confirmed = await showDialog<bool>(
-                                    context: context,
-                                    builder: (ctx) => AlertDialog(
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                          BorderRadius.circular(18)),
-                                      title: Row(
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(8),
-                                            decoration: BoxDecoration(
-                                                color: Colors.red
-                                                    .withOpacity(0.1),
-                                                borderRadius:
-                                                BorderRadius.circular(8)),
-                                            child: const Icon(
-                                                Icons.logout_rounded,
-                                                color: Colors.red,
-                                                size: 20),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          const Text('Logout',
-                                              style: TextStyle(
-                                                  fontSize: 18,
-                                                  fontWeight:
-                                                  FontWeight.w600)),
-                                        ],
-                                      ),
-                                      content: const Text(
-                                          'Are you sure you want to logout?',
-                                          style: TextStyle(
-                                              fontSize: 15, height: 1.4)),
-                                      actions: [
-                                        TextButton(
-                                            onPressed: () =>
-                                                Navigator.of(ctx).pop(false),
-                                            child: Text('Cancel',
-                                                style: TextStyle(
-                                                    fontSize: 15,
-                                                    color: Colors.grey[600]))),
+                                      builder: (_) => HelpSupportPage())),
+                            ),
+                            const SizedBox(height: 14),
+                            _ProfileOptionEnhanced(
+                              icon: Icons.info_outline_rounded,
+                              title: l10n.about,
+                              color: Colors.blueGrey,
+                              onTap: () =>
+                                  Navigator.push(context,
+                                      MaterialPageRoute(builder: (_) => AboutPage())),
+                            ),
+                            const SizedBox(height: 28),
+                            _ProfileOptionEnhanced(
+                              icon: Icons.logout_rounded,
+                              title: l10n.logout,
+                              color: Colors.red,
+                              onTap: () async {
+                                final confirmed = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(18)),
+                                    title: Row(
+                                      children: [
                                         Container(
+                                          padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
-                                              color: Colors.red,
+                                              color: Colors.red.withOpacity(0.1),
                                               borderRadius:
                                               BorderRadius.circular(8)),
-                                          child: TextButton(
-                                            onPressed: () =>
-                                                Navigator.of(ctx).pop(true),
-                                            child: const Text('Logout',
-                                                style: TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 15,
-                                                    fontWeight:
-                                                    FontWeight.w600)),
-                                          ),
+                                          child: const Icon(Icons.logout_rounded,
+                                              color: Colors.red, size: 20),
                                         ),
+                                        const SizedBox(width: 12),
+                                        const Text('Logout',
+                                            style: TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w600)),
                                       ],
                                     ),
-                                  );
-                                  if (confirmed == true) {
-                                    try {
-                                      // —— 关键改动：先抑制全局导航一次 —— //
-                                      _authRouting = true;
-                                      _lastAuthRouteAt = DateTime.now();
-
-                                      await Supabase.instance.client.auth
-                                          .signOut();
-                                      RewardService.clearCache();
-
-                                      // 清栈进欢迎页
-                                      (appNavKey.currentState ??
-                                          Navigator.of(context))
-                                          .pushNamedAndRemoveUntil(
-                                          '/welcome', (r) => false);
-
-                                      // 小延时后释放抑制标志，避免 race
-                                      Future.delayed(
-                                          const Duration(milliseconds: 600),
-                                              () {
-                                            _authRouting = false;
-                                          });
-                                    } catch (e) {
-                                      if (mounted) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(
-                                          SnackBar(
-                                            content: Row(
-                                              children: [
-                                                const Icon(
-                                                    Icons
-                                                        .error_outline_rounded,
-                                                    color: Colors.white,
-                                                    size: 18),
-                                                const SizedBox(width: 8),
-                                                Text('Logout failed: $e',
-                                                    style: const TextStyle(
-                                                        fontSize: 14)),
-                                              ],
-                                            ),
-                                            backgroundColor: Colors.red,
-                                            behavior: SnackBarBehavior.floating,
-                                            shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                BorderRadius.circular(10)),
-                                            margin: const EdgeInsets.all(16),
+                                    content: const Text(
+                                        'Are you sure you want to logout?',
+                                        style: TextStyle(
+                                            fontSize: 15, height: 1.4)),
+                                    actions: [
+                                      TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(false),
+                                          child: Text('Cancel',
+                                              style: TextStyle(
+                                                  fontSize: 15,
+                                                  color: Colors.grey[600]))),
+                                      Container(
+                                        decoration: BoxDecoration(
+                                            color: Colors.red,
+                                            borderRadius:
+                                            BorderRadius.circular(8)),
+                                        child: TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(ctx).pop(true),
+                                          child: const Text('Logout',
+                                              style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w600)),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                if (confirmed == true) {
+                                  try {
+                                    await Supabase.instance.client.auth.signOut();
+                                    RewardService.clearCache();
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Row(
+                                            children: [
+                                              const Icon(Icons.error_outline_rounded,
+                                                  color: Colors.white, size: 18),
+                                              const SizedBox(width: 8),
+                                              Text('Logout failed: $e',
+                                                  style: const TextStyle(fontSize: 14)),
+                                            ],
                                           ),
-                                        );
-                                      }
+                                          backgroundColor: Colors.red,
+                                          behavior: SnackBarBehavior.floating,
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                              BorderRadius.circular(10)),
+                                          margin: const EdgeInsets.all(16),
+                                        ),
+                                      );
                                     }
                                   }
-                                },
-                                scale: _tileScale,
-                              ),
-                              const SizedBox(height: 40),
-                            ],
-                          ),
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 40),
+                          ],
                         ),
                       ),
                     ),
@@ -6143,28 +5946,26 @@ class _ProfilePageState extends State<ProfilePage>
               ),
             ),
             if (_uploadingAvatar)
-              Positioned.fill(
-                child: Container(
-                  color: Colors.black54,
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16)),
-                      child: const Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(
-                              width: 36,
-                              height: 36,
-                              child: CircularProgressIndicator()),
-                          SizedBox(height: 16),
-                          Text('Uploading avatar...',
-                              style: TextStyle(
-                                  color: Color(0xFF616161), fontSize: 15)),
-                        ],
-                      ),
+              Container(
+                color: Colors.black54,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16)),
+                    child: const Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                            width: 36,
+                            height: 36,
+                            child: CircularProgressIndicator()),
+                        SizedBox(height: 16),
+                        Text('Uploading avatar...',
+                            style:
+                            TextStyle(color: Color(0xFF616161), fontSize: 15)),
+                      ],
                     ),
                   ),
                 ),
@@ -6174,82 +5975,131 @@ class _ProfilePageState extends State<ProfilePage>
       ),
     );
   }
-}
 
-/* ---------------- Verification Tile（紧凑卡片 + chevron） ---------------- */
-class _VerificationTileCard extends StatelessWidget {
-  final bool isVerified;
-  final bool isLoading;
-  final VoidCallback? onTap;
-  final double scale;
-
-  const _VerificationTileCard({
-    required this.isVerified,
-    required this.isLoading,
-    this.onTap,
-    this.scale = 1.0,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final s = scale;
-    final Color badgeColor = isVerified ? Colors.green : Colors.grey;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16 * s),
-        child: Container(
-          padding: EdgeInsets.all(16 * s),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16 * s),
-            boxShadow: [
-              BoxShadow(
-                color: const Color.fromRGBO(0, 0, 0, 0.04),
-                blurRadius: 12 * s,
-                offset: Offset(0, 2 * s),
-              ),
-            ],
-          ),
-          child: Row(
+  // 头像区域（保持你的原样式）
+  Widget _buildEnhancedHeader({
+    required bool isGuest,
+    required String name,
+    required String email,
+    String? avatarUrl,
+    String? memberSince,
+    vt.VerificationBadgeType verificationType = vt.VerificationBadgeType.none,
+  }) {
+    return Container(
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF2563EB), Color(0xFF3B82F6), Color(0xFF60A5FA)],
+          stops: [0.0, 0.5, 1.0],
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 30),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                padding: EdgeInsets.all(12 * s),
-                decoration: BoxDecoration(
-                  color: badgeColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(14 * s),
+              Hero(
+                tag: 'profile_avatar',
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(colors: [
+                      Colors.white.withOpacity(0.9),
+                      Colors.white.withOpacity(0.3)
+                    ]),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 20,
+                          offset: const Offset(0, 10))
+                    ],
+                  ),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // VerifiedAvatar 内部会根据 verificationType==none 决定是否显示徽标
+                      VerifiedAvatar(
+                        avatarUrl: avatarUrl,
+                        radius: 45,
+                        verificationType: verificationType,
+                        onTap: !isGuest ? _uploadAvatarSimple : null,
+                        defaultIcon:
+                        isGuest ? Icons.person_outline : Icons.person,
+                      ),
+                    ],
+                  ),
                 ),
-                child: Icon(Icons.verified, color: badgeColor, size: 26 * s),
               ),
-              SizedBox(width: 18 * s),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(isVerified ? 'Verified' : 'Verification',
-                        style: const TextStyle(
-                            fontSize: 16.0, fontWeight: FontWeight.w600)),
-                    SizedBox(height: 3 * s),
-                    Text(
-                        isVerified
-                            ? 'Status: Verified'
-                            : 'Status: Not verified',
-                        style:
-                        TextStyle(fontSize: 13.0, color: Colors.grey[600])),
+              const SizedBox(height: 16),
+              Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                  shadows: [
+                    Shadow(
+                        offset: Offset(0, 2),
+                        blurRadius: 4,
+                        color: Color(0x40000000))
                   ],
                 ),
               ),
-              SizedBox(width: 10 * s),
-              isLoading
-                  ? SizedBox(
-                width: 18 * s,
-                height: 18 * s,
-                child: const CircularProgressIndicator(strokeWidth: 2),
-              )
-                  : Icon(Icons.arrow_forward_ios,
-                  size: 18 * s, color: Colors.grey[400]),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(email.contains('@') ? Icons.email : Icons.phone,
+                        size: 14, color: Colors.white.withOpacity(0.95)),
+                    const SizedBox(width: 6),
+                    Text(email,
+                        style: TextStyle(
+                            color: Colors.white.withOpacity(0.95),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500)),
+                  ],
+                ),
+              ),
+              if (!isGuest && memberSince != null) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.calendar_today_outlined,
+                          size: 12, color: Colors.white),
+                      const SizedBox(width: 4),
+                      Text(memberSince,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500)),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -6258,14 +6108,93 @@ class _VerificationTileCard extends StatelessWidget {
   }
 }
 
-/* ---------------- 通用列表项（统一卡片样式） ---------------- */
+/* ---------------- Verification Tile（简版：图标 + chevron） ---------------- */
+class _VerificationTileCard extends StatelessWidget {
+  final bool isVerified;
+  final bool isLoading; // ✅ 新增：刷新中的可视反馈
+  final VoidCallback? onTap;
+
+  const _VerificationTileCard({
+    required this.isVerified,
+    required this.isLoading,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final Color badgeColor = isVerified ? Colors.green : Colors.grey;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          // 与其它通用卡片保持一致的内边距与阴影
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 12,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // 左侧圆角方块图标
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: badgeColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(Icons.verified, color: badgeColor, size: 26),
+              ),
+              const SizedBox(width: 18),
+              // 文案
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(isVerified ? 'Verified' : 'Verification',
+                        style: const TextStyle(
+                            fontSize: 17, fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 3),
+                    Text(
+                        isVerified ? 'Status: Verified' : 'Status: Not verified',
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              // 右侧：loading 或箭头
+              isLoading
+                  ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+                  : Icon(Icons.arrow_forward_ios,
+                  size: 18, color: Colors.grey[400]),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/* ---------------- 通用列表项（其余页面仍用你的卡片样式；不再改造细节） ---------------- */
 class _ProfileOptionEnhanced extends StatelessWidget {
   final IconData icon;
   final String title;
   final String? subtitle;
   final Color color;
   final VoidCallback? onTap;
-  final double scale;
 
   const _ProfileOptionEnhanced({
     required this.icon,
@@ -6273,122 +6202,55 @@ class _ProfileOptionEnhanced extends StatelessWidget {
     required this.color,
     this.subtitle,
     this.onTap,
-    this.scale = 1.0,
   });
 
   @override
   Widget build(BuildContext context) {
-    final s = scale;
-
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16 * s),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: EdgeInsets.all(16 * s),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16 * s),
+            borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                  color: const Color.fromRGBO(0, 0, 0, 0.04),
-                  blurRadius: 12 * s,
-                  offset: Offset(0, 2 * s))
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 2))
             ],
           ),
           child: Row(
             children: [
               Container(
-                padding: EdgeInsets.all(12 * s),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                     color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(14 * s)),
-                child: Icon(icon, color: color, size: 26 * s),
+                    borderRadius: BorderRadius.circular(14)),
+                child: Icon(icon, color: color, size: 26),
               ),
-              SizedBox(width: 18 * s),
+              const SizedBox(width: 18),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title,
                         style: const TextStyle(
-                            fontSize: 16.0, fontWeight: FontWeight.w600)),
+                            fontSize: 17, fontWeight: FontWeight.w600)),
                     if (subtitle != null) ...[
-                      SizedBox(height: 3 * s),
+                      const SizedBox(height: 3),
                       Text(subtitle!,
-                          style: TextStyle(
-                              fontSize: 13.0, color: Colors.grey[600])),
+                          style:
+                          TextStyle(fontSize: 14, color: Colors.grey[600])),
                     ],
                   ],
                 ),
               ),
-              SizedBox(width: 10 * s),
-              Icon(Icons.arrow_forward_ios,
-                  size: 18 * s, color: Colors.grey[400]),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/* ---------------- My Rewards（统一样式版） ---------------- */
-class _RewardsTileUnified extends StatelessWidget {
-  final double scale;
-  final VoidCallback? onTap;
-  const _RewardsTileUnified({this.scale = 1.0, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final s = scale;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16 * s),
-        child: Container(
-          padding: EdgeInsets.all(16 * s),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16 * s),
-            boxShadow: [
-              BoxShadow(
-                color: const Color.fromRGBO(0, 0, 0, 0.04),
-                blurRadius: 12 * s,
-                offset: Offset(0, 2 * s),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(12 * s),
-                decoration: BoxDecoration(
-                  color: Colors.deepPurple.withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(14 * s),
-                ),
-                child: Icon(Icons.emoji_events_rounded,
-                    color: Colors.deepPurple, size: 26 * s),
-              ),
-              SizedBox(width: 18 * s),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('My Rewards',
-                        style: TextStyle(
-                            fontSize: 16.0, fontWeight: FontWeight.w600)),
-                    SizedBox(height: 3),
-                    Text('Points: 0 · Coupons: 1',
-                        style:
-                        TextStyle(fontSize: 13.0, color: Color(0xFF6B7280))),
-                  ],
-                ),
-              ),
               const SizedBox(width: 10),
-              Icon(Icons.arrow_forward_ios, size: 18, color: Color(0xFFBDBDBD)),
+              Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey[400]),
             ],
           ),
         ),
@@ -6397,7 +6259,7 @@ class _RewardsTileUnified extends StatelessWidget {
   }
 }
 
-/* ---------------- Guest 简化入口 ---------------- */
+/* ---------------- Guest 选项（简版） ---------------- */
 class _GuestSimpleOptions extends StatelessWidget {
   const _GuestSimpleOptions();
 
@@ -6413,7 +6275,7 @@ class _GuestSimpleOptions extends StatelessWidget {
           onTap: () => Navigator.push(
               context, MaterialPageRoute(builder: (_) => HelpSupportPage())),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
         _ProfileOptionEnhanced(
           icon: Icons.info_outline_rounded,
           title: l10n.about,
@@ -6452,11 +6314,11 @@ class HelpSupportPage extends StatelessWidget {
                     end: Alignment.bottomRight,
                     colors: [Color(0xFF60A5FA), Color(0xFF3B82F6)]),
                 borderRadius: BorderRadius.circular(18),
-                boxShadow: const [
+                boxShadow: [
                   BoxShadow(
-                      color: Color.fromRGBO(37, 99, 235, 0.3),
+                      color: Colors.blue.withOpacity(0.3),
                       blurRadius: 24,
-                      offset: Offset(0, 12))
+                      offset: const Offset(0, 12))
                 ],
               ),
               child: Column(
@@ -6520,11 +6382,11 @@ class HelpSupportPage extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(14),
-            boxShadow: const [
+            boxShadow: [
               BoxShadow(
-                  color: Color.fromRGBO(0, 0, 0, 0.04),
+                  color: Colors.black.withOpacity(0.04),
                   blurRadius: 10,
-                  offset: Offset(0, 2))
+                  offset: const Offset(0, 2))
             ],
           ),
           child: Row(
@@ -6583,11 +6445,11 @@ class AboutPage extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: const [
+                boxShadow: [
                   BoxShadow(
-                      color: Color.fromRGBO(0, 0, 0, 0.05),
+                      color: Colors.black.withOpacity(0.05),
                       blurRadius: 12,
-                      offset: Offset(0, 4))
+                      offset: const Offset(0, 4))
                 ],
               ),
               child: Column(
@@ -6615,11 +6477,11 @@ class AboutPage extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: const [
+                boxShadow: [
                   BoxShadow(
-                      color: Color.fromRGBO(0, 0, 0, 0.05),
+                      color: Colors.black.withOpacity(0.05),
                       blurRadius: 12,
-                      offset: Offset(0, 4))
+                      offset: const Offset(0, 4))
                 ],
               ),
               child: Row(
@@ -6629,8 +6491,7 @@ class AboutPage extends StatelessWidget {
                       size: 18, color: Colors.grey[600]),
                   const SizedBox(width: 5),
                   Text('2024 Swaply. All rights reserved.',
-                      style:
-                      TextStyle(fontSize: 14, color: Colors.grey[600])),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600])),
                 ],
               ),
             ),

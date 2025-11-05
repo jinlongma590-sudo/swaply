@@ -6,7 +6,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:swaply/services/reward_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sf;
 
-const String kAuthRedirectUri = 'swaply://login-callback';
+// 导入全局配置和Service
+import 'package:swaply/config/auth_config.dart';
+import 'package:swaply/services/oauth_service.dart';
+
+// const String kAuthRedirectUri = 'swaply://login-callback'; // <- 已删除/注释，使用 auth_config.dart
 
 class RegisterScreen extends StatefulWidget {
   final String? invitationCode;
@@ -98,7 +102,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final res = await sf.Supabase.instance.client.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
-        emailRedirectTo: kAuthRedirectUri,
+        emailRedirectTo: kAuthRedirectUri, // <- 使用导入的常量
       );
 
       if (res.session != null) {
@@ -123,11 +127,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final code = _pickCodeFromUI();
       await _maybeBindInviteCode(code);
 
-      await sf.Supabase.instance.client.auth.signInWithOAuth(
-        sf.OAuthProvider.google,
-        redirectTo: kAuthRedirectUri,
-        queryParams: const {'prompt': 'select_account'},
-      );
+      // --- 修改点 ---
+      // await sf.Supabase.instance.client.auth.signInWithOAuth(
+      //   sf.OAuthProvider.google,
+      //   redirectTo: kAuthRedirectUri, // <- 旧常量
+      //   queryParams: const {'prompt': 'select_account'},
+      // );
+      await OAuthService.signInWithGoogle();
+      // --- 结束 ---
     } on sf.AuthException catch (e) {
       final msg = e.message.toLowerCase();
       if (msg.contains('cancel') ||
@@ -154,10 +161,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final code = _pickCodeFromUI();
       await _maybeBindInviteCode(code);
 
-      await sf.Supabase.instance.client.auth.signInWithOAuth(
-        sf.OAuthProvider.facebook,
-        redirectTo: kAuthRedirectUri,
-      );
+      // --- 修改点 ---
+      // await sf.Supabase.instance.client.auth.signInWithOAuth(
+      //   sf.OAuthProvider.facebook,
+      //   redirectTo: kAuthRedirectUri, // <- 旧常量
+      // );
+      await OAuthService.signInWithFacebook();
+      // --- 结束 ---
 
       await _maybeBindInviteCode(code);
     } on sf.AuthException catch (e) {
@@ -175,10 +185,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final code = _pickCodeFromUI();
       await _maybeBindInviteCode(code);
 
-      await sf.Supabase.instance.client.auth.signInWithOAuth(
-        sf.OAuthProvider.apple,
-        redirectTo: kAuthRedirectUri,
-      );
+      // --- 修改点 ---
+      // await sf.Supabase.instance.client.auth.signInWithOAuth(
+      //   sf.OAuthProvider.apple,
+      //   redirectTo: kAuthRedirectUri, // <- 旧常量
+      // );
+      await OAuthService.signInWithApple();
+      // --- 结束 ---
 
       await _maybeBindInviteCode(code);
     } on sf.AuthException catch (e) {

@@ -12,8 +12,12 @@ import 'forgot_password_screen.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart' as sf;
 
+// 导入全局配置和Service
+import 'package:swaply/config/auth_config.dart';
+import 'package:swaply/services/oauth_service.dart';
+
 // 与 Supabase Dashboard / AndroidManifest / iOS URL Types 对齐
-const String kAuthRedirectUri = 'swaply://login-callback';
+// const String kAuthRedirectUri = 'swaply://login-callback'; // <- 已删除/注释，使用 auth_config.dart
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -62,11 +66,14 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      await sf.Supabase.instance.client.auth.signInWithOAuth(
-        sf.OAuthProvider.google,
-        redirectTo: kAuthRedirectUri,
-        queryParams: const {'prompt': 'select_account'},
-      );
+      // --- 修改点 ---
+      // await sf.Supabase.instance.client.auth.signInWithOAuth(
+      //   sf.OAuthProvider.google,
+      //   redirectTo: kAuthRedirectUri, // <- 旧常量
+      //   queryParams: const {'prompt': 'select_account'},
+      // );
+      await OAuthService.signInWithGoogle();
+      // --- 结束 ---
     } on sf.AuthException catch (e) {
       final msg = e.message.toLowerCase();
       if (msg.contains('cancel') ||
@@ -92,10 +99,13 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      await sf.Supabase.instance.client.auth.signInWithOAuth(
-        sf.OAuthProvider.facebook,
-        redirectTo: kAuthRedirectUri,
-      );
+      // --- 修改点 ---
+      // await sf.Supabase.instance.client.auth.signInWithOAuth(
+      //   sf.OAuthProvider.facebook,
+      //   redirectTo: kAuthRedirectUri, // <- 旧常量
+      // );
+      await OAuthService.signInWithFacebook();
+      // --- 结束 ---
     } on sf.AuthException catch (e) {
       _showError(e.message);
     } catch (_) {
@@ -109,10 +119,13 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      await sf.Supabase.instance.client.auth.signInWithOAuth(
-        sf.OAuthProvider.apple,
-        redirectTo: kAuthRedirectUri,
-      );
+      // --- 修改点 ---
+      // await sf.Supabase.instance.client.auth.signInWithOAuth(
+      //   sf.OAuthProvider.apple,
+      //   redirectTo: kAuthRedirectUri, // <- 旧常量
+      // );
+      await OAuthService.signInWithApple();
+      // --- 结束 ---
     } on sf.AuthException catch (e) {
       _showError(e.message);
     } catch (_) {

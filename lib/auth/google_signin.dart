@@ -1,31 +1,30 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+// --- 新增 Import ---
+import 'package:swaply/services/oauth_service.dart';
+// -----------------
 
 /// 根据平台返回回调地址：Web 用 Dashboard 的 callback，移动端用自定义 scheme
-String _redirectUrl() {
-  if (kIsWeb) {
-    // 你项目的固定回调
-    return 'https://rhckybselarzglkmlyqs.supabase.co/auth/v1/callback';
-  }
-  // Android/iOS 自定义回调（已在 Manifest/Info.plist 配置）
-  return 'swaply://login-callback';
-}
+// --- 已删除：不再需要此方法，逻辑统一到 OAuthService ---
+// String _redirectUrl() { ... }
 
 /// Google 登录
 Future<void> signInWithGoogle(BuildContext context) async {
-  final client = Supabase.instance.client;
+  // final client = Supabase.instance.client; // 已移至 OAuthService
 
   try {
-    final redirectUrl = _redirectUrl();
-
-    await client.auth.signInWithOAuth(
-      OAuthProvider.google, // ✅ 关键：用 OAuthProvider.google
-      scopes: 'openid email profile',
-      redirectTo: redirectUrl,
-    );
-
-    debugPrint('[Google Sign-In] launched, redirect=$redirectUrl');
+    // --- 修改：调用统一的 Service ---
+    // final redirectUrl = _redirectUrl();
+    // await client.auth.signInWithOAuth(
+    //   OAuthProvider.google,
+    //   scopes: 'openid email profile',
+    //   redirectTo: redirectUrl,
+    // );
+    // debugPrint('[Google Sign-In] launched, redirect=$redirectUrl');
+    await OAuthService.signInWithGoogle();
+    debugPrint('[Google Sign-In] launched via OAuthService.');
+    // --- 结束 ---
   } catch (e, st) {
     debugPrint('[Google Sign-In] error: $e\n$st');
     if (!context.mounted) return;
@@ -38,6 +37,7 @@ Future<void> signInWithGoogle(BuildContext context) async {
 /// 退出登录
 Future<void> signOutGoogle() async {
   try {
+    // 这个方法保持不变是安全的
     await Supabase.instance.client.auth.signOut();
   } catch (e) {
     debugPrint('[Google Sign-Out] error: $e');

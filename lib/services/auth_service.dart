@@ -9,6 +9,11 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/profile_service.dart'; // 统一创建profile/欢迎券入口
 
+// --- 新增 Import ---
+import 'package:swaply/config/auth_config.dart';
+import 'package:swaply/services/oauth_service.dart';
+// -----------------
+
 class AuthService {
   SupabaseClient get supabase => Supabase.instance.client;
 
@@ -77,6 +82,7 @@ class AuthService {
         email: email.trim().toLowerCase(),
         password: password,
         data: meta.isEmpty ? null : meta,
+        emailRedirectTo: kAuthRedirectUri, // <- 统一回调
       );
 
       final user = supabase.auth.currentUser;
@@ -98,10 +104,13 @@ class AuthService {
     }
   }
 
-  Future<bool> signInWithGoogle({String? redirectTo}) async {
+  // --- 修改：使用 OAuthService ---
+  Future<bool> signInWithGoogle() async {
     try {
-      await supabase.auth
-          .signInWithOAuth(OAuthProvider.google, redirectTo: redirectTo);
+      // await supabase.auth
+      //     .signInWithOAuth(OAuthProvider.google, redirectTo: redirectTo);
+      await OAuthService.signInWithGoogle(); // <- 替换
+
       final user = supabase.auth.currentUser;
       if (user == null) return false;
 
@@ -127,10 +136,13 @@ class AuthService {
     }
   }
 
-  Future<bool> signInWithFacebook({String? redirectTo}) async {
+  // --- 修改：使用 OAuthService ---
+  Future<bool> signInWithFacebook() async {
     try {
-      await supabase.auth
-          .signInWithOAuth(OAuthProvider.facebook, redirectTo: redirectTo);
+      // await supabase.auth
+      //     .signInWithOAuth(OAuthProvider.facebook, redirectTo: redirectTo);
+      await OAuthService.signInWithFacebook(); // <- 替换
+
       final user = supabase.auth.currentUser;
       if (user == null) return false;
 
@@ -267,11 +279,12 @@ class AuthService {
     }
   }
 
-  Future<void> resetPassword(String email, {String? redirectTo}) async {
+  // --- 修改：使用 kAuthRedirectUri ---
+  Future<void> resetPassword(String email) async {
     try {
       await supabase.auth.resetPasswordForEmail(
         email.trim().toLowerCase(),
-        redirectTo: redirectTo,
+        redirectTo: kAuthRedirectUri, // <- 统一回调
       );
     } on AuthException catch (e) {
       throw Exception('Password reset failed: ${e.message}');
@@ -300,10 +313,13 @@ class AuthService {
       if (metadata != null) meta.addAll(metadata);
 
       if (meta.isNotEmpty || email != null) {
-        await supabase.auth.updateUser(UserAttributes(
-          email: email?.trim().toLowerCase(),
-          data: meta.isEmpty ? null : meta,
-        ));
+        await supabase.auth.updateUser(
+          UserAttributes(
+            email: email?.trim().toLowerCase(),
+            data: meta.isEmpty ? null : meta,
+          ),
+          emailRedirectTo: kAuthRedirectUri, // <- 统一回调
+        );
       }
 
       final user = currentUser;
