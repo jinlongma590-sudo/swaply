@@ -1,7 +1,7 @@
-// lib/auth/login_screen.dart - iOS 定向回调修复版（直连 Supabase）
+// lib/auth/login_screen.dart - iOS/Android/Web 平台兼容修复版
 
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+// ❌ 移除了 'dart:io'
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform; // ✅ 添加了 defaultTargetPlatform
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:url_launcher/url_launcher.dart' show LaunchMode; // ✅ 用于 authScreenLaunchMode
@@ -14,6 +14,8 @@ import 'package:supabase_flutter/supabase_flutter.dart' as sf;
 
 // 与 supabase_flutter 官方默认回调保持一致（iOS 必须携带这个或你的自定义 Scheme）
 const String _kIOSRedirect = 'io.supabase.flutter://callback';
+// ✅ 新增：定义 Android 的回调 URL（与你的 Manifest 一致）
+const String _kAndroidRedirect = 'swaply://login-callback';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -38,15 +40,29 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // 统一的 OAuth 入口：仅 iOS 显式传 redirectTo，其它平台走默认
+  // ✅ 修复：使用 defaultTargetPlatform 替换 Platform.isIOS
   Future<void> _oauthSignIn(
       sf.OAuthProvider provider, {
         String? scopes,
         Map<String, String>? queryParams,
       }) async {
+    // 动态决定重定向 URL
+    String? redirectUrl;
+    if (kIsWeb) {
+      redirectUrl = null; // Web 平台使用 Supabase 仪表盘的默认设置
+    } else {
+      // 非 Web 平台（Android, iOS 等）
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        redirectUrl = _kIOSRedirect; // iOS 使用 specific redirect
+      } else if (defaultTargetPlatform == TargetPlatform.android) {
+        redirectUrl = _kAndroidRedirect; // Android 使用 specific redirect
+      }
+      // 其他平台 (macOS, Windows...) 将使用 null
+    }
+
     await sf.Supabase.instance.client.auth.signInWithOAuth(
       provider,
-      redirectTo: Platform.isIOS ? _kIOSRedirect : null,
+      redirectTo: redirectUrl, // ✅ 使用动态决定的 URL
       authScreenLaunchMode: LaunchMode.externalApplication, // ✅ 强制外部浏览器
       scopes: scopes,
       queryParams: queryParams,
@@ -153,7 +169,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool showApple = !kIsWeb && Platform.isIOS;
+    // ✅ 修复：使用 defaultTargetPlatform 替换 Platform.isIOS
+    final bool showApple = !kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS);
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
