@@ -38,7 +38,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-
             <!-- 深链：swaply://login-callback（严格匹配 host） -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
@@ -46,6 +45,7 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="swaply" android:host="login-callback" android:pathPrefix="/"/>
             </intent-filter>
+
             <!-- 兜底：只要是 swaply://* 都接（有些 ROM 对多 <data> 组合有兼容问题） -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
@@ -54,7 +54,6 @@
                 <data android:scheme="swaply"/>
             </intent-filter>
 
-
             <!-- 深链（可选）：swaply://reset-password -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW"/>
@@ -62,6 +61,15 @@
                 <category android:name="android.intent.category.BROWSABLE"/>
                 <data android:scheme="swaply" android:host="reset-password"/>
             </intent-filter>
+
+            <!-- ✅ Supabase 默认 OAuth 回调：io.supabase.flutter://callback -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="io.supabase.flutter" android:host="callback"/>
+            </intent-filter>
+
         </activity>
 
         <meta-data android:name="flutterEmbedding" android:value="2" />

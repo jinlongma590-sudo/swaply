@@ -1,54 +1,42 @@
 // lib/services/oauth_service.dart
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart' show LaunchMode;
-import 'package:swaply/config/auth_config.dart';
+//
+// 统一的 OAuth 登录封装（Google / Facebook / Apple）
+// - 返回类型统一 Future<void>（兼容旧版返回 bool、新版返回 AuthResponse）
+// - redirectTo：Web 传 null；移动端传 swaply://login-callback（见 auth_config.dart）
+//
+// 不影响 Android；iOS 依赖 Info.plist 里的 URL Schemes 已就绪。
 
-/// 统一封装三方登录（Google / Facebook / Apple）
-/// - 使用 PKCE（在 `Supabase.initialize` 已设置）
-/// - 移动端优先用 **inAppBrowserView**（Android 的 Chrome Custom Tabs、iOS 的 SFSafariViewController），
-///   这是 Google 允许的授权容器；设备不支持时由 url_launcher 自动回落到系统浏览器。
-/// - redirectTo 全部统一走 `swaply://login-callback`
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:supabase_flutter/supabase_flutter.dart' as sf;
+import 'package:swaply/config/auth_config.dart'; // kAuthRedirectUri = 'swaply://login-callback'
+
 class OAuthService {
-  static SupabaseClient get _sb => Supabase.instance.client;
+  OAuthService._();
 
-  /// 移动端优先走 CustomTabs / SFSafariVC；Web 保持默认。
-  static LaunchMode get _launchMode =>
-      kIsWeb ? LaunchMode.platformDefault : LaunchMode.inAppBrowserView;
+  static sf.SupabaseClient get _sb => sf.Supabase.instance.client;
 
   /// Google 登录
-  static Future<void> signInWithGoogle() {
-    return _sb.auth.signInWithOAuth(
-      OAuthProvider.google,
+  static Future<void> signInWithGoogle() async {
+    await _sb.auth.signInWithOAuth(
+      sf.OAuthProvider.google,
       redirectTo: kIsWeb ? null : kAuthRedirectUri,
-      // Google 推荐的基本作用域
-      scopes: 'openid email profile',
-      // 让用户每次可选择账号
       queryParams: const {'prompt': 'select_account'},
-      authScreenLaunchMode: _launchMode,
     );
   }
 
   /// Facebook 登录
-  static Future<void> signInWithFacebook() {
-    return _sb.auth.signInWithOAuth(
-      OAuthProvider.facebook,
+  static Future<void> signInWithFacebook() async {
+    await _sb.auth.signInWithOAuth(
+      sf.OAuthProvider.facebook,
       redirectTo: kIsWeb ? null : kAuthRedirectUri,
-      // 明确声明 email（public_profile 默认就有，这里补上 email）
-      scopes: 'public_profile,email',
-      authScreenLaunchMode: _launchMode,
     );
   }
 
-  /// Apple 登录
-  static Future<void> signInWithApple() {
-    return _sb.auth.signInWithOAuth(
-      OAuthProvider.apple,
+  /// Apple 登录（仅 iOS 显示按钮）
+  static Future<void> signInWithApple() async {
+    await _sb.auth.signInWithOAuth(
+      sf.OAuthProvider.apple,
       redirectTo: kIsWeb ? null : kAuthRedirectUri,
-      // Apple 要求用空格分隔
-      scopes: 'name email',
-      authScreenLaunchMode: _launchMode,
     );
   }
 }

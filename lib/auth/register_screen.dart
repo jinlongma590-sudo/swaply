@@ -1,16 +1,18 @@
-// lib/auth/register_screen.dart — no authFlowType, use OAuthProvider.*, iOS-only Apple button
+// lib/auth/register_screen.dart — iOS OAuth 回跳修复版（直连 Supabase）
+
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:url_launcher/url_launcher.dart' show LaunchMode; // ✅ 用于 authScreenLaunchMode
 import 'package:swaply/services/reward_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sf;
 
-// 导入全局配置和Service
+// 仅保留全局配置（用于 emailRedirectTo 等）
 import 'package:swaply/config/auth_config.dart';
-import 'package:swaply/services/oauth_service.dart';
 
-// const String kAuthRedirectUri = 'swaply://login-callback'; // <- 已删除/注释，使用 auth_config.dart
+// 与 supabase_flutter 官方默认回调保持一致（iOS 必须携带这个或你的自定义 Scheme）
+const String _kIOSRedirect = 'io.supabase.flutter://callback';
 
 class RegisterScreen extends StatefulWidget {
   final String? invitationCode;
@@ -59,6 +61,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  // —— 统一的 OAuth 入口：仅 iOS 传 redirectTo，其它平台走默认 ——
+  Future<void> _oauthSignIn(
+      sf.OAuthProvider provider, {
+        String? scopes,
+        Map<String, String>? queryParams,
+      }) async {
+    await sf.Supabase.instance.client.auth.signInWithOAuth(
+      provider,
+      redirectTo: Platform.isIOS ? _kIOSRedirect : null,
+      authScreenLaunchMode: LaunchMode.externalApplication, // ✅ 强制外部浏览器
+      scopes: scopes,
+      queryParams: queryParams,
+    );
+  }
+
   Future<void> _maybeBindInviteCode(String? code) async {
     if (code == null || code.trim().isEmpty) return;
     final normalized = code.trim().toUpperCase();
@@ -102,7 +119,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final res = await sf.Supabase.instance.client.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
-        emailRedirectTo: kAuthRedirectUri, // <- 使用导入的常量
+        // 邮件验证回调走你的配置常量；如需 iOS 也回跳 App，可改成：
+        // emailRedirectTo: Platform.isIOS ? _kIOSRedirect : kAuthRedirectUri,
+        emailRedirectTo: kAuthRedirectUri,
       );
 
       if (res.session != null) {
@@ -127,19 +146,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final code = _pickCodeFromUI();
       await _maybeBindInviteCode(code);
 
-      // --- 修改点 ---
-      // await sf.Supabase.instance.client.auth.signInWithOAuth(
-      //   sf.OAuthProvider.google,
-      //   redirectTo: kAuthRedirectUri, // <- 旧常量
-      //   queryParams: const {'prompt': 'select_account'},
-      // );
-      await OAuthService.signInWithGoogle();
-      // --- 结束 ---
+      await _oauthSignIn(
+        sf.OAuthProvider.google,
+        queryParams: const {'prompt': 'select_account'},
+        // 可选：scopes: 'email profile',
+      );
+
+      await _maybeBindInviteCode(code);
     } on sf.AuthException catch (e) {
       final msg = e.message.toLowerCase();
       if (msg.contains('cancel') ||
           msg.contains('canceled') ||
           msg.contains('popup_closed')) {
+        // 用户手动关闭，不提示
       } else {
         _showError('Google sign-in error: ${e.message}');
       }
@@ -156,18 +175,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _facebookRegister() async {
+    if (_isLoading) return;
     setState(() => _isLoading = true);
     try {
       final code = _pickCodeFromUI();
       await _maybeBindInviteCode(code);
 
-      // --- 修改点 ---
-      // await sf.Supabase.instance.client.auth.signInWithOAuth(
-      //   sf.OAuthProvider.facebook,
-      //   redirectTo: kAuthRedirectUri, // <- 旧常量
-      // );
-      await OAuthService.signInWithFacebook();
-      // --- 结束 ---
+      await _oauthSignIn(
+        sf.OAuthProvider.facebook,
+        // 可选：scopes: 'email public_profile',
+      );
 
       await _maybeBindInviteCode(code);
     } on sf.AuthException catch (e) {
@@ -180,18 +197,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _appleRegister() async {
+    if (_isLoading) return;
     setState(() => _isLoading = true);
     try {
       final code = _pickCodeFromUI();
       await _maybeBindInviteCode(code);
 
-      // --- 修改点 ---
-      // await sf.Supabase.instance.client.auth.signInWithOAuth(
-      //   sf.OAuthProvider.apple,
-      //   redirectTo: kAuthRedirectUri, // <- 旧常量
-      // );
-      await OAuthService.signInWithApple();
-      // --- 结束 ---
+      await _oauthSignIn(
+        sf.OAuthProvider.apple,
+        scopes: 'name email', // Apple 推荐
+      );
 
       await _maybeBindInviteCode(code);
     } on sf.AuthException catch (e) {
@@ -280,8 +295,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
                 SizedBox(height: 6.h),
-                Text('Join Swaply and start trading',
-                    style: TextStyle(fontSize: 14.sp, color: Colors.grey[600])),
+                Text(
+                  'Join Swaply and start trading',
+                  style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
+                ),
                 SizedBox(height: 28.h),
 
                 _input(
@@ -397,8 +414,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     Expanded(
                       child: RichText(
                         text: TextSpan(
-                          style:
-                          TextStyle(fontSize: 12.sp, color: Colors.grey[700]),
+                          style: TextStyle(fontSize: 12.sp, color: Colors.grey[700]),
                           children: const [
                             TextSpan(text: 'I agree to the '),
                             TextSpan(
@@ -462,8 +478,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     Expanded(child: Divider(color: Colors.grey[300])),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 12.w),
-                      child: Text('OR',
-                          style: TextStyle(color: Colors.grey[500], fontSize: 12.sp)),
+                      child: Text(
+                        'OR',
+                        style: TextStyle(color: Colors.grey[500], fontSize: 12.sp),
+                      ),
                     ),
                     Expanded(child: Divider(color: Colors.grey[300])),
                   ],
@@ -505,7 +523,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: TextStyle(color: Colors.grey[600], fontSize: 12.sp),
                     ),
                     GestureDetector(
-                      onTap: () => _showInfo('Sign-in navigation is handled elsewhere.'),
+                      onTap: () =>
+                          _showInfo('Sign-in navigation is handled elsewhere.'),
                       child: Text(
                         'Sign In',
                         style: TextStyle(
@@ -577,8 +596,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         Text(
                           "Get extra rewards with friend's invitation",
-                          style:
-                          TextStyle(fontSize: 11.sp, color: Colors.grey[600]),
+                          style: TextStyle(fontSize: 11.sp, color: Colors.grey[600]),
                         ),
                       ],
                     ),
@@ -609,8 +627,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     textCapitalization: TextCapitalization.characters,
                     decoration: InputDecoration(
                       hintText: 'Enter invitation code',
-                      hintStyle:
-                      TextStyle(fontSize: 12.sp, color: Colors.grey[400]),
+                      hintStyle: TextStyle(fontSize: 12.sp, color: Colors.grey[400]),
                       prefixIcon: Icon(Icons.vpn_key,
                           size: 18.r, color: const Color(0xFF2196F3)),
                       filled: true,

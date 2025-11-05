@@ -73,7 +73,6 @@
     <string>This app needs camera access to take photos for your listing.</string>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>This app needs access to your photo library to upload listing images.</string>
-    <!-- 新增：部分机型/场景保存到相册需要这个权限，更稳 -->
     <key>NSPhotoLibraryAddUsageDescription</key>
     <string>This app needs permission to save photos to your library when you save or export images.</string>
 
@@ -81,9 +80,19 @@
     <key>FlutterDeepLinkingEnabled</key>
     <true/>
 
-    <!-- 自定义 URL Scheme：用于 Supabase OAuth 回调（iOS 只匹配 scheme） -->
+    <!-- URL Schemes：先加 Supabase 默认，再保留你的 swaply -->
     <key>CFBundleURLTypes</key>
     <array>
+      <!-- Supabase Flutter 默认 iOS 回调 Scheme（必须有） -->
+      <dict>
+        <key>CFBundleURLName</key>
+        <string>supabase.auth</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>io.supabase.flutter</string>
+        </array>
+      </dict>
+      <!-- 你的自定义 scheme（可选保留） -->
       <dict>
         <key>CFBundleURLName</key>
         <string>swaply.login</string>
@@ -94,7 +103,7 @@
       </dict>
     </array>
 
-    <!-- 允许 canOpenURL 的外部 App 白名单（按需） -->
+    <!-- 允许 canOpenURL 的外部 App 白名单 -->
     <key>LSApplicationQueriesSchemes</key>
     <array>
       <string>whatsapp</string>
@@ -107,7 +116,6 @@
       <string>fb-messenger</string>
       <string>fb-messenger-share-api</string>
       <string>facebook</string>
-      <!-- 新增：你的页面会用到 -->
       <string>tel</string>
       <string>mailto</string>
     </array>

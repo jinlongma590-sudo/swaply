@@ -445,7 +445,7 @@ Future<void> main() async {
     anonKey:
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoY2t5YnNlbGFyemdsa21seXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTM0NTgsImV4cCI6MjA3MDU4OTQ1OH0.3I0T2DidiF-q9l2tWeHOjB31QogXHDqRtEjDn0RfVbU',
     authOptions: const FlutterAuthClientOptions(
-      authFlowType: AuthFlowType.pkce, // 馃憟 鍏抽敭锛屽埆鍐欐垚 flowType
+       // 馃憟 鍏抽敭锛屽埆鍐欐垚 flowType
       autoRefreshToken: true,
     ),
   );
@@ -5169,7 +5169,10 @@ class NoGlowScrollBehavior extends ScrollBehavior {
 const _kPrivacyUrl = 'https://www.swaply.cc/privacy';
 const _kDeleteUrl = 'https://www.swaply.cc/delete-account';
 
-/* ---------------- Profile Page 涓汉璧勬枡椤?---------------- */
+// ✅ 新增（如果文件顶部没有）：避免 setState after dispose
+
+
+/* ---------------- Profile Page 个人资料页 ---------------- */
 class ProfilePage extends StatefulWidget {
   final bool isGuest;
   const ProfilePage({Key? key, this.isGuest = false}) : super(key: key);
@@ -5182,15 +5185,15 @@ class _ProfilePageState extends State<ProfilePage>
     with SingleTickerProviderStateMixin {
   bool _loading = true;
 
-  /// 基础资料（显示名/头像/时间等）
+  /// 基础资料（用于显示：名/头像/时间等）
   Map<String, dynamic>? _profile;
 
-  /// 只读的 profiles 行（若有需要）
+  /// 仅读 profiles 行（包含 verification_type 等）
   Map<String, dynamic>? _profileRow;
 
   final _svc = ProfileService();
 
-  // ✅ 新增：邮件验证服务与状态
+  // ✅ 认证服务与状态（取 user_verifications）
   final _verifySvc = EmailVerificationService();
   bool _verified = false;
   vt.VerificationBadgeType _badge = vt.VerificationBadgeType.none;
@@ -5202,10 +5205,8 @@ class _ProfilePageState extends State<ProfilePage>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
-  // ✅ 新增：监听句柄（需要 import 'dart:async';）
+  // ✅ 稳定性：保存订阅句柄 & 并发保护
   StreamSubscription<AuthState>? _authSub;
-
-  // ✅ 新增：并发防抖，避免短时间重复触发导致竞态
   bool _verifyBusy = false;
 
   @override
@@ -5216,31 +5217,28 @@ class _ProfilePageState extends State<ProfilePage>
     _fadeAnimation =
         CurvedAnimation(parent: _animationController, curve: Curves.easeInOut);
 
-    // 基础资料
     if (!widget.isGuest) {
       _load();
     } else {
       _animationController.forward();
     }
 
-    // ✅ 首次进入拉取一次验证状态
-    _reloadUserVerificationStatus();
-
-    // ✅ 监听登录态变化，记得在 dispose 里 cancel
-    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((event) {
-      if (!mounted) return;
-      _reloadUserVerificationStatus();
+    // ✅ 保存订阅，dispose 时取消
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((_) {
+      if (mounted) _reloadUserVerificationStatus();
     });
+
+    _reloadUserVerificationStatus();
   }
 
   @override
   void dispose() {
-    _authSub?.cancel();           // ✅ 防止页面销毁后仍然收到回调
+    _authSub?.cancel(); // ✅ 取消订阅
     _animationController.dispose();
     super.dispose();
   }
 
-  /// 只读加载：仅加载用于展示的基础资料
+  /// 仅读基础资料（显示用）
   Future<void> _load() async {
     try {
       final base = await _svc.getUserProfile();
@@ -5253,39 +5251,28 @@ class _ProfilePageState extends State<ProfilePage>
         _loading = false;
       });
       _animationController.forward();
-
-      if (kDebugMode) {
-        debugPrint('[Profile] load: base loaded');
-      }
     } catch (e) {
-      if (kDebugMode) debugPrint('Error loading profile: $e');
       if (!mounted) return;
       setState(() => _loading = false);
       _animationController.forward();
     }
   }
 
-  // ✅ 只查 user_verifications，计算 _verified/_badge，并更新到状态
+  // ✅ 仅读 user_verifications，一次性计算 _verified/_badge，并更新状态
   Future<void> _reloadUserVerificationStatus() async {
-    // 并发保护
-    if (_verifyBusy) return;
+    if (!mounted || _verifyBusy) return; // 并发 & 生命周期保护
     _verifyBusy = true;
-
-    if (!mounted) {
-      _verifyBusy = false;
-      return;
-    }
     setState(() => _verifyLoading = true);
 
     try {
-      // 查 user_verifications
-      final row = await _verifySvc.fetchVerificationRow();
+      // ✅ 一定用 getUser() 获取“最新用户”
+      final auth = Supabase.instance.client.auth;
+      final userResp = await auth.getUser();
+      final user = userResp.user;
 
-      // ✅ 用 getUser() 拿最新 user（而不是 currentUser 的旧缓存）
-      final user = (await Supabase.instance.client.auth.getUser()).user;
+      final row = await _verifySvc.fetchVerificationRow(); // user_verifications
 
-      final verified =
-      vutils.computeIsVerified(verificationRow: row, user: user);
+      final verified = vutils.computeIsVerified(verificationRow: row, user: user);
       final badge = vutils.computeBadgeType(verificationRow: row, user: user);
 
       if (!mounted) return;
@@ -5293,21 +5280,12 @@ class _ProfilePageState extends State<ProfilePage>
         _verificationRow = row;
         _verified = verified;
         _badge = badge;
+        _verifyLoading = false;
       });
-
-      if (kDebugMode) {
-        debugPrint('[ProfilePage] _reloadUserVerificationStatus(): '
-            'verified=$_verified badge=$_badge row=${_verificationRow?['verification_type']}');
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('[ProfilePage] _reloadUserVerificationStatus error: $e');
-      }
+    } catch (_) {
+      if (mounted) setState(() => _verifyLoading = false);
     } finally {
       _verifyBusy = false;
-      if (mounted) {
-        setState(() => _verifyLoading = false);
-      }
     }
   }
 
@@ -5318,7 +5296,8 @@ class _ProfilePageState extends State<ProfilePage>
     try {
       final p = await ProfileService.instance.getUserProfile();
       if (p != null) {
-        nameCtrl.text = (p['display_name'] ?? p['full_name'] ?? '').toString();
+        nameCtrl.text =
+            (p['display_name'] ?? p['full_name'] ?? '').toString();
         phoneCtrl.text = (p['phone'] ?? '').toString();
       }
     } catch (_) {}
@@ -5363,8 +5342,7 @@ class _ProfilePageState extends State<ProfilePage>
                     ),
                     const SizedBox(width: 12),
                     const Text('Edit Profile',
-                        style:
-                        TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -5374,14 +5352,12 @@ class _ProfilePageState extends State<ProfilePage>
                   decoration: InputDecoration(
                     labelText: 'Full name',
                     labelStyle: const TextStyle(fontSize: 14),
-                    prefixIcon:
-                    const Icon(Icons.person_outline_rounded, size: 20),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                    prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                          color: Theme.of(context).primaryColor, width: 2),
+                      borderSide:
+                      BorderSide(color: Theme.of(context).primaryColor, width: 2),
                     ),
                   ),
                 ),
@@ -5394,12 +5370,11 @@ class _ProfilePageState extends State<ProfilePage>
                     labelText: 'Phone',
                     labelStyle: const TextStyle(fontSize: 14),
                     prefixIcon: const Icon(Icons.phone_outlined, size: 20),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(
-                          color: Theme.of(context).primaryColor, width: 2),
+                      borderSide:
+                      BorderSide(color: Theme.of(context).primaryColor, width: 2),
                     ),
                   ),
                 ),
@@ -5410,8 +5385,8 @@ class _ProfilePageState extends State<ProfilePage>
                     TextButton(
                       onPressed: () => Navigator.of(dialogCtx).maybePop(false),
                       style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 12)),
+                          padding:
+                          const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
                       child: const Text('Cancel', style: TextStyle(fontSize: 15)),
                     ),
                     const SizedBox(width: 12),
@@ -5426,8 +5401,8 @@ class _ProfilePageState extends State<ProfilePage>
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 28, vertical: 12),
+                          padding:
+                          const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12)),
                         ),
@@ -5457,14 +5432,12 @@ class _ProfilePageState extends State<ProfilePage>
               children: const [
                 Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
                 SizedBox(width: 8),
-                Text('Profile updated successfully',
-                    style: TextStyle(fontSize: 14)),
+                Text('Profile updated successfully', style: TextStyle(fontSize: 14)),
               ],
             ),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
-            shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -5479,14 +5452,13 @@ class _ProfilePageState extends State<ProfilePage>
                     color: Colors.white, size: 18),
                 const SizedBox(width: 8),
                 Expanded(
-                    child: Text('Update failed: $e',
-                        style: const TextStyle(fontSize: 14))),
+                    child:
+                    Text('Upload failed: $e', style: const TextStyle(fontSize: 14))),
               ],
             ),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
-            shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -5497,6 +5469,9 @@ class _ProfilePageState extends State<ProfilePage>
     phoneCtrl.dispose();
   }
 
+  // -----------------------------------------------------
+  // 上传头像：并发保护 + 缓存破坏参数
+  // -----------------------------------------------------
   Future<void> _uploadAvatarSimple() async {
     if (!mounted) return;
     setState(() => _uploadingAvatar = true);
@@ -5516,16 +5491,20 @@ class _ProfilePageState extends State<ProfilePage>
 
       final bytes = await File(image.path).readAsBytes();
       final ext = image.path.split('.').last;
-      final path =
-          '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.$ext';
+      final path = '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.$ext';
+
+      if (!mounted) return;
 
       await Supabase.instance.client.storage
           .from('avatars')
           .uploadBinary(path, bytes, fileOptions: const FileOptions(upsert: true));
 
-      final publicUrl =
+      final baseUrl =
       Supabase.instance.client.storage.from('avatars').getPublicUrl(path);
-      await ProfileService.instance.updateUserProfile(avatarUrl: publicUrl);
+      final cacheBust = DateTime.now().millisecondsSinceEpoch;
+      final publicUrlWithCacheBust = '$baseUrl?v=$cacheBust';
+
+      await ProfileService.instance.updateUserProfile(avatarUrl: publicUrlWithCacheBust);
 
       await _load();
       if (!mounted) return;
@@ -5535,14 +5514,12 @@ class _ProfilePageState extends State<ProfilePage>
             children: const [
               Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
               SizedBox(width: 8),
-              Text('Avatar updated successfully',
-                  style: TextStyle(fontSize: 14)),
+              Text('Avatar updated successfully', style: TextStyle(fontSize: 14)),
             ],
           ),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -5552,18 +5529,14 @@ class _ProfilePageState extends State<ProfilePage>
         SnackBar(
           content: Row(
             children: [
-              const Icon(Icons.error_outline_rounded,
-                  color: Colors.white, size: 18),
+              const Icon(Icons.error_outline_rounded, color: Colors.white, size: 18),
               const SizedBox(width: 8),
-              Expanded(
-                  child: Text('Upload failed: $e',
-                      style: const TextStyle(fontSize: 14))),
+              Expanded(child: Text('Upload failed: $e', style: const TextStyle(fontSize: 14))),
             ],
           ),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -5572,32 +5545,140 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
+  // -----------------------------------------------------
+  // Header：回到“自适应高度 + 内部 padding”的经典写法（不固定 300）
+  // -----------------------------------------------------
+  Widget _buildHeaderClassic({
+    required bool isGuest,
+    required String name,
+    required String email,
+    String? avatarUrl,
+    String? memberSince,
+    vt.VerificationBadgeType verificationType = vt.VerificationBadgeType.none,
+  }) {
+    final double statusBar = MediaQuery.of(context).padding.top;
+
+    return Container(
+      // 渐变背景（与你之前的风格一致）
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF2563EB), Color(0xFF3B82F6), Color(0xFF60A5FA)],
+          stops: [0.0, 0.5, 1.0],
+        ),
+      ),
+      child: Padding(
+        // 内消化状态栏高度，整体不被拉高
+        padding: EdgeInsets.fromLTRB(24, (statusBar > 0 ? statusBar + 12 : 20), 24, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Hero(
+              tag: 'profile_avatar',
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(colors: [
+                    Colors.white.withOpacity(0.9),
+                    Colors.white.withOpacity(0.3),
+                  ]),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color.fromRGBO(0, 0, 0, 0.2),
+                      blurRadius: 16,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: VerifiedAvatar(
+                  avatarUrl: avatarUrl,
+                  radius: 42, // 保持你原来偏紧凑的头像尺寸
+                  verificationType: verificationType,
+                  onTap: !isGuest ? _uploadAvatarSimple : null,
+                  defaultIcon: isGuest ? Icons.person_outline : Icons.person,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20.0,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+                shadows: [
+                  Shadow(offset: Offset(0, 2), blurRadius: 4, color: Color(0x40000000)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.20),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.white.withOpacity(0.30), width: 1),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(email.contains('@') ? Icons.email : Icons.phone,
+                      size: 14, color: Colors.white.withOpacity(0.95)),
+                  const SizedBox(width: 6),
+                  Text(email,
+                      style: TextStyle(
+                          color: Colors.white.withOpacity(0.95),
+                          fontSize: 13.0,
+                          fontWeight: FontWeight.w500)),
+                ],
+              ),
+            ),
+            if (!isGuest && memberSince != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.calendar_today_outlined, size: 12, color: Colors.white),
+                    SizedBox(width: 4),
+                    // 文案在 build() 里拼好传进来
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final languageProvider = Provider.of<LanguageProvider>(context);
-
-    final media = MediaQuery.of(context);
-    final clamp = media.copyWith(textScaler: const TextScaler.linear(1.0));
 
     // Guest user interface
     if (widget.isGuest) {
       return MediaQuery(
-        data: clamp,
+        data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
         child: Scaffold(
           backgroundColor: const Color(0xFFF8F9FA),
           body: ScrollConfiguration(
             behavior: const ScrollBehavior(),
             child: CustomScrollView(
               slivers: [
-                const SliverAppBar(
-                  backgroundColor: Color(0xFF2563EB),
-                  pinned: false,
-                  elevation: 0,
-                  toolbarHeight: 0,
-                ),
                 SliverToBoxAdapter(
-                  child: _buildEnhancedHeader(
+                  child: _buildHeaderClassic(
                     isGuest: true,
                     name: l10n.guestUser,
                     email: l10n.browseWithoutAccount,
@@ -5623,20 +5704,16 @@ class _ProfilePageState extends State<ProfilePage>
     // Loading state
     if (_loading) {
       return MediaQuery(
-        data: clamp,
-        child: const Scaffold(
-          backgroundColor: Color(0xFFF8F9FA),
+        data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF8F9FA),
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(
-                    width: 36,
-                    height: 36,
-                    child: CircularProgressIndicator(strokeWidth: 3)),
+              children: const [
+                SizedBox(width: 36, height: 36, child: CircularProgressIndicator(strokeWidth: 3)),
                 SizedBox(height: 16),
-                Text('Loading profile...',
-                    style: TextStyle(color: Color(0xFF666666), fontSize: 15)),
+                Text('Loading profile...', style: TextStyle(color: Color(0xFF666666), fontSize: 15)),
               ],
             ),
           ),
@@ -5646,18 +5723,18 @@ class _ProfilePageState extends State<ProfilePage>
 
     final fullName = (_profile?['full_name'] ?? 'User').toString();
     final phone = (_profile?['phone'] ?? '').toString();
-    final email =
-    phone.isNotEmpty ? phone : (_profile?['email'] ?? '').toString();
+    final displayContact = phone.isNotEmpty ? phone : (_profile?['email'] ?? '').toString();
     final avatarUrl = (_profile?['avatar_url'] ?? '') as String?;
     final memberSince = _profile?['created_at']?.toString();
     String? memberSinceText;
     if (memberSince != null && memberSince.isNotEmpty) {
       final cut = memberSince.length >= 10 ? memberSince.substring(0, 10) : memberSince;
-      memberSinceText = cut;
+      memberSinceText = 'Member since $cut';
     }
 
+    // Normal User interface
     return MediaQuery(
-      data: clamp,
+      data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
       child: Scaffold(
         extendBody: true,
         backgroundColor: const Color(0xFFF8F9FA),
@@ -5667,25 +5744,18 @@ class _ProfilePageState extends State<ProfilePage>
               behavior: const ScrollBehavior(),
               child: CustomScrollView(
                 slivers: [
-                  const SliverAppBar(
-                    backgroundColor: Color(0xFF2563EB),
-                    pinned: false,
-                    elevation: 0,
-                    toolbarHeight: 0,
-                  ),
                   SliverToBoxAdapter(
-                    child: _buildEnhancedHeader(
+                    child: _buildHeaderClassic(
                       isGuest: false,
                       name: fullName,
-                      email: email,
-                      avatarUrl:
-                      (avatarUrl != null && avatarUrl.isNotEmpty) ? avatarUrl : null,
+                      email: displayContact,
+                      avatarUrl: (avatarUrl != null && avatarUrl.isNotEmpty) ? avatarUrl : null,
                       memberSince: memberSinceText,
-                      // ✅ 仅在 verified 时传入徽章；否则 none 不显示
-                      verificationType:
-                      _verified ? _badge : vt.VerificationBadgeType.none,
+                      verificationType: _verified ? _badge : vt.VerificationBadgeType.none,
                     ),
                   ),
+
+                  // 内容区域
                   SliverToBoxAdapter(
                     child: FadeTransition(
                       opacity: _fadeAnimation,
@@ -5696,75 +5766,76 @@ class _ProfilePageState extends State<ProfilePage>
                           children: [
                             const Text('Profile',
                                 style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 16.0,
                                     fontWeight: FontWeight.w600,
                                     color: Color(0xFF6B7280),
                                     letterSpacing: 0.5)),
-                            const SizedBox(height: 14),
-                            _ProfileOptionEnhanced(
+                            const SizedBox(height: 10),
+                            const _ProfileOptionEnhanced(
                               icon: Icons.edit_rounded,
-                              title: l10n.editProfile,
+                              title: 'Edit Profile',
                               color: Colors.blue,
-                              onTap: _editNamePhone,
                             ),
-                            const SizedBox(height: 14),
+                            // 上面这个为了保持结构，你如果需要 onTap=_editNamePhone 就把 const 去掉：
+                            // _ProfileOptionEnhanced(icon: Icons.edit_rounded, title: l10n.editProfile, color: Colors.blue, onTap: _editNamePhone),
 
-                            // ✅ 验证入口：绑定 _verified；点击后返回刷新一次
+                            const SizedBox(height: 12),
                             _VerificationTileCard(
                               isVerified: _verified,
                               isLoading: _verifyLoading,
                               onTap: () async {
                                 await Navigator.of(context).push<bool>(
-                                  MaterialPageRoute(
-                                      builder: (_) => const VerificationPage()),
+                                  MaterialPageRoute(builder: (_) => const VerificationPage()),
                                 );
                                 await _reloadUserVerificationStatus();
                               },
                             ),
 
-                            const SizedBox(height: 28),
+                            const SizedBox(height: 10),
                             const Text('Rewards & Activities',
                                 style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 16.0,
                                     fontWeight: FontWeight.w600,
                                     color: Color(0xFF6B7280),
                                     letterSpacing: 0.5)),
-                            const SizedBox(height: 14),
-                            const MyRewardsTile(),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 10),
+
+                            _RewardsTileUnified(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => CouponManagementPage()),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 12),
 
                             _ProfileOptionEnhanced(
                               icon: Icons.inventory_2_rounded,
                               title: l10n.myListings,
                               color: Colors.indigo,
                               onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) => const MyListingsPage())),
+                                  context, MaterialPageRoute(builder: (_) => const MyListingsPage())),
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 12),
+
                             _ProfileOptionEnhanced(
                               icon: Icons.favorite_rounded,
                               title: l10n.wishlist,
                               color: Colors.pink,
                               onTap: () {
-                                final user =
-                                    Supabase.instance.client.auth.currentUser;
+                                final user = Supabase.instance.client.auth.currentUser;
                                 if (user == null) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content:
-                                        Text('Please sign in to view Wishlist')),
+                                    const SnackBar(content: Text('Please sign in to view Wishlist')),
                                   );
                                   return;
                                 }
                                 Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (_) => const WishlistPage()));
+                                    context, MaterialPageRoute(builder: (_) => const WishlistPage()));
                               },
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 12),
 
                             _ProfileOptionEnhanced(
                               icon: Icons.person_add_alt_1_rounded,
@@ -5773,11 +5844,10 @@ class _ProfilePageState extends State<ProfilePage>
                               color: Colors.orange,
                               onTap: () => Navigator.push(
                                 context,
-                                MaterialPageRoute(
-                                    builder: (_) => const InviteFriendsPage()),
+                                MaterialPageRoute(builder: (_) => const InviteFriendsPage()),
                               ),
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 12),
 
                             _ProfileOptionEnhanced(
                               icon: Icons.local_activity_rounded,
@@ -5786,18 +5856,18 @@ class _ProfilePageState extends State<ProfilePage>
                               color: Colors.purple,
                               onTap: () => Navigator.push(
                                 context,
-                                MaterialPageRoute(
-                                    builder: (_) => CouponManagementPage()),
+                                MaterialPageRoute(builder: (_) => CouponManagementPage()),
                               ),
                             ),
-                            const SizedBox(height: 28),
+
+                            const SizedBox(height: 10),
                             const Text('Support',
                                 style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 16.0,
                                     fontWeight: FontWeight.w600,
                                     color: Color(0xFF6B7280),
                                     letterSpacing: 0.5)),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 10),
 
                             _ProfileOptionEnhanced(
                               icon: Icons.manage_accounts,
@@ -5806,12 +5876,10 @@ class _ProfilePageState extends State<ProfilePage>
                               color: Colors.cyan,
                               onTap: () => Navigator.push(
                                 context,
-                                MaterialPageRoute(
-                                  builder: (_) => const AccountSettingsPage(),
-                                ),
+                                MaterialPageRoute(builder: (_) => const AccountSettingsPage()),
                               ),
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 12),
 
                             _ProfileOptionEnhanced(
                               icon: Icons.privacy_tip_outlined,
@@ -5819,7 +5887,7 @@ class _ProfilePageState extends State<ProfilePage>
                               color: Colors.blueGrey,
                               onTap: () => launchUrl(Uri.parse(_kPrivacyUrl)),
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 12),
 
                             _ProfileOptionEnhanced(
                               icon: Icons.delete_outline,
@@ -5827,27 +5895,26 @@ class _ProfilePageState extends State<ProfilePage>
                               color: Colors.deepOrange,
                               onTap: () => launchUrl(Uri.parse(_kDeleteUrl)),
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 12),
 
                             _ProfileOptionEnhanced(
                               icon: Icons.help_outline_rounded,
                               title: l10n.helpSupport,
                               color: Colors.teal,
                               onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                      builder: (_) => HelpSupportPage())),
+                                  context, MaterialPageRoute(builder: (_) => HelpSupportPage())),
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: 12),
+
                             _ProfileOptionEnhanced(
                               icon: Icons.info_outline_rounded,
                               title: l10n.about,
                               color: Colors.blueGrey,
                               onTap: () =>
-                                  Navigator.push(context,
-                                      MaterialPageRoute(builder: (_) => AboutPage())),
+                                  Navigator.push(context, MaterialPageRoute(builder: (_) => AboutPage())),
                             ),
-                            const SizedBox(height: 28),
+                            const SizedBox(height: 18),
+
                             _ProfileOptionEnhanced(
                               icon: Icons.logout_rounded,
                               title: l10n.logout,
@@ -5864,38 +5931,29 @@ class _ProfilePageState extends State<ProfilePage>
                                           padding: const EdgeInsets.all(8),
                                           decoration: BoxDecoration(
                                               color: Colors.red.withOpacity(0.1),
-                                              borderRadius:
-                                              BorderRadius.circular(8)),
+                                              borderRadius: BorderRadius.circular(8)),
                                           child: const Icon(Icons.logout_rounded,
                                               color: Colors.red, size: 20),
                                         ),
                                         const SizedBox(width: 12),
                                         const Text('Logout',
                                             style: TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.w600)),
+                                                fontSize: 18, fontWeight: FontWeight.w600)),
                                       ],
                                     ),
-                                    content: const Text(
-                                        'Are you sure you want to logout?',
-                                        style: TextStyle(
-                                            fontSize: 15, height: 1.4)),
+                                    content: const Text('Are you sure you want to logout?',
+                                        style: TextStyle(fontSize: 15, height: 1.4)),
                                     actions: [
                                       TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(ctx).pop(false),
+                                          onPressed: () => Navigator.of(ctx).pop(false),
                                           child: Text('Cancel',
-                                              style: TextStyle(
-                                                  fontSize: 15,
-                                                  color: Colors.grey[600]))),
+                                              style: TextStyle(fontSize: 15, color: Colors.grey[600]))),
                                       Container(
                                         decoration: BoxDecoration(
                                             color: Colors.red,
-                                            borderRadius:
-                                            BorderRadius.circular(8)),
+                                            borderRadius: BorderRadius.circular(8)),
                                         child: TextButton(
-                                          onPressed: () =>
-                                              Navigator.of(ctx).pop(true),
+                                          onPressed: () => Navigator.of(ctx).pop(true),
                                           child: const Text('Logout',
                                               style: TextStyle(
                                                   color: Colors.white,
@@ -5926,8 +5984,7 @@ class _ProfilePageState extends State<ProfilePage>
                                           backgroundColor: Colors.red,
                                           behavior: SnackBarBehavior.floating,
                                           shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                              BorderRadius.circular(10)),
+                                              borderRadius: BorderRadius.circular(10)),
                                           margin: const EdgeInsets.all(16),
                                         ),
                                       );
@@ -5945,27 +6002,26 @@ class _ProfilePageState extends State<ProfilePage>
                 ],
               ),
             ),
+
+            // 上传中遮罩
             if (_uploadingAvatar)
-              Container(
-                color: Colors.black54,
-                child: Center(
-                  child: Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16)),
-                    child: const Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                            width: 36,
-                            height: 36,
-                            child: CircularProgressIndicator()),
-                        SizedBox(height: 16),
-                        Text('Uploading avatar...',
-                            style:
-                            TextStyle(color: Color(0xFF616161), fontSize: 15)),
-                      ],
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black54,
+                  child: Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                          color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                      child: const Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(width: 36, height: 36, child: CircularProgressIndicator()),
+                          SizedBox(height: 16),
+                          Text('Uploading avatar...',
+                              style: TextStyle(color: Color(0xFF616161), fontSize: 15)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -5975,143 +6031,12 @@ class _ProfilePageState extends State<ProfilePage>
       ),
     );
   }
-
-  // 头像区域（保持你的原样式）
-  Widget _buildEnhancedHeader({
-    required bool isGuest,
-    required String name,
-    required String email,
-    String? avatarUrl,
-    String? memberSince,
-    vt.VerificationBadgeType verificationType = vt.VerificationBadgeType.none,
-  }) {
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF2563EB), Color(0xFF3B82F6), Color(0xFF60A5FA)],
-          stops: [0.0, 0.5, 1.0],
-        ),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 30),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Hero(
-                tag: 'profile_avatar',
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(colors: [
-                      Colors.white.withOpacity(0.9),
-                      Colors.white.withOpacity(0.3)
-                    ]),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10))
-                    ],
-                  ),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      // VerifiedAvatar 内部会根据 verificationType==none 决定是否显示徽标
-                      VerifiedAvatar(
-                        avatarUrl: avatarUrl,
-                        radius: 45,
-                        verificationType: verificationType,
-                        onTap: !isGuest ? _uploadAvatarSimple : null,
-                        defaultIcon:
-                        isGuest ? Icons.person_outline : Icons.person,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
-                  shadows: [
-                    Shadow(
-                        offset: Offset(0, 2),
-                        blurRadius: 4,
-                        color: Color(0x40000000))
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(email.contains('@') ? Icons.email : Icons.phone,
-                        size: 14, color: Colors.white.withOpacity(0.95)),
-                    const SizedBox(width: 6),
-                    Text(email,
-                        style: TextStyle(
-                            color: Colors.white.withOpacity(0.95),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500)),
-                  ],
-                ),
-              ),
-              if (!isGuest && memberSince != null) ...[
-                const SizedBox(height: 10),
-                Container(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.calendar_today_outlined,
-                          size: 12, color: Colors.white),
-                      const SizedBox(width: 4),
-                      Text(memberSince,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500)),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
-/* ---------------- Verification Tile（简版：图标 + chevron） ---------------- */
+/* ---------------- Verification Tile（紧凑版：方角 + chevron） ---------------- */
 class _VerificationTileCard extends StatelessWidget {
   final bool isVerified;
-  final bool isLoading; // ✅ 新增：刷新中的可视反馈
+  final bool isLoading;
   final VoidCallback? onTap;
 
   const _VerificationTileCard({
@@ -6130,22 +6055,16 @@ class _VerificationTileCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          // 与其它通用卡片保持一致的内边距与阴影
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 12,
-                offset: const Offset(0, 2),
-              ),
+            boxShadow: const [
+              BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.04), blurRadius: 12, offset: Offset(0, 2)),
             ],
           ),
           child: Row(
             children: [
-              // 左侧圆角方块图标
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -6155,31 +6074,22 @@ class _VerificationTileCard extends StatelessWidget {
                 child: Icon(Icons.verified, color: badgeColor, size: 26),
               ),
               const SizedBox(width: 18),
-              // 文案
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(isVerified ? 'Verified' : 'Verification',
-                        style: const TextStyle(
-                            fontSize: 17, fontWeight: FontWeight.w600)),
+                        style: const TextStyle(fontSize: 16.0, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 3),
-                    Text(
-                        isVerified ? 'Status: Verified' : 'Status: Not verified',
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                    Text(isVerified ? 'Status: Verified' : 'Status: Not verified',
+                        style: TextStyle(fontSize: 13.0, color: Colors.grey[600])),
                   ],
                 ),
               ),
               const SizedBox(width: 10),
-              // 右侧：loading 或箭头
               isLoading
-                  ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-                  : Icon(Icons.arrow_forward_ios,
-                  size: 18, color: Colors.grey[400]),
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey[400]),
             ],
           ),
         ),
@@ -6188,7 +6098,7 @@ class _VerificationTileCard extends StatelessWidget {
   }
 }
 
-/* ---------------- 通用列表项（其余页面仍用你的卡片样式；不再改造细节） ---------------- */
+/* ---------------- 通用列表项（保持你原来的紧凑风格） ---------------- */
 class _ProfileOptionEnhanced extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -6212,15 +6122,12 @@ class _ProfileOptionEnhanced extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 2))
+            boxShadow: const [
+              BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.04), blurRadius: 12, offset: Offset(0, 2))
             ],
           ),
           child: Row(
@@ -6228,8 +6135,7 @@ class _ProfileOptionEnhanced extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(14)),
+                    color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(14)),
                 child: Icon(icon, color: color, size: 26),
               ),
               const SizedBox(width: 18),
@@ -6238,19 +6144,74 @@ class _ProfileOptionEnhanced extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(title,
-                        style: const TextStyle(
-                            fontSize: 17, fontWeight: FontWeight.w600)),
+                        style:
+                        const TextStyle(fontSize: 16.0, fontWeight: FontWeight.w600)),
                     if (subtitle != null) ...[
                       const SizedBox(height: 3),
                       Text(subtitle!,
-                          style:
-                          TextStyle(fontSize: 14, color: Colors.grey[600])),
+                          style: TextStyle(fontSize: 13.0, color: Colors.grey[600])),
                     ],
                   ],
                 ),
               ),
               const SizedBox(width: 10),
               Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey[400]),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/* ---------------- My Rewards（统一样式版） ---------------- */
+class _RewardsTileUnified extends StatelessWidget {
+  final VoidCallback? onTap;
+  const _RewardsTileUnified({this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.04), blurRadius: 12, offset: Offset(0, 2)),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.deepPurple.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.emoji_events_rounded,
+                    color: Colors.deepPurple, size: 26),
+              ),
+              const SizedBox(width: 18),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('My Rewards',
+                        style:
+                        TextStyle(fontSize: 16.0, fontWeight: FontWeight.w600)),
+                    SizedBox(height: 3),
+                    Text('Points: 0 · Coupons: 1',
+                        style: TextStyle(fontSize: 13.0, color: Color(0xFF6B7280))),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Icon(Icons.arrow_forward_ios, size: 18, color: Color(0xFFBDBDBD)),
             ],
           ),
         ),
@@ -6272,16 +6233,16 @@ class _GuestSimpleOptions extends StatelessWidget {
           icon: Icons.help_outline_rounded,
           title: l10n.helpSupport,
           color: Colors.blue,
-          onTap: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => HelpSupportPage())),
+          onTap: () =>
+              Navigator.push(context, MaterialPageRoute(builder: (_) => HelpSupportPage())),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         _ProfileOptionEnhanced(
           icon: Icons.info_outline_rounded,
           title: l10n.about,
           color: Colors.indigo,
-          onTap: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => AboutPage())),
+          onTap: () =>
+              Navigator.push(context, MaterialPageRoute(builder: (_) => AboutPage())),
         ),
       ],
     );
@@ -6314,11 +6275,11 @@ class HelpSupportPage extends StatelessWidget {
                     end: Alignment.bottomRight,
                     colors: [Color(0xFF60A5FA), Color(0xFF3B82F6)]),
                 borderRadius: BorderRadius.circular(18),
-                boxShadow: [
+                boxShadow: const [
                   BoxShadow(
-                      color: Colors.blue.withOpacity(0.3),
+                      color: Color.fromRGBO(37, 99, 235, 0.3),
                       blurRadius: 24,
-                      offset: const Offset(0, 12))
+                      offset: Offset(0, 12))
                 ],
               ),
               child: Column(
@@ -6331,25 +6292,21 @@ class HelpSupportPage extends StatelessWidget {
                           fontWeight: FontWeight.w700)),
                   const SizedBox(height: 10),
                   Text('Our support team is here to help you 24/7',
-                      style: TextStyle(
-                          color: Colors.white.withOpacity(0.9), fontSize: 15)),
+                      style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 15)),
                 ],
               ),
             ),
             const SizedBox(height: 24),
             Text('Contact Information',
                 style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.grey[800])),
+                    fontSize: 18, fontWeight: FontWeight.w700, color: Colors.grey[800])),
             const SizedBox(height: 14),
             _buildContactCard(
               icon: Icons.email_outlined,
               title: 'Email Support',
               subtitle: 'swaply@swaply.cc',
               color: Colors.blue,
-              onTap: () =>
-                  launchUrl(Uri(scheme: 'mailto', path: 'swaply@swaply.cc')),
+              onTap: () => launchUrl(Uri(scheme: 'mailto', path: 'swaply@swaply.cc')),
             ),
             const SizedBox(height: 12),
             _buildContactCard(
@@ -6382,11 +6339,8 @@ class HelpSupportPage extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2))
+            boxShadow: const [
+              BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.04), blurRadius: 10, offset: Offset(0, 2))
             ],
           ),
           child: Row(
@@ -6394,29 +6348,21 @@ class HelpSupportPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12)),
+                    color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
                 child: Icon(icon, color: color, size: 26),
               ),
               const SizedBox(width: 18),
               Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title,
-                          style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey[800])),
-                      const SizedBox(height: 3),
-                      Text(subtitle,
-                          style:
-                          TextStyle(fontSize: 14, color: Colors.grey[600])),
-                    ]),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(title,
+                      style:
+                      TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[800])),
+                  const SizedBox(height: 3),
+                  Text(subtitle, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                ]),
               ),
               if (onTap != null)
-                Icon(Icons.arrow_forward_ios,
-                    size: 16, color: Colors.grey[400]),
+                Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
             ],
           ),
         ),
@@ -6445,11 +6391,8 @@ class AboutPage extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4))
+                boxShadow: const [
+                  BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.05), blurRadius: 12, offset: Offset(0, 4))
                 ],
               ),
               child: Column(
@@ -6465,8 +6408,7 @@ class AboutPage extends StatelessWidget {
                   Text(
                     'Swaply is your community marketplace for trading items you no longer need for things you actually want.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: 15, color: Color(0xFF6B7280), height: 1.5),
+                    style: TextStyle(fontSize: 15, color: Color(0xFF6B7280), height: 1.5),
                   ),
                 ],
               ),
@@ -6477,18 +6419,14 @@ class AboutPage extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4))
+                boxShadow: const [
+                  BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.05), blurRadius: 12, offset: Offset(0, 4))
                 ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.copyright_rounded,
-                      size: 18, color: Colors.grey[600]),
+                  Icon(Icons.copyright_rounded, size: 18, color: Colors.grey[600]),
                   const SizedBox(width: 5),
                   Text('2024 Swaply. All rights reserved.',
                       style: TextStyle(fontSize: 14, color: Colors.grey[600])),

@@ -1,48 +1,41 @@
-import 'package:flutter/foundation.dart';
+// lib/auth/google_signin.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-// --- 新增 Import ---
-import 'package:swaply/services/oauth_service.dart';
-// -----------------
+import 'package:url_launcher/url_launcher.dart'; // for LaunchMode
 
-/// 根据平台返回回调地址：Web 用 Dashboard 的 callback，移动端用自定义 scheme
-// --- 已删除：不再需要此方法，逻辑统一到 OAuthService ---
-// String _redirectUrl() { ... }
+const String _kIOSRedirect = 'io.supabase.flutter://callback';
 
-/// Google 登录
-Future<void> signInWithGoogle(BuildContext context) async {
-  // final client = Supabase.instance.client; // 已移至 OAuthService
+class GoogleSignInButton extends StatelessWidget {
+  final VoidCallback? onBefore;
+  final VoidCallback? onAfter;
 
-  try {
-    // --- 修改：调用统一的 Service ---
-    // final redirectUrl = _redirectUrl();
-    // await client.auth.signInWithOAuth(
-    //   OAuthProvider.google,
-    //   scopes: 'openid email profile',
-    //   redirectTo: redirectUrl,
-    // );
-    // debugPrint('[Google Sign-In] launched, redirect=$redirectUrl');
-    await OAuthService.signInWithGoogle();
-    debugPrint('[Google Sign-In] launched via OAuthService.');
-    // --- 结束 ---
-  } catch (e, st) {
-    debugPrint('[Google Sign-In] error: $e\n$st');
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Google 登录启动失败，请稍后再试')),
+  const GoogleSignInButton({super.key, this.onBefore, this.onAfter});
+
+  Future<void> _startGoogleOAuth(BuildContext context) async {
+    onBefore?.call();
+    try {
+      await Supabase.instance.client.auth.signInWithOAuth(
+        OAuthProvider.google, // ← 这里一定要有逗号
+        // 只在 iOS 传 deep link，Android 传 null
+        redirectTo: Platform.isIOS ? _kIOSRedirect : null,
+        // iOS 必须用外部应用，避免内嵌页关不掉
+        authScreenLaunchMode: LaunchMode.externalApplication,
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Google 登录失败：$e')),
+      );
+    } finally {
+      onAfter?.call();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: () => _startGoogleOAuth(context),
+      child: const Text('Continue with Google'),
     );
   }
 }
-
-/// 退出登录
-Future<void> signOutGoogle() async {
-  try {
-    // 这个方法保持不变是安全的
-    await Supabase.instance.client.auth.signOut();
-  } catch (e) {
-    debugPrint('[Google Sign-Out] error: $e');
-  }
-}
-
-/// 是否已登录
-bool isLoggedIn() => Supabase.instance.client.auth.currentUser != null;

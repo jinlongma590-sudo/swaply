@@ -885,8 +885,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     final percentage =
                     price > 0 ? ((offer / price) * 100).round() : 0;
                     return InkWell(
-                      onTap: () =>
-                      offerController.text = offer.toStringAsFixed(0),
+                      onTap: () => offerController.text = offer.toStringAsFixed(0),
                       borderRadius: BorderRadius.circular(8.r),
                       child: Container(
                         padding: EdgeInsets.symmetric(
@@ -1270,6 +1269,18 @@ class _ProductDetailPageState extends State<ProductDetailPage>
 
   // ================== UI ==================
 
+  /// ✅ 新增：计算更大的图片显示高度（只放大展示范围，不改其它逻辑）
+  double _imageAreaHeight(BuildContext context) {
+    final screenH = MediaQuery.of(context).size.height;
+    // 目标为屏幕 58% 的高度，最低 320，高于 540 则封顶（全用适配尺寸）
+    final minH = 320.h;
+    final maxH = 540.h;
+    final target = screenH * 0.58;
+    // clamp 需要 num → 返回 double
+    final clamped = target.clamp(minH, maxH);
+    return clamped.toDouble();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1277,7 +1288,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 200.h,
+            expandedHeight: _imageAreaHeight(context), // ✅ 放大图片显示范围
             pinned: true,
             backgroundColor: Colors.white,
             elevation: 0,
@@ -1312,12 +1323,16 @@ class _ProductDetailPageState extends State<ProductDetailPage>
               )
                   : IconButton(
                 icon: Icon(
-                  _isInFavorites ? Icons.favorite : Icons.favorite_border,
-                  color: _isInFavorites ? Colors.red : Colors.grey[800],
+                  _isInFavorites
+                      ? Icons.favorite
+                      : Icons.favorite_border,
+                  color:
+                  _isInFavorites ? Colors.red : Colors.grey[800],
                 ),
                 iconSize: _topIconSize, // 放大
                 onPressed: _toggleFavorites,
-                tooltip: _isInFavorites ? 'Unfavorite' : 'Favorite',
+                tooltip:
+                _isInFavorites ? 'Unfavorite' : 'Favorite',
                 constraints: _topIconConstraints,
                 padding: const EdgeInsets.all(10),
               ),

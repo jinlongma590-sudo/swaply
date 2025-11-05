@@ -1,10 +1,10 @@
-// lib/auth/login_screen.dart - no authFlowType, use OAuthProvider.*, iOS-only Apple button
-// ignore_for_file: unused_import
+// lib/auth/login_screen.dart - iOS 定向回调修复版（直连 Supabase）
 
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:url_launcher/url_launcher.dart' show LaunchMode; // ✅ 用于 authScreenLaunchMode
 
 // 如需注册/找回密码页，请在别处跳转；这里不做任何路由
 import 'register_screen.dart';
@@ -12,12 +12,8 @@ import 'forgot_password_screen.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart' as sf;
 
-// 导入全局配置和Service
-import 'package:swaply/config/auth_config.dart';
-import 'package:swaply/services/oauth_service.dart';
-
-// 与 Supabase Dashboard / AndroidManifest / iOS URL Types 对齐
-// const String kAuthRedirectUri = 'swaply://login-callback'; // <- 已删除/注释，使用 auth_config.dart
+// 与 supabase_flutter 官方默认回调保持一致（iOS 必须携带这个或你的自定义 Scheme）
+const String _kIOSRedirect = 'io.supabase.flutter://callback';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -40,6 +36,21 @@ class _LoginScreenState extends State<LoginScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  // 统一的 OAuth 入口：仅 iOS 显式传 redirectTo，其它平台走默认
+  Future<void> _oauthSignIn(
+      sf.OAuthProvider provider, {
+        String? scopes,
+        Map<String, String>? queryParams,
+      }) async {
+    await sf.Supabase.instance.client.auth.signInWithOAuth(
+      provider,
+      redirectTo: Platform.isIOS ? _kIOSRedirect : null,
+      authScreenLaunchMode: LaunchMode.externalApplication, // ✅ 强制外部浏览器
+      scopes: scopes,
+      queryParams: queryParams,
+    );
   }
 
   Future<void> _loginEmailPassword() async {
@@ -66,14 +77,12 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      // --- 修改点 ---
-      // await sf.Supabase.instance.client.auth.signInWithOAuth(
-      //   sf.OAuthProvider.google,
-      //   redirectTo: kAuthRedirectUri, // <- 旧常量
-      //   queryParams: const {'prompt': 'select_account'},
-      // );
-      await OAuthService.signInWithGoogle();
-      // --- 结束 ---
+      await _oauthSignIn(
+        sf.OAuthProvider.google,
+        // 避免自动选中历史账号
+        queryParams: const {'prompt': 'select_account'},
+        // 可选：scopes: 'email profile',
+      );
     } on sf.AuthException catch (e) {
       final msg = e.message.toLowerCase();
       if (msg.contains('cancel') ||
@@ -99,13 +108,10 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      // --- 修改点 ---
-      // await sf.Supabase.instance.client.auth.signInWithOAuth(
-      //   sf.OAuthProvider.facebook,
-      //   redirectTo: kAuthRedirectUri, // <- 旧常量
-      // );
-      await OAuthService.signInWithFacebook();
-      // --- 结束 ---
+      await _oauthSignIn(
+        sf.OAuthProvider.facebook,
+        // 可选：scopes: 'email public_profile',
+      );
     } on sf.AuthException catch (e) {
       _showError(e.message);
     } catch (_) {
@@ -119,13 +125,11 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      // --- 修改点 ---
-      // await sf.Supabase.instance.client.auth.signInWithOAuth(
-      //   sf.OAuthProvider.apple,
-      //   redirectTo: kAuthRedirectUri, // <- 旧常量
-      // );
-      await OAuthService.signInWithApple();
-      // --- 结束 ---
+      await _oauthSignIn(
+        sf.OAuthProvider.apple,
+        // Apple 推荐 scopes: name email（首次授权才会返回姓名）
+        scopes: 'name email',
+      );
     } on sf.AuthException catch (e) {
       _showError(e.message);
     } catch (_) {
@@ -249,8 +253,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           Flexible(
                             child: Text(
                               'Remember me',
-                              style:
-                              TextStyle(fontSize: 12.sp, color: Colors.grey[700]),
+                              style: TextStyle(fontSize: 12.sp, color: Colors.grey[700]),
                             ),
                           ),
                         ],

@@ -5,14 +5,17 @@
 // 2.3：UI/模型需按 auth 优先、profiles 兜底判定（见 verification_utils.dart）
 
 import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:swaply/services/profile_service.dart'; // 统一创建profile/欢迎券入口
+import 'package:url_launcher/url_launcher.dart';
 
-// --- 新增 Import ---
+import 'package:swaply/services/profile_service.dart'; // 统一创建profile/欢迎券入口
 import 'package:swaply/config/auth_config.dart';
-import 'package:swaply/services/oauth_service.dart';
-// -----------------
+
+// iOS 的 Supabase 默认回调 Scheme（已在 Info.plist 配好）
+const String _kIOSRedirect = 'io.supabase.flutter://callback';
 
 class AuthService {
   SupabaseClient get supabase => Supabase.instance.client;
@@ -104,12 +107,14 @@ class AuthService {
     }
   }
 
-  // --- 修改：使用 OAuthService ---
+  // --- 直接使用 Supabase OAuth（iOS 走 _kIOSRedirect；Android/Web 走默认） ---
   Future<bool> signInWithGoogle() async {
     try {
-      // await supabase.auth
-      //     .signInWithOAuth(OAuthProvider.google, redirectTo: redirectTo);
-      await OAuthService.signInWithGoogle(); // <- 替换
+      await Supabase.instance.client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: Platform.isIOS ? _kIOSRedirect : null,
+        authScreenLaunchMode: LaunchMode.externalApplication,
+      );
 
       final user = supabase.auth.currentUser;
       if (user == null) return false;
@@ -136,12 +141,14 @@ class AuthService {
     }
   }
 
-  // --- 修改：使用 OAuthService ---
   Future<bool> signInWithFacebook() async {
     try {
-      // await supabase.auth
-      //     .signInWithOAuth(OAuthProvider.facebook, redirectTo: redirectTo);
-      await OAuthService.signInWithFacebook(); // <- 替换
+      await Supabase.instance.client.auth.signInWithOAuth(
+        OAuthProvider.facebook,
+        redirectTo: Platform.isIOS ? _kIOSRedirect : null,
+        authScreenLaunchMode: LaunchMode.externalApplication,
+        // 如果你需要 email，可在 Facebook 应用里启用 email 权限；此处不额外传 scopes 以避免版本差异编译错误
+      );
 
       final user = supabase.auth.currentUser;
       if (user == null) return false;
@@ -279,7 +286,7 @@ class AuthService {
     }
   }
 
-  // --- 修改：使用 kAuthRedirectUri ---
+  // --- 使用统一回调 URI 发送重置邮件 ---
   Future<void> resetPassword(String email) async {
     try {
       await supabase.auth.resetPasswordForEmail(
