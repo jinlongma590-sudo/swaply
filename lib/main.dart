@@ -1267,6 +1267,8 @@ class _MainNavigationPageState extends State<MainNavigationPage>
   }
 }
 
+
+
 /* ------------------------------------------------ */
 /* =========== TOP-LEVEL WIDGETS START HERE =========== */
 /* ------------------------------------------------ */
@@ -1338,6 +1340,9 @@ class SavedPage extends StatefulWidget {
 }
 
 class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
+  // ✅ 修复：添加您在其他页面使用的 _PRIMARY_BLUE 常量 (Facebook 蓝色)
+  static const Color _PRIMARY_BLUE = Color(0xFF1877F2);
+
   List<Map<String, dynamic>> _favoriteItems = [];
   bool _isLoading = true;
   bool _isRefreshing = false;
@@ -1345,69 +1350,94 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   Timer? _autoRefreshTimer;
   StreamSubscription<FavoriteUpdateEvent>? _favoritesSubscription;
 
-  // 自定义头部组件，用于统一蓝色、大标题和间距
-  Widget _buildCustomHeader(String title, {bool hasMenu = true}) {
-    return Container(
-      color: _PRIMARY_BLUE, // 统一的深蓝
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 16.h), // 标题距安全区顶部约 16dp
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24.sp, // 统一字体大小
-                        fontWeight: FontWeight.w600, // SemiBold
-                        height: 1.2,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (hasMenu && _favoriteItems.isNotEmpty && !_isLoading)
-                    PopupMenuButton<String>(
-                      icon: Icon(Icons.more_vert_rounded,
-                          color: Colors.white, size: 16.w),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8.w)),
-                      onSelected: (value) {
-                        if (value == 'clear_all') {
-                          _showClearAllDialog();
-                        }
-                      },
-                      itemBuilder: (BuildContext context) => [
-                        PopupMenuItem(
-                          value: 'clear_all',
-                          child: Row(
-                            children: [
-                              Icon(Icons.clear_all_rounded,
-                                  color: Colors.red, size: 12.w),
-                              SizedBox(width: 8.w),
-                              Text('Clear All',
-                                  style: TextStyle(fontSize: 11.sp)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
+  // ✅ A) 统一蓝色头部：高度自适应；提供是否居中、右上角按钮位
+  Widget _blueHeader({
+    required BuildContext context,
+    required String title,
+    required bool centerTitle,
+    Widget? trailing, // 右上角按钮（可选）
+  }) {
+    final double statusBar = MediaQuery.of(context).padding.top;
+
+    // 统一视觉高度（缩放后依然舒服）：statusBar + 132
+    const double kHeaderVisual = 76.0;
+    const double kTitleTop = 24.0; // 标题顶部偏移
+    const double kSide = 20.0; // 左右安全内边距
+
+    return SizedBox(
+      height: statusBar + kHeaderVisual,
+      child: Stack(
+        children: [
+          // 背景
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft, end: Alignment.bottomRight,
+                  // ✅ 修复：使用您首页的 Facebook 蓝色 (0xFF1877F2)
+                  colors: [_PRIMARY_BLUE, Color(0xFF1E88E5)],
+                ),
               ),
             ),
-            SizedBox(height: 16.h),
-          ],
-        ),
+          ),
+          // 标题
+          Positioned(
+            top: statusBar + kTitleTop,
+            left: centerTitle ? kSide : kSide,
+            right: centerTitle ? kSide : null,
+            child: SizedBox(
+              width: centerTitle ? MediaQuery.of(context).size.width - kSide * 2 : null,
+              child: Text(
+                title,
+                textAlign: centerTitle ? TextAlign.center : TextAlign.left,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          // 右上角操作按钮（可选）
+          if (trailing != null)
+            Positioned(
+              top: statusBar + 10, // 避开刘海/状态栏
+              right: 16,
+              child: trailing,
+            ),
+        ],
       ),
     );
   }
+
+  // ✅ 提取右上角菜单按钮以传递给 _blueHeader
+  Widget _buildMenuButton() {
+    return PopupMenuButton<String>(
+      icon: Icon(Icons.more_vert_rounded,
+          color: Colors.white, size: 16.w),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8.w)),
+      onSelected: (value) {
+        if (value == 'clear_all') {
+          _showClearAllDialog();
+        }
+      },
+      itemBuilder: (BuildContext context) => [
+        PopupMenuItem(
+          value: 'clear_all',
+          child: Row(
+            children: [
+              Icon(Icons.clear_all_rounded,
+                  color: Colors.red, size: 12.w),
+              SizedBox(width: 8.w),
+              Text('Clear All',
+                  style: TextStyle(fontSize: 11.sp)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
 
   @override
   void initState() {
@@ -1454,7 +1484,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           // 忙路禄氓艩 氓藛掳忙鈥澛睹ㄢ€斅徝寂∶€姑ヂ嵚趁β仿幻ヅ?氓藛掳忙艙卢氓艙掳氓藛鈥斆÷?
           _addToLocalFavorites(event.listingData!);
         } else if (!event.isAdded) {
-          // 盲禄沤忙鈥澛睹ㄢ€斅徝幻┾劉陇茂录拧莽芦鈥姑ヂ嵚趁ぢ慌矫ε撀ヅ撀懊ニ嗏€斆÷幻┾劉陇
+          // 盲禄沤忙鈥澛睹ㄢ€斅徝幻┾劉陇茂录拧莽芦鈥姑ヂ嵚趁ぢ慌矫ε撀ヅ撀懊ニ嗏€斆÷幻┾劉隴
           _removeFromLocalFavorites(event.listingId);
         }
       },
@@ -1618,7 +1648,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     setState(() => _isRefreshing = false);
   }
 
-  /// 盲禄沤忙鈥澛睹ㄢ€斅徝ヂぢ姑幻┾劉陇氓鈥⑩€犆モ€溌?- 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService
+  /// 盲禄沤忙鈥澛睹ㄢ€斅徝ヂぢ姑幻┾劉隴氓鈥⑩€犆モ€溌?- 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService
   Future<void> _removeFromFavorites(String listingId, int index) async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
@@ -2126,7 +2156,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
               ),
               child: ElevatedButton.icon(
                 onPressed: () {
-                  // 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛モ€号久捌捗モ€÷矫︹€⒙懊ヂ济ㄋ喡ニ喡懊┞︹€撁┞÷?
+                  // 盲驴庐氓隴聧茂录拧盲陆驴莽鈥澛モ€号久捌捗モ€÷矫︹€⒙懊ヂ济ㄋ喡ニ喡懊┞︹€撁┞÷?
                   if (widget.onNavigateToHome != null) {
                     widget.onNavigateToHome!();
                   } else {
@@ -2249,102 +2279,103 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       // Guest View: 统一蓝色
       return Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
-        appBar: AppBar(
-          backgroundColor: _PRIMARY_BLUE, // 统一蓝色
-          title: Text(
-            l10n?.myFavorites ?? 'My Favorites',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w600,
+        // ✅ 移除 AppBar
+        body: Column( // ✅ 改为 Column
+          children: [
+            _blueHeader( // ✅ C.1: 使用新头部
+              context: context,
+              title: l10n?.myFavorites ?? 'My Favorites',
+              centerTitle: false, // ✅ C.1: 左对齐
+              trailing: null,
             ),
-          ),
-          elevation: 0,
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 80.w,
-                height: 80.w,
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(40.w),
-                ),
-                child: Icon(
-                  Icons.lock_outline_rounded,
-                  size: 40.w,
-                  color: Colors.grey[500],
-                ),
-              ),
-              SizedBox(height: 16.h),
-              Text(
-                l10n?.loginRequired ?? 'Login Required',
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
-                ),
-              ),
-              SizedBox(height: 6.h),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24.w),
-                child: Text(
-                  l10n?.loginToSaveFavorites ??
-                      'Please login to view and save your favorite items.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 11.sp,
-                    height: 1.3,
-                  ),
-                ),
-              ),
-              SizedBox(height: 20.h),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    // 统一蓝色
-                    colors: [_PRIMARY_BLUE, const Color(0xFF1E88E5)],
-                  ),
-                  borderRadius: BorderRadius.circular(8.w),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _PRIMARY_BLUE.withOpacity(0.3),
-                      blurRadius: 8.w,
-                      offset: Offset(0, 3.h),
+            Expanded( // ✅ 内容区域
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 80.w,
+                      height: 80.w,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(40.w),
+                      ),
+                      child: Icon(
+                        Icons.lock_outline_rounded,
+                        size: 40.w,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+                    Text(
+                      l10n?.loginRequired ?? 'Login Required',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    SizedBox(height: 6.h),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24.w),
+                      child: Text(
+                        l10n?.loginToSaveFavorites ??
+                            'Please login to view and save your favorite items.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 11.sp,
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 20.h),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          // 统一蓝色
+                          colors: [_PRIMARY_BLUE, const Color(0xFF1E88E5)],
+                        ),
+                        borderRadius: BorderRadius.circular(8.w),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _PRIMARY_BLUE.withOpacity(0.3),
+                            blurRadius: 8.w,
+                            offset: Offset(0, 3.h),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context)
+                              .pushNamedAndRemoveUntil('/welcome', (route) => false);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          padding:
+                          EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8.w),
+                          ),
+                        ),
+                        icon: Icon(Icons.login_rounded,
+                            size: 12.w, color: Colors.white),
+                        label: Text(
+                          l10n?.loginNow ?? 'Login Now',
+                          style: TextStyle(
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.of(context)
-                        .pushNamedAndRemoveUntil('/welcome', (route) => false);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    padding:
-                    EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.w),
-                    ),
-                  ),
-                  icon: Icon(Icons.login_rounded,
-                      size: 12.w, color: Colors.white),
-                  label: Text(
-                    l10n?.loginNow ?? 'Login Now',
-                    style: TextStyle(
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
@@ -2352,54 +2383,65 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     // 氓路虏莽鈩⒙幻ヂ解€⒚犅睹︹偓聛
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      // 头部使用自定义组件
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(_CUSTOM_HEADER_HEIGHT), // 使用统一高度
-        child: _buildCustomHeader('My Favorites (${_favoriteItems.length})'),
-      ),
-      body: _isLoading
-          ? Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: 24.w,
-              height: 24.w,
-              child: CircularProgressIndicator(
-                valueColor: const AlwaysStoppedAnimation<Color>(
-                    _PRIMARY_BLUE), // 统一蓝色
-                strokeWidth: 2.w,
+      // ✅ 移除 AppBar
+      body: Column( // ✅ 改为 Column
+        children: [
+          _blueHeader( // ✅ C.1: 使用新头部
+            context: context,
+            title: 'My Favorites (${_favoriteItems.length})',
+            centerTitle: false, // ✅ C.1: 左对齐
+            trailing: (_favoriteItems.isNotEmpty && !_isLoading)
+                ? _buildMenuButton() // ✅ 传递菜单按钮
+                : null,
+          ),
+          Expanded( // ✅ 内容区域
+            child: _isLoading
+                ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 24.w,
+                    height: 24.w,
+                    child: CircularProgressIndicator(
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                          _PRIMARY_BLUE), // 统一蓝色
+                      strokeWidth: 2.w,
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    'Loading favorites...',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 11.sp,
+                    ),
+                  ),
+                ],
+              ),
+            )
+                : _errorMessage != null
+                ? _buildErrorState()
+                : _favoriteItems.isEmpty
+                ? _buildEmptyState()
+                : RefreshIndicator(
+              onRefresh: _refreshFavorites,
+              color: _PRIMARY_BLUE, // 统一蓝色
+              backgroundColor: Colors.white,
+              strokeWidth: 2.w,
+              child: ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                // ✅ C.2: 统一顶部间距为 16
+                padding: EdgeInsets.only(top: 16.h),
+                itemCount: _favoriteItems.length,
+                itemBuilder: (context, index) {
+                  return _buildFavoriteCard(
+                      _favoriteItems[index], index);
+                },
               ),
             ),
-            SizedBox(height: 8.h),
-            Text(
-              'Loading favorites...',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 11.sp,
-              ),
-            ),
-          ],
-        ),
-      )
-          : _errorMessage != null
-          ? _buildErrorState()
-          : _favoriteItems.isEmpty
-          ? _buildEmptyState()
-          : RefreshIndicator(
-        onRefresh: _refreshFavorites,
-        color: _PRIMARY_BLUE, // 统一蓝色
-        backgroundColor: Colors.white,
-        strokeWidth: 2.w,
-        child: ListView.builder(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.symmetric(vertical: 6.h),
-          itemCount: _favoriteItems.length,
-          itemBuilder: (context, index) {
-            return _buildFavoriteCard(
-                _favoriteItems[index], index);
-          },
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -2541,7 +2583,6 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 }
-
 /* ---------------- Wishlist Page 氓驴茠忙鈥灺棵ヂ嶁€⒚┞÷得┞澛?- 忙鈥撀懊ヂ⑴?---------------- */
 
 class WishlistPage extends StatefulWidget {
@@ -3400,6 +3441,87 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
+  // ✅ A) 统一一个蓝色头部写法
+  // 统一蓝色头部：高度自适应；提供是否居中、右上角按钮位
+  Widget _blueHeader({
+    required BuildContext context,
+    required String title,
+    required bool centerTitle,
+    Widget? trailing, // 右上角按钮（可选）
+  }) {
+    final double statusBar = MediaQuery.of(context).padding.top;
+
+    // 统一视觉高度（缩放后依然舒服）：statusBar + 132
+    const double kHeaderVisual = 76.0;
+    const double kTitleTop = 24.0; // 标题顶部偏移
+    const double kSide = 20.0; // 左右安全内边距
+
+    // ✅ 修复：使用您首页的 Facebook 蓝色 (0xFF1877F2)
+    const Color kUserPrimaryBlue = Color(0xFF1877F2);
+
+    return SizedBox(
+      height: statusBar + kHeaderVisual,
+      child: Stack(
+        children: [
+          // 背景
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft, end: Alignment.bottomRight,
+                  // ✅ 修复：使用 0xFF1877F2 的近似渐变
+                  colors: [kUserPrimaryBlue, Color(0xFF1E88E5)],
+                ),
+              ),
+            ),
+          ),
+          // 标题
+          Positioned(
+            top: statusBar + kTitleTop,
+            left: centerTitle ? kSide : kSide,
+            right: centerTitle ? kSide : null,
+            child: SizedBox(
+              width: centerTitle ? MediaQuery.of(context).size.width - kSide * 2 : null,
+              child: Text(
+                title,
+                textAlign: centerTitle ? TextAlign.center : TextAlign.left,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          // 右上角操作按钮（可选）
+          if (trailing != null)
+            Positioned(
+              top: statusBar + 10, // 避开刘海/状态栏
+              right: 16,
+              child: trailing,
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ B.1) 提取右上角 + 按钮以传递给 _blueHeader
+  Widget _buildPlusButton(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.only(top: 4.h, bottom: 4.h), // 微调垂直位置
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(12.r),
+      ),
+      child: IconButton(
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const SellFormPage()),
+        ),
+        icon: Icon(Icons.add_rounded, color: Colors.white, size: 24.r),
+        tooltip: 'Add New Listing',
+      ),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -3432,6 +3554,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     final l10n = AppLocalizations.of(context)!;
 
     if (widget.isGuest) {
+      // 访客视图保持不变
       return _buildGuestView(l10n);
     }
 
@@ -3443,10 +3566,20 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       body: CustomScrollView(
+        // ✅ B.3) 彻底禁止滚动
+        physics: const NeverScrollableScrollPhysics(),
         slivers: [
-          _buildSliverAppBar(l10n, myListings.length),
+          // ✅ B.1) 用统一头部
+          SliverToBoxAdapter(
+            child: _blueHeader(
+              context: context,
+              title: l10n.sellItem,
+              centerTitle: true, // ✅ 仅此页居中
+              trailing: _buildPlusButton(context), // ✅ 传入右上角按钮
+            ),
+          ),
           if (myListings.isEmpty)
-            _buildEmptyState(l10n)
+            _buildEmptyState(l10n) // ✅ B.2) _buildEmptyState 内部已修改
           else
             _buildListingsContent(myListings, l10n),
         ],
@@ -3455,10 +3588,11 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   }
 
   Widget _buildGuestView(AppLocalizations l10n) {
+    // 访客视图保持不变
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2196F3),
+        backgroundColor: const Color(0xFF1877F2), // ✅ 修复：使用 Facebook 蓝色
         title: Text(
           l10n.sellItem,
           style: TextStyle(
@@ -3533,12 +3667,14 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                     height: 56.h,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF2196F3), Color(0xFF1E88E5)],
+                        // ✅ 修复：使用 Facebook 蓝色
+                        colors: [Color(0xFF1877F2), Color(0xFF1E88E5)],
                       ),
                       borderRadius: BorderRadius.circular(16.r),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF2196F3).withOpacity(0.4),
+                          // ✅ 修复：使用 Facebook 蓝色
+                          color: const Color(0xFF1877F2).withOpacity(0.4),
                           blurRadius: 16.r,
                           offset: Offset(0, 8.h),
                         ),
@@ -3577,210 +3713,175 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildSliverAppBar(AppLocalizations l10n, int listingsCount) {
-    return SliverAppBar(
-      expandedHeight: 120.h,
-      floating: false,
-      pinned: true,
-      backgroundColor: const Color(0xFF2196F3),
-      flexibleSpace: FlexibleSpaceBar(
-        title: Text(
-          l10n.sellItem,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        background: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF2196F3),
-                Color(0xFF1E88E5),
-                Color(0xFF1976D2),
-              ],
-            ),
-          ),
-        ),
-      ),
-      actions: [
-        Container(
-          margin: EdgeInsets.only(right: 16.w, top: 8.h, bottom: 8.h),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(12.r),
-          ),
-          child: IconButton(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SellFormPage()),
-            ),
-            icon: Icon(Icons.add_rounded, color: Colors.white, size: 24.r),
-            tooltip: 'Add New Listing',
-          ),
-        ),
-      ],
-    );
-  }
+  // ⛔️ [_buildSliverAppBar 已被删除，由 _blueHeader 替代]
 
   Widget _buildEmptyState(AppLocalizations l10n) {
+    // ✅ 修复：使用 Facebook 蓝色
+    const Color kUserPrimaryBlue = Color(0xFF1877F2);
+
     return SliverFillRemaining(
-      child: SlideTransition(
-        position: _slideAnimation,
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: Center(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 140.w,
-                    height: 140.w,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          const Color(0xFF2196F3).withOpacity(0.2),
-                          const Color(0xFF1E88E5).withOpacity(0.1),
-                        ],
-                      ),
-                      borderRadius: BorderRadius.circular(70.r),
-                      border: Border.all(
-                        color: const Color(0xFF2196F3).withOpacity(0.3),
-                        width: 2,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF2196F3).withOpacity(0.2),
-                          blurRadius: 24.r,
-                          offset: Offset(0, 12.h),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      Icons.add_a_photo_rounded,
-                      size: 70.r,
-                      color: const Color(0xFF2196F3),
-                    ),
-                  ),
-                  SizedBox(height: 32.h),
-                  Text(
-                    l10n.sellYourItems,
-                    style: TextStyle(
-                      fontSize: 28.sp,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.black87,
-                      letterSpacing: -0.8,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 16.h),
-                  Text(
-                    l10n.takePhotoAndSell,
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 16.sp,
-                      height: 1.6,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 24.h),
-                  Container(
-                    padding:
-                    EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2196F3).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(16.r),
-                      border: Border.all(
-                        color: const Color(0xFF2196F3).withOpacity(0.2),
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.camera_alt_rounded,
-                                color: const Color(0xFF2196F3), size: 20.r),
-                            SizedBox(width: 8.w),
-                            Text('Take quality photos',
-                                style: TextStyle(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w600)),
+      // ✅ B.2) 整体缩小 20%
+      child: Transform.scale(
+        scale: 0.8,
+        alignment: Alignment.topCenter,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24.w),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 140.w,
+                        height: 140.w,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              kUserPrimaryBlue.withOpacity(0.2), // ✅ 修复
+                              kUserPrimaryBlue.withOpacity(0.1), // ✅ 修复
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(70.r),
+                          border: Border.all(
+                            color: kUserPrimaryBlue.withOpacity(0.3), // ✅ 修复
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: kUserPrimaryBlue.withOpacity(0.2), // ✅ 修复
+                              blurRadius: 24.r,
+                              offset: Offset(0, 12.h),
+                            ),
                           ],
                         ),
-                        SizedBox(height: 8.h),
-                        Row(
-                          children: [
-                            Icon(Icons.edit_rounded,
-                                color: const Color(0xFF2196F3), size: 20.r),
-                            SizedBox(width: 8.w),
-                            Text('Write detailed description',
-                                style: TextStyle(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w600)),
-                          ],
-                        ),
-                        SizedBox(height: 8.h),
-                        Row(
-                          children: [
-                            Icon(Icons.monetization_on_rounded,
-                                color: const Color(0xFF2196F3), size: 20.r),
-                            SizedBox(width: 8.w),
-                            Text('Set competitive price',
-                                style: TextStyle(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w600)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 40.h),
-                  Container(
-                    width: double.infinity,
-                    height: 56.h,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF2196F3), Color(0xFF1E88E5)],
-                      ),
-                      borderRadius: BorderRadius.circular(16.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF2196F3).withOpacity(0.4),
-                          blurRadius: 16.r,
-                          offset: Offset(0, 8.h),
-                        ),
-                      ],
-                    ),
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.transparent,
-                        shadowColor: Colors.transparent,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16.r),
+                        child: Icon(
+                          Icons.add_a_photo_rounded,
+                          size: 70.r,
+                          color: kUserPrimaryBlue, // ✅ 修复
                         ),
                       ),
-                      onPressed: () => Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const SellFormPage()),
-                      ),
-                      icon: Icon(Icons.add_rounded,
-                          color: Colors.white, size: 24.r),
-                      label: Text(
-                        l10n.postNewAd,
+                      SizedBox(height: 32.h),
+                      Text(
+                        l10n.sellYourItems,
                         style: TextStyle(
-                          color: Colors.white,
+                          fontSize: 28.sp,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.black87,
+                          letterSpacing: -0.8,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 16.h),
+                      Text(
+                        l10n.takePhotoAndSell,
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
                           fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
+                          height: 1.6,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 24.h),
+                      Container(
+                        padding:
+                        EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+                        decoration: BoxDecoration(
+                          color: kUserPrimaryBlue.withOpacity(0.1), // ✅ 修复
+                          borderRadius: BorderRadius.circular(16.r),
+                          border: Border.all(
+                            color: kUserPrimaryBlue.withOpacity(0.2), // ✅ 修复
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.camera_alt_rounded,
+                                    color: kUserPrimaryBlue, size: 20.r), // ✅ 修复
+                                SizedBox(width: 8.w),
+                                Text('Take quality photos',
+                                    style: TextStyle(
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                            SizedBox(height: 8.h),
+                            Row(
+                              children: [
+                                Icon(Icons.edit_rounded,
+                                    color: kUserPrimaryBlue, size: 20.r), // ✅ 修复
+                                SizedBox(width: 8.w),
+                                Text('Write detailed description',
+                                    style: TextStyle(
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                            SizedBox(height: 8.h),
+                            Row(
+                              children: [
+                                Icon(Icons.monetization_on_rounded,
+                                    color: kUserPrimaryBlue, size: 20.r), // ✅ 修复
+                                SizedBox(width: 8.w),
+                                Text('Set competitive price',
+                                    style: TextStyle(
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.w600)),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
-                    ),
+                      SizedBox(height: 40.h),
+                      Container(
+                        width: double.infinity,
+                        height: 56.h,
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [kUserPrimaryBlue, Color(0xFF1E88E5)], // ✅ 修复
+                          ),
+                          borderRadius: BorderRadius.circular(16.r),
+                          boxShadow: [
+                            BoxShadow(
+                              color: kUserPrimaryBlue.withOpacity(0.4), // ✅ 修复
+                              blurRadius: 16.r,
+                              offset: Offset(0, 8.h),
+                            ),
+                          ],
+                        ),
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16.r),
+                            ),
+                          ),
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const SellFormPage()),
+                          ),
+                          icon: Icon(Icons.add_rounded,
+                              color: Colors.white, size: 24.r),
+                          label: Text(
+                            l10n.postNewAd,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -3791,6 +3892,9 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
 
   Widget _buildListingsContent(
       List<Map<String, dynamic>> myListings, AppLocalizations l10n) {
+    // ✅ 修复：使用 Facebook 蓝色
+    const Color kUserPrimaryBlue = Color(0xFF1877F2);
+
     return SliverList(
       delegate: SliverChildBuilderDelegate(
             (context, index) {
@@ -3819,6 +3923,9 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
 
   Widget _buildStatsHeader(
       List<Map<String, dynamic>> myListings, AppLocalizations l10n) {
+    // ✅ 修复：使用 Facebook 蓝色
+    const Color kUserPrimaryBlue = Color(0xFF1877F2);
+
     final totalViews =
     myListings.fold<int>(0, (sum, item) => sum + 234); // Mock data
     final totalLikes =
@@ -3876,12 +3983,12 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                 padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [Color(0xFF2196F3), Color(0xFF1E88E5)],
+                    colors: [kUserPrimaryBlue, Color(0xFF1E88E5)], // ✅ 修复
                   ),
                   borderRadius: BorderRadius.circular(12.r),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF2196F3).withOpacity(0.3),
+                      color: kUserPrimaryBlue.withOpacity(0.3), // ✅ 修复
                       blurRadius: 8.r,
                       offset: Offset(0, 4.h),
                     ),
@@ -3918,7 +4025,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                       Icons.visibility_rounded,
                       totalViews.toString(),
                       'Total Views',
-                      const Color(0xFF2196F3))),
+                      kUserPrimaryBlue)), // ✅ 修复
               SizedBox(width: 12.w),
               Expanded(
                   child: _buildStatCard(
@@ -3977,6 +4084,9 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   }
 
   Widget _buildListingCard(Map<String, dynamic> item, AppLocalizations l10n) {
+    // ✅ 修复：使用 Facebook 蓝色
+    const Color kUserPrimaryBlue = Color(0xFF1877F2);
+
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
       decoration: BoxDecoration(
@@ -4066,19 +4176,19 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              const Color(0xFF2196F3).withOpacity(0.15),
-                              const Color(0xFF2196F3).withOpacity(0.08),
+                              kUserPrimaryBlue.withOpacity(0.15), // ✅ 修复
+                              kUserPrimaryBlue.withOpacity(0.08), // ✅ 修复
                             ],
                           ),
                           borderRadius: BorderRadius.circular(12.r),
                           border: Border.all(
-                            color: const Color(0xFF2196F3).withOpacity(0.2),
+                            color: kUserPrimaryBlue.withOpacity(0.2), // ✅ 修复
                           ),
                         ),
                         child: Text(
                           item['price'] ?? l10n.noPrice,
                           style: TextStyle(
-                            color: const Color(0xFF2196F3),
+                            color: kUserPrimaryBlue, // ✅ 修复
                             fontWeight: FontWeight.bold,
                             fontSize: 16.sp,
                           ),
@@ -4329,6 +4439,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   }
 }
 
+// ---------------- Notification Page ----------------
 /* ---------------- Notification Page 茅鈧∶嘎ッ┞÷?(莽麓搂氓鈥♀€樏九矫ヅ掆€撁р€八喢ε撀? ---------------- */
 
 class NotificationPage extends StatefulWidget {
@@ -4351,89 +4462,118 @@ class _NotificationPageState extends State<NotificationPage> {
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
 
-  // 自定义头部组件，用于统一蓝色、大标题和间距
-  Widget _buildCustomHeader(String title) {
-    final l10n = AppLocalizations.of(context)!;
-    final unreadCount =
-        _notifications.where((n) => n['is_read'] != true).length;
-    final displayTitle = '${title}${unreadCount > 0 ? ' ($unreadCount)' : ''}';
+  // ✅ 修复：添加您在其他页面使用的 _PRIMARY_BLUE 常量 (Facebook 蓝色)
+  static const Color _PRIMARY_BLUE = Color(0xFF1877F2);
 
-    return Container(
-      color: _PRIMARY_BLUE, // 统一的深蓝
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 16.h), // 标题距安全区顶部约 16dp
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      displayTitle,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24.sp, // 统一字体大小
-                        fontWeight: FontWeight.w600, // SemiBold
-                        height: 1.2,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (_notifications.isNotEmpty)
-                    PopupMenuButton<String>(
-                      icon: Icon(Icons.more_vert_rounded,
-                          color: Colors.white, size: 18.r),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8.r)),
-                      onSelected: (value) {
-                        if (value == 'mark_all_read') {
-                          _markAllAsRead();
-                        } else if (value == 'clear_all') {
-                          _clearAll();
-                        }
-                      },
-                      itemBuilder: (BuildContext context) => [
-                        PopupMenuItem(
-                          value: 'mark_all_read',
-                          child: Row(
-                            children: [
-                              Icon(Icons.done_all_rounded,
-                                  size: 14.r, color: Colors.grey.shade600),
-                              SizedBox(width: 8.w),
-                              Text(l10n.markAllAsRead,
-                                  style: TextStyle(fontSize: 12.sp)),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: 'clear_all',
-                          child: Row(
-                            children: [
-                              Icon(Icons.clear_all_rounded,
-                                  color: Colors.red, size: 14.r),
-                              SizedBox(width: 8.w),
-                              Text(l10n.clearAll,
-                                  style: TextStyle(
-                                      fontSize: 12.sp, color: Colors.red)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
+  // ✅ A) 统一一个蓝色头部写法
+  // 统一蓝色头部：高度自适应；提供是否居中、右上角按钮位
+  Widget _blueHeader({
+    required BuildContext context,
+    required String title,
+    required bool centerTitle,
+    Widget? trailing, // 右上角按钮（可选）
+  }) {
+    final double statusBar = MediaQuery.of(context).padding.top;
+
+    // 统一视觉高度（缩放后依然舒服）：statusBar + 132
+    const double kHeaderVisual = 76.0;
+    const double kTitleTop = 24.0; // 标题顶部偏移
+    const double kSide = 20.0; // 左右安全内边距
+
+    // ✅ 修复：使用您首页的 Facebook 蓝色 (0xFF1877F2)
+    const Color kUserPrimaryBlue = Color(0xFF1877F2);
+
+    return SizedBox(
+      height: statusBar + kHeaderVisual,
+      child: Stack(
+        children: [
+          // 背景
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft, end: Alignment.bottomRight,
+                  // ✅ 修复：使用 0xFF1877F2 的近似渐变
+                  colors: [kUserPrimaryBlue, Color(0xFF1E88E5)],
+                ),
               ),
             ),
-            SizedBox(height: 16.h),
-          ],
-        ),
+          ),
+          // 标题
+          Positioned(
+            top: statusBar + kTitleTop,
+            left: centerTitle ? kSide : kSide,
+            right: centerTitle ? kSide : null,
+            child: SizedBox(
+              width: centerTitle ? MediaQuery.of(context).size.width - kSide * 2 : null,
+              child: Text(
+                title,
+                textAlign: centerTitle ? TextAlign.center : TextAlign.left,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          // 右上角操作按钮（可选）
+          if (trailing != null)
+            Positioned(
+              top: statusBar + 10, // 避开刘海/状态栏
+              right: 16,
+              child: trailing,
+            ),
+        ],
       ),
     );
   }
+
+  // ✅ 提取右上角菜单按钮以传递给 _blueHeader
+  Widget _buildMenuButton() {
+    final l10n = AppLocalizations.of(context)!;
+    return PopupMenuButton<String>(
+      icon: Icon(Icons.more_vert_rounded,
+          color: Colors.white, size: 18.r),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8.r)),
+      onSelected: (value) {
+        if (value == 'mark_all_read') {
+          _markAllAsRead();
+        } else if (value == 'clear_all') {
+          _clearAll();
+        }
+      },
+      itemBuilder: (BuildContext context) => [
+        PopupMenuItem(
+          value: 'mark_all_read',
+          child: Row(
+            children: [
+              Icon(Icons.done_all_rounded,
+                  size: 14.r, color: Colors.grey.shade600),
+              SizedBox(width: 8.w),
+              Text(l10n.markAllAsRead,
+                  style: TextStyle(fontSize: 12.sp)),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'clear_all',
+          child: Row(
+            children: [
+              Icon(Icons.clear_all_rounded,
+                  color: Colors.red, size: 14.r),
+              SizedBox(width: 8.w),
+              Text(l10n.clearAll,
+                  style: TextStyle(
+                      fontSize: 12.sp, color: Colors.red)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ⛔️ [_buildCustomHeader 已被删除，由 _blueHeader 替代]
 
   @override
   void initState() {
@@ -4800,358 +4940,373 @@ class _NotificationPageState extends State<NotificationPage> {
     if (widget.isGuest) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
-        appBar: AppBar(
-          backgroundColor: _PRIMARY_BLUE, // 统一颜色
-          title: Text(
-            l10n.notifications,
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18.sp,
-              fontWeight: FontWeight.w600,
+        // ✅ 移除 AppBar
+        body: Column( // ✅ 改为 Column
+          children: [
+            _blueHeader( // ✅ D.1: 使用新头部
+              context: context,
+              title: l10n.notifications,
+              centerTitle: false, // ✅ D.1: 左对齐
+              trailing: null,
             ),
-          ),
-          elevation: 0,
-          centerTitle: true,
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 60.w,
-                height: 60.w,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(30.r),
-                ),
-                child: Icon(
-                  Icons.lock_outline_rounded,
-                  size: 30.r,
-                  color: Colors.grey.shade500,
-                ),
-              ),
-              SizedBox(height: 16.h),
-              Text(
-                l10n.loginRequired,
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-              SizedBox(height: 6.h),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24.w),
-                child: Text(
-                  l10n.loginToReceiveNotifications,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 12.sp,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-              SizedBox(height: 20.h),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [_PRIMARY_BLUE, const Color(0xFF1E88E5)], // 统一颜色
-                  ),
-                  borderRadius: BorderRadius.circular(10.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _PRIMARY_BLUE.withOpacity(0.3), // 统一颜色
-                      blurRadius: 8.r,
-                      offset: Offset(0, 3.h),
+            Expanded( // ✅ 内容区域
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 60.w,
+                      height: 60.w,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade200,
+                        borderRadius: BorderRadius.circular(30.r),
+                      ),
+                      child: Icon(
+                        Icons.lock_outline_rounded,
+                        size: 30.r,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+                    Text(
+                      l10n.loginRequired,
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    SizedBox(height: 6.h),
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24.w),
+                      child: Text(
+                        l10n.loginToReceiveNotifications,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.grey.shade600,
+                          fontSize: 12.sp,
+                          height: 1.4,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 20.h),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [_PRIMARY_BLUE, const Color(0xFF1E88E5)], // 统一颜色
+                        ),
+                        borderRadius: BorderRadius.circular(10.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _PRIMARY_BLUE.withOpacity(0.3), // 统一颜色
+                            blurRadius: 8.r,
+                            offset: Offset(0, 3.h),
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton.icon(
+                        onPressed: () => Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const LoginScreen()),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          padding:
+                          EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10.r),
+                          ),
+                        ),
+                        icon: Icon(Icons.login_rounded,
+                            size: 14.r, color: Colors.white),
+                        label: Text(
+                          l10n.loginNow,
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                child: ElevatedButton.icon(
-                  onPressed: () => Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const LoginScreen()),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    shadowColor: Colors.transparent,
-                    padding:
-                    EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10.r),
-                    ),
-                  ),
-                  icon: Icon(Icons.login_rounded,
-                      size: 14.r, color: Colors.white),
-                  label: Text(
-                    l10n.loginNow,
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
 
     final unreadCount =
         _notifications.where((n) => n['is_read'] != true).length;
+    final displayTitle =
+        '${l10n.notifications}${unreadCount > 0 ? ' ($unreadCount)' : ''}';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      // 头部使用自定义组件
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(_CUSTOM_HEADER_HEIGHT), // 使用统一高度
-        child: _buildCustomHeader(l10n.notifications),
-      ),
-      body: _isLoading
-          ? Center(
-        child: Container(
-          padding: EdgeInsets.all(24.w),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16.r),
-            boxShadow: [
-              BoxShadow(
-                color: _PRIMARY_BLUE.withOpacity(0.08), // 统一颜色
-                blurRadius: 10.r,
-                offset: Offset(0, 4.h),
-              ),
-            ],
+      // ✅ 移除 AppBar
+      body: Column( // ✅ 改为 Column
+        children: [
+          _blueHeader( // ✅ D.1: 使用新头部
+            context: context,
+            title: displayTitle,
+            centerTitle: false, // ✅ D.1: 左对齐
+            trailing: _notifications.isNotEmpty
+                ? _buildMenuButton() // ✅ 传递菜单按钮
+                : null,
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40.w,
-                height: 40.w,
+          Expanded( // ✅ 内容区域
+            child: _isLoading
+                ? Center(
+              child: Container(
+                padding: EdgeInsets.all(24.w),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      _PRIMARY_BLUE.withOpacity(0.2), // 统一颜色
-                      _PRIMARY_BLUE.withOpacity(0.1), // 统一颜色
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(20.r),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _PRIMARY_BLUE.withOpacity(0.08), // 统一颜色
+                      blurRadius: 10.r,
+                      offset: Offset(0, 4.h),
+                    ),
+                  ],
                 ),
-                child: Center(
-                  child: SizedBox(
-                    width: 20.w,
-                    height: 20.w,
-                    child: CircularProgressIndicator(
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                          _PRIMARY_BLUE), // 统一颜色
-                      strokeWidth: 2.5,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40.w,
+                      height: 40.w,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            _PRIMARY_BLUE.withOpacity(0.2), // 统一颜色
+                            _PRIMARY_BLUE.withOpacity(0.1), // 统一颜色
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(20.r),
+                      ),
+                      child: Center(
+                        child: SizedBox(
+                          width: 20.w,
+                          height: 20.w,
+                          child: CircularProgressIndicator(
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                                _PRIMARY_BLUE), // 统一颜色
+                            strokeWidth: 2.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 12.h),
+                    Text(
+                      'Loading notifications...',
+                      style: TextStyle(
+                        color: _PRIMARY_BLUE, // 统一颜色
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+                : _notifications.isEmpty
+                ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 60.w,
+                    height: 60.w,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          _PRIMARY_BLUE.withOpacity(0.1), // 统一颜色
+                          const Color(0xFF1E88E5).withOpacity(0.05),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(30.r),
+                      border: Border.all(
+                        color: _PRIMARY_BLUE.withOpacity(0.2), // 统一颜色
+                        width: 1,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.notifications_none_rounded,
+                      size: 30.r,
+                      color: _PRIMARY_BLUE, // 统一颜色
                     ),
                   ),
-                ),
-              ),
-              SizedBox(height: 12.h),
-              Text(
-                'Loading notifications...',
-                style: TextStyle(
-                  color: _PRIMARY_BLUE, // 统一颜色
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      )
-          : _notifications.isEmpty
-          ? Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 60.w,
-              height: 60.w,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    _PRIMARY_BLUE.withOpacity(0.1), // 统一颜色
-                    const Color(0xFF1E88E5).withOpacity(0.05),
-                  ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(30.r),
-                border: Border.all(
-                  color: _PRIMARY_BLUE.withOpacity(0.2), // 统一颜色
-                  width: 1,
-                ),
-              ),
-              child: Icon(
-                Icons.notifications_none_rounded,
-                size: 30.r,
-                color: _PRIMARY_BLUE, // 统一颜色
-              ),
-            ),
-            SizedBox(height: 16.h),
-            Text(
-              l10n.noNotifications,
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-            ),
-            SizedBox(height: 6.h),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Text(
-                l10n.notificationsWillAppearHere,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.grey.shade600,
-                  fontSize: 12.sp,
-                  height: 1.4,
-                ),
-              ),
-            ),
-          ],
-        ),
-      )
-          : RefreshIndicator(
-        onRefresh: _loadNotifications,
-        color: _PRIMARY_BLUE, // 统一颜色
-        backgroundColor: Colors.white,
-        strokeWidth: 2.w,
-        child: ListView.builder(
-          physics: const AlwaysScrollableScrollPhysics(),
-          itemCount: _notifications.length,
-          itemBuilder: (context, index) {
-            final notification = _notifications[index];
-            final isRead = notification['is_read'] == true;
-            final type = notification['type']?.toString() ?? '';
-            final createdAt =
-                notification['created_at']?.toString() ?? '';
-
-            return Dismissible(
-              key: Key('${notification['id']}'),
-              background: Container(
-                color: Colors.red.shade600,
-                alignment: Alignment.centerRight,
-                padding: EdgeInsets.only(right: 12.w),
-                child: Icon(
-                  Icons.delete_rounded,
-                  color: Colors.white,
-                  size: 20.r,
-                ),
-              ),
-              direction: DismissDirection.endToStart,
-              onDismissed: (direction) => _deleteNotification(index),
-              child: Container(
-                color: isRead
-                    ? Colors.white
-                    : _PRIMARY_BLUE.withOpacity(0.03), // 统一颜色
-                margin: EdgeInsets.only(bottom: 0.5.h),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => _handleNotificationTap(notification),
-                    splashColor:
-                    _PRIMARY_BLUE.withOpacity(0.1), // 统一颜色
-                    highlightColor:
-                    _PRIMARY_BLUE.withOpacity(0.05), // 统一颜色
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12.w,
-                        vertical: 8.h,
+                  SizedBox(height: 16.h),
+                  Text(
+                    l10n.noNotifications,
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  SizedBox(height: 6.h),
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    child: Text(
+                      l10n.notificationsWillAppearHere,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.grey.shade600,
+                        fontSize: 12.sp,
+                        height: 1.4,
                       ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _getNotificationIcon(type),
-                          SizedBox(width: 10.w),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                    ),
+                  ),
+                ],
+              ),
+            )
+                : RefreshIndicator(
+              onRefresh: _loadNotifications,
+              color: _PRIMARY_BLUE, // 统一颜色
+              backgroundColor: Colors.white,
+              strokeWidth: 2.w,
+              child: ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                // ✅ D.2: 统一顶部间距为 16
+                padding: EdgeInsets.only(top: 16.h),
+                itemCount: _notifications.length,
+                itemBuilder: (context, index) {
+                  final notification = _notifications[index];
+                  final isRead = notification['is_read'] == true;
+                  final type = notification['type']?.toString() ?? '';
+                  final createdAt =
+                      notification['created_at']?.toString() ?? '';
+
+                  return Dismissible(
+                    key: Key('${notification['id']}'),
+                    background: Container(
+                      color: Colors.red.shade600,
+                      alignment: Alignment.centerRight,
+                      padding: EdgeInsets.only(right: 12.w),
+                      child: Icon(
+                        Icons.delete_rounded,
+                        color: Colors.white,
+                        size: 20.r,
+                      ),
+                    ),
+                    direction: DismissDirection.endToStart,
+                    onDismissed: (direction) => _deleteNotification(index),
+                    child: Container(
+                      color: isRead
+                          ? Colors.white
+                          : _PRIMARY_BLUE.withOpacity(0.03), // 统一颜色
+                      margin: EdgeInsets.only(bottom: 0.5.h),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => _handleNotificationTap(notification),
+                          // ✅ 修复：将 _PRIMARY_BRAVO 替换为 _PRIMARY_BLUE
+                          splashColor:
+                          _PRIMARY_BLUE.withOpacity(0.1), // 统一颜色
+                          highlightColor:
+                          _PRIMARY_BLUE.withOpacity(0.05), // 统一颜色
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 12.w,
+                              vertical: 8.h,
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        '${notification['title'] ?? ''}',
+                                _getNotificationIcon(type),
+                                SizedBox(width: 10.w),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              '${notification['title'] ?? ''}',
+                                              style: TextStyle(
+                                                fontWeight: isRead
+                                                    ? FontWeight.w500
+                                                    : FontWeight.w600,
+                                                fontSize: 13.sp,
+                                                color: Colors.black87,
+                                                height: 1.3,
+                                              ),
+                                              maxLines: 2,
+                                              overflow:
+                                              TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          if (!isRead)
+                                            Container(
+                                              width: 6.w,
+                                              height: 6.w,
+                                              margin: EdgeInsets.only(
+                                                  left: 6.w),
+                                              decoration:
+                                              const BoxDecoration(
+                                                color:
+                                                _PRIMARY_BLUE, // 统一颜色
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                      SizedBox(height: 2.h),
+                                      Text(
+                                        '${notification['message'] ?? ''}',
                                         style: TextStyle(
-                                          fontWeight: isRead
-                                              ? FontWeight.w500
-                                              : FontWeight.w600,
-                                          fontSize: 13.sp,
-                                          color: Colors.black87,
-                                          height: 1.3,
+                                          fontSize: 11.sp,
+                                          color: Colors.grey.shade600,
+                                          height: 1.4,
                                         ),
                                         maxLines: 2,
-                                        overflow:
-                                        TextOverflow.ellipsis,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                    ),
-                                    if (!isRead)
-                                      Container(
-                                        width: 6.w,
-                                        height: 6.w,
-                                        margin: EdgeInsets.only(
-                                            left: 6.w),
-                                        decoration:
-                                        const BoxDecoration(
-                                          color:
-                                          _PRIMARY_BLUE, // 统一颜色
-                                          shape: BoxShape.circle,
-                                        ),
+                                      SizedBox(height: 4.h),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.access_time_rounded,
+                                            size: 10.r,
+                                            color: Colors.grey.shade400,
+                                          ),
+                                          SizedBox(width: 2.w),
+                                          Text(
+                                            NotificationService
+                                                .formatNotificationTime(
+                                                createdAt),
+                                            style: TextStyle(
+                                              fontSize: 10.sp,
+                                              color: Colors.grey.shade400,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                  ],
-                                ),
-                                SizedBox(height: 2.h),
-                                Text(
-                                  '${notification['message'] ?? ''}',
-                                  style: TextStyle(
-                                    fontSize: 11.sp,
-                                    color: Colors.grey.shade600,
-                                    height: 1.4,
+                                    ],
                                   ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                SizedBox(height: 4.h),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.access_time_rounded,
-                                      size: 10.r,
-                                      color: Colors.grey.shade400,
-                                    ),
-                                    SizedBox(width: 2.w),
-                                    Text(
-                                      NotificationService
-                                          .formatNotificationTime(
-                                          createdAt),
-                                      style: TextStyle(
-                                        fontSize: 10.sp,
-                                        color: Colors.grey.shade400,
-                                      ),
-                                    ),
-                                  ],
                                 ),
                               ],
                             ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
-            );
-          },
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -5168,11 +5323,7 @@ class NoGlowScrollBehavior extends ScrollBehavior {
 
 const _kPrivacyUrl = 'https://www.swaply.cc/privacy';
 const _kDeleteUrl = 'https://www.swaply.cc/delete-account';
-
-// ✅ 新增（如果文件顶部没有）：避免 setState after dispose
-
-
-/* ---------------- Profile Page 个人资料页 ---------------- */
+//---------------- Profile Page 个人资料页 ----------------
 class ProfilePage extends StatefulWidget {
   final bool isGuest;
   const ProfilePage({Key? key, this.isGuest = false}) : super(key: key);

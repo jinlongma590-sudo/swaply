@@ -1,17 +1,23 @@
-// lib/auth/register_screen.dart — iOS/Android 统一回调 最终修复版
+// lib/auth/register_screen.dart - 最终修复：Apple 登录改回 OAuth 流程
 
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform; // ✅ 移除 dart:io, 使用 defaultTargetPlatform
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 import 'package:swaply/services/reward_service.dart';
+
+// ✅ 修复：恢复使用 'as sf' 别名，以匹配 _oauthSignIn 辅助函数
 import 'package:supabase_flutter/supabase_flutter.dart' as sf;
 
 // 仅保留全局配置（用于 emailRedirectTo 等）
 import 'package:swaply/config/auth_config.dart';
 
-// ✅ 统一定义 iOS 和 Android 的回调 URL（必须与 Xcode Info.plist 和 AndroidManifest 中设置的一致）
-const String _kMobileRedirect = 'swaply://login-callback';
+// ✅ 修复：添加此 import 以便跳转
+import 'login_screen.dart';
+
+// ✅ 修复：使用您提供的、区分平台的常量
+const String _kIOSRedirect = 'io.supabase.flutter://callback';
+const String _kAndroidRedirect = 'swaply://login-callback';
 
 class RegisterScreen extends StatefulWidget {
   final String? invitationCode;
@@ -60,29 +66,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // ✅ 最终修复：iOS 和 Android 统一使用 _kMobileRedirect
+  // ✅ 修复：使用您提供的、区分平台的 _oauthSignIn 辅助函数
   Future<void> _oauthSignIn(
       sf.OAuthProvider provider, {
         String? scopes,
         Map<String, String>? queryParams,
       }) async {
-    // 动态决定重定向 URL
-    String? redirectUrl;
-    if (kIsWeb) {
-      redirectUrl = null; // Web 平台使用 Supabase 仪表盘的默认设置
-    } else {
-      // ✅ 无论是 iOS 还是 Android，都使用同一个自定义 Scheme
-      // 因为 'swaply' 存在于 Info.plist 和 AndroidManifest
-      if (defaultTargetPlatform == TargetPlatform.iOS ||
-          defaultTargetPlatform == TargetPlatform.android) {
-        redirectUrl = _kMobileRedirect;
+    String? redirect;
+    if (!kIsWeb) {
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        redirect = _kIOSRedirect;
+      } else if (defaultTargetPlatform == TargetPlatform.android) {
+        redirect = _kAndroidRedirect;
       }
-      // 其他平台 (macOS, Windows...) 将使用 null
     }
-
     await sf.Supabase.instance.client.auth.signInWithOAuth(
       provider,
-      redirectTo: redirectUrl, // ✅ 使用统一的 URL
+      redirectTo: redirect,
       authScreenLaunchMode: LaunchMode.externalApplication,
       scopes: scopes,
       queryParams: queryParams,
@@ -211,11 +211,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final code = _pickCodeFromUI();
       await _maybeBindInviteCode(code);
 
-      // ✅ 最终修复：使用 _oauthSignIn，它将自动使用正确的 _kMobileRedirect
-      await _oauthSignIn(
-        sf.OAuthProvider.apple,
-        scopes: 'name email', // Apple 推荐
-      );
+      // ✅ 修复：按照您的要求，将 Apple 登录改回 OAuth 流程
+      await _oauthSignIn(sf.OAuthProvider.apple, scopes: 'name email');
 
       await _maybeBindInviteCode(code);
     } on sf.AuthException catch (e) {
@@ -274,7 +271,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ 修复：使用 defaultTargetPlatform 替换 Platform.isIOS
     final bool isIOS = !kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS);
 
     return Scaffold(
@@ -533,8 +529,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: TextStyle(color: Colors.grey[600], fontSize: 12.sp),
                     ),
                     GestureDetector(
-                      onTap: () =>
-                          _showInfo('Sign-in navigation is handled elsewhere.'),
+                      // ✅ 修复：将 _showInfo 替换为实际导航
+                      onTap: () => Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const LoginScreen(),
+                        ),
+                      ),
                       child: Text(
                         'Sign In',
                         style: TextStyle(

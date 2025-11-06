@@ -1,18 +1,17 @@
-// lib/auth/login_screen.dart - iOS/Android 统一回调 最终修复版
+// lib/auth/login_screen.dart - 最终修复：Apple 登录改回 OAuth 流程
 
-// ❌ 移除了 'dart:io'
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform; // ✅ 使用 defaultTargetPlatform
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 
-// 如需注册/找回密码页，请在别处跳转；这里不做任何路由
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
 
-import 'package:supabase_flutter/supabase_flutter.dart' as sf;
+// ✅ 修复：移除了 'as sf' 别名
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-// ✅ 统一定义 iOS 和 Android 的回调 URL（必须与 Xcode Info.plist 和 AndroidManifest 中设置的一致）
+// ✅ 统一定义 iOS 和 Android 的回调 URL（用于 Google/Facebook/Apple）
 const String _kMobileRedirect = 'swaply://login-callback';
 
 class LoginScreen extends StatefulWidget {
@@ -38,29 +37,25 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // ✅ 最终修复：iOS 和 Android 统一使用 _kMobileRedirect
+  // ✅ 这个函数现在给 Google, Facebook, 和 Apple 统一使用
   Future<void> _oauthSignIn(
-      sf.OAuthProvider provider, {
+      OAuthProvider provider, {
         String? scopes,
         Map<String, String>? queryParams,
       }) async {
-    // 动态决定重定向 URL
     String? redirectUrl;
     if (kIsWeb) {
-      redirectUrl = null; // Web 平台使用 Supabase 仪表盘的默认设置
+      redirectUrl = null;
     } else {
-      // ✅ 无论是 iOS 还是 Android，都使用同一个自定义 Scheme
-      // 因为 'swaply' 存在于 Info.plist 和 AndroidManifest
       if (defaultTargetPlatform == TargetPlatform.iOS ||
           defaultTargetPlatform == TargetPlatform.android) {
         redirectUrl = _kMobileRedirect;
       }
-      // 其他平台 (macOS, Windows...) 将使用 null
     }
 
-    await sf.Supabase.instance.client.auth.signInWithOAuth(
+    await Supabase.instance.client.auth.signInWithOAuth(
       provider,
-      redirectTo: redirectUrl, // ✅ 使用统一的 URL
+      redirectTo: redirectUrl,
       authScreenLaunchMode: LaunchMode.externalApplication,
       scopes: scopes,
       queryParams: queryParams,
@@ -73,12 +68,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _busy = true);
     try {
-      await sf.Supabase.instance.client.auth.signInWithPassword(
+      await Supabase.instance.client.auth.signInWithPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      // 交给全局 onAuthStateChange 处理路由
-    } on sf.AuthException catch (e) {
+    } on AuthException catch (e) {
       _showError(e.message);
     } catch (_) {
       _showError('Login failed. Please try again.');
@@ -92,23 +86,20 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _busy = true);
     try {
       await _oauthSignIn(
-        sf.OAuthProvider.google,
-        // 避免自动选中历史账号
+        OAuthProvider.google,
         queryParams: const {'prompt': 'select_account'},
-        // 可选：scopes: 'email profile',
       );
-    } on sf.AuthException catch (e) {
+    } on AuthException catch (e) {
       final msg = e.message.toLowerCase();
       if (msg.contains('cancel') ||
           msg.contains('canceled') ||
           msg.contains('popup_closed')) {
-        // 用户手动关闭，不提示
       } else {
         _showError('Google sign-in error: ${e.message}');
       }
     } catch (_) {
       Future.delayed(const Duration(seconds: 1), () {
-        final user = sf.Supabase.instance.client.auth.currentUser;
+        final user = Supabase.instance.client.auth.currentUser;
         if (mounted && user == null) {
           _showError('Failed to start Google sign-in. Please try again.');
         }
@@ -123,10 +114,9 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _busy = true);
     try {
       await _oauthSignIn(
-        sf.OAuthProvider.facebook,
-        // 可选：scopes: 'email public_profile',
+        OAuthProvider.facebook,
       );
-    } on sf.AuthException catch (e) {
+    } on AuthException catch (e) {
       _showError(e.message);
     } catch (_) {
       _showError('Facebook 登录启动失败，请稍后再试');
@@ -139,13 +129,12 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      // ✅ 最终修复：使用 _oauthSignIn，它将自动使用正确的 _kMobileRedirect
+      // ✅ 最终修复：Apple 必须使用 _oauthSignIn，因为它现在是唯一正确配置的回调方式
       await _oauthSignIn(
-        sf.OAuthProvider.apple,
-        // Apple 推荐 scopes: name email（首次授权才会返回姓名）
+        OAuthProvider.apple,
         scopes: 'name email',
       );
-    } on sf.AuthException catch (e) {
+    } on AuthException catch (e) {
       _showError(e.message);
     } catch (_) {
       _showError('Apple 登录启动失败，请稍后再试');
@@ -168,7 +157,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ 修复：使用 defaultTargetPlatform 替换 Platform.isIOS
     final bool showApple = !kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS);
 
     return Scaffold(
@@ -394,7 +382,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(color: Colors.grey[600], fontSize: 12.sp),
                     ),
                     GestureDetector(
-                      onTap: () => _showError('注册跳转不在登录页处理'),
+                      // ✅ 修复：将 _showError 替换为实际导航
+                      onTap: () => Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const RegisterScreen(),
+                        ),
+                      ),
                       child: Text(
                         'Sign Up',
                         style: TextStyle(
