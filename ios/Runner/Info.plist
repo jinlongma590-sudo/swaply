@@ -80,10 +80,10 @@
     <key>FlutterDeepLinkingEnabled</key>
     <true/>
 
-    <!-- URL Schemes：先�?Supabase 默认，再保留你的 swaply -->
+    <!-- URL Schemes：先加 Supabase 默认，再保留你的 swaply -->
     <key>CFBundleURLTypes</key>
     <array>
-      <!-- Supabase Flutter 默认 iOS 回调 Scheme（必须有�?-->
+      <!-- Supabase Flutter 默认 iOS 回调 Scheme（必须有） -->
       <dict>
         <key>CFBundleURLName</key>
         <string>supabase.auth</string>
@@ -92,7 +92,7 @@
           <string>io.supabase.flutter</string>
         </array>
       </dict>
-      <!-- 你的自定�?scheme（可选保留） -->
+      <!-- 你的自定义 scheme（可选保留） -->
       <dict>
         <key>CFBundleURLName</key>
         <string>swaply.login</string>
@@ -103,7 +103,7 @@
       </dict>
     </array>
 
-    <!-- 允许 canOpenURL 的外�?App 白名�?-->
+    <!-- 允许 canOpenURL 的外部 App 白名单 -->
     <key>LSApplicationQueriesSchemes</key>
     <array>
       <string>whatsapp</string>
