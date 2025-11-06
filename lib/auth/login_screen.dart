@@ -1,6 +1,7 @@
-// lib/auth/login_screen.dart - iOS/Android 平台分离回调 最终修复版
+// lib/auth/login_screen.dart - iOS/Android 统一回调 最终修复版
 
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform; // ✅ 移除 dart:io, 使用 defaultTargetPlatform
+// ❌ 移除了 'dart:io'
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform; // ✅ 使用 defaultTargetPlatform
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:url_launcher/url_launcher.dart' show LaunchMode;
@@ -11,10 +12,8 @@ import 'forgot_password_screen.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart' as sf;
 
-// ✅ 恢复 iOS 默认回调 (您的 Apple 登录之前依赖此设置)
-const String _kIOSRedirect = 'io.supabase.flutter://callback';
-// ✅ 保留 Android 专用回调 (您的 Android 侧依赖此设置)
-const String _kAndroidRedirect = 'swaply://login-callback';
+// ✅ 统一定义 iOS 和 Android 的回调 URL（必须与 Xcode Info.plist 和 AndroidManifest 中设置的一致）
+const String _kMobileRedirect = 'swaply://login-callback';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -39,7 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // ✅ 最终修复：根据平台动态选择正确的回调
+  // ✅ 最终修复：iOS 和 Android 统一使用 _kMobileRedirect
   Future<void> _oauthSignIn(
       sf.OAuthProvider provider, {
         String? scopes,
@@ -50,18 +49,18 @@ class _LoginScreenState extends State<LoginScreen> {
     if (kIsWeb) {
       redirectUrl = null; // Web 平台使用 Supabase 仪表盘的默认设置
     } else {
-      // 非 Web 平台（Android, iOS 等）
-      if (defaultTargetPlatform == TargetPlatform.iOS) {
-        redirectUrl = _kIOSRedirect; // ✅ iOS 必须使用这个
-      } else if (defaultTargetPlatform == TargetPlatform.android) {
-        redirectUrl = _kAndroidRedirect; // ✅ Android 必须使用这个
+      // ✅ 无论是 iOS 还是 Android，都使用同一个自定义 Scheme
+      // 因为 'swaply' 存在于 Info.plist 和 AndroidManifest
+      if (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.android) {
+        redirectUrl = _kMobileRedirect;
       }
       // 其他平台 (macOS, Windows...) 将使用 null
     }
 
     await sf.Supabase.instance.client.auth.signInWithOAuth(
       provider,
-      redirectTo: redirectUrl, // ✅ 使用平台特定的 URL
+      redirectTo: redirectUrl, // ✅ 使用统一的 URL
       authScreenLaunchMode: LaunchMode.externalApplication,
       scopes: scopes,
       queryParams: queryParams,
@@ -140,7 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      // ✅ 最终修复：恢复到您之前能正常工作的 _oauthSignIn 方法
+      // ✅ 最终修复：使用 _oauthSignIn，它将自动使用正确的 _kMobileRedirect
       await _oauthSignIn(
         sf.OAuthProvider.apple,
         // Apple 推荐 scopes: name email（首次授权才会返回姓名）

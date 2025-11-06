@@ -5546,7 +5546,7 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   // -----------------------------------------------------
-  // Header：回到“自适应高度 + 内部 padding”的经典写法（不固定 300）
+  // Header：自适应高度 + 内部 padding；恢复“Member since …”显示
   // -----------------------------------------------------
   Widget _buildHeaderClassic({
     required bool isGuest,
@@ -5649,10 +5649,17 @@ class _ProfilePageState extends State<ProfilePage>
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
-                    Icon(Icons.calendar_today_outlined, size: 12, color: Colors.white),
-                    SizedBox(width: 4),
-                    // 文案在 build() 里拼好传进来
+                  children: [
+                    const Icon(Icons.calendar_today_outlined, size: 12, color: Colors.white),
+                    const SizedBox(width: 4),
+                    Text(
+                      memberSince,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -5776,9 +5783,6 @@ class _ProfilePageState extends State<ProfilePage>
                               title: 'Edit Profile',
                               color: Colors.blue,
                             ),
-                            // 上面这个为了保持结构，你如果需要 onTap=_editNamePhone 就把 const 去掉：
-                            // _ProfileOptionEnhanced(icon: Icons.edit_rounded, title: l10n.editProfile, color: Colors.blue, onTap: _editNamePhone),
-
                             const SizedBox(height: 12),
                             _VerificationTileCard(
                               isVerified: _verified,
@@ -5876,7 +5880,7 @@ class _ProfilePageState extends State<ProfilePage>
                               color: Colors.cyan,
                               onTap: () => Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const AccountSettingsPage()),
+                                MaterialPageRoute(builder: (_) => const AccountSettingsPage() ),
                               ),
                             ),
                             const SizedBox(height: 12),
@@ -6033,7 +6037,7 @@ class _ProfilePageState extends State<ProfilePage>
   }
 }
 
-/* ---------------- Verification Tile（紧凑版：方角 + chevron） ---------------- */
+/* ---------------- Verification Tile（iOS 紧凑版；Android 原样） ---------------- */
 class _VerificationTileCard extends StatelessWidget {
   final bool isVerified;
   final bool isLoading;
@@ -6048,17 +6052,21 @@ class _VerificationTileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Color badgeColor = isVerified ? Colors.green : Colors.grey;
+    final bool isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+    final double vPad = isIOS ? 12 : 16;      // 垂直更紧凑
+    final double iconSize = isIOS ? 22 : 26;  // 图标略小
+    final double radius = isIOS ? 14 : 16;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(radius),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: vPad),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(radius),
             boxShadow: const [
               BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.04), blurRadius: 12, offset: Offset(0, 2)),
             ],
@@ -6066,12 +6074,12 @@ class _VerificationTileCard extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(isIOS ? 10 : 12),
                 decoration: BoxDecoration(
                   color: badgeColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(isIOS ? 12 : 14),
                 ),
-                child: Icon(Icons.verified, color: badgeColor, size: 26),
+                child: Icon(Icons.verified, color: badgeColor, size: iconSize),
               ),
               const SizedBox(width: 18),
               Expanded(
@@ -6098,7 +6106,7 @@ class _VerificationTileCard extends StatelessWidget {
   }
 }
 
-/* ---------------- 通用列表项（保持你原来的紧凑风格） ---------------- */
+/* ---------------- 通用列表项（iOS 紧凑版；Android 原样） ---------------- */
 class _ProfileOptionEnhanced extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -6116,16 +6124,21 @@ class _ProfileOptionEnhanced extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+    final double vPad = isIOS ? 12 : 16;
+    final double iconSize = isIOS ? 22 : 26;
+    final double radius = isIOS ? 14 : 16;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(radius),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: vPad),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(radius),
             boxShadow: const [
               BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.04), blurRadius: 12, offset: Offset(0, 2))
             ],
@@ -6133,10 +6146,10 @@ class _ProfileOptionEnhanced extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(isIOS ? 10 : 12),
                 decoration: BoxDecoration(
-                    color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(14)),
-                child: Icon(icon, color: color, size: 26),
+                    color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(isIOS ? 12 : 14)),
+                child: Icon(icon, color: color, size: iconSize),
               ),
               const SizedBox(width: 18),
               Expanded(
@@ -6164,23 +6177,28 @@ class _ProfileOptionEnhanced extends StatelessWidget {
   }
 }
 
-/* ---------------- My Rewards（统一样式版） ---------------- */
+/* ---------------- My Rewards（iOS 紧凑版；Android 原样） ---------------- */
 class _RewardsTileUnified extends StatelessWidget {
   final VoidCallback? onTap;
   const _RewardsTileUnified({this.onTap});
 
   @override
   Widget build(BuildContext context) {
+    final bool isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+    final double vPad = isIOS ? 12 : 16;
+    final double iconSize = isIOS ? 22 : 26;
+    final double radius = isIOS ? 14 : 16;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(radius),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: vPad),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(radius),
             boxShadow: const [
               BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.04), blurRadius: 12, offset: Offset(0, 2)),
             ],
@@ -6188,13 +6206,13 @@ class _RewardsTileUnified extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: EdgeInsets.all(isIOS ? 10 : 12),
                 decoration: BoxDecoration(
                   color: Colors.deepPurple.withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(isIOS ? 12 : 14),
                 ),
-                child: const Icon(Icons.emoji_events_rounded,
-                    color: Colors.deepPurple, size: 26),
+                child: Icon(Icons.emoji_events_rounded,
+                    color: Colors.deepPurple, size: iconSize),
               ),
               const SizedBox(width: 18),
               const Expanded(
