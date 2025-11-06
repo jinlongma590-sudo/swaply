@@ -1,7 +1,7 @@
 name: swaply
 description: A marketplace app for Zimbabwe
 publish_to: 'none'
-version: 1.0.0+28
+version: 1.0.0+29
 
 environment:
   sdk: '>=3.3.0 <4.0.0'   # 与 supabase_flutter 2.7.x / sign_in_with_apple 7.x 兼容
@@ -33,7 +33,7 @@ dependencies:
   share_plus: ^12.0.0
 
   # Supabase / OAuth
-  supabase_flutter: ^2.7.0
+  supabase_flutter: ^2.10.3
   supabase: ^2.4.0
   google_sign_in: ^6.2.1        # 你项目中有用到，保留；若完全走 Supabase OAuth 可后续移除
   sign_in_with_apple: ^7.0.1
