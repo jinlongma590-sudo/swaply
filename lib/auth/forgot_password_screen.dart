@@ -1,5 +1,7 @@
+// lib/auth/forgot_password_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({Key? key}) : super(key: key);
@@ -21,16 +23,48 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _sendResetLink() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
-      // 模拟发送邮件
-      await Future.delayed(const Duration(seconds: 2));
+    setState(() => _isLoading = true);
+    try {
+      // ✅ 真发邮件（Supabase 标准流程：邮件里是“重置密码链接”）
+      await Supabase.instance.client.auth.resetPasswordForEmail(
+        _emailController.text.trim(),
+        redirectTo: 'io.supabase.flutter://callback', // iOS 已在 Info.plist 配好
+      );
 
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _isEmailSent = true;
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Reset link sent to ${_emailController.text.trim()}'),
+          backgroundColor: Colors.green[600],
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: Colors.red[400],
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to send reset link, please try again.'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -79,8 +113,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(height: 20.h),
-
-          // Icon with enhanced design
           Center(
             child: Container(
               width: 100.r,
@@ -106,8 +138,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
           ),
           SizedBox(height: 40.h),
-
-          // Header with better typography
           Text(
             'Forgot Password?',
             style: TextStyle(
@@ -119,7 +149,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
           SizedBox(height: 12.h),
           Text(
-            'Don\'t worry! Enter your email address and we\'ll send you a link to reset your password.',
+            'Enter your email address and we\'ll send you a link to reset your password.',
             style: TextStyle(
               fontSize: 16.sp,
               color: Colors.grey[600],
@@ -128,8 +158,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
           ),
           SizedBox(height: 40.h),
-
-          // Email Field with enhanced styling
           Container(
             decoration: BoxDecoration(
               boxShadow: [
@@ -192,9 +220,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
                 focusedErrorBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16.r),
-                  borderSide: BorderSide(
+                  borderSide: const BorderSide(
                     color: Colors.red,
-                    width: 2.r,
+                    width: 2,
                   ),
                 ),
                 contentPadding: EdgeInsets.symmetric(
@@ -215,8 +243,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
           ),
           SizedBox(height: 40.h),
-
-          // Enhanced Send Button
           Container(
             width: double.infinity,
             height: 56.h,
@@ -243,29 +269,27 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 child: Center(
                   child: _isLoading
                       ? SizedBox(
-                          width: 24.r,
-                          height: 24.r,
-                          child: const CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2.5,
-                          ),
-                        )
+                    width: 24.r,
+                    height: 24.r,
+                    child: const CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2.5,
+                    ),
+                  )
                       : Text(
-                          'Send Reset Link',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
+                    'Send Reset Link',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
           SizedBox(height: 24.h),
-
-          // Back to login link
           Center(
             child: TextButton(
               onPressed: () => Navigator.pop(context),
@@ -288,8 +312,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return Column(
       children: [
         SizedBox(height: 60.h),
-
-        // Success icon with animation-ready styling
         Container(
           width: 120.r,
           height: 120.r,
@@ -313,7 +335,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
         ),
         SizedBox(height: 32.h),
-
         Text(
           'Email Sent!',
           style: TextStyle(
@@ -324,7 +345,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
         ),
         SizedBox(height: 16.h),
-
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 32.w),
           child: Text(
@@ -338,8 +358,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
         ),
         SizedBox(height: 40.h),
-
-        // Enhanced back button
         Container(
           width: double.infinity,
           height: 56.h,
@@ -375,14 +393,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             ),
           ),
         ),
-
         SizedBox(height: 32.h),
-
-        // Resend option
         TextButton(
-          onPressed: () {
-            setState(() => _isEmailSent = false);
-          },
+          onPressed: _isLoading ? null : _sendResetLink,
           child: Text(
             'Didn\'t receive the email? Send again',
             style: TextStyle(

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as dev; // ✅ 新增的 import
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -13,9 +14,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-// ====== 鏈」鐩唴鐨勪緷璧?======
+// ====== 链」鐩唴鐨勪緷璧?======
 import 'package:swaply/auth/login_screen.dart';
 import 'package:swaply/auth/welcome_screen.dart';
+import 'package:swaply/auth/reset_password_page.dart'; // ✅ 新增：密码找回完成后设置新密码页面
 import 'package:swaply/models/coupon.dart';
 import 'package:swaply/models/listing_store.dart';
 import 'package:swaply/models/verification_types.dart' as vt;
@@ -43,7 +45,7 @@ import 'package:swaply/widgets/my_rewards_tile.dart';
 import 'package:swaply/widgets/verified_avatar.dart';
 import 'package:swaply/widgets/verification_badge.dart' as vb;
 import 'package:swaply/widgets/verification_badge_mini.dart';
-// 鉁?鏂板锛歩OS 瀹夊叏鍖哄畧鎶?
+// 鉁?鏂板锛VictoriaOS 瀹夊叏鍖哄畧鎶?
 import 'package:swaply/widgets/ios_insets_guard.dart';
 import 'startup_screen.dart';
 
@@ -238,6 +240,18 @@ void wireAuthHook() {
   _globalAuthSub = auth.onAuthStateChange.listen((data) async {
     final event = data.event;
 
+    // ✅ 新增：邮件链接触发找回密码，导航到重置密码页
+    if (event == AuthChangeEvent.passwordRecovery) {
+      debugPrint('[Auth] passwordRecovery detected -> navigate ResetPasswordPage');
+      final ctx = appNavKey.currentContext;
+      if (ctx != null) {
+        appNavKey.currentState?.push(
+          MaterialPageRoute(builder: (_) => const ResetPasswordPage()),
+        );
+      }
+      return; // 本次事件只做恢复密码引导
+    }
+
     if (event == AuthChangeEvent.tokenRefreshed ||
         event == AuthChangeEvent.userUpdated) {
       debugPrint('[Auth] $event - skipping business logic');
@@ -252,7 +266,7 @@ void wireAuthHook() {
       if (u != null) {
         await NotificationService.subscribeUser(u.id);
 
-// 鉁?鏂伴€昏緫锛氱敱鏈嶅姟绔箓绛?RPC 鍐冲畾鏄惁闇€瑕佸脊涓€娆℃杩庡埜
+        // 鉁?鏂伴€昏緫锛氱敱鏈嶅姟绔箓绛?RPC 鍐冲畾鏄惁闇€瑕佸脊涓€娆℃杩庡埜
         try {
           final res = await RewardService.ensureWelcomeForCurrentUser();
           if (res.shouldPopup) {
@@ -265,8 +279,8 @@ void wireAuthHook() {
 
         final ctx = appNavKey.currentContext;
         if (ctx != null) {
-// ✅ 修复：冷启动(initialSession)不再导航，避免二次 push；
-// 仅在真正登录(signedIn)且当前不在 /home 时导航到首页
+          // ✅ 修复：冷启动(initialSession)不再导航，避免二次 push；
+          // 仅在真正登录(signedIn)且当前不在 /home 时导航到首页
           if (event == AuthChangeEvent.signedIn) {
             final current = ModalRoute.of(ctx)?.settings.name;
             if (current != '/home') {
@@ -310,7 +324,7 @@ String _fixUtf8Mojibake(String? raw) {
   return s;
 }
 
-// 绠€鍗曠殑鈥滄杩庣ぜ鈥濆脊绐楋紙淇濇寔涓庡叾浠栧瑙嗚涓€鑷达級
+// 绠€鍗曠殑鈥滄杩庣ぜ鈥濆脊绐楋紙淇濇寔涓庡叾浠lc 澶勭Handling changed Visual 涓€鑷达級
 void _showWelcomeGiftDialog() {
   final ctx = appNavKey.currentContext;
   if (ctx == null) return;
@@ -387,7 +401,7 @@ void _showWelcomeGiftDialog() {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-// === 闈欓煶 Supabase 鐨?refresh session 鍣煶锛堜粎寮€鍙戞湡锛?===
+  // === 闈欓煶 Supabase 鐨?refresh session 鍣煶锛堜粎寮€鍙戞湡锛?===
       {
     final _orig = debugPrint;
     debugPrint = (String? message, {int? wrapWidth}) {
@@ -398,9 +412,9 @@ Future<void> main() async {
       _orig(message, wrapWidth: wrapWidth);
     };
   }
-// =====================================================
+  // =====================================================
 
-// ========= 鍏ㄥ眬閿欒鍏滃簳 =========
+  // ========= 鍏ㄥ眬閿欒鍏滃簳 =========
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
   };
@@ -423,8 +437,8 @@ Future<void> main() async {
                 Icon(Icons.error_outline, color: Colors.red, size: 28.w),
                 SizedBox(height: 6.h),
                 Text('Something went wrong',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 14.sp)),
+                    style:
+                    TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
                 SizedBox(height: 4.h),
                 Text(
                   details.exceptionAsString(),
@@ -439,19 +453,23 @@ Future<void> main() async {
     );
   };
 
-// 鉁?鍚敤 PKCE OAuth锛堢Щ鍔ㄧ蹇呴』锛?
+  // 鉁?鍚敤 PKCE OAuth锛堢Щ鍔ㄧ蹇呴』锛?
   await Supabase.initialize(
     url: 'https://rhckybselarzglkmlyqs.supabase.co',
     anonKey:
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoY2t5YnNlbGFyemdsa21seXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTM0NTgsImV4cCI6MjA3MDU4OTQ1OH0.3I0T2DidiF-q9l2tWeHOjB31QogXHDqRtEjDn0RfVbU',
     authOptions: const FlutterAuthClientOptions(
-       // 馃憟 鍏抽敭锛屽埆鍐欐垚 flowType
+      // 馃憟 鍏抽敭锛屽埆鍐欐垚 flowType
       autoRefreshToken: true,
     ),
   );
 
-// 鉁?鍦?Supabase 鍒濆鍖栧悗锛宺unApp 涔嬪墠璋冪敤鍏ㄥ眬鐩戝惉鍣?
+  // 鉁?鍦?Supabase 鍒濆鍖栧悗锛宺unApp 涔嬪墠璋冪敤鍏ㄥ眬鐩戝惉鍣?
   wireAuthHook();
+
+  // ✅ 方案 B：启动时补档 + 注册登录时监听（来自您的方案）
+  await _ensureProfileForCurrentUserOnce(); // 启动时，若已登录则补档一次
+  _setupAuthListener(); // 以后每次登录都自动补档
 
   runApp(
     ChangeNotifierProvider(
@@ -487,8 +505,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     switch (state) {
       case AppLifecycleState.resumed:
         debugPrint('App resumed - clearing notifications if needed');
-// 涓嶅啀涓诲姩 refreshSession锛岄伩鍏嶈嚜鍔ㄧ櫥鍑?
-// AuthService().refreshSession(minInterval: const Duration(minutes: 15));
+        // 涓嶅啀涓诲姩 refreshSession锛岄伩鍏嶈嚜鍔ㄧ櫥鍑?
+        // AuthService().refreshSession(minInterval: const Duration(minutes: 15));
         break;
       case AppLifecycleState.paused:
         debugPrint('App paused');
@@ -557,13 +575,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   ),
                 ),
               ),
-// 鉁?浠呬娇鐢?initialRoute锛岄伩鍏嶅悓鏃惰缃?home 閫犳垚璺敱鍐茬獊
+              // 鉁?浠呬娇鐢?initialRoute锛岄伩鍏嶅悓鏃惰缃?home 閫犳垚璺敱鍐茬獊
               initialRoute: hasSession ? '/home' : '/welcome',
               routes: {
-// 鉁?Welcome 鈫?Startup
+                // 鉁?Welcome 鈫?Startup
                 '/welcome': (_) => const WelcomeScreen(),
                 '/login': (_) => const LoginScreen(),
-// ✅ 修改：/home 指向带五栏的 MainNavigationPage
+                // ✅ 修改：/home 指向带五栏的 MainNavigationPage
                 '/home': (_) => MainNavigationPage(
                   isGuest:
                   Supabase.instance.client.auth.currentSession == null,
@@ -3498,7 +3516,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
           // 右上角操作按钮（可选）
           if (trailing != null)
             Positioned(
-              top: statusBar + 10, // 避开刘海/状态栏
+              top: statusBar + 4, // 避开刘海/状态栏
               right: 16,
               child: trailing,
             ),
@@ -5933,10 +5951,11 @@ class _ProfilePageState extends State<ProfilePage>
                                     color: Color(0xFF6B7280),
                                     letterSpacing: 0.5)),
                             const SizedBox(height: 10),
-                            const _ProfileOptionEnhanced(
+                             _ProfileOptionEnhanced(
                               icon: Icons.edit_rounded,
                               title: 'Edit Profile',
                               color: Colors.blue,
+                              onTap: _editNamePhone,
                             ),
                             const SizedBox(height: 12),
                             _VerificationTileCard(
@@ -6610,5 +6629,65 @@ class AboutPage extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+/// 登录态变更监听：用户 signedIn 时，确保 profiles 里有一行
+void _setupAuthListener() {
+  final supabase = Supabase.instance.client;
+
+  supabase.auth.onAuthStateChange.listen((authState) async {
+    final event   = authState.event;
+    final session = authState.session;
+
+    if (event == AuthChangeEvent.signedIn && session?.user != null) {
+      await _ensureProfileExists(session!.user);
+    }
+  });
+}
+
+/// 启动时做一次性校验（用户可能已经处于登录态；此时不会触发 signedIn 事件）
+Future<void> _ensureProfileForCurrentUserOnce() async {
+  final user = Supabase.instance.client.auth.currentUser;
+  if (user != null) {
+    await _ensureProfileExists(user);
+  }
+}
+
+/// 只做一件事：如果 profiles 里没有该用户，就 upsert 一行
+Future<void> _ensureProfileExists(User user) async {
+  final supabase = Supabase.instance.client;
+
+  try {
+    // 查是否已存在
+    final existing = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+    if (existing != null) return; // 已有，无需处理
+
+    // 尽量从 OAuth metadata 里取到名字与头像
+    final meta      = user.userMetadata ?? {};
+    final fullName  = (meta['full_name'] ?? meta['name'] ?? user.email ?? 'New User').toString();
+    final avatarUrl = (meta['avatar_url'] ?? meta['picture'])?.toString();
+
+    // 用 upsert 防止重复/并发 (等价于 INSERT ... ON CONFLICT(id) DO UPDATE)
+    await supabase.from('profiles').upsert(
+      {
+        'id':        user.id,      // 与 auth.users.id 一致
+        'email':     user.email,
+        'full_name': fullName,
+        'avatar_url': avatarUrl,
+        // 如果你表里还有 NOT NULL 字段，这里给个默认值
+        // 'phone': '',
+        // 'verification_type': 'none',
+      },
+      onConflict: 'id',
+      ignoreDuplicates: true, // 有些 SDK 版本支持；若不支持也没关系
+    );
+  } catch (e, st) {
+    dev.log('ensureProfile error: $e', stackTrace: st);
+    // 这里不要抛出，让 UI 正常继续；失败一般是 RLS/表结构问题
   }
 }

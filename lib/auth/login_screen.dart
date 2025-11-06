@@ -94,6 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (msg.contains('cancel') ||
           msg.contains('canceled') ||
           msg.contains('popup_closed')) {
+        // 用户取消，不提示
       } else {
         _showError('Google sign-in error: ${e.message}');
       }
@@ -157,7 +158,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool showApple = !kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS);
+    final bool showApple =
+        !kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS);
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -189,7 +191,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 SizedBox(height: 6.h),
                 Text(
                   'Sign in to continue to Swaply',
-                  style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
+                  style:
+                  TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
                 ),
                 SizedBox(height: 32.h),
 
@@ -200,8 +203,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   icon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'Please enter your email';
-                    if (!RegExp(r'^[\w\.-]+@[\w\.-]+\.\w{2,}$').hasMatch(v)) {
+                    if (v == null || v.isEmpty) {
+                      return 'Please enter your email';
+                    }
+                    if (!RegExp(r'^[\w\.-]+@[\w\.-]+\.\w{2,}$')
+                        .hasMatch(v)) {
                       return 'Please enter a valid email';
                     }
                     return null;
@@ -227,8 +233,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         setState(() => _isPasswordVisible = !_isPasswordVisible),
                   ),
                   validator: (v) {
-                    if (v == null || v.isEmpty) return 'Please enter your password';
-                    if (v.length < 6) return 'Password must be at least 6 characters';
+                    if (v == null || v.isEmpty) {
+                      return 'Please enter your password';
+                    }
+                    if (v.length < 6) {
+                      return 'Password must be at least 6 characters';
+                    }
                     return null;
                   },
                 ),
@@ -257,7 +267,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           Flexible(
                             child: Text(
                               'Remember me',
-                              style: TextStyle(fontSize: 12.sp, color: Colors.grey[700]),
+                              style: TextStyle(
+                                  fontSize: 12.sp,
+                                  color: Colors.grey[700]),
                             ),
                           ),
                         ],
@@ -265,7 +277,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     Flexible(
                       child: GestureDetector(
-                        onTap: () => _showError('Forgot Password 统一入口处理'),
+                        // ✅ 修复：点击进入忘记密码页
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) =>
+                              const ForgotPasswordScreen(),
+                            ),
+                          );
+                        },
                         child: Text(
                           'Forgot Password?',
                           style: TextStyle(
@@ -332,7 +352,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     Expanded(child: Divider(color: Colors.grey[300])),
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12.w),
+                      padding:
+                      EdgeInsets.symmetric(horizontal: 12.w),
                       child: Text(
                         'OR',
                         style: TextStyle(
@@ -379,14 +400,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     Text(
                       "Don't have an account? ",
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12.sp),
+                      style: TextStyle(
+                          color: Colors.grey[600], fontSize: 12.sp),
                     ),
                     GestureDetector(
                       // ✅ 修复：将 _showError 替换为实际导航
                       onTap: () => Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const RegisterScreen(),
+                          builder: (context) =>
+                          const RegisterScreen(),
                         ),
                       ),
                       child: Text(
@@ -418,13 +441,16 @@ class _LoginScreenState extends State<LoginScreen> {
       child: ElevatedButton.icon(
         onPressed: _busy ? null : _handleAppleLogin,
         icon: const Icon(Icons.apple, color: Colors.white),
-        label: const Text('Sign in with Apple', overflow: TextOverflow.ellipsis),
+        label: const Text('Sign in with Apple',
+            overflow: TextOverflow.ellipsis),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.black,
           foregroundColor: Colors.white,
           elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
-          textStyle: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w600),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8.r)),
+          textStyle:
+          TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w600),
         ),
       ),
     );
@@ -458,11 +484,14 @@ class _LoginScreenState extends State<LoginScreen> {
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
-          labelStyle: TextStyle(color: Colors.grey[600], fontSize: 12.sp),
-          hintStyle: TextStyle(color: Colors.grey[400], fontSize: 12.sp),
+          labelStyle:
+          TextStyle(color: Colors.grey[600], fontSize: 12.sp),
+          hintStyle:
+          TextStyle(color: Colors.grey[400], fontSize: 12.sp),
           prefixIcon: Container(
             padding: EdgeInsets.all(10.r),
-            child: Icon(icon, color: const Color(0xFF2196F3), size: 18.r),
+            child: Icon(icon,
+                color: const Color(0xFF2196F3), size: 18.r),
           ),
           suffixIcon: suffixIcon,
           filled: true,
@@ -473,21 +502,26 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12.r),
-            borderSide: BorderSide(color: Colors.grey[200]!, width: 1.0),
+            borderSide:
+            BorderSide(color: Colors.grey[200]!, width: 1.0),
           ),
           focusedBorder: const OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(12)),
-            borderSide: BorderSide(color: Color(0xFF2196F3), width: 1.5),
+            borderSide:
+            BorderSide(color: Color(0xFF2196F3), width: 1.5),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12.r),
-            borderSide: BorderSide(color: Colors.red[300]!, width: 1.0),
+            borderSide:
+            BorderSide(color: Colors.red[300]!, width: 1.0),
           ),
           focusedErrorBorder: const OutlineInputBorder(
             borderRadius: BorderRadius.all(Radius.circular(12)),
-            borderSide: BorderSide(color: Colors.red, width: 1.5),
+            borderSide:
+            BorderSide(color: Colors.red, width: 1.5),
           ),
-          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+          contentPadding: EdgeInsets.symmetric(
+              horizontal: 16.w, vertical: 14.h),
         ),
         validator: validator,
       ),
