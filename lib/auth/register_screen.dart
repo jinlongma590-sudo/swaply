@@ -1,4 +1,4 @@
-// lib/auth/register_screen.dart - 最终修复：Apple 登录改回 OAuth 流程
+// lib/auth/register_screen.dart — 最终修复：统一回调为 swaply://
 
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 import 'package:flutter/material.dart';
@@ -6,8 +6,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 import 'package:swaply/services/reward_service.dart';
 
-// ✅ 修复：恢复使用 'as sf' 别名，以匹配 _oauthSignIn 辅助函数
-import 'package:supabase_flutter/supabase_flutter.dart' as sf;
+// ✅ 修复：移除了 'as sf' 别名
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // 仅保留全局配置（用于 emailRedirectTo 等）
 import 'package:swaply/config/auth_config.dart';
@@ -15,9 +15,8 @@ import 'package:swaply/config/auth_config.dart';
 // ✅ 修复：添加此 import 以便跳转
 import 'login_screen.dart';
 
-// ✅ 修复：使用您提供的、区分平台的常量
-const String _kIOSRedirect = 'io.supabase.flutter://callback';
-const String _kAndroidRedirect = 'swaply://login-callback';
+// ✅ 修复：使常量与 login_screen.dart 保持一致
+const String _kMobileRedirect = 'swaply://login-callback';
 
 class RegisterScreen extends StatefulWidget {
   final String? invitationCode;
@@ -66,23 +65,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // ✅ 修复：使用您提供的、区分平台的 _oauthSignIn 辅助函数
+  // ✅ 修复：使用与 login_screen.dart 完全相同的 _oauthSignIn 函数
   Future<void> _oauthSignIn(
-      sf.OAuthProvider provider, {
+      OAuthProvider provider, {
         String? scopes,
         Map<String, String>? queryParams,
       }) async {
-    String? redirect;
-    if (!kIsWeb) {
-      if (defaultTargetPlatform == TargetPlatform.iOS) {
-        redirect = _kIOSRedirect;
-      } else if (defaultTargetPlatform == TargetPlatform.android) {
-        redirect = _kAndroidRedirect;
+    String? redirectUrl; // 变量名从 redirect 改为 redirectUrl 以匹配
+    if (kIsWeb) {
+      redirectUrl = null;
+    } else {
+      if (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.android) {
+        redirectUrl = _kMobileRedirect; // ✅ 统一使用 swaply://
       }
     }
-    await sf.Supabase.instance.client.auth.signInWithOAuth(
+    await Supabase.instance.client.auth.signInWithOAuth(
       provider,
-      redirectTo: redirect,
+      redirectTo: redirectUrl,
       authScreenLaunchMode: LaunchMode.externalApplication,
       scopes: scopes,
       queryParams: queryParams,
@@ -94,7 +94,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final normalized = code.trim().toUpperCase();
     RegisterScreen.pendingInvitationCode = normalized;
 
-    final user = sf.Supabase.instance.client.auth.currentUser;
+    final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
       try {
         await RewardService.submitInviteCode(normalized);
@@ -129,7 +129,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final code = _pickCodeFromUI();
       await _maybeBindInviteCode(code);
 
-      final res = await sf.Supabase.instance.client.auth.signUp(
+      final res = await Supabase.instance.client.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         emailRedirectTo: kAuthRedirectUri,
@@ -141,7 +141,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       } else {
         _showInfo('Verification email sent. Please check your inbox.');
       }
-    } on sf.AuthException catch (e) {
+    } on AuthException catch (e) {
       _showError(e.message);
     } catch (_) {
       _showError('Registration failed. Please try again.');
@@ -158,12 +158,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await _maybeBindInviteCode(code);
 
       await _oauthSignIn(
-        sf.OAuthProvider.google,
+        OAuthProvider.google,
         queryParams: const {'prompt': 'select_account'},
       );
 
       await _maybeBindInviteCode(code);
-    } on sf.AuthException catch (e) {
+    } on AuthException catch (e) {
       final msg = e.message.toLowerCase();
       if (msg.contains('cancel') ||
           msg.contains('canceled') ||
@@ -173,7 +173,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     } catch (_) {
       Future.delayed(const Duration(seconds: 1), () {
-        final user = sf.Supabase.instance.client.auth.currentUser;
+        final user = Supabase.instance.client.auth.currentUser;
         if (mounted && user == null) {
           _showError('Failed to start Google sign-in. Please try again.');
         }
@@ -191,11 +191,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       await _maybeBindInviteCode(code);
 
       await _oauthSignIn(
-        sf.OAuthProvider.facebook,
+        OAuthProvider.facebook,
       );
 
       await _maybeBindInviteCode(code);
-    } on sf.AuthException catch (e) {
+    } on AuthException catch (e) {
       _showError(e.message);
     } catch (_) {
       _showError('Facebook 登录启动失败，请稍后再试');
@@ -211,11 +211,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final code = _pickCodeFromUI();
       await _maybeBindInviteCode(code);
 
-      // ✅ 修复：按照您的要求，将 Apple 登录改回 OAuth 流程
-      await _oauthSignIn(sf.OAuthProvider.apple, scopes: 'name email');
+      // ✅ 修复：Apple 必须使用 _oauthSignIn
+      await _oauthSignIn(
+        OAuthProvider.apple,
+        scopes: 'name email',
+      );
 
       await _maybeBindInviteCode(code);
-    } on sf.AuthException catch (e) {
+    } on AuthException catch (e) {
       _showError(e.message);
     } catch (_) {
       _showError('Apple 登录启动失败，请稍后再试');
@@ -230,13 +233,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }) async {
     setState(() => _isLoading = true);
     try {
-      await sf.Supabase.instance.client.auth.verifyOTP(
+      await Supabase.instance.client.auth.verifyOTP(
         email: email,
         token: code,
-        type: sf.OtpType.email,
+        type: OtpType.email,
       );
       _showInfo('Email verified.');
-    } on sf.AuthException catch (e) {
+    } on AuthException catch (e) {
       _showError(e.message);
     } catch (_) {
       _showError('Verification failed. Please try again.');
