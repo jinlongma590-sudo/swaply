@@ -27,10 +27,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     setState(() => _isLoading = true);
     try {
-      // ✅ 真发邮件（Supabase 标准流程：邮件里是“重置密码链接”）
+      // ✅ 关键修正：带上自定义回调，强制回到 App，而不是跳官网
       await Supabase.instance.client.auth.resetPasswordForEmail(
         _emailController.text.trim(),
-        redirectTo: 'io.supabase.flutter://callback', // iOS 已在 Info.plist 配好
+        redirectTo: 'swaply://reset-password',
       );
 
       if (!mounted) return;
@@ -218,9 +218,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     width: 1.5.r,
                   ),
                 ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16.r),
-                  borderSide: const BorderSide(
+                focusedErrorBorder: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(16)),
+                  borderSide: BorderSide(
                     color: Colors.red,
                     width: 2,
                   ),

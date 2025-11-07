@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/foundation.dart' show SynchronousFuture;
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter/services.dart'; // ✅ 新增：全局状态栏/系统UI控制
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
@@ -400,6 +401,14 @@ void _showWelcomeGiftDialog() {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ✅ 全局：内容延伸到屏幕边缘 + 状态栏透明并使用白色图标（Jiji/微信同款效果）
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,        // 露出你自己的彩色背景
+    statusBarIconBrightness: Brightness.light, // Android：白色图标
+    statusBarBrightness: Brightness.dark,      // iOS：白色图标
+  ));
 
   // === 闈欓煶 Supabase 鐨?refresh session 鍣煶锛堜粎寮€鍙戞湡锛?===
       {
@@ -1379,8 +1388,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
 
     // iOS 收紧，Android 保持原样
     final bool _isIOS       = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    final double kHeaderVisual = _isIOS ? 56.0 : 76.0;  // 头部视觉高度
-    final double kTitleTop     = _isIOS ? 10.0 : 24.0;  // 标题距顶
+    final double kHeaderVisual = _isIOS ? 48.0 : 76.0;  // 头部视觉高度
+    final double kTitleTop     = _isIOS ? 6.0 : 24.0;  // 标题距顶
     const double kSide         = 20.0;                  // 左右内边距
 
     return SizedBox(
@@ -1419,7 +1428,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           // 右上角操作按钮（可选）
           if (trailing != null)
             Positioned(
-              top: statusBar + 10, // 避开刘海/状态栏
+              top: statusBar + 7, // 避开刘海/状态栏
               right: 16,
               child: trailing,
             ),
@@ -3473,8 +3482,8 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     // 统一视觉高度（缩放后依然舒服）：statusBar + 132
     // iOS 收紧，Android 保持原样
     final bool _isIOS       = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    final double kHeaderVisual = _isIOS ? 56.0 : 76.0;  // 头部视觉高度
-    final double kTitleTop     = _isIOS ? 10.0 : 24.0;  // 标题距顶
+    final double kHeaderVisual = _isIOS ? 48.0 : 76.0;  // 头部视觉高度
+    final double kTitleTop     = _isIOS ? 6.0 : 24.0;  // 标题距顶
     const double kSide         = 20.0;                  // 左右内边距
 
     // ✅ 修复：使用您首页的 Facebook 蓝色 (0xFF1877F2)
@@ -3516,7 +3525,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
           // 右上角操作按钮（可选）
           if (trailing != null)
             Positioned(
-              top: statusBar + 4, // 避开刘海/状态栏
+              top: statusBar + 1, // 避开刘海/状态栏
               right: 16,
               child: trailing,
             ),
@@ -4499,8 +4508,8 @@ class _NotificationPageState extends State<NotificationPage> {
     // 统一视觉高度（缩放后依然舒服）：statusBar + 132
     // iOS 收紧，Android 保持原样
     final bool _isIOS       = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    final double kHeaderVisual = _isIOS ? 56.0 : 76.0;  // 头部视觉高度
-    final double kTitleTop     = _isIOS ? 10.0 : 24.0;  // 标题距顶
+    final double kHeaderVisual = _isIOS ? 48.0 : 76.0;  // 头部视觉高度
+    final double kTitleTop     = _isIOS ? 6.0 : 24.0;  // 标题距顶
     const double kSide         = 20.0;                  // 左右内边距
     // ✅ 修复：使用您首页的 Facebook 蓝色 (0xFF1877F2)
     const Color kUserPrimaryBlue = Color(0xFF1877F2);
@@ -4541,7 +4550,7 @@ class _NotificationPageState extends State<NotificationPage> {
           // 右上角操作按钮（可选）
           if (trailing != null)
             Positioned(
-              top: statusBar + 10, // 避开刘海/状态栏
+              top: statusBar + 7, // 避开刘海/状态栏
               right: 16,
               child: trailing,
             ),
