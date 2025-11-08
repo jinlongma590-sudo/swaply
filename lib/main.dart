@@ -1428,7 +1428,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           // 右上角操作按钮（可选）
           if (trailing != null)
             Positioned(
-              top: statusBar + 7, // 避开刘海/状态栏
+              top: statusBar + 6, // 避开刘海/状态栏
               right: 16,
               child: trailing,
             ),
@@ -1441,7 +1441,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   Widget _buildMenuButton() {
     return PopupMenuButton<String>(
       icon: Icon(Icons.more_vert_rounded,
-          color: Colors.white, size: 16.w),
+          color: Colors.white, size: 18.w),
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8.w)),
       onSelected: (value) {
@@ -3525,7 +3525,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
           // 右上角操作按钮（可选）
           if (trailing != null)
             Positioned(
-              top: statusBar + 1, // 避开刘海/状态栏
+              top: statusBar + 6.0, // 避开刘海/状态栏
               right: 16,
               child: trailing,
             ),
@@ -4432,7 +4432,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
             content: Row(
               children: [
                 Icon(Icons.check_circle_rounded,
-                    color: Colors.white, size: 18.r),
+                    color: Colors.white, size: 20.r),
                 SizedBox(width: 8.w),
                 Text(l10n.listingDeleted),
               ],
@@ -4452,7 +4452,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
             content: Row(
               children: [
                 Icon(Icons.error_outline_rounded,
-                    color: Colors.white, size: 18.r),
+                    color: Colors.white, size: 20.r),
                 SizedBox(width: 8.w),
                 Expanded(child: Text('Delete failed: $e')),
               ],
@@ -4550,7 +4550,7 @@ class _NotificationPageState extends State<NotificationPage> {
           // 右上角操作按钮（可选）
           if (trailing != null)
             Positioned(
-              top: statusBar + 7, // 避开刘海/状态栏
+              top: statusBar + 6, // 避开刘海/状态栏
               right: 16,
               child: trailing,
             ),

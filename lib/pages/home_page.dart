@@ -1,6 +1,8 @@
 // lib/pages/home_page.dart
 // 使用Facebook亮蓝色和Jiji风格的自动图片调整功能
 
+import 'dart:io' show Platform; // ✅ 仅用于 iOS 判断
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -118,6 +120,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _searchCtrl.dispose();
     _fadeController.dispose();
     super.dispose();
+  }
+
+  /* ===================== 仅 iOS：头部向下“轻微”整体位移 ===================== */
+  double _iosBump(BuildContext context) {
+    if (!Platform.isIOS) return 0;
+    final top = MediaQuery.of(context).padding.top; // 灵动岛/状态栏安全区
+    return top + 5; // ⬅️ 你要求使用 +5
   }
 
   /* ===================== 数据加载 ===================== */
@@ -366,15 +375,20 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildCompactHeader() {
+    final bump = _iosBump(context); // 仅 iOS 有位移，Android 为 0
+
     return Stack(
       children: [
-        // 简化的头部背景
+        // 简化的头部背景（加上 bump，避免白卡片顶到刘海区域）
         Container(
-          height: 140.h,
+          height: 140.h + bump,
           color: _primaryBlue,
         ),
         Column(
           children: [
+            // 顶部整体下移，避免被灵动岛遮住
+            SizedBox(height: bump),
+
             // 紧凑Logo区域
             Container(
               padding: EdgeInsets.only(top: 35.h, bottom: 16.h),
@@ -1177,7 +1191,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         height: double.infinity,
         decoration: BoxDecoration(
           color: Colors.grey[200],
-          borderRadius: BorderRadius.vertical(top: Radius.circular(10.r)),
+          borderRadius:
+          BorderRadius.vertical(top: Radius.circular(10.r)),
         ),
         child: Center(
           child: Column(
@@ -1207,7 +1222,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         height: double.infinity,
         decoration: BoxDecoration(
           color: Colors.grey[200],
-          borderRadius: BorderRadius.vertical(top: Radius.circular(10.r)),
+          borderRadius:
+          BorderRadius.vertical(top: Radius.circular(10.r)),
         ),
         child: Center(
           child: Column(
