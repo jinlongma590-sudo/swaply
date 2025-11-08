@@ -126,7 +126,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   double _iosBump(BuildContext context) {
     if (!Platform.isIOS) return 0;
     final top = MediaQuery.of(context).padding.top; // 灵动岛/状态栏安全区
-    return top + 15; // ⬅️ 你要求使用 +5
+    return top + 17; // ⬅️ 你要求使用 +5
   }
 
   /* ===================== 数据加载 ===================== */

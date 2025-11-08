@@ -1428,7 +1428,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           // 右上角操作按钮（可选）
           if (trailing != null)
             Positioned(
-              top: statusBar + 4, // 避开刘海/状态栏
+              top: statusBar - 1, // 避开刘海/状态栏
               right: 16,
               child: trailing,
             ),
@@ -3525,7 +3525,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
           // 右上角操作按钮（可选）
           if (trailing != null)
             Positioned(
-              top: statusBar + 4.0, // 避开刘海/状态栏
+              top: statusBar - 1.0, // 避开刘海/状态栏
               right: 16,
               child: trailing,
             ),
@@ -4031,7 +4031,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.add_rounded, size: 18.r, color: Colors.white),
+                      Icon(Icons.add_rounded, size: 12.r, color: Colors.white),
                       SizedBox(width: 6.w),
                       Text(
                         l10n.newAd,
@@ -4550,7 +4550,7 @@ class _NotificationPageState extends State<NotificationPage> {
           // 右上角操作按钮（可选）
           if (trailing != null)
             Positioned(
-              top: statusBar + 2, // 避开刘海/状态栏
+              top: statusBar - 1, // 避开刘海/状态栏
               right: 16,
               child: trailing,
             ),
