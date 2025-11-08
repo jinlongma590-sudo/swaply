@@ -282,11 +282,11 @@ class _VerificationPageState extends State<VerificationPage>
   Widget _buildHeaderIOS() {
     final double statusBar = MediaQuery.of(context).padding.top;
 
-    const double kHeaderVisual = 38.0;   // 头部可见高度
-    const double kTitleTop = -6.0;       // 标题顶距（相对 statusBar）
-    const double kSideTop = -1.0;        // 左/右角小组件顶距
-    const double kSide = 16.0;           // 左右内边距
-    const double kBtnSize = 36.0;        // 左右按钮大致占位宽度（用于居中标题）
+    const double kHeaderVisual = 38.0; // 头部可见高度
+    const double kTitleTop = -6.0; // 标题顶距（相对 statusBar）
+    const double kSideTop = -1.0; // 左/右角小组件顶距
+    const double kSide = 16.0; // 左右内边距
+    const double kBtnSize = 36.0; // 左右按钮大致占位宽度（用于居中标题）
     const double kSpacing = 16.0;
 
     final backBtn = GestureDetector(
@@ -695,14 +695,16 @@ class _VerificationPageState extends State<VerificationPage>
     );
   }
 
+  // ✅ [MODIFIED] _buildOfficialVerificationCard 已被替换为你的新版本
   Widget _buildOfficialVerificationCard() {
-    // 固定使用“官方蓝”视觉（不跟随 badge，避免显示成绿色）
+    // 统一使用官方蓝
     const Color kOfficialBlue = Color(0xFF1877F2);
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20.r),
+        borderRadius: BorderRadius.circular(18.r),
+        border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -711,44 +713,58 @@ class _VerificationPageState extends State<VerificationPage>
           ),
         ],
       ),
-      padding: EdgeInsets.all(20.w),
+      padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 16.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 头部：图标 + 标题 + 简述（更紧凑的行高与间距）
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: EdgeInsets.all(10.w),
+                width: 42.w,
+                height: 42.w,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [kOfficialBlue, kOfficialBlue],
-                  ),
-                  borderRadius: BorderRadius.circular(14.r),
+                  color: kOfficialBlue,
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
-                child: Icon(Icons.verified_rounded,
-                    color: Colors.white, size: 20.w),
+                child:
+                Icon(Icons.verified_rounded, color: Colors.white, size: 22.w),
               ),
-              SizedBox(width: 14.w),
-              Text('Official Verification',
-                  style:
-                  TextStyle(fontSize: 17.sp, fontWeight: FontWeight.bold)),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Official Verification',
+                      style: TextStyle(
+                          fontSize: 16.5.sp, fontWeight: FontWeight.w700),
+                    ),
+                    SizedBox(height: 4.h),
+                    Text(
+                      'Apply if you represent a business, organization, or public figure.',
+                      style: TextStyle(
+                          fontSize: 12.5.sp,
+                          color: Colors.grey.shade700,
+                          height: 1.35),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
-          SizedBox(height: 12.h),
-          Text(
-            'Apply for official verification if you represent a business, organization, or public figure.',
-            style: TextStyle(
-                fontSize: 13.sp, color: Colors.grey.shade700, height: 1.4),
-          ),
-          SizedBox(height: 16.h),
+
+          SizedBox(height: 14.h),
+
+          // 优势列表：更紧凑的“信息面板”样式
           Container(
-            padding: EdgeInsets.all(16.w),
+            padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [kOfficialBlue.withOpacity(0.08), kOfficialBlue.withOpacity(0.04)],
-              ),
-              borderRadius: BorderRadius.circular(14.r),
-              border: Border.all(color: kOfficialBlue.withOpacity(0.35)),
+              color: kOfficialBlue.withOpacity(0.04),
+              borderRadius: BorderRadius.circular(12.r),
+              border: Border.all(color: kOfficialBlue.withOpacity(0.28)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -760,11 +776,14 @@ class _VerificationPageState extends State<VerificationPage>
               ],
             ),
           ),
-          SizedBox(height: 16.h),
+
+          SizedBox(height: 14.h),
+
+          // 申请按钮：改为实心主按钮，视觉更聚焦
           SizedBox(
             width: double.infinity,
-            height: 48.h,
-            child: OutlinedButton.icon(
+            height: 46.h,
+            child: ElevatedButton.icon(
               onPressed: () {
                 showDialog(
                   context: context,
@@ -777,7 +796,9 @@ class _VerificationPageState extends State<VerificationPage>
                     content: Text(
                       'Official verification applications are coming soon. We\'ll notify you when this feature becomes available.',
                       style: TextStyle(
-                          fontSize: 13.sp, color: Colors.grey.shade700),
+                          fontSize: 13.sp,
+                          color: Colors.grey.shade700,
+                          height: 1.35),
                     ),
                     actions: [
                       TextButton(
@@ -788,14 +809,20 @@ class _VerificationPageState extends State<VerificationPage>
                   ),
                 );
               },
-              icon: Icon(Icons.send_rounded, size: 18.w, color: kOfficialBlue),
-              label: Text('Apply for Official Status',
-                  style: TextStyle(fontSize: 14.sp, color: kOfficialBlue)),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: kOfficialBlue,
-                side: BorderSide(color: kOfficialBlue, width: 1.2.w),
+              icon:
+              Icon(Icons.arrow_forward_rounded, size: 18.w, color: Colors.white),
+              label: Text(
+                'Apply for Official Status',
+                style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white),
+              ),
+              style: ElevatedButton.styleFrom(
+                elevation: 0,
+                backgroundColor: kOfficialBlue,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14.r)),
+                    borderRadius: BorderRadius.circular(12.r)),
               ),
             ),
           ),
@@ -810,7 +837,7 @@ class _VerificationPageState extends State<VerificationPage>
       child: Row(
         children: [
           Icon(Icons.check_circle_rounded,
-              color: const Color(0xFF1877F2), size: 16.w),
+              color: const Color(0xFF1877F2), size: 16.w), // ✅ 使用固定蓝色
           SizedBox(width: 10.w),
           Expanded(
             child: Text(text, style: TextStyle(fontSize: 12.sp, height: 1.3)),

@@ -242,9 +242,10 @@ Download: https://www.swaply.cc
       return _buildNotLoggedInView();
     }
 
-    // ✅ 仅 iOS：与 sell/通知/saved 一致的顶部间距（状态栏 + 38）
+    // ✅ [MODIFIED] 提取平台变量
     final double statusBar = MediaQuery.of(context).padding.top;
     final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    // ✅ [MODIFIED] iOS 标准高度
     final double? iosToolbarHeight = _isIOS ? (statusBar + 38.0) : null;
 
     return Scaffold(
@@ -253,7 +254,8 @@ Download: https://www.swaply.cc
         elevation: 0,
         backgroundColor: const Color(0xFF4CAF50),
         foregroundColor: Colors.white,
-        toolbarHeight: iosToolbarHeight, // ✅ 对齐顶部距离（仅 iOS 生效）
+        // ✅ [MODIFIED] 应用 iOS 标准高度
+        toolbarHeight: iosToolbarHeight,
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
           icon: Icon(Icons.arrow_back_ios_new, size: 20.r),
@@ -314,9 +316,10 @@ Download: https://www.swaply.cc
   }
 
   Widget _buildNotLoggedInView() {
-    // ✅ 仅 iOS：未登录页同样对齐顶部高度
+    // ✅ [MODIFIED] 提取平台变量 (为未登录页)
     final double statusBar = MediaQuery.of(context).padding.top;
     final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    // ✅ [MODIFIED] iOS 标准高度 (为未登录页)
     final double? iosToolbarHeight = _isIOS ? (statusBar + 38.0) : null;
 
     return Scaffold(
@@ -325,7 +328,8 @@ Download: https://www.swaply.cc
         elevation: 0,
         backgroundColor: const Color(0xFF4CAF50),
         foregroundColor: Colors.white,
-        toolbarHeight: iosToolbarHeight, // ✅ 对齐顶部距离（仅 iOS 生效）
+        // ✅ [MODIFIED] 应用 iOS 标准高度
+        toolbarHeight: iosToolbarHeight,
         title: Text(
           'Invite Friends',
           style: TextStyle(
@@ -333,6 +337,8 @@ Download: https://www.swaply.cc
             fontWeight: FontWeight.w600,
           ),
         ),
+        // ✅ 自动添加 leading (back button)
+        automaticallyImplyLeading: true,
       ),
       body: Center(
         child: Padding(

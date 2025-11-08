@@ -3241,46 +3241,55 @@ class _WishlistPageState extends State<WishlistPage> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ 顶部蓝统一为 Facebook 蓝（0xFF1877F2），并按 iOS 紧凑高度
+    final statusBar = MediaQuery.of(context).padding.top;
+    final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+    final double toolbarH = isIOS ? (statusBar + 38.0) : 44.0;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        backgroundColor: Colors.pink,
-        title: Text(
-          'My Wishlist (${_wishlistItems.length})',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        elevation: 0,
-        actions: [
-          if (_wishlistItems.isNotEmpty && !_isLoading)
-            PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert_rounded,
-                  color: Colors.white, size: 20.w),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.w)),
-              onSelected: (value) {
-                if (value == 'clear_all') {
-                  _showClearAllDialog();
-                }
-              },
-              itemBuilder: (BuildContext context) => [
-                PopupMenuItem(
-                  value: 'clear_all',
-                  child: Row(
-                    children: [
-                      Icon(Icons.clear_all_rounded,
-                          color: Colors.red, size: 16.w),
-                      SizedBox(width: 10.w),
-                      Text('Clear All', style: TextStyle(fontSize: 13.sp)),
-                    ],
-                  ),
-                ),
-              ],
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(toolbarH),
+        child: AppBar(
+          backgroundColor: const Color(0xFF1877F2),
+          title: Text(
+            'My Wishlist (${_wishlistItems.length})',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w600,
             ),
-        ],
+          ),
+          elevation: 0,
+          toolbarHeight: toolbarH,
+          actions: [
+            if (_wishlistItems.isNotEmpty && !_isLoading)
+              PopupMenuButton<String>(
+                icon: Icon(Icons.more_vert_rounded,
+                    color: Colors.white, size: 20.w),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.w)),
+                onSelected: (value) {
+                  if (value == 'clear_all') {
+                    _showClearAllDialog();
+                  }
+                },
+                itemBuilder: (BuildContext context) => [
+                  PopupMenuItem(
+                    value: 'clear_all',
+                    child: Row(
+                      children: [
+                        Icon(Icons.clear_all_rounded,
+                            color: Colors.red, size: 16.w),
+                        SizedBox(width: 10.w),
+                        Text('Clear All', style: TextStyle(fontSize: 13.sp)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
       ),
       body: _isLoading
           ? Center(
@@ -3452,6 +3461,7 @@ class _WishlistPageState extends State<WishlistPage> {
     }
   }
 }
+
 // 莽卢卢氓鈥衡€好┢捖ニ嗏€犆寂ellPage 氓鈥÷好モ€澛┞÷?(忙聛垄氓陇聧氓庐艗忙鈥⒙疵ヅ犈该ㄆ捖? 氓鈥櫯?NotificationPage 茅鈧∶嘎ッ┞÷?(盲陆驴莽鈥澛ぢ号捗ぢ嘎р€八喢ε撀♀€濻ervice茅鈥衡€犆λ喡?
 
 /* ---------------- Sell Page ---------------- */
@@ -3476,6 +3486,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     required bool centerTitle,
     Widget? trailing,
     double trailingTopAdjust = 0.0, // ↑ 右上角按钮相对标题的垂直微调
+    double trailingHeight = 28.0,   // ↑ 右上角按钮容器高度（用于与字号=28的标题居中对齐）
   }) {
     final double statusBar = MediaQuery.of(context).padding.top;
 
@@ -3532,10 +3543,10 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
               ),
             ),
           ),
-          // 右上角按钮（与标题行对齐；可用 trailingTopAdjust 再微调）
+          // 右上角按钮（与标题行垂直居中；可用 trailingTopAdjust 再微调）
           if (trailing != null)
             Positioned(
-              top: titleTop + trailingTopAdjust,
+              top: titleTop + ((28.0 - trailingHeight) / 2) + trailingTopAdjust,
               right: 12,
               child: trailing,
             ),
@@ -3623,7 +3634,8 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
               title: l10n.sellItem,
               centerTitle: true,
               trailing: _buildPlusButton(context),
-              trailingTopAdjust: -6.0, // 若还偏低，调到 -8.0；偏高则 -4.0
+              trailingTopAdjust: 0.0, // 与标题垂直居中，如需微调可改为 -2.0 / +2.0
+              trailingHeight: 28.0,   // 与 _buildPlusButton 的外框一致
             ),
           ),
           if (myListings.isEmpty)
@@ -5995,7 +6007,7 @@ class _ProfilePageState extends State<ProfilePage>
                               onTap: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (_) => CouponManagementPage()),
+                                  MaterialPageRoute(builder: (_) => TaskManagementPage()),
                                 );
                               },
                             ),
@@ -6477,7 +6489,8 @@ class HelpSupportPage extends StatelessWidget {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        // ✅ iOS 首块内容与 AppBar 底之间 12dp；Android 保持 20
+        padding: EdgeInsets.fromLTRB(20, isIOS ? 12 : 20, 20, 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -6810,7 +6823,8 @@ class AccountSettingsPage extends StatelessWidget {
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        // ✅ iOS 首块内容与 AppBar 底之间 12dp；Android 保持 20
+        padding: EdgeInsets.fromLTRB(20, isIOS ? 12 : 20, 20, 20),
         child: Column(
           children: [
             // Section: Password & Security

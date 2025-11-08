@@ -153,15 +153,16 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
   Widget build(BuildContext context) {
     final title = 'Results for "${widget.keyword}"';
 
-    // ✅ 仅 iOS 调整到与 sell/通知/saved 一致的顶部间距
+    // ✅ [MODIFIED] 提取平台变量
     final double statusBar = MediaQuery.of(context).padding.top;
     final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    // ✅ [MODIFIED] iOS 标准高度
     final double? iosToolbarHeight = _isIOS ? (statusBar + 38.0) : null;
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        // ✅ 应用 iOS 专属高度；Android 不变
+        // ✅ [MODIFIED] 应用 iOS 标准高度
         toolbarHeight: iosToolbarHeight,
         backgroundColor: const Color(0xFF2196F3), // 颜色保持不变
         title: Text(title, style: const TextStyle(color: Colors.white)),
