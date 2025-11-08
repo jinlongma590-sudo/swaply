@@ -79,7 +79,7 @@ class _MyListingsPageState extends State<MyListingsPage>
       final response = await Supabase.instance.client
           .from('listings')
           .select(
-              'id, title, images, image_urls, price, city, created_at, views_count')
+          'id, title, images, image_urls, price, city, created_at, views_count')
           .eq('user_id', user.id)
           .eq('status', 'active')
           .order('created_at', ascending: false)
@@ -293,7 +293,7 @@ class _MyListingsPageState extends State<MyListingsPage>
       builder: (BuildContext context) {
         return AlertDialog(
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
           title: Row(
             children: [
               Container(
@@ -303,12 +303,12 @@ class _MyListingsPageState extends State<MyListingsPage>
                   borderRadius: BorderRadius.circular(6.r),
                 ),
                 child:
-                    Icon(Icons.delete_outline, color: Colors.red, size: 18.r),
+                Icon(Icons.delete_outline, color: Colors.red, size: 18.r),
               ),
               SizedBox(width: 10.w),
               Text('Delete Listing',
                   style:
-                      TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600)),
+                  TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600)),
             ],
           ),
           content: Text(
@@ -362,7 +362,7 @@ class _MyListingsPageState extends State<MyListingsPage>
                 recipientId: offer.buyerId,
                 title: 'Offer Accepted!',
                 message:
-                    'Your offer of ${offer.formattedOfferAmount} for ${offer.listingTitle ?? 'the item'} has been accepted!',
+                'Your offer of ${offer.formattedOfferAmount} for ${offer.listingTitle ?? 'the item'} has been accepted!',
                 metadata: {
                   'offer_amount': offer.offerAmount,
                   'listing_title': offer.listingTitle,
@@ -385,7 +385,7 @@ class _MyListingsPageState extends State<MyListingsPage>
                 recipientId: offer.buyerId,
                 title: 'Offer Declined',
                 message:
-                    'Your offer of ${offer.formattedOfferAmount} for ${offer.listingTitle ?? 'the item'} has been declined${message != null && message.isNotEmpty ? ': $message' : '.'}',
+                'Your offer of ${offer.formattedOfferAmount} for ${offer.listingTitle ?? 'the item'} has been declined${message != null && message.isNotEmpty ? ': $message' : '.'}',
                 metadata: {
                   'offer_amount': offer.offerAmount,
                   'listing_title': offer.listingTitle,
@@ -476,104 +476,81 @@ class _MyListingsPageState extends State<MyListingsPage>
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+    // ✅ [MODIFIED] 提取平台变量和通用 Widgets
+    final double statusBar = MediaQuery.of(context).padding.top;
+    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
+    // --- Extracted Widgets ---
+
+    final Widget backButton = GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Container(
+        width: 32.w,
+        height: 32.h,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(8.r),
+        ),
+        child: Icon(
+          Icons.arrow_back_ios_new,
+          color: Colors.white,
+          size: 16.r,
+        ),
+      ),
+    );
+
+    final Widget titleText = Text(
+      'My Listings',
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: 18.sp,
+        fontWeight: FontWeight.w600,
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+
+    final Widget tabBarWidget = Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.white.withOpacity(0.7),
+        indicator: BoxDecoration(
+          color: Colors.white.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(8.r),
+        ),
+        labelStyle: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600),
+        unselectedLabelStyle:
+        TextStyle(fontSize: 12.sp, fontWeight: FontWeight.normal),
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerHeight: 0,
+        tabs: [
+          Tab(text: 'Items (${_listings.length})'),
+          Tab(text: 'Offers (${_receivedOffers.length})'),
+        ],
+      ),
+    );
+
+    // --- Main Build ---
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       body: Column(
         children: [
-          // 紧凑的固定头部
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF2563EB),
-                  Color(0xFF3B82F6),
-                  Color(0xFF60A5FA)
-                ],
-              ),
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 标题栏
-                  Container(
-                    height: 44.h,
-                    padding: EdgeInsets.symmetric(horizontal: 16.w),
-                    child: Row(
-                      children: [
-                        // 返回按钮
-                        GestureDetector(
-                          onTap: () => Navigator.pop(context),
-                          child: Container(
-                            width: 32.w,
-                            height: 32.h,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(8.r),
-                            ),
-                            child: Icon(
-                              Icons.arrow_back_ios_new,
-                              color: Colors.white,
-                              size: 16.r,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 12.w),
-                        // 标题
-                        Expanded(
-                          child: Text(
-                            'My Listings',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Tab栏 - 减少上下间距
-                  Container(
-                    margin: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
-                    height: 32.h,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8.r),
-                    ),
-                    child: TabBar(
-                      controller: _tabController,
-                      labelColor: Colors.white,
-                      unselectedLabelColor: Colors.white.withOpacity(0.7),
-                      indicator: BoxDecoration(
-                        color: Colors.white.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(8.r),
-                      ),
-                      labelStyle: TextStyle(
-                          fontSize: 12.sp, fontWeight: FontWeight.w600),
-                      unselectedLabelStyle: TextStyle(
-                          fontSize: 12.sp, fontWeight: FontWeight.normal),
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      dividerHeight: 0,
-                      tabs: [
-                        Tab(text: 'Items (${_listings.length})'),
-                        Tab(text: 'Offers (${_receivedOffers.length})'),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          // ✅ [MODIFIED] 调用平台感知的 Header
+          _buildHeader(
+            statusBar,
+            _isIOS,
+            backButton,
+            titleText,
+            tabBarWidget,
           ),
 
-          // 内容区域
+          // 内容区域 (Unchanged)
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -586,6 +563,120 @@ class _MyListingsPageState extends State<MyListingsPage>
         ],
       ),
     );
+  }
+
+  // ✅ [NEW] 平台感知的 Header Builder
+  Widget _buildHeader(
+      double statusBar,
+      bool isIOS,
+      Widget backButton,
+      Widget titleText,
+      Widget tabBarWidget,
+      ) {
+    if (isIOS) {
+      // ✅ iOS: 严格按照标准值进行 Stack + Positioned 布局
+      const double kSideWidgetTop = -1.0;
+      const double kTitleTop = -6.0;
+      final double kSide = 16.w;
+      final double kTabBarHeight = 32.h;
+      final double kTabBarTopMargin = 8.h;
+      final double kTabBarBottomMargin = 12.h;
+      const double kTitleRowVisualHeight = 38.0;
+
+      // 计算总高度以容纳所有组件
+      final double kTotalVisualHeight = kTitleRowVisualHeight +
+          kTabBarTopMargin +
+          kTabBarHeight +
+          kTabBarBottomMargin; // 38 + 8 + 32 + 12 = 90.h
+
+      return Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF2563EB),
+              Color(0xFF3B82F6),
+              Color(0xFF60A5FA)
+            ],
+          ),
+        ),
+        child: SizedBox(
+          height: statusBar + kTotalVisualHeight,
+          child: Stack(
+            children: [
+              // --- Title Row Elements (Standard) ---
+              Positioned(
+                top: statusBar + kSideWidgetTop, // 标准: -1.0
+                left: kSide,
+                child: backButton,
+              ),
+              Positioned(
+                top: statusBar + kTitleTop, // 标准: -6.0
+                left: kSide + 32.w + 12.w, // padding + button + spacing
+                right: kSide,
+                child: titleText,
+              ),
+              // --- Tab Bar Element (Positioned) ---
+              Positioned(
+                bottom: kTabBarBottomMargin, // 12.h from bottom
+                left: kSide,
+                right: kSide,
+                height: kTabBarHeight, // 32.h height
+                child: tabBarWidget,
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      // ✅ Android: 保持你原有的布局 (SafeArea + Column)
+      return Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF2563EB),
+              Color(0xFF3B82F6),
+              Color(0xFF60A5FA)
+            ],
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 标题栏 (Original)
+              Container(
+                height: 44.h,
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                child: Row(
+                  children: [
+                    backButton,
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: titleText,
+                    ),
+                  ],
+                ),
+              ),
+              // Tab栏 (Original)
+              Container(
+                margin: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
+                height: 32.h,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: tabBarWidget,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildListingsTab() {
@@ -649,7 +740,7 @@ class _MyListingsPageState extends State<MyListingsPage>
     // Safe get image list
     final images = ListingService.readImages(listing) ?? <String>[];
     final firstImage =
-        images.isNotEmpty ? images.first : 'assets/images/placeholder.jpg';
+    images.isNotEmpty ? images.first : 'assets/images/placeholder.jpg';
 
     final city = listing['city']?.toString() ?? '';
     final createdAt = listing['created_at']?.toString() ?? '';
@@ -717,23 +808,23 @@ class _MyListingsPageState extends State<MyListingsPage>
                             borderRadius: BorderRadius.circular(8.r),
                             child: firstImage.startsWith('http')
                                 ? Image.network(
-                                    firstImage,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Icon(Icons.image_rounded,
-                                          color: Colors.grey.shade400,
-                                          size: 20.w);
-                                    },
-                                  )
+                              firstImage,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(Icons.image_rounded,
+                                    color: Colors.grey.shade400,
+                                    size: 20.w);
+                              },
+                            )
                                 : Image.asset(
-                                    firstImage,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Icon(Icons.image_rounded,
-                                          color: Colors.grey.shade400,
-                                          size: 20.w);
-                                    },
-                                  ),
+                              firstImage,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(Icons.image_rounded,
+                                    color: Colors.grey.shade400,
+                                    size: 20.w);
+                              },
+                            ),
                           ),
                         ),
                         SizedBox(width: 12.w),
@@ -809,7 +900,7 @@ class _MyListingsPageState extends State<MyListingsPage>
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
-                                          const SellFormPage(),
+                                      const SellFormPage(),
                                     ),
                                   );
                                   break;
@@ -896,7 +987,7 @@ class _MyListingsPageState extends State<MyListingsPage>
                                         color: const Color(0xFF2563EB)
                                             .withOpacity(0.1),
                                         borderRadius:
-                                            BorderRadius.circular(6.r),
+                                        BorderRadius.circular(6.r),
                                       ),
                                       child: Icon(
                                         Icons.visibility_outlined,
@@ -907,7 +998,7 @@ class _MyListingsPageState extends State<MyListingsPage>
                                     SizedBox(width: 8.w),
                                     Column(
                                       crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           '$viewsCount',
@@ -950,16 +1041,16 @@ class _MyListingsPageState extends State<MyListingsPage>
                                     ConnectionState.waiting) {
                                   return Container(
                                     padding:
-                                        EdgeInsets.symmetric(vertical: 4.h),
+                                    EdgeInsets.symmetric(vertical: 4.h),
                                     child: Row(
                                       children: [
                                         Container(
                                           padding: EdgeInsets.all(6.r),
                                           decoration: BoxDecoration(
                                             color:
-                                                Colors.green.withOpacity(0.1),
+                                            Colors.green.withOpacity(0.1),
                                             borderRadius:
-                                                BorderRadius.circular(6.r),
+                                            BorderRadius.circular(6.r),
                                           ),
                                           child: SizedBox(
                                             width: 14.r,
@@ -967,21 +1058,21 @@ class _MyListingsPageState extends State<MyListingsPage>
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2,
                                               valueColor:
-                                                  AlwaysStoppedAnimation<Color>(
-                                                      Colors.green),
+                                              AlwaysStoppedAnimation<Color>(
+                                                  Colors.green),
                                             ),
                                           ),
                                         ),
                                         SizedBox(width: 8.w),
                                         Column(
                                           crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                          CrossAxisAlignment.start,
                                           children: [
                                             Text('...',
                                                 style: TextStyle(
                                                     fontSize: 14.sp,
                                                     fontWeight:
-                                                        FontWeight.bold)),
+                                                    FontWeight.bold)),
                                             Text('Inquiries',
                                                 style: TextStyle(
                                                     fontSize: 10.sp,
@@ -1009,16 +1100,16 @@ class _MyListingsPageState extends State<MyListingsPage>
                                   },
                                   child: Container(
                                     padding:
-                                        EdgeInsets.symmetric(vertical: 4.h),
+                                    EdgeInsets.symmetric(vertical: 4.h),
                                     child: Row(
                                       children: [
                                         Container(
                                           padding: EdgeInsets.all(6.r),
                                           decoration: BoxDecoration(
                                             color:
-                                                Colors.green.withOpacity(0.1),
+                                            Colors.green.withOpacity(0.1),
                                             borderRadius:
-                                                BorderRadius.circular(6.r),
+                                            BorderRadius.circular(6.r),
                                           ),
                                           child: Icon(
                                             Icons.chat_bubble_outline,
@@ -1030,7 +1121,7 @@ class _MyListingsPageState extends State<MyListingsPage>
                                         Expanded(
                                           child: Column(
                                             crossAxisAlignment:
-                                                CrossAxisAlignment.start,
+                                            CrossAxisAlignment.start,
                                             children: [
                                               Text(
                                                 '$totalInquiries',
@@ -1089,7 +1180,7 @@ class _MyListingsPageState extends State<MyListingsPage>
       builder: (BuildContext context) {
         return AlertDialog(
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
           contentPadding: EdgeInsets.zero,
           content: Container(
             width: MediaQuery.of(context).size.width * 0.85,
@@ -1123,7 +1214,7 @@ class _MyListingsPageState extends State<MyListingsPage>
                 Text(
                   title,
                   style:
-                      TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
+                  TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1249,7 +1340,7 @@ class _MyListingsPageState extends State<MyListingsPage>
     // Safe get image list
     final images = offer.listingImages ?? <String>[];
     final firstImage =
-        images.isNotEmpty ? images.first : 'assets/images/placeholder.jpg';
+    images.isNotEmpty ? images.first : 'assets/images/placeholder.jpg';
 
     return TweenAnimationBuilder<double>(
       duration: Duration(milliseconds: 200 + (index * 50)),
@@ -1295,23 +1386,23 @@ class _MyListingsPageState extends State<MyListingsPage>
                             borderRadius: BorderRadius.circular(8.r),
                             child: firstImage.startsWith('http')
                                 ? Image.network(
-                                    firstImage,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Icon(Icons.image_rounded,
-                                          color: Colors.grey.shade400,
-                                          size: 18.w);
-                                    },
-                                  )
+                              firstImage,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(Icons.image_rounded,
+                                    color: Colors.grey.shade400,
+                                    size: 18.w);
+                              },
+                            )
                                 : Image.asset(
-                                    firstImage,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Icon(Icons.image_rounded,
-                                          color: Colors.grey.shade400,
-                                          size: 18.w);
-                                    },
-                                  ),
+                              firstImage,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Icon(Icons.image_rounded,
+                                    color: Colors.grey.shade400,
+                                    size: 18.w);
+                              },
+                            ),
                           ),
                         ),
                         SizedBox(width: 12.w),
@@ -1365,7 +1456,7 @@ class _MyListingsPageState extends State<MyListingsPage>
                               horizontal: 8.w, vertical: 4.h),
                           decoration: BoxDecoration(
                             color:
-                                _getStatusColor(offer.status).withOpacity(0.1),
+                            _getStatusColor(offer.status).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12.r),
                           ),
                           child: Text(
@@ -1561,7 +1652,7 @@ class _MyListingsPageState extends State<MyListingsPage>
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
                   padding:
-                      EdgeInsets.symmetric(horizontal: 24.w, vertical: 10.h),
+                  EdgeInsets.symmetric(horizontal: 24.w, vertical: 10.h),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8.r)),
                 ),
@@ -1664,7 +1755,7 @@ class _MyListingsPageState extends State<MyListingsPage>
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
                   padding:
-                      EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+                  EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8.r)),
                 ),

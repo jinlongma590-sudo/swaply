@@ -1,5 +1,6 @@
 // lib/pages/coupon_management_page.dart - 防循环版本（30s页面级TTL + Future缓存）
 import 'dart:async';
+import 'package:flutter/foundation.dart'; // ✅ 导入 kIsWeb 和 defaultTargetPlatform
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -240,7 +241,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
         bool isCurrentlyExpired = false;
         try {
           isCurrentlyExpired =
-              coupon.expiresAt != null ? now.isAfter(coupon.expiresAt) : false;
+          coupon.expiresAt != null ? now.isAfter(coupon.expiresAt) : false;
         } catch (e) {
           debugPrint('Error checking expiry for coupon ${coupon.id}: $e');
           isCurrentlyExpired = false;
@@ -322,7 +323,10 @@ class _CouponManagementPageState extends State<CouponManagementPage>
       backgroundColor: Colors.grey[50],
       body: Column(
         children: [
+          // 1. 调用新的、更短的、符合 iOS 标准的 AppBar
           _buildCustomAppBar(),
+          // 2. 调用单独的、带背景的 QuickStats Wrapper
+          _buildQuickStatsWrapper(),
           _buildTrendingQuotaCard(),
           _buildTabBar(),
           Expanded(
@@ -368,7 +372,169 @@ class _CouponManagementPageState extends State<CouponManagementPage>
     );
   }
 
+  // ✅ [MODIFIED] _buildCustomAppBar
+  // 严格按照 SacedPage/NotificationPage 的 iOS 标准进行布局
   Widget _buildCustomAppBar() {
+    final double statusBar = MediaQuery.of(context).padding.top;
+    // ✅ 检查是否为 iOS
+    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
+    // --- 提取的通用 Widgets ---
+    final Widget backButton = GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Container(
+        // 保持 34x34 尺寸 (8+18+8)
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(
+          Icons.arrow_back_ios_new,
+          color: Colors.white,
+          size: 18,
+        ),
+      ),
+    );
+
+    // ✅ [MODIFIED] 移除 Expanded
+    final Widget titleColumn = const Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min, // ✅ 确保 Column 包裹内容
+      children: [
+        Text(
+          'My Coupons',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+          maxLines: 1, // 确保不换行
+          overflow: TextOverflow.ellipsis, // 超出时省略
+        ),
+        Text(
+          'Manage and use your coupons',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.white70,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+
+    final Widget refreshButton = GestureDetector(
+      onTap: _isRefreshing ? null : _onPullToRefresh,
+      child: Container(
+        // 保持 34x34 尺寸
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: _isRefreshing
+            ? const SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            color: Colors.white,
+          ),
+        )
+            : const Icon(
+          Icons.refresh,
+          color: Colors.white,
+          size: 18,
+        ),
+      ),
+    );
+
+    // --- 平台特定布局 ---
+    if (_isIOS) {
+      // ✅ ================== iOS: 精确值布局 ==================
+      const double kHeaderVisual = 38.0; // 1. 头部可见高度
+      const double kSideWidgetTop = -1.0; // 3. 左右小组件顶部
+      const double kTitleTop = -6.0; // 2. 标题顶部
+      const double kSide = 16.0; // 左右内边距
+      const double kButtonWidth = 36.0; // 按钮估算宽度
+      const double kSpacing = 16.0; // 间距
+
+      return Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF2196F3),
+              Color(0xFF1976D2),
+              Color(0xFF1565C0),
+            ],
+          ),
+        ),
+        child: SizedBox(
+          height: statusBar + kHeaderVisual, // 1. 应用高度
+          child: Stack(
+            children: [
+              // 3. 应用左侧小组件顶部
+              Positioned(
+                top: statusBar + kSideWidgetTop,
+                left: kSide,
+                child: backButton,
+              ),
+              // 2. 应用标题顶部
+              Positioned(
+                top: statusBar + kTitleTop,
+                left: kSide + kButtonWidth + kSpacing,
+                right: kSide + kButtonWidth + kSpacing,
+                child:
+                titleColumn, // titleColumn 已移除 Expanded，可以被 Positioned 约束
+              ),
+              // 3. 应用右侧小组件顶部
+              Positioned(
+                top: statusBar + kSideWidgetTop,
+                right: kSide,
+                child: refreshButton,
+              ),
+            ],
+          ),
+        ),
+      );
+    } else {
+      // ✅ Android: 保持原有布局 (SafeArea + Padding)
+      return Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF2196F3),
+              Color(0xFF1976D2),
+              Color(0xFF1565C0),
+            ],
+          ),
+        ),
+        child: SafeArea(
+          bottom: false, // 确保只应用 top
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0), // 移除底部 Sizedbox 间距
+            child: Row(
+              children: [
+                backButton,
+                const SizedBox(width: 16),
+                Expanded(child: titleColumn), // Android 保持 Expanded
+                refreshButton,
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+  }
+
+  // ✅ [NEW] _buildQuickStatsWrapper
+  // 渲染 QuickStats 卡片，并为其提供无缝衔接的蓝色背景和间距
+  Widget _buildQuickStatsWrapper() {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -381,83 +547,9 @@ class _CouponManagementPageState extends State<CouponManagementPage>
           ],
         ),
       ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.arrow_back_ios_new,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'My Coupons',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        Text(
-                          'Manage and use your coupons',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: _isRefreshing ? null : _onPullToRefresh,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: _isRefreshing
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(
-                              Icons.refresh,
-                              color: Colors.white,
-                              size: 18,
-                            ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              _buildQuickStats(),
-            ],
-          ),
-        ),
-      ),
+      // 还原原有的 24.0 间距 和 24.0 底部内边距
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+      child: _buildQuickStats(),
     );
   }
 
@@ -785,7 +877,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
                 backgroundColor: const Color(0xFF2196F3),
                 foregroundColor: Colors.white,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -804,24 +896,24 @@ class _CouponManagementPageState extends State<CouponManagementPage>
       child: coupons.isEmpty
           ? _buildEmptyState(emptyMessage)
           : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: coupons.length,
-              itemBuilder: (context, index) {
-                return TweenAnimationBuilder<double>(
-                  duration: Duration(milliseconds: 300 + (index * 100)),
-                  tween: Tween(begin: 0.0, end: 1.0),
-                  builder: (context, value, child) {
-                    return Transform.translate(
-                      offset: Offset(0, 20 * (1 - value)),
-                      child: Opacity(
-                        opacity: value,
-                        child: _buildCouponCard(coupons[index]),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+        padding: const EdgeInsets.all(16),
+        itemCount: coupons.length,
+        itemBuilder: (context, index) {
+          return TweenAnimationBuilder<double>(
+            duration: Duration(milliseconds: 300 + (index * 100)),
+            tween: Tween(begin: 0.0, end: 1.0),
+            builder: (context, value, child) {
+              return Transform.translate(
+                offset: Offset(0, 20 * (1 - value)),
+                child: Opacity(
+                  opacity: value,
+                  child: _buildCouponCard(coupons[index]),
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -896,9 +988,9 @@ class _CouponManagementPageState extends State<CouponManagementPage>
         border: isExpiringSoon
             ? Border.all(color: Colors.red.withOpacity(0.3), width: 2)
             : Border.all(
-                color: _getCouponColor(coupon.type).withOpacity(0.2),
-                width: 1,
-              ),
+          color: _getCouponColor(coupon.type).withOpacity(0.2),
+          width: 1,
+        ),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
@@ -1069,7 +1161,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
                           style: OutlinedButton.styleFrom(
                             foregroundColor: _getCouponColor(coupon.type),
                             side:
-                                BorderSide(color: _getCouponColor(coupon.type)),
+                            BorderSide(color: _getCouponColor(coupon.type)),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -1348,7 +1440,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
                 icon: Icons.local_fire_department,
                 title: 'Hot Pin Coupons',
                 description:
-                    'Pin your items to the trending section on homepage for maximum visibility.',
+                'Pin your items to the trending section on homepage for maximum visibility.',
                 color: const Color(0xFFFF6B35),
               ),
               const SizedBox(height: 16),
@@ -1356,7 +1448,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
                 icon: Icons.push_pin,
                 title: 'Category Pin Coupons',
                 description:
-                    'Pin your items to the top of specific category pages.',
+                'Pin your items to the top of specific category pages.',
                 color: const Color(0xFF2196F3),
               ),
               const SizedBox(height: 16),

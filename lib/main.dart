@@ -3454,7 +3454,7 @@ class _WishlistPageState extends State<WishlistPage> {
 }
 // 莽卢卢氓鈥衡€好┢捖ニ嗏€犆寂ellPage 氓鈥÷好モ€澛┞÷?(忙聛垄氓陇聧氓庐艗忙鈥⒙疵ヅ犈该ㄆ捖? 氓鈥櫯?NotificationPage 茅鈧∶嘎ッ┞÷?(盲陆驴莽鈥澛ぢ号捗ぢ嘎р€八喢ε撀♀€濻ervice茅鈥衡€犆λ喡?
 
-/* ---------------- Sell Page 氓鈥÷好モ€澛┞÷?(莽戮沤氓艗鈥撁р€八喢ε撀? ---------------- */
+/* ---------------- Sell Page ---------------- */
 
 class SellPage extends StatefulWidget {
   final bool isGuest;
@@ -3469,25 +3469,25 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  // ✅ A) 统一一个蓝色头部写法
-  // 统一蓝色头部：高度自适应；提供是否居中、右上角按钮位
+  // 统一蓝色头部（支持传入右上角按钮，并可单独微调其纵向位置）
   Widget _blueHeader({
     required BuildContext context,
     required String title,
     required bool centerTitle,
-    Widget? trailing, // 右上角按钮（可选）
+    Widget? trailing,
+    double trailingTopAdjust = 0.0, // ↑ 右上角按钮相对标题的垂直微调
   }) {
     final double statusBar = MediaQuery.of(context).padding.top;
 
-    // 统一视觉高度（缩放后依然舒服）：statusBar + 132
-    // iOS 收紧，Android 保持原样
-    final bool _isIOS       = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    final double kHeaderVisual = _isIOS ? 38.0 : 76.0;  // 头部视觉高度
-    final double kTitleTop     = _isIOS ? -6.0 : 20.0;  // 标题距顶
-    const double kSide         = 20.0;                  // 左右内边距
+    // iOS 紧凑、Android 保持
+    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final double kHeaderVisual = _isIOS ? 38.0 : 76.0;
+    final double kTitleTop     = _isIOS ? -6.0 : 20.0;
+    const double kSide         = 20.0;
 
-    // ✅ 修复：使用您首页的 Facebook 蓝色 (0xFF1877F2)
     const Color kUserPrimaryBlue = Color(0xFF1877F2);
+
+    final double titleTop = statusBar + kTitleTop;
 
     return SizedBox(
       height: statusBar + kHeaderVisual,
@@ -3498,8 +3498,8 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
             child: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  begin: Alignment.topLeft, end: Alignment.bottomRight,
-                  // ✅ 修复：使用 0xFF1877F2 的近似渐变
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                   colors: [kUserPrimaryBlue, Color(0xFF1E88E5)],
                 ),
               ),
@@ -3507,26 +3507,36 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
           ),
           // 标题
           Positioned(
-            top: statusBar + kTitleTop,
-            left: centerTitle ? kSide : kSide,
+            top: titleTop,
+            left: kSide,
             right: centerTitle ? kSide : null,
             child: SizedBox(
-              width: centerTitle ? MediaQuery.of(context).size.width - kSide * 2 : null,
-              child: Text(
-                title,
-                textAlign: centerTitle ? TextAlign.center : TextAlign.left,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700,
-                ),
+              width: centerTitle
+                  ? MediaQuery.of(context).size.width - kSide * 2
+                  : null,
+              child: const Text(''), // 占位避免抖动（可保留）
+            ),
+          ),
+          Positioned(
+            top: titleTop,
+            left: kSide,
+            right: centerTitle ? kSide : null,
+            child: Text(
+              title,
+              textAlign: centerTitle ? TextAlign.center : TextAlign.left,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
-          // 右上角操作按钮（可选）
+          // 右上角按钮（与标题行对齐；可用 trailingTopAdjust 再微调）
           if (trailing != null)
             Positioned(
-              top: statusBar - 1.0, // 避开刘海/状态栏
-              right: 16,
+              top: titleTop + trailingTopAdjust,
+              right: 12,
               child: trailing,
             ),
         ],
@@ -3534,26 +3544,28 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     );
   }
 
-  // ✅ B.1) 提取右上角 + 按钮以传递给 _blueHeader
+  // 右上角「+」按钮（外框 28×28，更小更紧凑）
   Widget _buildPlusButton(BuildContext context) {
+    const double box = 28.0;   // 外部矩形尺寸
+    const double icon = 17.0;  // 图标尺寸
+
     return Container(
-      margin: EdgeInsets.only(top: -2.h, bottom: 2.h), // 微调垂直位置
+      width: box,
+      height: box,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(10.r),
+        color: Colors.white.withOpacity(0.18),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: IconButton(
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const SellFormPage()),
         ),
         icon: const Icon(Icons.add_rounded, color: Colors.white),
-        iconSize: 18.r,                                          // 图标更小
-        padding: EdgeInsets.zero,                                // 去默认内边距
-        constraints: BoxConstraints.tightFor(                    // 总体尺寸更小
-          width: 36.r,
-          height: 36.r,
-        ),
-        splashRadius: 18.r,
+        iconSize: icon,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: box, height: box),
+        splashRadius: box / 2,
+        visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
         tooltip: 'Add New Listing',
       ),
     );
@@ -3596,27 +3608,26 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     }
 
     final raw = ListingStore.i.getAll();
-    final List<Map<String, dynamic>> myListings = (raw is List)
-        ? List<Map<String, dynamic>>.from(raw)
-        : const <Map<String, dynamic>>[];
+    final List<Map<String, dynamic>> myListings =
+    (raw is List) ? List<Map<String, dynamic>>.from(raw) : const <Map<String, dynamic>>[];
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       body: CustomScrollView(
-        // ✅ B.3) 彻底禁止滚动
         physics: const NeverScrollableScrollPhysics(),
         slivers: [
-          // ✅ B.1) 用统一头部
+          // 头部：标题居中，右上角 + 与标题对齐
           SliverToBoxAdapter(
             child: _blueHeader(
               context: context,
               title: l10n.sellItem,
-              centerTitle: true, // ✅ 仅此页居中
-              trailing: _buildPlusButton(context), // ✅ 传入右上角按钮
+              centerTitle: true,
+              trailing: _buildPlusButton(context),
+              trailingTopAdjust: -6.0, // 若还偏低，调到 -8.0；偏高则 -4.0
             ),
           ),
           if (myListings.isEmpty)
-            _buildEmptyState(l10n) // ✅ B.2) _buildEmptyState 内部已修改
+            _buildEmptyState(l10n)
           else
             _buildListingsContent(myListings, l10n),
         ],
@@ -3629,7 +3640,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1877F2), // ✅ 修复：使用 Facebook 蓝色
+        backgroundColor: const Color(0xFF1877F2),
         title: Text(
           l10n.sellItem,
           style: TextStyle(
@@ -3704,13 +3715,11 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                     height: 56.h,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        // ✅ 修复：使用 Facebook 蓝色
                         colors: [Color(0xFF1877F2), Color(0xFF1E88E5)],
                       ),
                       borderRadius: BorderRadius.circular(16.r),
                       boxShadow: [
                         BoxShadow(
-                          // ✅ 修复：使用 Facebook 蓝色
                           color: const Color(0xFF1877F2).withOpacity(0.4),
                           blurRadius: 16.r,
                           offset: Offset(0, 8.h),
@@ -3750,14 +3759,11 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     );
   }
 
-  // ⛔️ [_buildSliverAppBar 已被删除，由 _blueHeader 替代]
-
   Widget _buildEmptyState(AppLocalizations l10n) {
-    // ✅ 修复：使用 Facebook 蓝色
+    // ✅ 使用 Facebook 蓝
     const Color kUserPrimaryBlue = Color(0xFF1877F2);
 
     return SliverFillRemaining(
-      // ✅ B.2) 整体缩小 20%
       child: Transform.scale(
         scale: 0.8,
         alignment: Alignment.topCenter,
@@ -3781,18 +3787,18 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                             colors: [
-                              kUserPrimaryBlue.withOpacity(0.2), // ✅ 修复
-                              kUserPrimaryBlue.withOpacity(0.1), // ✅ 修复
+                              kUserPrimaryBlue.withOpacity(0.2),
+                              kUserPrimaryBlue.withOpacity(0.1),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(70.r),
                           border: Border.all(
-                            color: kUserPrimaryBlue.withOpacity(0.3), // ✅ 修复
+                            color: kUserPrimaryBlue.withOpacity(0.3),
                             width: 2,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: kUserPrimaryBlue.withOpacity(0.2), // ✅ 修复
+                              color: kUserPrimaryBlue.withOpacity(0.2),
                               blurRadius: 24.r,
                               offset: Offset(0, 12.h),
                             ),
@@ -3801,7 +3807,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                         child: Icon(
                           Icons.add_a_photo_rounded,
                           size: 70.r,
-                          color: kUserPrimaryBlue, // ✅ 修复
+                          color: kUserPrimaryBlue,
                         ),
                       ),
                       SizedBox(height: 32.h),
@@ -3827,13 +3833,12 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                       ),
                       SizedBox(height: 24.h),
                       Container(
-                        padding:
-                        EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+                        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
                         decoration: BoxDecoration(
-                          color: kUserPrimaryBlue.withOpacity(0.1), // ✅ 修复
+                          color: kUserPrimaryBlue.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(16.r),
                           border: Border.all(
-                            color: kUserPrimaryBlue.withOpacity(0.2), // ✅ 修复
+                            color: kUserPrimaryBlue.withOpacity(0.2),
                           ),
                         ),
                         child: Column(
@@ -3841,7 +3846,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                             Row(
                               children: [
                                 Icon(Icons.camera_alt_rounded,
-                                    color: kUserPrimaryBlue, size: 20.r), // ✅ 修复
+                                    color: kUserPrimaryBlue, size: 20.r),
                                 SizedBox(width: 8.w),
                                 Text('Take quality photos',
                                     style: TextStyle(
@@ -3853,7 +3858,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                             Row(
                               children: [
                                 Icon(Icons.edit_rounded,
-                                    color: kUserPrimaryBlue, size: 20.r), // ✅ 修复
+                                    color: kUserPrimaryBlue, size: 20.r),
                                 SizedBox(width: 8.w),
                                 Text('Write detailed description',
                                     style: TextStyle(
@@ -3865,7 +3870,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                             Row(
                               children: [
                                 Icon(Icons.monetization_on_rounded,
-                                    color: kUserPrimaryBlue, size: 20.r), // ✅ 修复
+                                    color: kUserPrimaryBlue, size: 20.r),
                                 SizedBox(width: 8.w),
                                 Text('Set competitive price',
                                     style: TextStyle(
@@ -3882,12 +3887,12 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                         height: 56.h,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [kUserPrimaryBlue, Color(0xFF1E88E5)], // ✅ 修复
+                            colors: [kUserPrimaryBlue, Color(0xFF1E88E5)],
                           ),
                           borderRadius: BorderRadius.circular(16.r),
                           boxShadow: [
                             BoxShadow(
-                              color: kUserPrimaryBlue.withOpacity(0.4), // ✅ 修复
+                              color: kUserPrimaryBlue.withOpacity(0.4),
                               blurRadius: 16.r,
                               offset: Offset(0, 8.h),
                             ),
@@ -3929,7 +3934,6 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
 
   Widget _buildListingsContent(
       List<Map<String, dynamic>> myListings, AppLocalizations l10n) {
-    // ✅ 修复：使用 Facebook 蓝色
     const Color kUserPrimaryBlue = Color(0xFF1877F2);
 
     return SliverList(
@@ -3960,13 +3964,10 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
 
   Widget _buildStatsHeader(
       List<Map<String, dynamic>> myListings, AppLocalizations l10n) {
-    // ✅ 修复：使用 Facebook 蓝色
     const Color kUserPrimaryBlue = Color(0xFF1877F2);
 
-    final totalViews =
-    myListings.fold<int>(0, (sum, item) => sum + 234); // Mock data
-    final totalLikes =
-    myListings.fold<int>(0, (sum, item) => sum + 12); // Mock data
+    final totalViews = myListings.fold<int>(0, (sum, item) => sum + 234); // Mock
+    final totalLikes = myListings.fold<int>(0, (sum, item) => sum + 12);  // Mock
 
     return Container(
       margin: EdgeInsets.all(16.w),
@@ -3975,10 +3976,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Colors.white,
-            const Color(0xFFF8F9FA),
-          ],
+          colors: [Colors.white, const Color(0xFFF8F9FA)],
         ),
         borderRadius: BorderRadius.circular(20.r),
         boxShadow: [
@@ -4020,12 +4018,12 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                 padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [kUserPrimaryBlue, Color(0xFF1E88E5)], // ✅ 修复
+                    colors: [kUserPrimaryBlue, Color(0xFF1E88E5)],
                   ),
                   borderRadius: BorderRadius.circular(12.r),
                   boxShadow: [
                     BoxShadow(
-                      color: kUserPrimaryBlue.withOpacity(0.3), // ✅ 修复
+                      color: kUserPrimaryBlue.withOpacity(0.3),
                       blurRadius: 8.r,
                       offset: Offset(0, 4.h),
                     ),
@@ -4058,25 +4056,31 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
           Row(
             children: [
               Expanded(
-                  child: _buildStatCard(
-                      Icons.visibility_rounded,
-                      totalViews.toString(),
-                      'Total Views',
-                      kUserPrimaryBlue)), // ✅ 修复
+                child: _buildStatCard(
+                  Icons.visibility_rounded,
+                  totalViews.toString(),
+                  'Total Views',
+                  kUserPrimaryBlue,
+                ),
+              ),
               SizedBox(width: 12.w),
               Expanded(
-                  child: _buildStatCard(
-                      Icons.favorite_rounded,
-                      totalLikes.toString(),
-                      'Total Likes',
-                      Colors.red.shade400)),
+                child: _buildStatCard(
+                  Icons.favorite_rounded,
+                  totalLikes.toString(),
+                  'Total Likes',
+                  Colors.red.shade400,
+                ),
+              ),
               SizedBox(width: 12.w),
               Expanded(
-                  child: _buildStatCard(
-                      Icons.trending_up_rounded,
-                      '${(totalViews * 0.15).toInt()}',
-                      'Engagement',
-                      Colors.green.shade400)),
+                child: _buildStatCard(
+                  Icons.trending_up_rounded,
+                  '${(totalViews * 0.15).toInt()}',
+                  'Engagement',
+                  Colors.green.shade400,
+                ),
+              ),
             ],
           ),
         ],
@@ -4084,8 +4088,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildStatCard(
-      IconData icon, String value, String label, Color color) {
+  Widget _buildStatCard(IconData icon, String value, String label, Color color) {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
@@ -4121,7 +4124,6 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   }
 
   Widget _buildListingCard(Map<String, dynamic> item, AppLocalizations l10n) {
-    // ✅ 修复：使用 Facebook 蓝色
     const Color kUserPrimaryBlue = Color(0xFF1877F2);
 
     return Container(
@@ -4155,7 +4157,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
             padding: EdgeInsets.all(16.w),
             child: Row(
               children: [
-                // 氓鈥⑩€犆モ€溌伱モ€郝久р€扳€?
+                // 缩略图
                 Hero(
                   tag: 'listing_${item['id']}',
                   child: Container(
@@ -4173,12 +4175,11 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                           ? Image.asset(
                         item['images'][0],
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            Icon(
-                              Icons.image_rounded,
-                              color: Colors.grey.shade400,
-                              size: 32.r,
-                            ),
+                        errorBuilder: (context, error, stackTrace) => Icon(
+                          Icons.image_rounded,
+                          color: Colors.grey.shade400,
+                          size: 32.r,
+                        ),
                       )
                           : Icon(
                         Icons.image_rounded,
@@ -4190,7 +4191,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                 ),
                 SizedBox(width: 16.w),
 
-                // 氓鈥⑩€犆モ€溌伱ぢ柯∶β伮?
+                // 文本
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -4208,24 +4209,23 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                       ),
                       SizedBox(height: 8.h),
                       Container(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 12.w, vertical: 6.h),
+                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              kUserPrimaryBlue.withOpacity(0.15), // ✅ 修复
-                              kUserPrimaryBlue.withOpacity(0.08), // ✅ 修复
+                              kUserPrimaryBlue.withOpacity(0.15),
+                              kUserPrimaryBlue.withOpacity(0.08),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(12.r),
                           border: Border.all(
-                            color: kUserPrimaryBlue.withOpacity(0.2), // ✅ 修复
+                            color: kUserPrimaryBlue.withOpacity(0.2),
                           ),
                         ),
                         child: Text(
                           item['price'] ?? l10n.noPrice,
                           style: TextStyle(
-                            color: kUserPrimaryBlue, // ✅ 修复
+                            color: kUserPrimaryBlue,
                             fontWeight: FontWeight.bold,
                             fontSize: 16.sp,
                           ),
@@ -4234,21 +4234,21 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                       SizedBox(height: 12.h),
                       Row(
                         children: [
-                          _buildEnhancedStatItem(Icons.visibility_rounded,
-                              '234', Colors.blue.shade400),
+                          _buildEnhancedStatItem(
+                              Icons.visibility_rounded, '234', Colors.blue.shade400),
                           SizedBox(width: 16.w),
-                          _buildEnhancedStatItem(Icons.favorite_rounded, '12',
-                              Colors.red.shade400),
+                          _buildEnhancedStatItem(
+                              Icons.favorite_rounded, '12', Colors.red.shade400),
                           SizedBox(width: 16.w),
-                          _buildEnhancedStatItem(Icons.chat_bubble_rounded, '3',
-                              Colors.green.shade400),
+                          _buildEnhancedStatItem(
+                              Icons.chat_bubble_rounded, '3', Colors.green.shade400),
                         ],
                       ),
                     ],
                   ),
                 ),
 
-                // 猫聫艙氓聧鈥⒚ε掆€懊┾€櫬?
+                // 三点菜单
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
@@ -4362,8 +4362,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
         title: Row(
           children: [
             Container(
@@ -4397,7 +4396,8 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                  colors: [Colors.red.shade400, Colors.red.shade600]),
+                colors: [Colors.red.shade400, Colors.red.shade600],
+              ),
               borderRadius: BorderRadius.circular(12.r),
             ),
             child: TextButton(
@@ -4408,9 +4408,10 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
               child: Text(
                 'Delete',
                 style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600),
+                  color: Colors.white,
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -4421,8 +4422,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
 
   void _deleteListing(Map<String, dynamic> item, AppLocalizations l10n) async {
     try {
-      final urls =
-          (item['images'] as List?)?.cast<String>() ?? const <String>[];
+      final urls = (item['images'] as List?)?.cast<String>() ?? const <String>[];
       final paths = urls
           .map(ListingService.publicUrlToObjectPath)
           .whereType<String>()
@@ -4438,16 +4438,14 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.check_circle_rounded,
-                    color: Colors.white, size: 20.r),
+                Icon(Icons.check_circle_rounded, color: Colors.white, size: 20.r),
                 SizedBox(width: 8.w),
                 Text(l10n.listingDeleted),
               ],
             ),
             backgroundColor: Colors.green.shade600,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
             margin: EdgeInsets.all(16.w),
           ),
         );
@@ -4458,16 +4456,14 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.error_outline_rounded,
-                    color: Colors.white, size: 20.r),
+                Icon(Icons.error_outline_rounded, color: Colors.white, size: 20.r),
                 SizedBox(width: 8.w),
                 Expanded(child: Text('Delete failed: $e')),
               ],
             ),
             backgroundColor: Colors.red.shade600,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
             margin: EdgeInsets.all(16.w),
           ),
         );
@@ -4475,6 +4471,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     }
   }
 }
+
 
 // ---------------- Notification Page ----------------
 /* ---------------- Notification Page 茅鈧∶嘎ッ┞÷?(莽麓搂氓鈥♀€樏九矫ヅ掆€撁р€八喢ε撀? ---------------- */
