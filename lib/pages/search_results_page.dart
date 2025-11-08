@@ -1,4 +1,5 @@
 // lib/pages/search_results_page.dart
+import 'package:flutter/foundation.dart'; // ✅ 仅为平台判断与 kIsWeb
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/listing_service.dart';
@@ -60,7 +61,7 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
         offset: 0,
       );
 
-      // 2) 取当前关键字/城市下的置顶项（search_pins_active 已是“只包含有效期内”的视图）
+      // 2) 取当前关键字/城市下的置顶项
       _pinnedIds = await _fetchPinnedIds(kw, city);
 
       // 3) 合并 & 映射
@@ -72,11 +73,10 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
     }
   }
 
-  /// 读取置顶的 listing_id 集合（使用 filter，避免 eq/ilike 等扩展方法）
+  /// 读取置顶的 listing_id 集合
   Future<Set<String>> _fetchPinnedIds(String kw, String? city) async {
     final sb = Supabase.instance.client;
 
-    // 关键字用 %kw% 模糊；城市若指定则后面在 Dart 里再过滤
     final data = await sb
         .from('search_pins_active')
         .select('listing_id, keyword, city')
@@ -153,15 +153,24 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
   Widget build(BuildContext context) {
     final title = 'Results for "${widget.keyword}"';
 
+    // ✅ 仅 iOS 调整到与 sell/通知/saved 一致的顶部间距
+    final double statusBar = MediaQuery.of(context).padding.top;
+    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final double? iosToolbarHeight = _isIOS ? (statusBar + 38.0) : null;
+
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2196F3),
+        // ✅ 应用 iOS 专属高度；Android 不变
+        toolbarHeight: iosToolbarHeight,
+        backgroundColor: const Color(0xFF2196F3), // 颜色保持不变
         title: Text(title, style: const TextStyle(color: Colors.white)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
+        centerTitle: false, // 与其它页面一致（如有需要你可保持默认）
+        elevation: 0,
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -227,7 +236,8 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                       children: [
                         // 顶部图：强制铺满
                         AspectRatio(
-                          aspectRatio: 1.0, // 方形展示，视觉更稳定
+                          aspectRatio:
+                          1.0, // 方形展示，视觉更稳定
                           child: ClipRRect(
                             borderRadius:
                             const BorderRadius.vertical(
@@ -263,8 +273,8 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                                 p['title']?.toString() ?? '',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style:
-                                const TextStyle(fontSize: 14),
+                                style: const TextStyle(
+                                    fontSize: 14),
                               ),
                               const SizedBox(height: 3),
                               Row(
@@ -275,7 +285,8 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
                                   const SizedBox(width: 2),
                                   Expanded(
                                     child: Text(
-                                      p['location']?.toString() ??
+                                      p['location']
+                                          ?.toString() ??
                                           '',
                                       maxLines: 1,
                                       overflow:

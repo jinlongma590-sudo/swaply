@@ -3,8 +3,7 @@
 // ✅ 最小可用流程：输入验证码 → 调服务 → 读表 → 刷新本页 UI → Navigator.pop(true)
 // ✅ 你已有复杂 UI：已把“提交逻辑”按最小版搬入（_verifyCode）
 // ✅ 判定是否已认证 / 徽章类型：统一走 utils（基于 user_verifications 行）
-// ✅ 本次按要求改动：EmailVerificationService() 无位置参数；
-//    sendVerificationCode(...) / verifyCode(email:, code:) / fetchVerificationRow() 新方法名
+// ✅ 本次改动：iOS 顶部间距与标准页一致（statusBar+38，标题-6，左右按钮-1）；官方认证卡片固定 Facebook 蓝
 
 import 'dart:async';
 
@@ -50,7 +49,6 @@ class _VerificationPageState extends State<VerificationPage>
   void initState() {
     super.initState();
 
-    // ✅ 构造器不再接收位置参数
     _svc = EmailVerificationService();
 
     _animationController = AnimationController(
@@ -77,7 +75,6 @@ class _VerificationPageState extends State<VerificationPage>
 
   // === 统一读取 & 计算（只读 user_verifications，不碰 profiles） ===
   Future<void> _loadUserVerificationStatus() async {
-    // ✅ 方法名统一：fetchVerificationRow()
     final row = await _svc.fetchVerificationRow();
     final verified = vutils.computeIsVerified(verificationRow: row, user: null);
     final badge = vutils.computeBadgeType(verificationRow: row, user: null);
@@ -91,7 +88,7 @@ class _VerificationPageState extends State<VerificationPage>
     if (kDebugMode) {
       debugPrint(
         '[VerificationPage] _loadUserVerificationStatus(): '
-        'verified=$_verified badge=$_badge vt=${_badge.name}',
+            'verified=$_verified badge=$_badge vt=${_badge.name}',
       );
     }
   }
@@ -108,7 +105,6 @@ class _VerificationPageState extends State<VerificationPage>
         throw Exception('Please enter your email address');
       }
 
-      // ✅ 方法名统一：sendVerificationCode(...)
       final okSend = await _svc.sendVerificationCode(email);
       if (!okSend) throw Exception('Failed to send verification code');
 
@@ -127,10 +123,6 @@ class _VerificationPageState extends State<VerificationPage>
   }
 
   /// ✅ 提交验证码（最小版逻辑）
-  /// 1) _svc.verifyCode(email:, code:)
-  /// 2) 立刻读回 user_verifications
-  /// 3) 刷新 UI
-  /// 4) SnackBar & pop(true) 交给上一页刷新
   Future<void> _verifyCode() async {
     try {
       setState(() {
@@ -144,14 +136,12 @@ class _VerificationPageState extends State<VerificationPage>
         throw Exception('Please enter email and the 6-digit code');
       }
 
-      // ✅ 方法名统一：verifyCode(email:, code:)
       final ok = await _svc.verifyCode(email: email, code: code);
       if (!ok) throw Exception('Invalid or expired verification code');
 
-      // 读回最新状态并刷新本页
       final row = await _svc.fetchVerificationRow();
       final verified =
-          vutils.computeIsVerified(verificationRow: row, user: null);
+      vutils.computeIsVerified(verificationRow: row, user: null);
       final badge = vutils.computeBadgeType(verificationRow: row, user: null);
 
       if (!mounted) return;
@@ -211,7 +201,7 @@ class _VerificationPageState extends State<VerificationPage>
         backgroundColor: Colors.green.shade600,
         behavior: SnackBarBehavior.floating,
         shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
         margin: EdgeInsets.all(12.w),
       ),
     );
@@ -224,9 +214,11 @@ class _VerificationPageState extends State<VerificationPage>
         return Colors.grey;
       case vt.VerificationBadgeType.verified:
       case vt.VerificationBadgeType.blue:
+      // 邮箱验证成功：保持绿色（与你现有视觉一致）
         return const Color(0xFF4CAF50);
       case vt.VerificationBadgeType.official:
       case vt.VerificationBadgeType.government:
+      // 官方/政府：Facebook 蓝
         return const Color(0xFF1877F2);
       case vt.VerificationBadgeType.premium:
       case vt.VerificationBadgeType.gold:
@@ -239,8 +231,22 @@ class _VerificationPageState extends State<VerificationPage>
 
   @override
   Widget build(BuildContext context) {
-    final badge = _badge;
+    final isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
+    if (isIOS) {
+      // ============== iOS：使用自定义头部，匹配标准间距 ==============
+      return Scaffold(
+        backgroundColor: Colors.grey.shade50,
+        body: Column(
+          children: [
+            _buildHeaderIOS(),
+            Expanded(child: _buildPageBody()),
+          ],
+        ),
+      );
+    }
+
+    // ============== Android & 其他：保持原 AppBar 不变 ==============
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
@@ -268,26 +274,102 @@ class _VerificationPageState extends State<VerificationPage>
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(16.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildVerificationStatusCard(badge),
+      body: _buildPageBody(),
+    );
+  }
+
+  // ================= iOS 头部（标准数值） =================
+  Widget _buildHeaderIOS() {
+    final double statusBar = MediaQuery.of(context).padding.top;
+
+    const double kHeaderVisual = 38.0;   // 头部可见高度
+    const double kTitleTop = -6.0;       // 标题顶距（相对 statusBar）
+    const double kSideTop = -1.0;        // 左/右角小组件顶距
+    const double kSide = 16.0;           // 左右内边距
+    const double kBtnSize = 36.0;        // 左右按钮大致占位宽度（用于居中标题）
+    const double kSpacing = 16.0;
+
+    final backBtn = GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
+      ),
+    );
+
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: SizedBox(
+        height: statusBar + kHeaderVisual,
+        child: Stack(
+          children: [
+            // 左按钮
+            Positioned(
+              top: statusBar + kSideTop,
+              left: kSide,
+              child: backBtn,
+            ),
+            // 居中标题（用等宽占位保持居中）
+            Positioned(
+              top: statusBar + kTitleTop,
+              left: kSide + kBtnSize + kSpacing,
+              right: kSide + kBtnSize + kSpacing,
+              child: Text(
+                'Account Verification',
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 18.sp, // 保持你原 AppBar 字号，不改风格
+                ),
+              ),
+            ),
+            // 右侧占位（保证标题真正居中；无按钮也保留空间）
+            Positioned(
+              top: statusBar + kSideTop,
+              right: kSide,
+              child: const SizedBox(width: kBtnSize, height: kBtnSize),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ================= 页面主体（复用给 iOS/Android） =================
+  Widget _buildPageBody() {
+    final badge = _badge;
+
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: SingleChildScrollView(
+        padding: EdgeInsets.all(16.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildVerificationStatusCard(badge),
+            SizedBox(height: 16.h),
+            if (!_verified) _buildEmailVerificationCard(),
+            SizedBox(height: 16.h),
+            if (_verified) _buildOfficialVerificationCard(),
+            SizedBox(height: 16.h),
+            _buildHelpCard(),
+            if (_message != null) ...[
               SizedBox(height: 16.h),
-              if (!_verified) _buildEmailVerificationCard(),
-              SizedBox(height: 16.h),
-              if (_verified) _buildOfficialVerificationCard(),
-              SizedBox(height: 16.h),
-              _buildHelpCard(),
-              if (_message != null) ...[
-                SizedBox(height: 16.h),
-                _buildMsg(),
-              ],
+              _buildMsg(),
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -326,13 +408,13 @@ class _VerificationPageState extends State<VerificationPage>
                 decoration: BoxDecoration(
                   gradient: verified
                       ? LinearGradient(colors: [
-                          Colors.green.shade400,
-                          Colors.green.shade600
-                        ])
+                    Colors.green.shade400,
+                    Colors.green.shade600
+                  ])
                       : LinearGradient(colors: [
-                          Colors.orange.shade400,
-                          Colors.orange.shade600
-                        ]),
+                    Colors.orange.shade400,
+                    Colors.orange.shade600
+                  ]),
                   borderRadius: BorderRadius.circular(14.r),
                   boxShadow: [
                     BoxShadow(
@@ -377,15 +459,11 @@ class _VerificationPageState extends State<VerificationPage>
                   ],
                 ),
               ),
-            ],
-          ),
-          SizedBox(height: 16.h),
-          Row(
-            children: [
               if (badge != vt.VerificationBadgeType.none)
                 Container(
+                  margin: EdgeInsets.only(left: 8.w),
                   padding:
-                      EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                  EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16.r),
@@ -402,23 +480,24 @@ class _VerificationPageState extends State<VerificationPage>
                     showIcon: true,
                   ),
                 ),
-              const Spacer(),
-              TextButton.icon(
-                onPressed: _refreshStatus,
-                icon: Icon(Icons.refresh_rounded, size: 16.w),
-                label:
-                    Text('Refresh Status', style: TextStyle(fontSize: 12.sp)),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF667EEA),
-                  backgroundColor: Colors.white.withOpacity(0.8),
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
+            ],
+          ),
+          SizedBox(height: 12.h),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: _refreshStatus,
+              icon: Icon(Icons.refresh_rounded, size: 16.w),
+              label: Text('Refresh Status', style: TextStyle(fontSize: 12.sp)),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF667EEA),
+                backgroundColor: Colors.white.withOpacity(0.8),
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.r),
                 ),
               ),
-            ],
+            ),
           ),
         ],
       ),
@@ -453,12 +532,12 @@ class _VerificationPageState extends State<VerificationPage>
                   borderRadius: BorderRadius.all(Radius.circular(14)),
                 ),
                 child:
-                    Icon(Icons.email_rounded, color: Colors.white, size: 20.w),
+                Icon(Icons.email_rounded, color: Colors.white, size: 20.w),
               ),
               SizedBox(width: 14.w),
               Text('Email Verification',
                   style:
-                      TextStyle(fontSize: 17.sp, fontWeight: FontWeight.bold)),
+                  TextStyle(fontSize: 17.sp, fontWeight: FontWeight.bold)),
             ],
           ),
           SizedBox(height: 20.h),
@@ -485,7 +564,7 @@ class _VerificationPageState extends State<VerificationPage>
               filled: true,
               fillColor: Colors.grey.shade50,
               contentPadding:
-                  EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+              EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
             ),
             style: TextStyle(fontSize: 14.sp),
           ),
@@ -515,26 +594,26 @@ class _VerificationPageState extends State<VerificationPage>
                   alignment: Alignment.center,
                   child: _isLoading
                       ? SizedBox(
-                          height: 20.h,
-                          width: 20.w,
-                          child: const CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
+                    height: 20.h,
+                    width: 20.w,
+                    child: const CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor:
+                      AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
                       : Text(
-                          _resendCountdown > 0
-                              ? 'Resend Code (${_resendCountdown}s)'
-                              : _sentToEmail != null
-                                  ? 'Resend Verification Code'
-                                  : 'Send Verification Code',
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
+                    _resendCountdown > 0
+                        ? 'Resend Code (${_resendCountdown}s)'
+                        : _sentToEmail != null
+                        ? 'Resend Verification Code'
+                        : 'Send Verification Code',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -556,7 +635,7 @@ class _VerificationPageState extends State<VerificationPage>
               hintText: '000000',
               counterText: '',
               border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(14.r)),
+              OutlineInputBorder(borderRadius: BorderRadius.circular(14.r)),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14.r),
                 borderSide: BorderSide(color: Color(0xFF667EEA), width: 2.w),
@@ -564,7 +643,7 @@ class _VerificationPageState extends State<VerificationPage>
               filled: true,
               fillColor: Colors.grey.shade50,
               contentPadding:
-                  EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+              EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
             ),
           ),
           SizedBox(height: 16.h),
@@ -591,22 +670,22 @@ class _VerificationPageState extends State<VerificationPage>
                   alignment: Alignment.center,
                   child: _isLoading
                       ? SizedBox(
-                          height: 20.h,
-                          width: 20.w,
-                          child: const CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
+                    height: 20.h,
+                    width: 20.w,
+                    child: const CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor:
+                      AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
                       : Text(
-                          'Verify Code',
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
+                    'Verify Code',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -617,7 +696,8 @@ class _VerificationPageState extends State<VerificationPage>
   }
 
   Widget _buildOfficialVerificationCard() {
-    final badge = _badge;
+    // 固定使用“官方蓝”视觉（不跟随 badge，避免显示成绿色）
+    const Color kOfficialBlue = Color(0xFF1877F2);
 
     return Container(
       decoration: BoxDecoration(
@@ -640,11 +720,8 @@ class _VerificationPageState extends State<VerificationPage>
               Container(
                 padding: EdgeInsets.all(10.w),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      _getVerificationColor(badge).withOpacity(0.7),
-                      _getVerificationColor(badge)
-                    ],
+                  gradient: const LinearGradient(
+                    colors: [kOfficialBlue, kOfficialBlue],
                   ),
                   borderRadius: BorderRadius.circular(14.r),
                 ),
@@ -654,7 +731,7 @@ class _VerificationPageState extends State<VerificationPage>
               SizedBox(width: 14.w),
               Text('Official Verification',
                   style:
-                      TextStyle(fontSize: 17.sp, fontWeight: FontWeight.bold)),
+                  TextStyle(fontSize: 17.sp, fontWeight: FontWeight.bold)),
             ],
           ),
           SizedBox(height: 12.h),
@@ -668,10 +745,10 @@ class _VerificationPageState extends State<VerificationPage>
             padding: EdgeInsets.all(16.w),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.blue.shade50, Colors.indigo.shade50],
+                colors: [kOfficialBlue.withOpacity(0.08), kOfficialBlue.withOpacity(0.04)],
               ),
               borderRadius: BorderRadius.circular(14.r),
-              border: Border.all(color: Colors.blue.shade200),
+              border: Border.all(color: kOfficialBlue.withOpacity(0.35)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -711,12 +788,12 @@ class _VerificationPageState extends State<VerificationPage>
                   ),
                 );
               },
-              icon: Icon(Icons.send_rounded, size: 18.w),
+              icon: Icon(Icons.send_rounded, size: 18.w, color: kOfficialBlue),
               label: Text('Apply for Official Status',
-                  style: TextStyle(fontSize: 14.sp)),
+                  style: TextStyle(fontSize: 14.sp, color: kOfficialBlue)),
               style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.blue,
-                side: BorderSide(color: Colors.blue, width: 1.2.w),
+                foregroundColor: kOfficialBlue,
+                side: BorderSide(color: kOfficialBlue, width: 1.2.w),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14.r)),
               ),
@@ -733,7 +810,7 @@ class _VerificationPageState extends State<VerificationPage>
       child: Row(
         children: [
           Icon(Icons.check_circle_rounded,
-              color: Colors.blue.shade600, size: 16.w),
+              color: const Color(0xFF1877F2), size: 16.w),
           SizedBox(width: 10.w),
           Expanded(
             child: Text(text, style: TextStyle(fontSize: 12.sp, height: 1.3)),
@@ -774,7 +851,7 @@ class _VerificationPageState extends State<VerificationPage>
               SizedBox(width: 14.w),
               Text('Need Help?',
                   style:
-                      TextStyle(fontSize: 17.sp, fontWeight: FontWeight.bold)),
+                  TextStyle(fontSize: 17.sp, fontWeight: FontWeight.bold)),
             ],
           ),
           SizedBox(height: 16.h),

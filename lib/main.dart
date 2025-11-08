@@ -5964,7 +5964,7 @@ class _ProfilePageState extends State<ProfilePage>
                                     color: Color(0xFF6B7280),
                                     letterSpacing: 0.5)),
                             const SizedBox(height: 10),
-                             _ProfileOptionEnhanced(
+                            _ProfileOptionEnhanced(
                               icon: Icons.edit_rounded,
                               title: 'Edit Profile',
                               color: Colors.blue,
@@ -6460,12 +6460,21 @@ class HelpSupportPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
+    // ✅ 顶部蓝统一为 Facebook 蓝（0xFF1877F2），并按 iOS 紧凑高度
+    final statusBar = MediaQuery.of(context).padding.top;
+    final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+    final double toolbarH = isIOS ? (statusBar + 38.0) : 44.0;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: Text(l10n.helpSupport),
-        backgroundColor: const Color(0xFF2563EB),
-        elevation: 0,
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(toolbarH),
+        child: AppBar(
+          title: Text(l10n.helpSupport),
+          backgroundColor: const Color(0xFF1877F2),
+          elevation: 0,
+          toolbarHeight: toolbarH,
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -6580,12 +6589,21 @@ class HelpSupportPage extends StatelessWidget {
 class AboutPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    // ✅ 顶部蓝统一为 Facebook 蓝（0xFF1877F2），并按 iOS 紧凑高度
+    final statusBar = MediaQuery.of(context).padding.top;
+    final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+    final double toolbarH = isIOS ? (statusBar + 38.0) : 44.0;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: const Text('About'),
-        backgroundColor: const Color(0xFF2563EB),
-        elevation: 0,
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(toolbarH),
+        child: AppBar(
+          title: const Text('About'),
+          backgroundColor: const Color(0xFF1877F2),
+          elevation: 0,
+          toolbarHeight: toolbarH,
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -6637,6 +6655,238 @@ class AboutPage extends StatelessWidget {
                       style: TextStyle(fontSize: 14, color: Colors.grey[600])),
                 ],
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/* ---------------- Account Settings Page ---------------- */
+class AccountSettingsPage extends StatelessWidget {
+  const AccountSettingsPage({super.key});
+
+  Future<void> _changePassword(BuildContext context) async {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Change Password'),
+        content: const Text(
+          'Implement your password change flow here (email link / in-app form).',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _manageDevices(BuildContext context) async {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Devices & Sessions'),
+        content: const Text(
+          'Show active sessions/devices and allow users to revoke sessions.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _signOut(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child:
+              const Icon(Icons.logout_rounded, color: Colors.red, size: 20),
+            ),
+            const SizedBox(width: 12),
+            const Text('Logout',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to logout?',
+          style: TextStyle(fontSize: 15, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Cancel',
+                style: TextStyle(fontSize: 15, color: Colors.grey[600])),
+          ),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.red,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text(
+                'Logout',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await Supabase.instance.client.auth.signOut();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Signed out')),
+          );
+          Navigator.of(context).maybePop();
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.error_outline_rounded,
+                      color: Colors.white, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text('Logout failed: $e',
+                        style: const TextStyle(fontSize: 14)),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.red,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              margin: const EdgeInsets.all(16),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // ✅ 顶部蓝统一为 Facebook 蓝（0xFF1877F2），并按 iOS 紧凑高度
+    final statusBar = MediaQuery.of(context).padding.top;
+    final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+    final double toolbarH = isIOS ? (statusBar + 38.0) : 44.0;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(toolbarH),
+        child: AppBar(
+          title: const Text('Account'),
+          backgroundColor: const Color(0xFF1877F2),
+          elevation: 0,
+          toolbarHeight: toolbarH,
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            // Section: Password & Security
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Password & Security',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey[800],
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            _ProfileOptionEnhanced(
+              icon: Icons.lock_outline_rounded,
+              title: 'Change Password',
+              subtitle: 'Update your account password',
+              color: const Color(0xFF1877F2),
+              onTap: () => _changePassword(context),
+            ),
+            const SizedBox(height: 12),
+            _ProfileOptionEnhanced(
+              icon: Icons.devices_other_rounded,
+              title: 'Devices & Sessions',
+              subtitle: 'Manage your logged-in devices',
+              color: Colors.indigo,
+              onTap: () => _manageDevices(context),
+            ),
+
+            const SizedBox(height: 18),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Privacy & Data',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey[800],
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            _ProfileOptionEnhanced(
+              icon: Icons.privacy_tip_outlined,
+              title: 'Privacy Policy',
+              color: Colors.blueGrey,
+              onTap: () => launchUrl(Uri.parse(_kPrivacyUrl)),
+            ),
+            const SizedBox(height: 12),
+            _ProfileOptionEnhanced(
+              icon: Icons.delete_outline,
+              title: 'Data Deletion / How to delete my account',
+              color: Colors.deepOrange,
+              onTap: () => launchUrl(Uri.parse(_kDeleteUrl)),
+            ),
+
+            const SizedBox(height: 18),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Danger Zone',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.red[600],
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            _ProfileOptionEnhanced(
+              icon: Icons.logout_rounded,
+              title: 'Logout',
+              color: Colors.red,
+              onTap: () => _signOut(context),
             ),
           ],
         ),

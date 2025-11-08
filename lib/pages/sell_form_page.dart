@@ -1,6 +1,7 @@
 // lib/pages/sell_form_page.dart
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart'; // ✅ kIsWeb & defaultTargetPlatform
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
@@ -19,6 +20,7 @@ import 'package:swaply/services/coupon_service.dart';
 import 'package:swaply/models/coupon.dart';
 // ✅ 关键操作守卫（未验证则引导验证）
 import 'package:swaply/services/verification_guard.dart';
+import 'package:flutter/services.dart'; // ✅ 用于 iOS 顶部状态栏文字颜色（仅 iOS 传入）
 
 class SellFormPage extends StatefulWidget {
   const SellFormPage({super.key});
@@ -31,7 +33,7 @@ class SellFormPage extends StatefulWidget {
  * 相册选图：返回内存字节而不是路径
  * ========================= */
 Future<({Uint8List bytes, String? name, String? ext, String? mime})?>
-    pickImageBytes() async {
+pickImageBytes() async {
   final res = await FilePicker.platform.pickFiles(
     type: FileType.image,
     withData: true, // 关键：要 bytes
@@ -83,7 +85,7 @@ class _SellFormPageState extends State<SellFormPage>
 
   // 用 record 存每张图的 bytes + 元信息
   final List<({Uint8List bytes, String? name, String? ext, String? mime})>
-      _images = [];
+  _images = [];
 
   String _category = '';
   String _city = 'Harare';
@@ -372,12 +374,12 @@ class _SellFormPageState extends State<SellFormPage>
   }
 
   Widget _buildCompactTextField(
-    String key,
-    String label,
-    String hint, {
-    bool isRequired = false,
-    TextInputType? keyboardType,
-  }) {
+      String key,
+      String label,
+      String hint, {
+        bool isRequired = false,
+        TextInputType? keyboardType,
+      }) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -398,7 +400,7 @@ class _SellFormPageState extends State<SellFormPage>
           labelText: label,
           hintText: hint,
           contentPadding:
-              EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+          EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10.r),
             borderSide: BorderSide.none,
@@ -431,7 +433,7 @@ class _SellFormPageState extends State<SellFormPage>
         decoration: InputDecoration(
           labelText: label,
           contentPadding:
-              EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+          EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10.r),
             borderSide: BorderSide.none,
@@ -443,7 +445,7 @@ class _SellFormPageState extends State<SellFormPage>
         value: _dynamicValues[key],
         items: items
             .map((c) => DropdownMenuItem(
-                value: c, child: Text(c, style: TextStyle(fontSize: 13.sp))))
+            value: c, child: Text(c, style: TextStyle(fontSize: 13.sp))))
             .toList(),
         onChanged: (v) => setState(() => _dynamicValues[key] = v ?? ''),
         validator: isRequired
@@ -548,13 +550,13 @@ class _SellFormPageState extends State<SellFormPage>
             '$userId/${DateTime.now().millisecondsSinceEpoch}_$fileName';
 
         await Supabase.instance.client.storage.from('listings').uploadBinary(
-              objectPath,
-              img.bytes, // 👈 直接 bytes
-              fileOptions: FileOptions(
-                contentType: img.mime ?? 'image/*',
-                upsert: false,
-              ),
-            );
+          objectPath,
+          img.bytes, // 👈 直接 bytes
+          fileOptions: FileOptions(
+            contentType: img.mime ?? 'image/*',
+            upsert: false,
+          ),
+        );
 
         final publicUrl = Supabase.instance.client.storage
             .from('listings')
@@ -592,9 +594,9 @@ class _SellFormPageState extends State<SellFormPage>
         imageUrls: urls, // ⬅️ 写入上传后的 urls
         userId: userId,
         sellerName:
-            _nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text.trim(),
+        _nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text.trim(),
         contactPhone:
-            _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+        _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
       );
 
       if (!mounted) return;
@@ -683,7 +685,7 @@ class _SellFormPageState extends State<SellFormPage>
           backgroundColor: Colors.orange[600],
           behavior: SnackBarBehavior.floating,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
           margin: EdgeInsets.all(16.w),
           duration: const Duration(seconds: 5),
         ),
@@ -834,7 +836,7 @@ class _SellFormPageState extends State<SellFormPage>
                     child: _buildImageOption(
                       Icons.photo_camera_rounded,
                       'Camera',
-                      () async {
+                          () async {
                         Navigator.pop(context);
                         final file = await _cameraPicker.pickImage(
                           source: ImageSource.camera,
@@ -847,12 +849,12 @@ class _SellFormPageState extends State<SellFormPage>
                           }
                           final bytes = await file.readAsBytes();
                           setState(() => _images.add((
-                                bytes: bytes,
-                                name:
-                                    'camera_${DateTime.now().millisecondsSinceEpoch}.jpg',
-                                ext: 'jpg',
-                                mime: 'image/jpeg',
-                              )));
+                          bytes: bytes,
+                          name:
+                          'camera_${DateTime.now().millisecondsSinceEpoch}.jpg',
+                          ext: 'jpg',
+                          mime: 'image/jpeg',
+                          )));
                         }
                       },
                     ),
@@ -862,7 +864,7 @@ class _SellFormPageState extends State<SellFormPage>
                     child: _buildImageOption(
                       Icons.photo_library_rounded,
                       'Gallery',
-                      () async {
+                          () async {
                         Navigator.pop(context);
                         // ✅ 只在一个地方调用 bytes 版选图
                         final picked = await pickImageBytes();
@@ -939,10 +941,19 @@ class _SellFormPageState extends State<SellFormPage>
   Widget build(BuildContext context) {
     final categoryFields = _getCategorySpecificFields();
 
+    // ✅ 仅 iOS 做顶部高度统一；安卓保持默认
+    final double statusBar = MediaQuery.of(context).padding.top;
+    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    // ✅ 与 sell/通知/saved 基准一致：缩小顶部背景范围 & 统一顶部间距（仅 iOS）
+    final double? iosToolbarHeight = _isIOS ? (statusBar + 34.0) : null;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF2196F3),
+        // ✅ 仅 iOS 生效；安卓为 null 使用系统默认，不改
+        toolbarHeight: iosToolbarHeight,
+        systemOverlayStyle: _isIOS ? SystemUiOverlayStyle.light : null,
+        backgroundColor: const Color(0xFF2196F3), // 颜色保持不变
         title: Text(
           'New Advert',
           style: TextStyle(
@@ -961,89 +972,89 @@ class _SellFormPageState extends State<SellFormPage>
       body: Stack(
         children: [
           AbsorbPointer(
-            absorbing: _submitting,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(12.w),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Photo Upload Section
-                        _buildPhotoSection(),
-                        SizedBox(height: 12.h),
+              absorbing: _submitting,
+              child: SlideTransition(
+                  position: _slideAnimation,
+                  child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: SingleChildScrollView(
+                          padding: EdgeInsets.all(12.w),
+                          child: Form(
+                              key: _formKey,
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                  // Photo Upload Section
+                                  _buildPhotoSection(),
+                              SizedBox(height: 12.h),
 
-                        // Category Dropdown
-                        _buildCategorySection(),
-                        SizedBox(height: 12.h),
-
-                        // Dynamic Fields
-                        if (categoryFields.isNotEmpty) ...[
-                          ...categoryFields,
+                          // Category Dropdown
+                          _buildCategorySection(),
                           SizedBox(height: 12.h),
-                        ],
 
-                        // Basic Info Section
-                        _buildBasicInfoSection(),
-                        SizedBox(height: 12.h),
-
-                        // Coupon Section
-                        if (_showCouponSection) ...[
-                          _buildCouponSelectionSection(),
-                          SizedBox(height: 12.h),
-                        ],
-
-                        // Seller Info Section
-                        _buildSellerInfoSection(),
-                        SizedBox(height: 16.h),
-
-                        // Submit Button
-                        _buildSubmitButton(),
-                        SizedBox(height: 12.h),
+                          // Dynamic Fields
+                          if (categoryFields.isNotEmpty) ...[
+                      ...categoryFields,
+                      SizedBox(height: 12.h),
                       ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
 
-          // Loading Overlay
-          if (_submitting)
-            Container(
-              color: Colors.black.withOpacity(0.5),
-              child: Center(
-                child: Container(
-                  padding: EdgeInsets.all(24.w),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16.r),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const CircularProgressIndicator(
-                        color: Color(0xFF2196F3),
-                        strokeWidth: 3,
-                      ),
-                      SizedBox(height: 16.h),
-                      Text(
-                        _progressMsg,
-                        style: TextStyle(
-                            fontSize: 14.sp, fontWeight: FontWeight.w500),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+                      // Basic Info Section
+                      _buildBasicInfoSection(),
+                  SizedBox(height: 12.h),
+
+                  // Coupon Section
+                  if (_showCouponSection) ...[
+              _buildCouponSelectionSection(),
+          SizedBox(height: 12.h),
+        ],
+
+        // Seller Info Section
+        _buildSellerInfoSection(),
+        SizedBox(height: 16.h),
+
+        // Submit Button
+        _buildSubmitButton(),
+        SizedBox(height: 12.h),
         ],
       ),
+    ),
+    ),
+    ),
+    ),
+    ),
+
+    // Loading Overlay
+    if (_submitting)
+    Container(
+    color: Colors.black.withOpacity(0.5),
+    child: Center(
+    child: Container(
+    padding: EdgeInsets.all(24.w),
+    decoration: BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(16.r),
+    ),
+    child: Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+    const CircularProgressIndicator(
+    color: Color(0xFF2196F3),
+    strokeWidth: 3,
+    ),
+    SizedBox(height: 16.h),
+    Text(
+    _progressMsg,
+    style: TextStyle(
+    fontSize: 14.sp, fontWeight: FontWeight.w500),
+    textAlign: TextAlign.center,
+    ),
+    ],
+    ),
+    ),
+    ),
+    ),
+    ],
+    ),
     );
   }
 
@@ -1367,7 +1378,7 @@ class _SellFormPageState extends State<SellFormPage>
                           style: TextStyle(
                             fontSize: 9.sp,
                             color:
-                                _getCategoryColor(_category).withOpacity(0.8),
+                            _getCategoryColor(_category).withOpacity(0.8),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -1626,7 +1637,7 @@ class _SellFormPageState extends State<SellFormPage>
             decoration: InputDecoration(
               labelText: 'Title *',
               contentPadding:
-                  EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+              EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10.r),
                 borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1646,7 +1657,7 @@ class _SellFormPageState extends State<SellFormPage>
               labelText: 'Price (USD) *',
               prefixText: '\$ ',
               contentPadding:
-                  EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+              EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10.r),
                 borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1662,7 +1673,7 @@ class _SellFormPageState extends State<SellFormPage>
             decoration: InputDecoration(
               labelText: 'Region *',
               contentPadding:
-                  EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+              EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10.r),
                 borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1672,8 +1683,8 @@ class _SellFormPageState extends State<SellFormPage>
             value: _city,
             items: _cities
                 .map((c) => DropdownMenuItem(
-                    value: c,
-                    child: Text(c, style: TextStyle(fontSize: 13.sp))))
+                value: c,
+                child: Text(c, style: TextStyle(fontSize: 13.sp))))
                 .toList(),
             onChanged: (v) => setState(() => _city = v!),
             style: TextStyle(fontSize: 13.sp, color: Colors.black87),
@@ -1688,7 +1699,7 @@ class _SellFormPageState extends State<SellFormPage>
             decoration: InputDecoration(
               labelText: 'Description',
               contentPadding:
-                  EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+              EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10.r),
                 borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1746,7 +1757,7 @@ class _SellFormPageState extends State<SellFormPage>
             decoration: InputDecoration(
               labelText: 'Your Name *',
               contentPadding:
-                  EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+              EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10.r),
                 borderSide: BorderSide(color: Colors.grey.shade300),
@@ -1766,14 +1777,14 @@ class _SellFormPageState extends State<SellFormPage>
               labelText: 'Phone Number *',
               hintText: '+263 77 123 4567',
               contentPadding:
-                  EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+              EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10.r),
                 borderSide: BorderSide(color: Colors.grey.shade300),
               ),
               labelStyle: TextStyle(fontSize: 12.sp),
               hintStyle:
-                  TextStyle(fontSize: 11.sp, color: Colors.grey.shade400),
+              TextStyle(fontSize: 11.sp, color: Colors.grey.shade400),
             ),
             validator: (v) => v!.isEmpty ? 'Required' : null,
           ),
@@ -1811,7 +1822,7 @@ class _SellFormPageState extends State<SellFormPage>
                   borderRadius: BorderRadius.circular(10.r),
                 ),
                 child:
-                    Icon(Icons.card_giftcard, color: Colors.white, size: 16.r),
+                Icon(Icons.card_giftcard, color: Colors.white, size: 16.r),
               ),
               SizedBox(width: 8.w),
               Expanded(
@@ -1866,29 +1877,29 @@ class _SellFormPageState extends State<SellFormPage>
               ),
             )
           else ...[
-            Text(
-              'Select a coupon to use:',
-              style: TextStyle(
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w600,
+              Text(
+                'Select a coupon to use:',
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-            SizedBox(height: 10.h),
-            Wrap(
-              spacing: 6.w,
-              runSpacing: 6.h,
-              children: [
-                _buildCouponOption(null, 'No Coupon', 'Post without pinning'),
-                ..._availableCoupons
-                    .map((coupon) => _buildCouponOption(
-                          coupon,
-                          coupon.title,
-                          '${_getCouponTypeDescription(coupon.type)} • ${coupon.expiryStatusText}',
-                        ))
-                    .toList(),
-              ],
-            ),
-          ],
+              SizedBox(height: 10.h),
+              Wrap(
+                spacing: 6.w,
+                runSpacing: 6.h,
+                children: [
+                  _buildCouponOption(null, 'No Coupon', 'Post without pinning'),
+                  ..._availableCoupons
+                      .map((coupon) => _buildCouponOption(
+                    coupon,
+                    coupon.title,
+                    '${_getCouponTypeDescription(coupon.type)} • ${coupon.expiryStatusText}',
+                  ))
+                      .toList(),
+                ],
+              ),
+            ],
         ],
       ),
     );
@@ -1941,7 +1952,7 @@ class _SellFormPageState extends State<SellFormPage>
                       fontSize: 12.sp,
                       fontWeight: FontWeight.w600,
                       color:
-                          isSelected ? Colors.orange.shade800 : Colors.black87,
+                      isSelected ? Colors.orange.shade800 : Colors.black87,
                     ),
                   ),
                 ),
@@ -2014,23 +2025,23 @@ class _SellFormPageState extends State<SellFormPage>
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
         ),
         child: _submitting
             ? SizedBox(
-                height: 18.h,
-                width: 18.w,
-                child: const CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white),
-              )
+          height: 18.h,
+          width: 18.w,
+          child: const CircularProgressIndicator(
+              strokeWidth: 2, color: Colors.white),
+        )
             : Text(
-                'Post Advertisement',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
+          'Post Advertisement',
+          style: TextStyle(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
       ),
     );
   }

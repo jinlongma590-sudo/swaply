@@ -57,42 +57,51 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     'Redcliff',
   ];
 
+  // ✅ 仅调整了排序；文件名/ID/label 均保持不变
   static const List<Map<String, String>> _categories = [
     {"id": "trending", "icon": "trending", "label": "Trending"},
+
+    // Hot & high-intent first
+    {"id": "phones_tablets", "icon": "phones_tablets", "label": "Phones"},
     {"id": "vehicles", "icon": "vehicles", "label": "Vehicles"},
     {"id": "property", "icon": "property", "label": "Property"},
+    {"id": "electronics", "icon": "electronics", "label": "Electronics"},
+    {"id": "fashion", "icon": "fashion", "label": "Fashion"},
+
+    // Services & Jobs
+    {"id": "services", "icon": "services", "label": "Services"},
+    {"id": "jobs", "icon": "jobs", "label": "Jobs"},
+    {
+      "id": "seeking_work_cvs",
+      "icon": "seeking_work_cvs",
+      "label": "Jobs Seeking"
+    },
+
+    // Home & daily life
+    {
+      "id": "home_furniture_appliances",
+      "icon": "home_furniture_appliances",
+      "label": "Home & Furniture"
+    },
     {
       "id": "beauty_personal_care",
       "icon": "beauty_personal_care",
       "label": "Beauty & Care"
     },
-    {"id": "jobs", "icon": "jobs", "label": "Jobs"},
+    {"id": "pets", "icon": "pets", "label": "Pets"},
     {"id": "babies_kids", "icon": "babies_kids", "label": "Baby & Kids"},
-    {"id": "services", "icon": "services", "label": "Services"},
-    {
-      "id": "leisure_activities",
-      "icon": "leisure_activities",
-      "label": "Leisure"
-    },
+
+    // Long-tail / nice-to-have
     {
       "id": "repair_construction",
       "icon": "repair_construction",
       "label": "Repair"
     },
     {
-      "id": "home_furniture_appliances",
-      "icon": "home_furniture_appliances",
-      "label": "Home & Furniture"
+      "id": "leisure_activities",
+      "icon": "leisure_activities",
+      "label": "Leisure"
     },
-    {"id": "pets", "icon": "pets", "label": "Pets"},
-    {"id": "electronics", "icon": "electronics", "label": "Electronics"},
-    {"id": "phones_tablets", "icon": "phones_tablets", "label": "Phones"},
-    {
-      "id": "seeking_work_cvs",
-      "icon": "seeking_work_cvs",
-      "label": "Jobs Seeking"
-    },
-    {"id": "fashion", "icon": "fashion", "label": "Fashion"},
     {
       "id": "food_agriculture_drinks",
       "icon": "food_agriculture_drinks",

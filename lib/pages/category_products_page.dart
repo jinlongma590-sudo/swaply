@@ -1,8 +1,10 @@
 // lib/pages/category_products_page.dart
 // 使用Facebook亮蓝色和Jiji风格的自动图片调整功能 - 更紧凑设计
+// ✅ 与 Sell / Notifications / Saved 一致的 iOS 顶部距离（statusBar + 38）
 
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:swaply/config.dart';
 import 'package:swaply/pages/product_detail_page.dart';
@@ -147,8 +149,9 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
     }
 
     if (priceData is String) {
-      if (priceData.toLowerCase().contains('free') || priceData == '0')
+      if (priceData.toLowerCase().contains('free') || priceData == '0') {
         return 'Free';
+      }
 
       final cleanPrice = priceData.replaceAll(RegExp(r'[^\d.]'), '');
       final parsedPrice = num.tryParse(cleanPrice);
@@ -160,7 +163,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
         if (priceData.contains('\$') || priceData.contains('USD')) {
           return priceData;
         } else {
-          return '\$${priceData}';
+          return '\$$priceData';
         }
       }
     }
@@ -174,7 +177,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
     try {
       final categoryDb = _categoryIdToDb(widget.categoryId);
       final city =
-          _selectedLocation == 'All Zimbabwe' ? null : _selectedLocation;
+      _selectedLocation == 'All Zimbabwe' ? null : _selectedLocation;
 
       final pinnedAds = await CouponService.getCategoryPinnedAds(
         category: categoryDb,
@@ -239,7 +242,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
     final categoryDb = _categoryIdToDb(widget.categoryId);
     final city = _selectedLocation == 'All Zimbabwe' ? null : _selectedLocation;
     final total =
-        await ListingApi.countListings(category: categoryDb, city: city);
+    await ListingApi.countListings(category: categoryDb, city: city);
     if (mounted) setState(() => _totalCount = total);
   }
 
@@ -438,14 +441,14 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
                       loc,
                       style: TextStyle(
                         fontWeight:
-                            selected ? FontWeight.w600 : FontWeight.normal,
+                        selected ? FontWeight.w600 : FontWeight.normal,
                         color: selected ? _primaryBlue : Colors.grey[800],
                         fontSize: 13.sp,
                       ),
                     ),
                     trailing: selected
                         ? Icon(Icons.check_circle,
-                            color: _primaryBlue, size: 18.sp)
+                        color: _primaryBlue, size: 18.sp)
                         : null,
                     onTap: () {
                       setState(() => _selectedLocation = loc);
@@ -489,21 +492,26 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
   }
 
   PreferredSizeWidget _buildCompactAppBar() {
+    // ✅ 与 Sell / Notifications / Saved 一致：iOS 采用 (statusBar + 38)，其它平台维持原 44.h
+    final double statusBar = MediaQuery.of(context).padding.top;
+    final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final double toolbarH = isIOS ? (statusBar + 38.0) : 44.h;
+
     return AppBar(
       elevation: 0,
       backgroundColor: _primaryBlue,
       foregroundColor: Colors.white,
-      toolbarHeight: 44.h, // 更小的工具栏
+      toolbarHeight: toolbarH,
       title: Text(
         widget.categoryName,
         style: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w600,
-          fontSize: 16.sp, // 更小的标题文字
+          fontSize: 16.sp,
         ),
       ),
       leading: IconButton(
-        icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 18.sp),
+        icon: Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18.sp),
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
@@ -654,8 +662,9 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
   }
 
   Widget _buildBody() {
-    if (_loading && _items.isEmpty && _pinnedAds.isEmpty)
+    if (_loading && _items.isEmpty && _pinnedAds.isEmpty) {
       return _buildSkeleton();
+    }
     if (_error != null) {
       return _buildErrorState();
     }
@@ -701,7 +710,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
                   mainAxisSpacing: 6.h, // 减少间距
                 ),
                 delegate: SliverChildBuilderDelegate(
-                  (context, i) {
+                      (context, i) {
                     if (i >= _items.length) return _buildLoadingTile();
                     final p = _items[i];
                     return _buildUltraCompactProductCard(p);
@@ -857,7 +866,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
                     decoration: BoxDecoration(
                       color: Colors.grey[200],
                       borderRadius:
-                          BorderRadius.vertical(top: Radius.circular(7.r)),
+                      BorderRadius.vertical(top: Radius.circular(7.r)),
                     ),
                     child: Center(
                         child: CircularProgressIndicator(
@@ -1002,7 +1011,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
                 color: _primaryBlue,
                 value: loadingProgress.expectedTotalBytes != null
                     ? loadingProgress.cumulativeBytesLoaded /
-                        loadingProgress.expectedTotalBytes!
+                    loadingProgress.expectedTotalBytes!
                     : null,
               ),
             ),
@@ -1075,7 +1084,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
       ),
       child: Center(
           child:
-              CircularProgressIndicator(strokeWidth: 2, color: _primaryBlue)),
+          CircularProgressIndicator(strokeWidth: 2, color: _primaryBlue)),
     );
   }
 
@@ -1101,7 +1110,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
                 decoration: BoxDecoration(
                   color: Colors.grey[300],
                   borderRadius:
-                      BorderRadius.vertical(top: Radius.circular(8.r)),
+                  BorderRadius.vertical(top: Radius.circular(8.r)),
                 ),
                 child: Center(
                     child: CircularProgressIndicator(

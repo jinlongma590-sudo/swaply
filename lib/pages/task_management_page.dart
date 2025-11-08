@@ -8,8 +8,10 @@
 // 6) ✅ 历史从 coupon_usages 直接加载，不再依赖 RewardService.getUserRewardHistory
 // 7) ✅ Realtime 历史频道改为监听 coupon_usages 表
 // 8) ✅ 历史卡片：第一行券标题，第二行友好化 reason（app/system/auto/空隐藏或映射）
+// 9) ✅ iOS 头部改为“基准页像素对齐”的自定义头；Android 保持 AppBar
 
 import 'dart:convert';
+import 'package:flutter/foundation.dart'; // kIsWeb / defaultTargetPlatform
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -89,9 +91,9 @@ class _TaskManagementPageState extends State<TaskManagementPage>
     final s = v?.toString() ?? '';
     if (s.isEmpty) return s;
 
-    // 只含 ASCII + 常见分隔符（·/•）等“安全字符”——直接返回，避免误修
+    // 只含 ASCII + 常见分隔符 等“安全字符”——直接返回，避免误修
     final safe =
-        RegExp(r'^[\x00-\x7F\u00B7\u2022\s\.\,\;\:\!\?\-_/()\[\]&\+\%]*$');
+    RegExp(r'^[\x00-\x7F\u00B7\u2022\s\.\,\;\:\!\?\-_/()\[\]&\+\%]*$');
     if (safe.hasMatch(s)) return s;
 
     // 只有出现这些“明显乱码痕迹”时才尝试修复
@@ -99,7 +101,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
         s.contains('Â') ||
         s.contains('â') ||
         s.contains('ð') ||
-        s.contains('�');
+        s.contains('');
     if (!looksBroken) return s;
 
     try {
@@ -124,7 +126,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
     }
   }
 
-  /// 分隔符归一化：把 `Â· / â€¢ / • / �` 等统一成 “ · ”
+  /// 分隔符归一化：把 `Â· / â€¢ / • / ` 等统一成 “ · ”
   String _normalizeSeparators(String s) {
     return s
         .replaceAll('Â·', ' · ')
@@ -189,79 +191,77 @@ class _TaskManagementPageState extends State<TaskManagementPage>
     _couponChannel = client
         .channel('rewards-coupons-${user.id}')
         .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'coupons',
-          filter: PostgresChangeFilter(
-            column: 'user_id',
-            type: PostgresChangeFilterType.eq,
-            value: user.id,
-          ),
-          callback: (_) {
-            _loadRewardCoupons();
-            _loadRewardStats();
-          },
-        )
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'coupons',
+      filter: PostgresChangeFilter(
+        column: 'user_id',
+        type: PostgresChangeFilterType.eq,
+        value: user.id,
+      ),
+      callback: (_) {
+        _loadRewardCoupons();
+        _loadRewardStats();
+      },
+    )
         .subscribe();
 
     // ✅ coupon_usages（历史/统计变化 -> 立即刷新）
     _logsChannel = client
         .channel('rewards-logs-${user.id}')
         .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'coupon_usages', // ← 已从 reward_logs 改为 coupon_usages
-          filter: PostgresChangeFilter(
-            column: 'user_id',
-            type: PostgresChangeFilterType.eq,
-            value: user.id,
-          ),
-          callback: (_) {
-            _loadRewardHistory();
-            _loadRewardStats();
-          },
-        )
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'coupon_usages',
+      filter: PostgresChangeFilter(
+        column: 'user_id',
+        type: PostgresChangeFilterType.eq,
+        value: user.id,
+      ),
+      callback: (_) {
+        _loadRewardHistory();
+        _loadRewardStats();
+      },
+    )
         .subscribe();
 
     // user_tasks（任务进度）
     _taskChannel = client
         .channel('rewards-tasks-${user.id}')
         .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'user_tasks', // ← 这里
-          filter: PostgresChangeFilter(
-            column: 'user_id',
-            type: PostgresChangeFilterType.eq,
-            value: user.id,
-          ),
-          callback: (_) async {
-            await _loadTasks();
-            await _loadRewardStats();
-          },
-        )
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'user_tasks',
+      filter: PostgresChangeFilter(
+        column: 'user_id',
+        type: PostgresChangeFilterType.eq,
+        value: user.id,
+      ),
+      callback: (_) async {
+        await _loadTasks();
+        await _loadRewardStats();
+      },
+    )
         .subscribe();
 
     // referrals（邀请关系状态变化 -> 刷新统计/奖励券/历史）
     _referralChannel = client
         .channel('rewards-referrals-${user.id}')
         .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'referrals',
-          // 监听我作为 inviter 的记录
-          filter: PostgresChangeFilter(
-            column: 'inviter_id',
-            type: PostgresChangeFilterType.eq,
-            value: user.id,
-          ),
-          callback: (_) async {
-            // 邀请达成可能触发发券/日志，保险起见三者都刷
-            await _loadRewardStats();
-            await _loadRewardCoupons();
-            await _loadRewardHistory();
-          },
-        )
+      event: PostgresChangeEvent.all,
+      schema: 'public',
+      table: 'referrals',
+      filter: PostgresChangeFilter(
+        column: 'inviter_id',
+        type: PostgresChangeFilterType.eq,
+        value: user.id,
+      ),
+      callback: (_) async {
+        await _loadRewardStats();
+        await _loadRewardCoupons();
+        await _loadRewardHistory();
+      },
+    )
         .subscribe();
   }
 
@@ -270,9 +270,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
     if (_loading) return;
 
     final now = DateTime.now();
-    if (!force &&
-        _lastFetchAt != null &&
-        now.difference(_lastFetchAt!) < _ttl) {
+    if (!force && _lastFetchAt != null && now.difference(_lastFetchAt!) < _ttl) {
       if (mounted && _animationController.value == 0.0) {
         _animationController.forward();
       }
@@ -341,14 +339,14 @@ class _TaskManagementPageState extends State<TaskManagementPage>
     try {
       final supabase = Supabase.instance.client;
 
-      // 1) 抓使用记录
+      // 1) 使用记录
       final usages = await supabase
           .from('coupon_usages')
           .select('id,coupon_id,user_id,listing_id,used_at,note,context')
           .eq('user_id', user.id)
           .order('used_at', ascending: false);
 
-      // 2) 可选：抓优惠券标题/类型（没有外键也行，我们用 IN 一次性取回）
+      // 2) 批量取回相关券信息
       final List<String> ids = usages
           .map((u) => u['coupon_id'])
           .whereType<String>()
@@ -367,7 +365,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
         }
       }
 
-      // 3) 映射成页面需要的字段
+      // 3) 映射页面字段
       final List<Map<String, dynamic>> history = [];
       for (final u in usages) {
         // 解析 context.source
@@ -391,7 +389,6 @@ class _TaskManagementPageState extends State<TaskManagementPage>
         final rewardType = _mapCouponTypeToRewardType(c?['type'] as String?);
 
         history.add({
-          // 这几个 key 正好是 _buildHistoryCard 用到的
           'created_at': u['used_at'],
           'reward_reason': (source ?? 'coupon_used'),
           'coupon_title': couponTitle,
@@ -402,7 +399,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
       if (!mounted) return;
       setState(() => _rewardHistory = history);
     } catch (_) {
-      // 静默失败，避免打断 UI
+      // 静默失败
     }
   }
 
@@ -417,8 +414,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
     } catch (_) {}
   }
 
-  /// 关键修复：放宽查询条件，只按 `user_id + status=active` 取数，
-  /// 之后在本地用 `_isRewardCoupon` 过滤（避免漏掉 category / trending / boost 等奖励券）
+  /// 放宽查询条件，只按 user_id + status=active；本地再过滤奖励券
   Future<void> _loadRewardCoupons() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
@@ -491,6 +487,9 @@ class _TaskManagementPageState extends State<TaskManagementPage>
   Widget build(BuildContext context) {
     super.build(context);
 
+    final double statusBar = MediaQuery.of(context).padding.top;
+    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
     return FutureBuilder<void>(
       future: _dataFuture,
       builder: (context, snapshot) {
@@ -498,152 +497,254 @@ class _TaskManagementPageState extends State<TaskManagementPage>
             snapshot.connectionState == ConnectionState.waiting &&
                 _lastFetchAt == null;
 
-        return Scaffold(
-          backgroundColor: const Color(0xFFF8F9FA),
-          appBar: AppBar(
-            title: Text(
-              'My Rewards',
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
+        if (_isIOS) {
+          // ===== iOS：使用自定义头部（像素对齐基准页） =====
+          return Scaffold(
+            backgroundColor: const Color(0xFFF8F9FA),
+            body: Column(
+              children: [
+                _buildHeaderIOSRewards(context),
+                _buildBodyMain(isInitialLoading),
+              ],
             ),
-            backgroundColor: const Color(0xFF4CAF50),
-            elevation: 0,
-            leading: IconButton(
-              icon: Icon(Icons.arrow_back_ios_new,
-                  color: Colors.white, size: 18.w),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            actions: [
-              Padding(
-                padding: EdgeInsets.only(right: 16.w),
-                child: GestureDetector(
-                  onTap: _isRefreshing ? null : _refreshData,
-                  child: Container(
-                    padding: EdgeInsets.all(8.r),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    child: _isRefreshing
-                        ? SizedBox(
-                            width: 20.r,
-                            height: 20.r,
-                            child: const CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : Icon(Icons.refresh, color: Colors.white, size: 20.r),
-                  ),
+          );
+        } else {
+          // ===== Android 等平台：保持原 AppBar 行为 =====
+          return Scaffold(
+            backgroundColor: const Color(0xFFF8F9FA),
+            appBar: AppBar(
+              title: Text(
+                'My Rewards',
+                style: TextStyle(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
                 ),
               ),
-            ],
-          ),
-          body: Column(
-            children: [
-              // 头部统计信息
-              Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF4CAF50),
-                      Color(0xFF45A049),
-                      Color(0xFF2E7D32),
-                    ],
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.all(20.w),
-                      child: _buildQuickStats(),
-                    ),
-                    // Tab导航
-                    Container(
-                      margin: EdgeInsets.fromLTRB(20.w, 0, 20.w, 20.h),
+              backgroundColor: const Color(0xFF4CAF50),
+              elevation: 0,
+              leading: IconButton(
+                icon: Icon(Icons.arrow_back_ios_new,
+                    color: Colors.white, size: 18.w),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              actions: [
+                Padding(
+                  padding: EdgeInsets.only(right: 16.w),
+                  child: GestureDetector(
+                    onTap: _isRefreshing ? null : _refreshData,
+                    child: Container(
+                      padding: EdgeInsets.all(8.r),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12.r),
                       ),
-                      child: TabBar(
-                        controller: _tabController,
-                        labelColor: Colors.white,
-                        unselectedLabelColor: Colors.white.withOpacity(0.7),
-                        indicator: BoxDecoration(
-                          color: Colors.white.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(12.r),
+                      child: _isRefreshing
+                          ? SizedBox(
+                        width: 20.r,
+                        height: 20.r,
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
                         ),
-                        labelStyle: TextStyle(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        unselectedLabelStyle: TextStyle(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.normal,
-                        ),
-                        tabs: [
-                          Tab(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.assignment, size: 16.r),
-                                SizedBox(width: 6.w),
-                                const Text('Tasks'),
-                              ],
-                            ),
-                          ),
-                          Tab(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.card_giftcard, size: 16.r),
-                                SizedBox(width: 6.w),
-                                const Text('Coupons'),
-                              ],
-                            ),
-                          ),
-                          Tab(
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.history, size: 16.r),
-                                SizedBox(width: 6.w),
-                                const Text('History'),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                      )
+                          : Icon(Icons.refresh,
+                          color: Colors.white, size: 20.r),
                     ),
-                  ],
+                  ),
+                ),
+              ],
+            ),
+            body: _buildBodyMain(isInitialLoading),
+          );
+        }
+      },
+    );
+  }
+
+  // ===== iOS 自定义头部（与基准页像素对齐） =====
+  Widget _buildHeaderIOSRewards(BuildContext context) {
+    final double statusBar = MediaQuery.of(context).padding.top;
+
+    const double kHeaderVisual = 38.0; // 头部可视高度
+    const double kTitleTop = -6.0;     // 标题相对 statusBar 的顶距
+    const double kSideTop = -1.0;      // 左/右角按钮相对 statusBar 的顶距
+    const double kSide = 16.0;
+    const double kBtnSize = 36.0;
+    const double kSpacing = 16.0;
+
+    final refresh = GestureDetector(
+      onTap: _isRefreshing ? null : _refreshData,
+      child: Container(
+        width: kBtnSize,
+        height: kBtnSize,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: _isRefreshing
+            ? const CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        )
+            : const Icon(Icons.refresh, color: Colors.white, size: 18),
+      ),
+    );
+
+    final back = GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Container(
+        width: kBtnSize,
+        height: kBtnSize,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child:
+        const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18),
+      ),
+    );
+
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF4CAF50), Color(0xFF45A049), Color(0xFF2E7D32)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: SizedBox(
+        height: statusBar + kHeaderVisual,
+        child: Stack(
+          children: [
+            Positioned(top: statusBar + kSideTop, left: kSide, child: back),
+            Positioned(
+              top: statusBar + kTitleTop,
+              left: kSide + kBtnSize + kSpacing,
+              right: kSide + kBtnSize + kSpacing,
+              child: Text(
+                'My Rewards',
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 18.sp,
                 ),
               ),
-              // Tab内容
-              Expanded(
-                child: isInitialLoading
-                    ? _buildLoadingState()
-                    : FadeTransition(
-                        opacity: _fadeAnimation,
-                        child: TabBarView(
-                          controller: _tabController,
+            ),
+            Positioned(top: statusBar + kSideTop, right: kSide, child: refresh),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ===== 主体内容（iOS / Android 共用） =====
+  Widget _buildBodyMain(bool isInitialLoading) {
+    return Expanded(
+      child: Column(
+        children: [
+          // 头部统计信息（绿色渐变条）
+          Container(
+            width: double.infinity,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF4CAF50),
+                  Color(0xFF45A049),
+                  Color(0xFF2E7D32),
+                ],
+              ),
+            ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: EdgeInsets.all(20.w),
+                  child: _buildQuickStats(),
+                ),
+                // Tab 导航
+                Container(
+                  margin: EdgeInsets.fromLTRB(20.w, 0, 20.w, 20.h),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    labelColor: Colors.white,
+                    unselectedLabelColor: Colors.white.withOpacity(0.7),
+                    indicator: BoxDecoration(
+                      color: Colors.white.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                    labelStyle: TextStyle(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    unselectedLabelStyle: TextStyle(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.normal,
+                    ),
+                    tabs: [
+                      Tab(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            _buildActiveTasksTab(),
-                            _buildRewardCouponsTab(),
-                            _buildHistoryTab(),
+                            Icon(Icons.assignment, size: 16.r),
+                            SizedBox(width: 6.w),
+                            const Text('Tasks'),
                           ],
                         ),
                       ),
-              ),
-            ],
+                      Tab(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.card_giftcard, size: 16.r),
+                            SizedBox(width: 6.w),
+                            const Text('Coupons'),
+                          ],
+                        ),
+                      ),
+                      Tab(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.history, size: 16.r),
+                            SizedBox(width: 6.w),
+                            const Text('History'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        );
-      },
+          // Tab 内容
+          Expanded(
+            child: isInitialLoading
+                ? _buildLoadingState()
+                : FadeTransition(
+              opacity: _fadeAnimation,
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildActiveTasksTab(),
+                  _buildRewardCouponsTab(),
+                  _buildHistoryTab(),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -728,7 +829,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
                   child: const CircularProgressIndicator(
                     strokeWidth: 3,
                     valueColor:
-                        AlwaysStoppedAnimation<Color>(Color(0xFF4CAF50)),
+                    AlwaysStoppedAnimation<Color>(Color(0xFF4CAF50)),
                   ),
                 ),
                 SizedBox(height: 16.h),
@@ -756,22 +857,22 @@ class _TaskManagementPageState extends State<TaskManagementPage>
       color: const Color(0xFF4CAF50),
       child: activeTasks.isEmpty
           ? ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.all(20.r),
-              children: [
-                _buildEmptyState(
-                  icon: Icons.assignment_outlined,
-                  title: 'No Active Tasks',
-                  subtitle: 'Complete daily activities to earn rewards',
-                ),
-              ],
-            )
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.all(20.r),
+        children: [
+          _buildEmptyState(
+            icon: Icons.assignment_outlined,
+            title: 'No Active Tasks',
+            subtitle: 'Complete daily activities to earn rewards',
+          ),
+        ],
+      )
           : ListView.builder(
-              padding: EdgeInsets.all(20.r),
-              itemCount: activeTasks.length,
-              itemBuilder: (context, index) =>
-                  _buildTaskCard(activeTasks[index], index),
-            ),
+        padding: EdgeInsets.all(20.r),
+        itemCount: activeTasks.length,
+        itemBuilder: (context, index) =>
+            _buildTaskCard(activeTasks[index], index),
+      ),
     );
   }
 
@@ -781,22 +882,22 @@ class _TaskManagementPageState extends State<TaskManagementPage>
       color: const Color(0xFF4CAF50),
       child: _rewardCoupons.isEmpty
           ? ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.all(20.r),
-              children: [
-                _buildEmptyState(
-                  icon: Icons.card_giftcard_outlined,
-                  title: 'No Reward Coupons',
-                  subtitle: 'Complete tasks to earn reward coupons',
-                ),
-              ],
-            )
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.all(20.r),
+        children: [
+          _buildEmptyState(
+            icon: Icons.card_giftcard_outlined,
+            title: 'No Reward Coupons',
+            subtitle: 'Complete tasks to earn reward coupons',
+          ),
+        ],
+      )
           : ListView.builder(
-              padding: EdgeInsets.all(20.r),
-              itemCount: _rewardCoupons.length,
-              itemBuilder: (context, index) =>
-                  _buildRewardCouponCard(_rewardCoupons[index], index),
-            ),
+        padding: EdgeInsets.all(20.r),
+        itemCount: _rewardCoupons.length,
+        itemBuilder: (context, index) =>
+            _buildRewardCouponCard(_rewardCoupons[index], index),
+      ),
     );
   }
 
@@ -806,22 +907,22 @@ class _TaskManagementPageState extends State<TaskManagementPage>
       color: const Color(0xFF4CAF50),
       child: _rewardHistory.isEmpty
           ? ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: EdgeInsets.all(20.r),
-              children: [
-                _buildEmptyState(
-                  icon: Icons.history_outlined,
-                  title: 'No History Records',
-                  subtitle: 'Your reward history will appear here',
-                ),
-              ],
-            )
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.all(20.r),
+        children: [
+          _buildEmptyState(
+            icon: Icons.history_outlined,
+            title: 'No History Records',
+            subtitle: 'Your reward history will appear here',
+          ),
+        ],
+      )
           : ListView.builder(
-              padding: EdgeInsets.all(20.r),
-              itemCount: _rewardHistory.length,
-              itemBuilder: (context, index) =>
-                  _buildHistoryCard(_rewardHistory[index], index),
-            ),
+        padding: EdgeInsets.all(20.r),
+        itemCount: _rewardHistory.length,
+        itemBuilder: (context, index) =>
+            _buildHistoryCard(_rewardHistory[index], index),
+      ),
     );
   }
 
@@ -944,7 +1045,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
   Widget _buildRewardCouponCard(CouponModel coupon, int index) {
     final fixedTitle = _normalizeSeparators(_fixUtf8Mojibake(coupon.title));
     final fixedDesc =
-        _normalizeSeparators(_fixUtf8Mojibake(coupon.description));
+    _normalizeSeparators(_fixUtf8Mojibake(coupon.description));
 
     return Container(
       margin: EdgeInsets.only(bottom: 16.h),
@@ -1057,14 +1158,13 @@ class _TaskManagementPageState extends State<TaskManagementPage>
     final createdAt =
         DateTime.tryParse(reward['created_at'] ?? '') ?? DateTime.now();
 
-    // ====== 新逻辑：第一行显示券标题；第二行友好 reason，app/system/auto 隐藏或映射 ======
+    // 第一行券标题；第二行友好化 reason，app/system/auto 隐藏或映射
     final couponTitle = _normalizeSeparators(
       _fixUtf8Mojibake(reward['coupon_title'] ?? 'Coupon Reward'),
     );
 
-    // 友好化 reason：app/system/auto 这类就隐藏；否则做分隔符/乱码修复
     final rawReason =
-        (reward['reward_reason'] ?? '').toString().trim().toLowerCase();
+    (reward['reward_reason'] ?? '').toString().trim().toLowerCase();
     String prettyReason(String raw, String? type) {
       if (raw.isEmpty || raw == 'app' || raw == 'system' || raw == 'auto') {
         switch ((type ?? '').toLowerCase()) {
@@ -1082,7 +1182,6 @@ class _TaskManagementPageState extends State<TaskManagementPage>
     }
 
     final reason = prettyReason(rawReason, reward['reward_type']);
-    // =======================================================================
 
     return Container(
       margin: EdgeInsets.only(bottom: 12.h),
@@ -1123,7 +1222,6 @@ class _TaskManagementPageState extends State<TaskManagementPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 第一行：券标题
                 Text(
                   couponTitle,
                   style: TextStyle(
@@ -1132,7 +1230,6 @@ class _TaskManagementPageState extends State<TaskManagementPage>
                     color: Colors.black87,
                   ),
                 ),
-                // 第二行：友好化 reason（可隐藏）
                 if (reason.isNotEmpty) ...[
                   SizedBox(height: 2.h),
                   Text(
@@ -1334,7 +1431,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
         return 'welcome';
       case 'referralbonus':
         return 'referral_bonus';
-      // 下面这些都算“活动奖励”
+    // 下面这些都算“活动奖励”
       case 'trending':
       case 'hot':
       case 'category':

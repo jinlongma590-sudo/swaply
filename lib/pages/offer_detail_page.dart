@@ -276,7 +276,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
         backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
         behavior: SnackBarBehavior.floating,
         shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
         margin: EdgeInsets.all(12.w),
       ),
     );
@@ -530,7 +530,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
               SizedBox(height: 12.h),
               Text('Report user',
                   style:
-                      TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w700)),
+                  TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w700)),
               SizedBox(height: 12.h),
               DropdownButtonFormField<String>(
                 value: type,
@@ -673,7 +673,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
         margin: EdgeInsets.symmetric(vertical: 4.h),
         child: Column(
           crossAxisAlignment:
-              isMyMessage ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          isMyMessage ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             Container(
               constraints: BoxConstraints(
@@ -869,8 +869,8 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                   decoration: InputDecoration(
                     hintText: disabled
                         ? (_otherBlockedMe
-                            ? 'You are blocked by this user'
-                            : 'You blocked this user')
+                        ? 'You are blocked by this user'
+                        : 'You blocked this user')
                         : 'Type a message...',
                     hintStyle: TextStyle(
                       color: Colors.grey.shade500,
@@ -878,7 +878,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                     ),
                     border: InputBorder.none,
                     contentPadding:
-                        EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+                    EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
                   ),
                 ),
               ),
@@ -905,19 +905,19 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                         height: 50.h,
                         child: _isSendingMessage
                             ? Padding(
-                                padding: EdgeInsets.all(12.w),
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.w,
-                                  valueColor:
-                                      const AlwaysStoppedAnimation<Color>(
-                                          Colors.white),
-                                ),
-                              )
+                          padding: EdgeInsets.all(12.w),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.w,
+                            valueColor:
+                            const AlwaysStoppedAnimation<Color>(
+                                Colors.white),
+                          ),
+                        )
                             : Icon(
-                                Icons.send_rounded,
-                                color: Colors.white,
-                                size: 24.w,
-                              ),
+                          Icons.send_rounded,
+                          color: Colors.white,
+                          size: 24.w,
+                        ),
                       ),
                     ),
                   ),
@@ -932,9 +932,16 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ 仅 iOS 调整 AppBar 高度，与 sell/通知/saved 对齐
+    final double statusBar = MediaQuery.of(context).padding.top;
+    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final double? iosToolbarHeight = _isIOS ? (statusBar + 38.0) : null;
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
+        // ✅ 与基准页一致的顶部距离（仅 iOS 生效）
+        toolbarHeight: iosToolbarHeight,
         title: Text(
           'Offer Details',
           style: TextStyle(

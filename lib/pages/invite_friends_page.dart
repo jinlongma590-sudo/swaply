@@ -1,6 +1,7 @@
 // lib/pages/invite_friends_page.dart - 现代化设计 + 正确处理 link_referral 返回状态
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:share_plus/share_plus.dart';
@@ -241,12 +242,18 @@ Download: https://www.swaply.cc
       return _buildNotLoggedInView();
     }
 
+    // ✅ 仅 iOS：与 sell/通知/saved 一致的顶部间距（状态栏 + 38）
+    final double statusBar = MediaQuery.of(context).padding.top;
+    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final double? iosToolbarHeight = _isIOS ? (statusBar + 38.0) : null;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: const Color(0xFF4CAF50),
         foregroundColor: Colors.white,
+        toolbarHeight: iosToolbarHeight, // ✅ 对齐顶部距离（仅 iOS 生效）
         leading: IconButton(
           onPressed: () => Navigator.pop(context),
           icon: Icon(Icons.arrow_back_ios_new, size: 20.r),
@@ -263,13 +270,13 @@ Download: https://www.swaply.cc
             onPressed: _isRefreshing ? null : _refreshData,
             icon: _isRefreshing
                 ? SizedBox(
-                    width: 20.r,
-                    height: 20.r,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
+              width: 20.r,
+              height: 20.r,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
                 : Icon(Icons.refresh, size: 20.r),
           ),
         ],
@@ -277,42 +284,48 @@ Download: https://www.swaply.cc
       body: _loading
           ? _buildLoadingState()
           : FadeTransition(
-              opacity: _fadeAnimation,
-              child: RefreshIndicator(
-                onRefresh: _refreshData,
-                color: const Color(0xFF4CAF50),
-                child: SingleChildScrollView(
-                  padding: EdgeInsets.all(16.w),
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildModernStatsCard(),
-                      SizedBox(height: 20.h),
-                      _buildRewardsInfoCard(),
-                      SizedBox(height: 20.h),
-                      _buildInviteCodeCard(),
-                      SizedBox(height: 20.h),
-                      _buildBindInviteCard(),
-                      SizedBox(height: 20.h),
-                      _buildProgressCard(),
-                      SizedBox(height: 20.h),
-                      _buildHistoryCard(),
-                    ],
-                  ),
-                ),
-              ),
+        opacity: _fadeAnimation,
+        child: RefreshIndicator(
+          onRefresh: _refreshData,
+          color: const Color(0xFF4CAF50),
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(16.w),
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildModernStatsCard(),
+                SizedBox(height: 20.h),
+                _buildRewardsInfoCard(),
+                SizedBox(height: 20.h),
+                _buildInviteCodeCard(),
+                SizedBox(height: 20.h),
+                _buildBindInviteCard(),
+                SizedBox(height: 20.h),
+                _buildProgressCard(),
+                SizedBox(height: 20.h),
+                _buildHistoryCard(),
+              ],
             ),
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildNotLoggedInView() {
+    // ✅ 仅 iOS：未登录页同样对齐顶部高度
+    final double statusBar = MediaQuery.of(context).padding.top;
+    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final double? iosToolbarHeight = _isIOS ? (statusBar + 38.0) : null;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: const Color(0xFF4CAF50),
         foregroundColor: Colors.white,
+        toolbarHeight: iosToolbarHeight, // ✅ 对齐顶部距离（仅 iOS 生效）
         title: Text(
           'Invite Friends',
           style: TextStyle(
@@ -363,7 +376,7 @@ Download: https://www.swaply.cc
 
   Widget _buildModernStatsCard() {
     final successRate =
-        _totalCount > 0 ? (_completedCount / _totalCount * 100).toInt() : 0;
+    _totalCount > 0 ? (_completedCount / _totalCount * 100).toInt() : 0;
 
     return Container(
       padding: EdgeInsets.all(20.w),
@@ -648,7 +661,7 @@ Download: https://www.swaply.cc
                 color: const Color(0xFFF8F9FA),
                 borderRadius: BorderRadius.circular(12.r),
                 border:
-                    Border.all(color: const Color(0xFF4CAF50).withOpacity(0.3)),
+                Border.all(color: const Color(0xFF4CAF50).withOpacity(0.3)),
               ),
               child: Column(
                 children: [
@@ -703,10 +716,10 @@ Download: https://www.swaply.cc
                 onPressed: _regenerating ? null : _refreshCode,
                 icon: _regenerating
                     ? SizedBox(
-                        width: 16.r,
-                        height: 16.r,
-                        child: const CircularProgressIndicator(strokeWidth: 2),
-                      )
+                  width: 16.r,
+                  height: 16.r,
+                  child: const CircularProgressIndicator(strokeWidth: 2),
+                )
                     : const Icon(Icons.refresh, size: 16),
                 // 文案改为 Refresh，避免误导
                 label: Text(_regenerating ? 'Refreshing...' : 'Refresh Code'),
@@ -769,7 +782,7 @@ Download: https://www.swaply.cc
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12.r),
                 borderSide:
-                    const BorderSide(color: Color(0xFFFF9800), width: 2),
+                const BorderSide(color: Color(0xFFFF9800), width: 2),
               ),
             ),
           ),
@@ -780,13 +793,13 @@ Download: https://www.swaply.cc
               onPressed: _binding ? null : _bindInviteCode,
               icon: _binding
                   ? SizedBox(
-                      width: 16.r,
-                      height: 16.r,
-                      child: const CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
+                width: 16.r,
+                height: 16.r,
+                child: const CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
                   : const Icon(Icons.link, size: 18),
               label: Text(_binding ? 'Binding...' : 'Bind Invitation'),
               style: ElevatedButton.styleFrom(
