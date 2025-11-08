@@ -1388,8 +1388,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
 
     // iOS 收紧，Android 保持原样
     final bool _isIOS       = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    final double kHeaderVisual = _isIOS ? 43.0 : 76.0;  // 头部视觉高度
-    final double kTitleTop     = _isIOS ? 1.0 : 20.0;  // 标题距顶
+    final double kHeaderVisual = _isIOS ? 38.0 : 76.0;  // 头部视觉高度
+    final double kTitleTop     = _isIOS ? -5.0 : 20.0;  // 标题距顶
     const double kSide         = 20.0;                  // 左右内边距
 
     return SizedBox(
@@ -3482,8 +3482,8 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     // 统一视觉高度（缩放后依然舒服）：statusBar + 132
     // iOS 收紧，Android 保持原样
     final bool _isIOS       = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    final double kHeaderVisual = _isIOS ? 43.0 : 76.0;  // 头部视觉高度
-    final double kTitleTop     = _isIOS ? 1.0 : 20.0;  // 标题距顶
+    final double kHeaderVisual = _isIOS ? 38.0 : 76.0;  // 头部视觉高度
+    final double kTitleTop     = _isIOS ? -5.0 : 20.0;  // 标题距顶
     const double kSide         = 20.0;                  // 左右内边距
 
     // ✅ 修复：使用您首页的 Facebook 蓝色 (0xFF1877F2)
@@ -4508,8 +4508,8 @@ class _NotificationPageState extends State<NotificationPage> {
     // 统一视觉高度（缩放后依然舒服）：statusBar + 132
     // iOS 收紧，Android 保持原样
     final bool _isIOS       = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    final double kHeaderVisual = _isIOS ? 43.0 : 76.0;  // 头部视觉高度
-    final double kTitleTop     = _isIOS ? 1.0 : 20.0;  // 标题距顶
+    final double kHeaderVisual = _isIOS ? 38.0 : 76.0;  // 头部视觉高度
+    final double kTitleTop     = _isIOS ? -5.0 : 20.0;  // 标题距顶
     const double kSide         = 20.0;                  // 左右内边距
     // ✅ 修复：使用您首页的 Facebook 蓝色 (0xFF1877F2)
     const Color kUserPrimaryBlue = Color(0xFF1877F2);
@@ -4550,7 +4550,7 @@ class _NotificationPageState extends State<NotificationPage> {
           // 右上角操作按钮（可选）
           if (trailing != null)
             Positioned(
-              top: statusBar + 4, // 避开刘海/状态栏
+              top: statusBar + 2, // 避开刘海/状态栏
               right: 16,
               child: trailing,
             ),
