@@ -153,26 +153,10 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
   Widget build(BuildContext context) {
     final title = 'Results for "${widget.keyword}"';
 
-    // ✅ [MODIFIED] 提取平台变量
-    final double statusBar = MediaQuery.of(context).padding.top;
-    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    // ✅ [MODIFIED] iOS 标准高度
-    final double? iosToolbarHeight = _isIOS ? (statusBar + 38.0) : null;
-
     return Scaffold(
       backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        // ✅ [MODIFIED] 应用 iOS 标准高度
-        toolbarHeight: iosToolbarHeight,
-        backgroundColor: const Color(0xFF2196F3), // 颜色保持不变
-        title: Text(title, style: const TextStyle(color: Colors.white)),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        centerTitle: false, // 与其它页面一致（如有需要你可保持默认）
-        elevation: 0,
-      ),
+      // ✅ [MODIFIED] 替换 AppBar 为 _buildStandardAppBar 方法
+      appBar: _buildStandardAppBar(context, title),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
@@ -314,8 +298,100 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
     );
   }
 
+  // ✅ [NEW] 提取 AppBar 构建逻辑，应用 verification_page 标准
+  PreferredSizeWidget _buildStandardAppBar(
+      BuildContext context, String title) {
+    final double statusBar = MediaQuery.of(context).padding.top;
+    final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    const Color kBgColor = Color(0xFF2196F3); // 此页面的背景色
+
+    // ============== Android & 其他：保持原 AppBar 不变 ==============
+    if (!isIOS) {
+      return AppBar(
+        backgroundColor: kBgColor,
+        title: Text(title, style: const TextStyle(color: Colors.white)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        centerTitle: false, // 保持此页面的 Android 样式
+        elevation: 0,
+      );
+    }
+
+    // ============== iOS：使用自定义头部 (VerificationPage 标准) ==============
+
+    // 1. 标准布局数值 (来自 verification_page.dart)
+    const double kHeaderVisual = 38.0; // 头部可见高度
+    const double kTitleTop = -6.0; // 标题顶距（相对 statusBar）
+    const double kSideTop = 2.0; // 左/右角小组件顶距
+    const double kSide = 16.0; // 左右内边距
+    const double kBtnSize = 36.0; // 左右按钮大致占位宽度
+    const double kSpacing = 16.0;
+
+    // 2. 定义此页面的小组件
+    final backBtn = GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        // (使用此页面的 Icon，但应用标准尺寸)
+        child: const Icon(Icons.arrow_back, size: 18, color: Colors.white),
+      ),
+    );
+
+    // 3. 构建布局
+    return PreferredSize(
+      preferredSize: Size.fromHeight(statusBar + kHeaderVisual),
+      child: Container(
+        color: kBgColor, // ✅ [Requirement] 保持此页面的背景颜色
+        child: SizedBox(
+          height: statusBar + kHeaderVisual,
+          child: Stack(
+            children: [
+              // 左按钮
+              Positioned(
+                top: statusBar + kSideTop,
+                left: kSide,
+                child: backBtn,
+              ),
+
+              // 居中标题
+              Positioned(
+                top: statusBar + kTitleTop,
+                left: kSide + kBtnSize + kSpacing,
+                right: kSide + kBtnSize + kSpacing,
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700, // (应用标准 fontWeight)
+                    fontSize: 18, // (应用标准 fontSize, 不使用 .sp)
+                  ),
+                ),
+              ),
+
+              // 右侧占位（此页面无 Action）
+              Positioned(
+                top: statusBar + kSideTop,
+                right: kSide,
+                child: const SizedBox(width: kBtnSize, height: kBtnSize),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   /// 铺满容器（网络/本地都可），失败时灰底占位
   Widget _thumb(Map<String, dynamic> p) {
+    // ... (此方法及以下所有方法保持不变)
     final imgs = p['images'];
     if (imgs is List && imgs.isNotEmpty) {
       final first = imgs.first.toString();

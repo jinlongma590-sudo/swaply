@@ -491,36 +491,127 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
     );
   }
 
+  // ✅ [MODIFIED] 已经替换为 verification_page.dart 的 iOS 布局标准
   PreferredSizeWidget _buildCompactAppBar() {
-    // ✅ 与 Sell / Notifications / Saved 一致：iOS 采用 (statusBar + 38)，其它平台维持原 44.h
     final double statusBar = MediaQuery.of(context).padding.top;
     final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    final double toolbarH = isIOS ? (statusBar + 38.0) : 44.h;
 
-    return AppBar(
-      elevation: 0,
-      backgroundColor: _primaryBlue,
-      foregroundColor: Colors.white,
-      toolbarHeight: toolbarH,
-      title: Text(
-        widget.categoryName,
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-          fontSize: 16.sp,
+    // ============== Android & 其他：保持原 AppBar 不变 ==============
+    if (!isIOS) {
+      return AppBar(
+        elevation: 0,
+        backgroundColor: _primaryBlue, // 保持此页面的背景色
+        foregroundColor: Colors.white,
+        toolbarHeight: 44.h, // 保持 Android 原高度
+        title: Text(
+          widget.categoryName,
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
+            fontSize: 16.sp,
+          ),
+        ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18.sp),
+          onPressed: () => Navigator.pop(context),
+        ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.search, color: Colors.white, size: 20.sp),
+            onPressed: () {},
+          ),
+          SizedBox(width: 2.w),
+        ],
+      );
+    }
+
+    // ============== iOS：使用自定义头部 (VerificationPage 标准) ==============
+
+    // 1. 标准布局数值 (来自 verification_page.dart)
+    const double kHeaderVisual = 38.0; // 头部可见高度
+    const double kTitleTop = -6.0; // 标题顶距（相对 statusBar）
+    const double kSideTop = 2.0; // 左/右角小组件顶距
+    const double kSide = 16.0; // 左右内边距
+    const double kBtnSize = 36.0; // 左右按钮大致占位宽度
+    const double kSpacing = 16.0; // 标题与按钮的最小间距
+
+    // 2. 定义此页面的小组件 (采用 standard 样式)
+
+    // 左按钮 (采用 standard 样式)
+    final backBtn = GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Container(
+        // (VerificationPage 样式)
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child:
+        const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
+      ),
+    );
+
+    // 右按钮 (采用 standard 样式, 但使用此页面的 Icon 和 Action)
+    final searchBtn = GestureDetector(
+      onTap: () {
+        /* (此页面的 onPressed 逻辑) */
+      },
+      child: Container(
+        // (VerificationPage 样式)
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(Icons.search, size: 20.sp, color: Colors.white), // (此页面的 Icon)
+      ),
+    );
+
+    // 3. 构建布局
+    return PreferredSize(
+      preferredSize: Size.fromHeight(statusBar + kHeaderVisual),
+      child: Container(
+        color: _primaryBlue, // ✅ [Requirement] 保持此页面的背景颜色
+        child: SizedBox(
+          height: statusBar + kHeaderVisual,
+          child: Stack(
+            children: [
+              // 左按钮
+              Positioned(
+                top: statusBar + kSideTop,
+                left: kSide,
+                child: backBtn,
+              ),
+
+              // 居中标题
+              Positioned(
+                top: statusBar + kTitleTop,
+                left: kSide + kBtnSize + kSpacing,
+                right: kSide + kBtnSize + kSpacing,
+                child: Text(
+                  widget.categoryName, // (此页面的 Title)
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    // (此页面的 Style)
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16.sp,
+                  ),
+                ),
+              ),
+
+              // 右侧 Action
+              Positioned(
+                top: statusBar + kSideTop,
+                right: kSide,
+                child: searchBtn,
+              ),
+            ],
+          ),
         ),
       ),
-      leading: IconButton(
-        icon: Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18.sp),
-        onPressed: () => Navigator.pop(context),
-      ),
-      actions: [
-        IconButton(
-          icon: Icon(Icons.search, color: Colors.white, size: 20.sp),
-          onPressed: () {},
-        ),
-        SizedBox(width: 2.w),
-      ],
     );
   }
 

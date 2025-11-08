@@ -937,25 +937,22 @@ class _SellFormPageState extends State<SellFormPage>
   }
 
   /* ------------------ UI ------------------ */
-  @override
-  Widget build(BuildContext context) {
-    final categoryFields = _getCategorySpecificFields();
 
-    // ✅ 仅 iOS 做顶部高度统一；安卓保持默认
+  // ✅ [NEW] 统一的 AppBar 构建器
+  PreferredSizeWidget _buildStandardAppBar(BuildContext context) {
+    const String title = 'New Advert';
     final double statusBar = MediaQuery.of(context).padding.top;
-    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    // ✅ 与 sell/通知/saved 基准一致：缩小顶部背景范围 & 统一顶部间距（仅 iOS）
-    final double? iosToolbarHeight = _isIOS ? (statusBar + 34.0) : null;
+    final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    const Color kBgColor = Color(0xFF2196F3); // 此页面的背景色
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        // ✅ 仅 iOS 生效；安卓为 null 使用系统默认，不改
-        toolbarHeight: iosToolbarHeight,
-        systemOverlayStyle: _isIOS ? SystemUiOverlayStyle.light : null,
-        backgroundColor: const Color(0xFF2196F3), // 颜色保持不变
+    // ============== Android & 其他：保持原 AppBar 不变 ==============
+    if (!isIOS) {
+      return AppBar(
+        toolbarHeight: null, // (使用安卓默认)
+        systemOverlayStyle: null,
+        backgroundColor: kBgColor,
         title: Text(
-          'New Advert',
+          title,
           style: TextStyle(
             color: Colors.white,
             fontSize: 18.sp,
@@ -968,93 +965,171 @@ class _SellFormPageState extends State<SellFormPage>
         ),
         elevation: 0,
         centerTitle: true,
+      );
+    }
+
+    // ============== iOS：使用自定义头部 (VerificationPage 标准) ==============
+
+    // 1. 标准布局数值
+    const double kHeaderVisual = 38.0; // (使用 38.0 标准)
+    const double kTitleTop = -6.0;
+    const double kSideTop = 2.0;
+    const double kSide = 16.0;
+    const double kBtnSize = 36.0;
+    const double kSpacing = 16.0;
+
+    // 2. 定义小组件
+    final backBtn = GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
       ),
+    );
+
+    // 3. 构建布局
+    return PreferredSize(
+      preferredSize: Size.fromHeight(statusBar + kHeaderVisual),
+      child: Container(
+        color: kBgColor,
+        // (设置顶部状态栏文字为白色)
+        child: AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle.light,
+          child: SizedBox(
+            height: statusBar + kHeaderVisual,
+            child: Stack(
+              children: [
+                Positioned(
+                  top: statusBar + kSideTop,
+                  left: kSide,
+                  child: backBtn,
+                ),
+                Positioned(
+                  top: statusBar + kTitleTop,
+                  left: kSide + kBtnSize + kSpacing,
+                  right: kSide + kBtnSize + kSpacing,
+                  child: Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle( // (应用标准 Style)
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: statusBar + kSideTop,
+                  right: kSide,
+                  child: const SizedBox(width: kBtnSize, height: kBtnSize),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final categoryFields = _getCategorySpecificFields();
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
+      // ✅ [MODIFIED] 替换 AppBar
+      appBar: _buildStandardAppBar(context),
       body: Stack(
         children: [
           AbsorbPointer(
-              absorbing: _submitting,
-              child: SlideTransition(
-                  position: _slideAnimation,
-                  child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: SingleChildScrollView(
-                          padding: EdgeInsets.all(12.w),
-                          child: Form(
-                              key: _formKey,
-                              child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                  // Photo Upload Section
-                                  _buildPhotoSection(),
-                              SizedBox(height: 12.h),
+            absorbing: _submitting,
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(12.w),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Photo Upload Section
+                        _buildPhotoSection(),
+                        SizedBox(height: 12.h),
 
-                          // Category Dropdown
-                          _buildCategorySection(),
+                        // Category Dropdown
+                        _buildCategorySection(),
+                        SizedBox(height: 12.h),
+
+                        // Dynamic Fields
+                        if (categoryFields.isNotEmpty) ...[
+                          ...categoryFields,
                           SizedBox(height: 12.h),
+                        ],
 
-                          // Dynamic Fields
-                          if (categoryFields.isNotEmpty) ...[
-                      ...categoryFields,
-                      SizedBox(height: 12.h),
+                        // Basic Info Section
+                        _buildBasicInfoSection(),
+                        SizedBox(height: 12.h),
+
+                        // Coupon Section
+                        if (_showCouponSection) ...[
+                          _buildCouponSelectionSection(),
+                          SizedBox(height: 12.h),
+                        ],
+
+                        // Seller Info Section
+                        _buildSellerInfoSection(),
+                        SizedBox(height: 16.h),
+
+                        // Submit Button
+                        _buildSubmitButton(),
+                        SizedBox(height: 12.h),
                       ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
 
-                      // Basic Info Section
-                      _buildBasicInfoSection(),
-                  SizedBox(height: 12.h),
-
-                  // Coupon Section
-                  if (_showCouponSection) ...[
-              _buildCouponSelectionSection(),
-          SizedBox(height: 12.h),
-        ],
-
-        // Seller Info Section
-        _buildSellerInfoSection(),
-        SizedBox(height: 16.h),
-
-        // Submit Button
-        _buildSubmitButton(),
-        SizedBox(height: 12.h),
+          // Loading Overlay
+          if (_submitting)
+            Container(
+              color: Colors.black.withOpacity(0.5),
+              child: Center(
+                child: Container(
+                  padding: EdgeInsets.all(24.w),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16.r),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(
+                        color: Color(0xFF2196F3),
+                        strokeWidth: 3,
+                      ),
+                      SizedBox(height: 16.h),
+                      Text(
+                        _progressMsg,
+                        style: TextStyle(
+                            fontSize: 14.sp, fontWeight: FontWeight.w500),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
-    ),
-    ),
-    ),
-    ),
-    ),
-
-    // Loading Overlay
-    if (_submitting)
-    Container(
-    color: Colors.black.withOpacity(0.5),
-    child: Center(
-    child: Container(
-    padding: EdgeInsets.all(24.w),
-    decoration: BoxDecoration(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(16.r),
-    ),
-    child: Column(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-    const CircularProgressIndicator(
-    color: Color(0xFF2196F3),
-    strokeWidth: 3,
-    ),
-    SizedBox(height: 16.h),
-    Text(
-    _progressMsg,
-    style: TextStyle(
-    fontSize: 14.sp, fontWeight: FontWeight.w500),
-    textAlign: TextAlign.center,
-    ),
-    ],
-    ),
-    ),
-    ),
-    ),
-    ],
-    ),
     );
   }
 

@@ -1,4 +1,5 @@
 // lib/pages/account_settings_page.dart
+import 'package:flutter/foundation.dart'; // ✅ [ADDED] For platform check
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -180,17 +181,106 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     }
   }
 
+  // ✅ [NEW] 统一的 AppBar 构建器
+  PreferredSizeWidget _buildStandardAppBar(BuildContext context) {
+    const String title = 'Account';
+    final double statusBar = MediaQuery.of(context).padding.top;
+    final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    // (使用与 Help/About 一致的颜色)
+    const Color kBgColor = Color(0xFF2563EB);
+
+    // ============== Android & 其他：保持原 AppBar 不变 ==============
+    if (!isIOS) {
+      return AppBar(
+        title: Text(
+          title,
+          // (使用原 Style，但确保颜色为白色)
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: kBgColor, // (应用一致的背景色)
+        elevation: 0,
+        leading: IconButton(
+          // (确保 Android 也有返回按钮)
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      );
+    }
+
+    // ============== iOS：使用自定义头部 (VerificationPage 标准) ==============
+
+    // 1. 标准布局数值
+    const double kHeaderVisual = 38.0;
+    const double kTitleTop = -6.0;
+    const double kSideTop = 2.0;
+    const double kSide = 16.0;
+    const double kBtnSize = 36.0;
+    const double kSpacing = 16.0;
+
+    // 2. 定义小组件
+    final backBtn = GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
+      ),
+    );
+
+    // 3. 构建布局
+    return PreferredSize(
+      preferredSize: Size.fromHeight(statusBar + kHeaderVisual),
+      child: Container(
+        color: kBgColor,
+        child: SizedBox(
+          height: statusBar + kHeaderVisual,
+          child: Stack(
+            children: [
+              Positioned(
+                top: statusBar + kSideTop,
+                left: kSide,
+                child: backBtn,
+              ),
+              Positioned(
+                top: statusBar + kTitleTop,
+                left: kSide + kBtnSize + kSpacing,
+                right: kSide + kBtnSize + kSpacing,
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18, // (应用标准 fontSize)
+                  ),
+                ),
+              ),
+              Positioned(
+                top: statusBar + kSideTop,
+                right: kSide,
+                child: const SizedBox(width: kBtnSize, height: kBtnSize),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final danger = Theme.of(context).colorScheme.error;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Account',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-        ),
-        elevation: 0,
-      ),
+      // ✅ [MODIFIED] 替换 AppBar
+      appBar: _buildStandardAppBar(context),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

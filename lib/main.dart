@@ -2611,7 +2611,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 }
-/* ---------------- Wishlist Page 氓驴茠忙鈥灺棵ヂ嶁€⒚┞÷得┞澛?- 忙鈥撀懊ヂ⑴?---------------- */
+/* ---------------- Wishlist Page 收藏夹页面 - 统一服务 ---------------- */
 
 class WishlistPage extends StatefulWidget {
   const WishlistPage({Key? key}) : super(key: key);
@@ -2632,7 +2632,7 @@ class _WishlistPageState extends State<WishlistPage> {
     _loadWishlist();
   }
 
-  /// 氓艩 猫陆陆氓驴茠忙鈥灺棵ヂ嶁€⒚ニ嗏€斆÷?
+  /// 加载收藏夹列表
   Future<void> _loadWishlist() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
@@ -2651,7 +2651,7 @@ class _WishlistPageState extends State<WishlistPage> {
 
       if (kDebugMode) {}
 
-      // 盲陆驴莽鈥澛?DualFavoritesService 猫沤路氓聫鈥撁ヂ科捗︹€灺棵ヂ嶁€⒚ニ嗏€斆÷妓喢ぢ慌?wishlists 猫隆篓茂录鈥?
+      // 使用 DualFavoritesService 获取收藏夹（包含 wishlists 和 favorites）
       final items = await DualFavoritesService.getUserWishlist(
         userId: user.id,
         limit: 100,
@@ -2677,20 +2677,20 @@ class _WishlistPageState extends State<WishlistPage> {
     }
   }
 
-  /// 氓藛路忙鈥撀懊ヂ科捗︹€灺棵ヂ嶁€⒚ニ嗏€斆÷?
+  /// 刷新收藏夹
   Future<void> _refreshWishlist() async {
     setState(() => _isRefreshing = true);
     await _loadWishlist();
     setState(() => _isRefreshing = false);
   }
 
-  /// 盲禄沤氓驴茠忙鈥灺棵ヂ嶁€⒚幻┾劉陇氓鈥⑩€犆モ€溌?
+  /// 从收藏夹和喜爱中移除
   Future<void> _removeFromWishlist(String listingId, int index) async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
     try {
-      // 盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼莽搂禄茅鈩⒙?
+      // 使用 DualFavoritesService 移除
       final success = await DualFavoritesService.removeFromFavorites(
         userId: user.id,
         listingId: listingId,
@@ -2744,7 +2744,7 @@ class _WishlistPageState extends State<WishlistPage> {
     }
   }
 
-  /// 猫沤路氓聫鈥撁モ€⑩€犆モ€溌伱モ€郝久р€扳€?
+  /// 获取列表图片
   String _getListingImage(Map<String, dynamic> listing) {
     final images = listing['images'] ?? listing['image_urls'];
     if (images is List && images.isNotEmpty) {
@@ -2753,7 +2753,7 @@ class _WishlistPageState extends State<WishlistPage> {
     return 'assets/images/placeholder.jpg';
   }
 
-  /// 忙 录氓录聫氓艗鈥撁ぢ宦访?录
+  /// 格式化价格
   String _formatPrice(dynamic price) {
     if (price == null) return 'Price not available';
 
@@ -2768,7 +2768,7 @@ class _WishlistPageState extends State<WishlistPage> {
     return priceStr;
   }
 
-  /// 忙啪鈥灻ヂ宦好ヂ科捗︹€灺棵ヂ嶁€⒚ヂ嵚∶р€扳€?
+  /// 构建收藏卡片
   Widget _buildWishlistCard(Map<String, dynamic> item, int index) {
     final listing = item['listing'] ?? {};
     final listingId =
@@ -2779,7 +2779,7 @@ class _WishlistPageState extends State<WishlistPage> {
     final imageUrl = _getListingImage(listing);
     final createdAt = item['created_at']?.toString() ?? '';
 
-    // 忙 录氓录聫氓艗鈥撁β仿幻ヅ?忙鈥斅睹┾€斅?
+    // 格式化时间
     final timeAdded = DualFavoritesService.formatSavedTime(createdAt);
 
     return Card(
@@ -2799,7 +2799,7 @@ class _WishlistPageState extends State<WishlistPage> {
                 ),
               ),
             ).then((_) {
-              // 盲禄沤氓鈥⑩€犆モ€溌伱γζ掆€γ┞÷得库€澝モ€号久ヂ恻矫ニ喡访︹€撀懊ニ嗏€斆÷?
+              // 返回时重新加载，以防用户在详情页取消了收藏
               _loadWishlist();
             });
           }
@@ -2821,7 +2821,7 @@ class _WishlistPageState extends State<WishlistPage> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 氓鈥⑩€犆モ€溌伱モ€郝久р€扳€?
+                // 图片
                 Hero(
                   tag: 'wishlist_image_$listingId',
                   child: ClipRRect(
@@ -2891,7 +2891,7 @@ class _WishlistPageState extends State<WishlistPage> {
                 ),
                 SizedBox(width: 12.w),
 
-                // 氓鈥⑩€犆モ€溌伱ぢ柯∶β伮?
+                // 信息
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -2969,7 +2969,7 @@ class _WishlistPageState extends State<WishlistPage> {
                   ),
                 ),
 
-                // 莽搂禄茅鈩⒙っε掆€懊┾€櫬?
+                // 移除按钮
                 Container(
                   margin: EdgeInsets.only(left: 6.w),
                   decoration: BoxDecoration(
@@ -3000,7 +3000,7 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  /// 忙藴戮莽陇潞莽搂禄茅鈩⒙っ÷っヂ姑澝β♀€?
+  /// 弹出移除确认框
   void _showRemoveDialog(String listingId, String title, int index) {
     showDialog(
       context: context,
@@ -3065,7 +3065,7 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  /// 忙啪鈥灻ヂ宦好┞好犅睹︹偓聛
+  /// 构建空状态
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -3166,7 +3166,7 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  /// 忙啪鈥灻ヂ宦好┾€濃劉猫炉炉莽艩露忙鈧?
+  /// 构建错误状态
   Widget _buildErrorState() {
     return Center(
       child: Padding(
@@ -3239,49 +3239,144 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
+  // ✅ [NEW] 统一的 AppBar 构建器
+  PreferredSizeWidget _buildStandardAppBar(BuildContext context) {
+    final double statusBar = MediaQuery.of(context).padding.top;
+    final bool isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+    const Color kBgColor = Colors.pink; // 此页面的背景色
+
+    // 动态标题
+    final String title = 'My Wishlist (${_wishlistItems.length})';
+    final titleStyle = TextStyle(
+      color: Colors.white,
+      fontSize: 16.sp, // (保持原 sp)
+      fontWeight: FontWeight.w600,
+    );
+
+    // 动态 Actions
+    final actionsWidget = (_wishlistItems.isNotEmpty && !_isLoading)
+        ? PopupMenuButton<String>(
+      icon: Icon(Icons.more_vert_rounded,
+          color: Colors.white, size: 20.w), // (保持原 w)
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.w)),
+      onSelected: (value) {
+        if (value == 'clear_all') {
+          _showClearAllDialog();
+        }
+      },
+      itemBuilder: (BuildContext context) => [
+        PopupMenuItem(
+          value: 'clear_all',
+          child: Row(
+            children: [
+              Icon(Icons.clear_all_rounded,
+                  color: Colors.red, size: 16.w),
+              SizedBox(width: 10.w),
+              Text('Clear All', style: TextStyle(fontSize: 13.sp)),
+            ],
+          ),
+        ),
+      ],
+    )
+        : null; // iOS 侧如果为 null，SizedBox 占位
+
+    // ============== Android & 其他：保持原 AppBar 不变 ==============
+    if (!isIOS) {
+      return AppBar(
+        backgroundColor: kBgColor,
+        title: Text(title, style: titleStyle),
+        elevation: 0,
+        actions: actionsWidget != null ? [actionsWidget] : [],
+        leading: IconButton(
+          // (确保 Android 也有返回按钮)
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      );
+    }
+
+    // ============== iOS：使用自定义头部 (VerificationPage 标准) ==============
+
+    // 1. 标准布局数值
+    const double kHeaderVisual = 38.0;
+    const double kTitleTop = -6.0;
+    const double kSideTop = 2.0;
+    const double kSide = 16.0;
+    const double kBtnSize = 36.0;
+    const double kSpacing = 16.0;
+
+    // 2. 定义小组件
+    final backBtn = GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
+      ),
+    );
+
+    // 3. 构建布局
+    return PreferredSize(
+      preferredSize: Size.fromHeight(statusBar + kHeaderVisual),
+      child: Container(
+        color: kBgColor,
+        child: SizedBox(
+          height: statusBar + kHeaderVisual,
+          child: Stack(
+            children: [
+              // 左按钮
+              Positioned(
+                top: statusBar + kSideTop,
+                left: kSide,
+                child: backBtn,
+              ),
+              // 居中标题
+              Positioned(
+                top: statusBar + kTitleTop,
+                left: kSide + kBtnSize + kSpacing,
+                right: kSide + kBtnSize + kSpacing,
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle( // (应用标准 Style)
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+              // 右侧 Action
+              Positioned(
+                top: statusBar + kSideTop,
+                right: kSide,
+                // (包裹一层 SizedBox 确保大小)
+                child: SizedBox(
+                  width: kBtnSize,
+                  height: kBtnSize,
+                  // (居中对齐 Action)
+                  child: Center(
+                    child: actionsWidget ?? const SizedBox.shrink(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        backgroundColor: Colors.pink,
-        title: Text(
-          'My Wishlist (${_wishlistItems.length})',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        elevation: 0,
-        actions: [
-          if (_wishlistItems.isNotEmpty && !_isLoading)
-            PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert_rounded,
-                  color: Colors.white, size: 20.w),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.w)),
-              onSelected: (value) {
-                if (value == 'clear_all') {
-                  _showClearAllDialog();
-                }
-              },
-              itemBuilder: (BuildContext context) => [
-                PopupMenuItem(
-                  value: 'clear_all',
-                  child: Row(
-                    children: [
-                      Icon(Icons.clear_all_rounded,
-                          color: Colors.red, size: 16.w),
-                      SizedBox(width: 10.w),
-                      Text('Clear All', style: TextStyle(fontSize: 13.sp)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-        ],
-      ),
+      // ✅ [MODIFIED] 替换 AppBar
+      appBar: _buildStandardAppBar(context),
       body: _isLoading
           ? Center(
         child: Column(
@@ -3329,7 +3424,7 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  /// 忙藴戮莽陇潞忙赂鈥γ┞好︹€扳偓忙舱鈥懊÷っヂ姑澝β♀€?
+  /// 弹出清空确认框
   void _showClearAllDialog() {
     showDialog(
       context: context,
@@ -3394,13 +3489,13 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  /// 忙赂鈥γ┞好︹€扳偓忙舱鈥懊ヂ科捗︹€灺棵ヂ嶁€?
+  /// 清空收藏夹
   Future<void> _clearAllWishlist() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
     try {
-      // 盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼忙赂鈥γ┞?
+      // 使用 DualFavoritesService 清空
       final success =
       await DualFavoritesService.clearUserFavorites(userId: user.id);
 
@@ -3469,25 +3564,89 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  // 统一蓝色头部（支持传入右上角按钮，并可单独微调其纵向位置）
+  // ✅ [MODIFIED] 统一蓝色头部（iOS 已按 standard 布局修改）
   Widget _blueHeader({
     required BuildContext context,
     required String title,
     required bool centerTitle,
     Widget? trailing,
-    double trailingTopAdjust = 0.0, // ↑ 右上角按钮相对标题的垂直微调
+    double trailingTopAdjust = 0.0, // (此参数仅 Android 侧保留使用)
   }) {
     final double statusBar = MediaQuery.of(context).padding.top;
-
-    // iOS 紧凑、Android 保持
     final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    final double kHeaderVisual = _isIOS ? 38.0 : 76.0;
-    final double kTitleTop     = _isIOS ? -6.0 : 20.0;
-    const double kSide         = 20.0;
-
     const Color kUserPrimaryBlue = Color(0xFF1877F2);
 
-    final double titleTop = statusBar + kTitleTop;
+    // ============== Android (Original Logic) ==============
+    if (!_isIOS) {
+      final double kHeaderVisual = 76.0;
+      final double kTitleTop = 20.0;
+      const double kSide = 20.0;
+      final double titleTop = statusBar + kTitleTop;
+
+      return SizedBox(
+        height: statusBar + kHeaderVisual,
+        child: Stack(
+          children: [
+            // 背景
+            Positioned.fill(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [kUserPrimaryBlue, Color(0xFF1E88E5)],
+                  ),
+                ),
+              ),
+            ),
+            // 标题
+            Positioned(
+              top: titleTop,
+              left: kSide,
+              right: centerTitle ? kSide : null,
+              child: SizedBox(
+                width: centerTitle
+                    ? MediaQuery.of(context).size.width - kSide * 2
+                    : null,
+                child: const Text(''), // 占位避免抖动（可保留）
+              ),
+            ),
+            Positioned(
+              top: titleTop,
+              left: kSide,
+              right: centerTitle ? kSide : null,
+              child: Text(
+                title,
+                textAlign: centerTitle ? TextAlign.center : TextAlign.left,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            // 右上角按钮（与标题行对齐；可用 trailingTopAdjust 再微调）
+            if (trailing != null)
+              Positioned(
+                top: titleTop + trailingTopAdjust, // (Android 保持原逻辑)
+                right: 12, // (Android 保持原逻辑)
+                child: trailing,
+              ),
+          ],
+        ),
+      );
+    }
+
+    // ============== iOS (Verification Page Standard Logic) ==============
+
+    // 1. 标准布局数值
+    const double kHeaderVisual = 38.0; // Standard
+    const double kTitleTop = -6.0;     // Standard
+    const double kSideTop = 2.0;       // Standard
+    const double kSide = 16.0;       // Standard
+    const double kBtnSize = 28.0;      // (来自 _buildPlusButton 的 28.0)
+    const double kSpacing = 16.0;      // Standard
 
     return SizedBox(
       height: statusBar + kHeaderVisual,
@@ -3505,38 +3664,33 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
               ),
             ),
           ),
+          // 左侧占位（保证标题居中）
+          Positioned(
+            top: statusBar + kSideTop,
+            left: kSide,
+            child: const SizedBox(width: kBtnSize, height: kBtnSize),
+          ),
           // 标题
           Positioned(
-            top: titleTop,
-            left: kSide,
-            right: centerTitle ? kSide : null,
-            child: SizedBox(
-              width: centerTitle
-                  ? MediaQuery.of(context).size.width - kSide * 2
-                  : null,
-              child: const Text(''), // 占位避免抖动（可保留）
-            ),
-          ),
-          Positioned(
-            top: titleTop,
-            left: kSide,
-            right: centerTitle ? kSide : null,
+            top: statusBar + kTitleTop, // (statusBar - 6.0)
+            left: kSide + kBtnSize + kSpacing, // (16 + 28 + 16)
+            right: kSide + kBtnSize + kSpacing, // (16 + 28 + 16)
             child: Text(
               title,
-              textAlign: centerTitle ? TextAlign.center : TextAlign.left,
+              textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 28,
+                fontSize: 28, // (保持此页面的大字体)
                 fontWeight: FontWeight.w700,
               ),
             ),
           ),
-          // 右上角按钮（与标题行对齐；可用 trailingTopAdjust 再微调）
+          // 右上角按钮 (Trailing)
           if (trailing != null)
             Positioned(
-              top: titleTop + trailingTopAdjust,
-              right: 12,
+              top: statusBar + kSideTop, // ✅ 标准对齐 (statusBar + 2.0)
+              right: kSide, // ✅ 标准边距 (16.0)
               child: trailing,
             ),
         ],
@@ -3623,7 +3777,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
               title: l10n.sellItem,
               centerTitle: true,
               trailing: _buildPlusButton(context),
-              trailingTopAdjust: -6.0, // 若还偏低，调到 -8.0；偏高则 -4.0
+              trailingTopAdjust: -6.0, // ✅ (此参数仅 Android 生效)
             ),
           ),
           if (myListings.isEmpty)
@@ -4471,8 +4625,6 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     }
   }
 }
-
-
 // ---------------- Notification Page ----------------
 /* ---------------- Notification Page 茅鈧∶嘎ッ┞÷?(莽麓搂氓鈥♀€樏九矫ヅ掆€撁р€八喢ε撀? ---------------- */
 
@@ -5995,7 +6147,7 @@ class _ProfilePageState extends State<ProfilePage>
                               onTap: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (_) => CouponManagementPage()),
+                                  MaterialPageRoute(builder: (_) => TaskManagementPage()),
                                 );
                               },
                             ),
@@ -6462,11 +6614,8 @@ class HelpSupportPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: Text(l10n.helpSupport),
-        backgroundColor: const Color(0xFF2563EB),
-        elevation: 0,
-      ),
+      // ✅ [MODIFIED] 替换 AppBar
+      appBar: _buildStandardAppBar(context, l10n.helpSupport),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -6527,6 +6676,86 @@ class HelpSupportPage extends StatelessWidget {
     );
   }
 
+  // ✅ [NEW] 统一的 AppBar 构建器
+  PreferredSizeWidget _buildStandardAppBar(BuildContext context, String title) {
+    final double statusBar = MediaQuery.of(context).padding.top;
+    // 使用 Theme.of(context).platform 因为它不需要 'foundation.dart'
+    final bool isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+    const Color kBgColor = Color(0xFF2563EB); // 此页面的背景色
+
+    // ============== Android & 其他：保持原 AppBar 不变 ==============
+    if (!isIOS) {
+      return AppBar(
+        title: Text(title, style: const TextStyle(color: Colors.white)),
+        backgroundColor: kBgColor,
+        elevation: 0,
+      );
+    }
+
+    // ============== iOS：使用自定义头部 (VerificationPage 标准) ==============
+
+    // 1. 标准布局数值
+    const double kHeaderVisual = 38.0;
+    const double kTitleTop = -6.0;
+    const double kSideTop = 2.0;
+    const double kSide = 16.0;
+    const double kBtnSize = 36.0;
+    const double kSpacing = 16.0;
+
+    // 2. 定义小组件
+    final backBtn = GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
+      ),
+    );
+
+    // 3. 构建布局
+    return PreferredSize(
+      preferredSize: Size.fromHeight(statusBar + kHeaderVisual),
+      child: Container(
+        color: kBgColor,
+        child: SizedBox(
+          height: statusBar + kHeaderVisual,
+          child: Stack(
+            children: [
+              Positioned(
+                top: statusBar + kSideTop,
+                left: kSide,
+                child: backBtn,
+              ),
+              Positioned(
+                top: statusBar + kTitleTop,
+                left: kSide + kBtnSize + kSpacing,
+                right: kSide + kBtnSize + kSpacing,
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18, // (应用标准 fontSize)
+                  ),
+                ),
+              ),
+              Positioned(
+                top: statusBar + kSideTop,
+                right: kSide,
+                child: const SizedBox(width: kBtnSize, height: kBtnSize),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildContactCard({
     required IconData icon,
     required String title,
@@ -6582,11 +6811,8 @@ class AboutPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        title: const Text('About'),
-        backgroundColor: const Color(0xFF2563EB),
-        elevation: 0,
-      ),
+      // ✅ [MODIFIED] 替换 AppBar
+      appBar: _buildStandardAppBar(context, 'About'),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -6639,6 +6865,86 @@ class AboutPage extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // ✅ [NEW] 统一的 AppBar 构建器
+  PreferredSizeWidget _buildStandardAppBar(BuildContext context, String title) {
+    final double statusBar = MediaQuery.of(context).padding.top;
+    // 使用 Theme.of(context).platform 因为它不需要 'foundation.dart'
+    final bool isIOS = Theme.of(context).platform == TargetPlatform.iOS;
+    const Color kBgColor = Color(0xFF2563EB); // 此页面的背景色
+
+    // ============== Android & 其他：保持原 AppBar 不变 ==============
+    if (!isIOS) {
+      return AppBar(
+        title: Text(title, style: const TextStyle(color: Colors.white)),
+        backgroundColor: kBgColor,
+        elevation: 0,
+      );
+    }
+
+    // ============== iOS：使用自定义头部 (VerificationPage 标准) ==============
+
+    // 1. 标准布局数值
+    const double kHeaderVisual = 38.0;
+    const double kTitleTop = -6.0;
+    const double kSideTop = 2.0;
+    const double kSide = 16.0;
+    const double kBtnSize = 36.0;
+    const double kSpacing = 16.0;
+
+    // 2. 定义小组件
+    final backBtn = GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
+      ),
+    );
+
+    // 3. 构建布局
+    return PreferredSize(
+      preferredSize: Size.fromHeight(statusBar + kHeaderVisual),
+      child: Container(
+        color: kBgColor,
+        child: SizedBox(
+          height: statusBar + kHeaderVisual,
+          child: Stack(
+            children: [
+              Positioned(
+                top: statusBar + kSideTop,
+                left: kSide,
+                child: backBtn,
+              ),
+              Positioned(
+                top: statusBar + kTitleTop,
+                left: kSide + kBtnSize + kSpacing,
+                right: kSide + kBtnSize + kSpacing,
+                child: Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18, // (应用标准 fontSize)
+                  ),
+                ),
+              ),
+              Positioned(
+                top: statusBar + kSideTop,
+                right: kSide,
+                child: const SizedBox(width: kBtnSize, height: kBtnSize),
+              ),
+            ],
+          ),
         ),
       ),
     );
