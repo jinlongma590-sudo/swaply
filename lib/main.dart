@@ -1389,7 +1389,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     // iOS 收紧，Android 保持原样
     final bool _isIOS       = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
     final double kHeaderVisual = _isIOS ? 43.0 : 76.0;  // 头部视觉高度
-    final double kTitleTop     = _isIOS ? 2.0 : 24.0;  // 标题距顶
+    final double kTitleTop     = _isIOS ? 1.0 : 20.0;  // 标题距顶
     const double kSide         = 20.0;                  // 左右内边距
 
     return SizedBox(
@@ -3483,7 +3483,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     // iOS 收紧，Android 保持原样
     final bool _isIOS       = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
     final double kHeaderVisual = _isIOS ? 43.0 : 76.0;  // 头部视觉高度
-    final double kTitleTop     = _isIOS ? 2.0 : 24.0;  // 标题距顶
+    final double kTitleTop     = _isIOS ? 1.0 : 20.0;  // 标题距顶
     const double kSide         = 20.0;                  // 左右内边距
 
     // ✅ 修复：使用您首页的 Facebook 蓝色 (0xFF1877F2)
@@ -3546,7 +3546,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const SellFormPage()),
         ),
-        icon: Icon(Icons.add_rounded, color: Colors.white, size: 24.r),
+        icon: Icon(Icons.add_rounded, color: Colors.white, size: 19.r),
         tooltip: 'Add New Listing',
       ),
     );
@@ -4509,7 +4509,7 @@ class _NotificationPageState extends State<NotificationPage> {
     // iOS 收紧，Android 保持原样
     final bool _isIOS       = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
     final double kHeaderVisual = _isIOS ? 43.0 : 76.0;  // 头部视觉高度
-    final double kTitleTop     = _isIOS ? 2.0 : 24.0;  // 标题距顶
+    final double kTitleTop     = _isIOS ? 1.0 : 20.0;  // 标题距顶
     const double kSide         = 20.0;                  // 左右内边距
     // ✅ 修复：使用您首页的 Facebook 蓝色 (0xFF1877F2)
     const Color kUserPrimaryBlue = Color(0xFF1877F2);
