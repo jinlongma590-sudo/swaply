@@ -1389,7 +1389,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     // iOS 收紧，Android 保持原样
     final bool _isIOS       = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
     final double kHeaderVisual = _isIOS ? 38.0 : 76.0;  // 头部视觉高度
-    final double kTitleTop     = _isIOS ? -5.0 : 20.0;  // 标题距顶
+    final double kTitleTop     = _isIOS ? -6.0 : 20.0;  // 标题距顶
     const double kSide         = 20.0;                  // 左右内边距
 
     return SizedBox(
@@ -3483,7 +3483,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     // iOS 收紧，Android 保持原样
     final bool _isIOS       = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
     final double kHeaderVisual = _isIOS ? 38.0 : 76.0;  // 头部视觉高度
-    final double kTitleTop     = _isIOS ? -5.0 : 20.0;  // 标题距顶
+    final double kTitleTop     = _isIOS ? -6.0 : 20.0;  // 标题距顶
     const double kSide         = 20.0;                  // 左右内边距
 
     // ✅ 修复：使用您首页的 Facebook 蓝色 (0xFF1877F2)
@@ -3537,16 +3537,23 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   // ✅ B.1) 提取右上角 + 按钮以传递给 _blueHeader
   Widget _buildPlusButton(BuildContext context) {
     return Container(
-      margin: EdgeInsets.only(top: 0.h, bottom: 4.h), // 微调垂直位置
+      margin: EdgeInsets.only(top: -2.h, bottom: 2.h), // 微调垂直位置
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(12.r),
+        borderRadius: BorderRadius.circular(10.r),
       ),
       child: IconButton(
         onPressed: () => Navigator.of(context).push(
           MaterialPageRoute(builder: (_) => const SellFormPage()),
         ),
-        icon: Icon(Icons.add_rounded, color: Colors.white, size: 19.r),
+        icon: const Icon(Icons.add_rounded, color: Colors.white),
+        iconSize: 18.r,                                          // 图标更小
+        padding: EdgeInsets.zero,                                // 去默认内边距
+        constraints: BoxConstraints.tightFor(                    // 总体尺寸更小
+          width: 36.r,
+          height: 36.r,
+        ),
+        splashRadius: 18.r,
         tooltip: 'Add New Listing',
       ),
     );
@@ -4509,7 +4516,7 @@ class _NotificationPageState extends State<NotificationPage> {
     // iOS 收紧，Android 保持原样
     final bool _isIOS       = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
     final double kHeaderVisual = _isIOS ? 38.0 : 76.0;  // 头部视觉高度
-    final double kTitleTop     = _isIOS ? -5.0 : 20.0;  // 标题距顶
+    final double kTitleTop     = _isIOS ? -6.0 : 20.0;  // 标题距顶
     const double kSide         = 20.0;                  // 左右内边距
     // ✅ 修复：使用您首页的 Facebook 蓝色 (0xFF1877F2)
     const Color kUserPrimaryBlue = Color(0xFF1877F2);
