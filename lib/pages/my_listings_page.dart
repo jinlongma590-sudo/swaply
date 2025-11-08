@@ -574,20 +574,33 @@ class _MyListingsPageState extends State<MyListingsPage>
       Widget tabBarWidget,
       ) {
     if (isIOS) {
-      // ✅ iOS: 严格按照标准值进行 Stack + Positioned 布局
-      const double kSideWidgetTop = -1.0;
-      const double kTitleTop = -6.0;
+      // ✅ [MODIFIED] 严格按照 C1 要求进行布局
+      // C1. iOS 用 Stack+Positioned 精确定位（关键改动）
+
+      // 系统导航条高度
+      const double kNavBarHeight = 44.0;
+      // 左右按钮可视高度 (从 build 方法中得知 backButton 尺寸为 32.h)
+      final double kBtnSizeH = 32.h;
+      // 左右外边距
       final double kSide = 16.w;
+
+      // 左右按钮纵向定位 (导航条垂直居中)
+      // (44 - 32) / 2 = 6.0
+      final double kBtnTop = statusBar + (kNavBarHeight - kBtnSizeH) / 2;
+      // 标题纵向定位：与按钮同一行
+      final double kTitleTop = kBtnTop;
+
+      // TabBar 高度/上下边距
       final double kTabBarHeight = 32.h;
       final double kTabBarTopMargin = 8.h;
       final double kTabBarBottomMargin = 12.h;
-      const double kTitleRowVisualHeight = 38.0;
 
-      // 计算总高度以容纳所有组件
-      final double kTotalVisualHeight = kTitleRowVisualHeight +
+      // 头部容器高度（决定蓝色背景铺到哪）
+      // 44 + 8 + 32 + 12 = 96.h
+      final double kTotalVisualHeight = kNavBarHeight +
           kTabBarTopMargin +
           kTabBarHeight +
-          kTabBarBottomMargin; // 38 + 8 + 32 + 12 = 90.h
+          kTabBarBottomMargin;
 
       return Container(
         decoration: const BoxDecoration(
@@ -595,34 +608,38 @@ class _MyListingsPageState extends State<MyListingsPage>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF2563EB),
-              Color(0xFF3B82F6),
-              Color(0xFF60A5FA)
+              Color(0xFF2563EB), // 颜色保持不变
+              Color(0xFF3B82F6), // 颜色保持不变
+              Color(0xFF60A5FA)  // 颜色保持不变
             ],
           ),
         ),
+        // 外层 SizedBox.height = statusBar + kTotalVisualHeight
         child: SizedBox(
           height: statusBar + kTotalVisualHeight,
           child: Stack(
             children: [
-              // --- Title Row Elements (Standard) ---
+              // --- 标题行 ---
               Positioned(
-                top: statusBar + kSideWidgetTop, // 标准: -1.0
+                top: kBtnTop,
                 left: kSide,
                 child: backButton,
               ),
               Positioned(
-                top: statusBar + kTitleTop, // 标准: -6.0
+                top: kTitleTop, // 与按钮同一基线
                 left: kSide + 32.w + 12.w, // padding + button + spacing
                 right: kSide,
                 child: titleText,
               ),
-              // --- Tab Bar Element (Positioned) ---
+
+              // --- TabBar ---
               Positioned(
-                bottom: kTabBarBottomMargin, // 12.h from bottom
+                top: statusBar +
+                    kNavBarHeight +
+                    kTabBarTopMargin, // 状态栏 + 导航条(44) + 间距(8)
                 left: kSide,
                 right: kSide,
-                height: kTabBarHeight, // 32.h height
+                height: kTabBarHeight,
                 child: tabBarWidget,
               ),
             ],
@@ -630,7 +647,7 @@ class _MyListingsPageState extends State<MyListingsPage>
         ),
       );
     } else {
-      // ✅ Android: 保持你原有的布局 (SafeArea + Column)
+      // ✅ Android: 保持你原有的布局 (SafeArea + Column) - 此处完全不变
       return Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
