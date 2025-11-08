@@ -243,138 +243,260 @@ Download: https://www.swaply.cc
     }
 
     // ✅ [MODIFIED] 提取平台变量
-    final double statusBar = MediaQuery.of(context).padding.top;
     final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    // ✅ [MODIFIED] iOS 标准高度
-    final double? iosToolbarHeight = _isIOS ? (statusBar + 38.0) : null;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: const Color(0xFF4CAF50),
-        foregroundColor: Colors.white,
-        // ✅ [MODIFIED] 应用 iOS 标准高度
-        toolbarHeight: iosToolbarHeight,
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: Icon(Icons.arrow_back_ios_new, size: 20.r),
-        ),
-        title: Text(
-          'Invite Friends',
-          style: TextStyle(
-            fontSize: 20.sp,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        actions: [
-          IconButton(
-            onPressed: _isRefreshing ? null : _refreshData,
-            icon: _isRefreshing
-                ? SizedBox(
-              width: 20.r,
-              height: 20.r,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
-            )
-                : Icon(Icons.refresh, size: 20.r),
-          ),
-        ],
+    // ✅ [MODIFIED] 提取刷新按钮逻辑，以便在 iOS 和 Android 之间共享
+    final refreshBtnWidget = _isRefreshing
+        ? SizedBox(
+      width: 20.r,
+      height: 20.r,
+      child: CircularProgressIndicator(
+        strokeWidth: 2,
+        color: Colors.white,
       ),
-      body: _loading
-          ? _buildLoadingState()
-          : FadeTransition(
-        opacity: _fadeAnimation,
-        child: RefreshIndicator(
-          onRefresh: _refreshData,
-          color: const Color(0xFF4CAF50),
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(16.w),
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildModernStatsCard(),
-                SizedBox(height: 20.h),
-                _buildRewardsInfoCard(),
-                SizedBox(height: 20.h),
-                _buildInviteCodeCard(),
-                SizedBox(height: 20.h),
-                _buildBindInviteCard(),
-                SizedBox(height: 20.h),
-                _buildProgressCard(),
-                SizedBox(height: 20.h),
-                _buildHistoryCard(),
-              ],
+    )
+        : Icon(Icons.refresh, size: 20.r);
+
+    // ✅ [MODIFIED] 准备 iOS 刷新按钮（需要适配 Stack）
+    final iosRefreshBtn = GestureDetector(
+      onTap: _isRefreshing ? null : _refreshData,
+      child: Container(
+        width: 36.0, // kBtnSize
+        height: 36.0, // kBtnSize
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: _isRefreshing
+            ? const CircularProgressIndicator(
+          strokeWidth: 2,
+          color: Colors.white,
+        )
+            : const Icon(Icons.refresh, color: Colors.white, size: 18),
+      ),
+    );
+
+
+    if (_isIOS) {
+      // ===== ✅ iOS: 使用自定义 Stack 头部 =====
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
+        body: Column(
+          children: [
+            _buildHeaderIOS(context, trailing: iosRefreshBtn),
+            Expanded(child: _buildBodyContent()),
+          ],
+        ),
+      );
+    } else {
+      // ===== ✅ Android: 保持原有 AppBar =====
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: const Color(0xFF4CAF50),
+          foregroundColor: Colors.white,
+          toolbarHeight: null, // Android 默认
+          leading: IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: Icon(Icons.arrow_back_ios_new, size: 20.r),
+          ),
+          title: Text(
+            'Invite Friends',
+            style: TextStyle(
+              fontSize: 20.sp,
+              fontWeight: FontWeight.w600,
             ),
+          ),
+          actions: [
+            IconButton(
+              onPressed: _isRefreshing ? null : _refreshData,
+              icon: refreshBtnWidget,
+            ),
+          ],
+        ),
+        body: _buildBodyContent(),
+      );
+    }
+  }
+
+  /// ✅ [NEW] iOS 自定义头部 (基于 verification_page.dart 标准)
+  Widget _buildHeaderIOS(BuildContext context, {Widget? trailing}) {
+    final double statusBar = MediaQuery.of(context).padding.top;
+
+    // 标准数值
+    const double kHeaderVisual = 38.0;
+    const double kTitleTop = -6.0;
+    const double kSideTop = -1.0;
+    const double kSide = 16.0;
+    const double kBtnSize = 36.0;
+    const double kSpacing = 16.0;
+
+    final backBtn = GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Container(
+        width: kBtnSize,
+        height: kBtnSize,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
+      ),
+    );
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF4CAF50), // ✅ 保持邀请页的绿色
+      ),
+      child: SizedBox(
+        height: statusBar + kHeaderVisual,
+        child: Stack(
+          children: [
+            // 左按钮
+            Positioned(
+              top: statusBar + kSideTop,
+              left: kSide,
+              child: backBtn,
+            ),
+            // 居中标题
+            Positioned(
+              top: statusBar + kTitleTop,
+              left: kSide + kBtnSize + kSpacing,
+              right: kSide + kBtnSize + kSpacing,
+              child: Text(
+                'Invite Friends',
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 20.sp, // 匹配 Android AppBar 字体
+                ),
+              ),
+            ),
+            // 右按钮 (刷新)
+            if (trailing != null)
+              Positioned(
+                top: statusBar + kSideTop,
+                right: kSide,
+                child: trailing,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// ✅ [NEW] 提取的主体内容
+  Widget _buildBodyContent() {
+    return _loading
+        ? _buildLoadingState()
+        : FadeTransition(
+      opacity: _fadeAnimation,
+      child: RefreshIndicator(
+        onRefresh: _refreshData,
+        color: const Color(0xFF4CAF50),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(16.w),
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildModernStatsCard(),
+              SizedBox(height: 20.h),
+              _buildRewardsInfoCard(),
+              SizedBox(height: 20.h),
+              _buildInviteCodeCard(),
+              SizedBox(height: 20.h),
+              _buildBindInviteCard(),
+              SizedBox(height: 20.h),
+              _buildProgressCard(),
+              SizedBox(height: 20.h),
+              _buildHistoryCard(),
+            ],
           ),
         ),
       ),
     );
   }
 
+  /// ✅ [MODIFIED] 未登录视图也使用新标准
   Widget _buildNotLoggedInView() {
-    // ✅ [MODIFIED] 提取平台变量 (为未登录页)
-    final double statusBar = MediaQuery.of(context).padding.top;
     final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    // ✅ [MODIFIED] iOS 标准高度 (为未登录页)
-    final double? iosToolbarHeight = _isIOS ? (statusBar + 38.0) : null;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: const Color(0xFF4CAF50),
-        foregroundColor: Colors.white,
-        // ✅ [MODIFIED] 应用 iOS 标准高度
-        toolbarHeight: iosToolbarHeight,
-        title: Text(
-          'Invite Friends',
-          style: TextStyle(
-            fontSize: 20.sp,
-            fontWeight: FontWeight.w600,
-          ),
+    if (_isIOS) {
+      // ===== iOS Guest: 使用自定义 Stack 头部 (无刷新按钮) =====
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
+        body: Column(
+          children: [
+            _buildHeaderIOS(context, trailing: null), // ✅ 无刷新按钮
+            Expanded(child: _buildGuestBodyContent()),
+          ],
         ),
-        // ✅ 自动添加 leading (back button)
-        automaticallyImplyLeading: true,
-      ),
-      body: Center(
-        child: Padding(
-          padding: EdgeInsets.all(20.w),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 80.w,
-                height: 80.h,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(40.r),
-                ),
-                child: Icon(Icons.login, size: 40.r, color: Colors.white),
-              ),
-              SizedBox(height: 20.h),
-              Text(
-                'Please Sign In',
-                style: TextStyle(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              SizedBox(height: 6.h),
-              Text(
-                'Sign in to use the invite feature and earn rewards',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  color: Colors.grey[600],
-                ),
-              ),
-            ],
+      );
+    } else {
+      // ===== Android Guest: 保持原有 AppBar =====
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: const Color(0xFF4CAF50),
+          foregroundColor: Colors.white,
+          toolbarHeight: null, // Android 默认
+          title: Text(
+            'Invite Friends',
+            style: TextStyle(
+              fontSize: 20.sp,
+              fontWeight: FontWeight.w600,
+            ),
           ),
+          automaticallyImplyLeading: true,
+        ),
+        body: _buildGuestBodyContent(),
+      );
+    }
+  }
+
+  /// ✅ [NEW] 提取的未登录主体内容
+  Widget _buildGuestBodyContent() {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.all(20.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80.w,
+              height: 80.h,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(40.r),
+              ),
+              child: Icon(Icons.login, size: 40.r, color: Colors.white),
+            ),
+            SizedBox(height: 20.h),
+            Text(
+              'Please Sign In',
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            SizedBox(height: 6.h),
+            Text(
+              'Sign in to use the invite feature and earn rewards',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12.sp,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
         ),
       ),
     );

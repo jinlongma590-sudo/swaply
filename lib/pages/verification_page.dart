@@ -284,7 +284,7 @@ class _VerificationPageState extends State<VerificationPage>
 
     const double kHeaderVisual = 38.0; // 头部可见高度
     const double kTitleTop = -6.0; // 标题顶距（相对 statusBar）
-    const double kSideTop = -1.0; // 左/右角小组件顶距
+    const double kSideTop = 2.0; // 左/右角小组件顶距（原 -1.0，向下微调以与标题对齐）
     const double kSide = 16.0; // 左右内边距
     const double kBtnSize = 36.0; // 左右按钮大致占位宽度（用于居中标题）
     const double kSpacing = 16.0;
@@ -375,65 +375,65 @@ class _VerificationPageState extends State<VerificationPage>
     );
   }
 
-  // === 顶部状态卡片（含骨架屏） ===
+  // ✅ [MODIFIED] 修复了绿色卡片的布局，使其与蓝色卡片一致
   Widget _buildVerificationStatusCard(vt.VerificationBadgeType badge) {
     final verified = _verified;
+
+    // 1. 判定颜色
+    Color kStatusColor;
+    Color kTextColor;
+    if (verified) {
+      kStatusColor = Colors.green; // 绿色
+      kTextColor = Colors.green.shade800;
+    } else {
+      kStatusColor = Colors.orange; // 未验证是橙色
+      kTextColor = Colors.orange.shade800;
+    }
 
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: verified
-              ? [Colors.green.shade50, Colors.green.shade100]
-              : [Colors.orange.shade50, Colors.orange.shade100],
+          colors: [
+            kStatusColor.withOpacity(0.05),
+            kStatusColor.withOpacity(0.1)
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(20.r),
+        borderRadius: BorderRadius.circular(18.r), // 匹配蓝色卡片
+        border: Border.all(color: kStatusColor.withOpacity(0.2)), // 匹配蓝色卡片
         boxShadow: [
           BoxShadow(
-            color: (verified ? Colors.green : Colors.orange).withOpacity(0.2),
+            color: kStatusColor.withOpacity(0.05), // 匹配蓝色卡片
             blurRadius: 16.r,
             offset: Offset(0, 6.h),
           ),
         ],
       ),
-      padding: EdgeInsets.all(20.w),
+      padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 16.h), // 匹配蓝色卡片
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 头部：图标 + 标题 + 简述 (与 Official Card 结构一致)
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: EdgeInsets.all(10.w),
+                width: 42.w,
+                height: 42.w,
+                alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  gradient: verified
-                      ? LinearGradient(colors: [
-                    Colors.green.shade400,
-                    Colors.green.shade600
-                  ])
-                      : LinearGradient(colors: [
-                    Colors.orange.shade400,
-                    Colors.orange.shade600
-                  ]),
-                  borderRadius: BorderRadius.circular(14.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (verified ? Colors.green : Colors.orange)
-                          .withOpacity(0.3),
-                      blurRadius: 6.r,
-                      offset: Offset(0, 3.h),
-                    ),
-                  ],
+                  color: kStatusColor,
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Icon(
-                  verified
-                      ? Icons.verified_user_rounded
-                      : Icons.warning_amber_rounded,
-                  color: Colors.white,
-                  size: 24.w,
-                ),
+                    verified
+                        ? Icons.verified_user_rounded
+                        : Icons.warning_amber_rounded,
+                    color: Colors.white,
+                    size: 22.w),
               ),
-              SizedBox(width: 14.w),
+              SizedBox(width: 12.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -441,35 +441,43 @@ class _VerificationPageState extends State<VerificationPage>
                     Text(
                       verified ? 'Verified Account' : 'Account Not Verified',
                       style: TextStyle(
-                        fontSize: 17.sp,
-                        fontWeight: FontWeight.bold,
-                        color: verified
-                            ? Colors.green.shade800
-                            : Colors.orange.shade800,
-                      ),
+                          fontSize: 16.5.sp, // 匹配
+                          fontWeight: FontWeight.w700,
+                          color: kTextColor),
                     ),
-                    SizedBox(height: 3.h),
+                    SizedBox(height: 4.h),
                     Text(
                       verified
                           ? 'Your email address has been successfully verified.'
                           : 'Please verify your email to access all features.',
                       style: TextStyle(
-                          fontSize: 13.sp, color: Colors.grey.shade700),
+                          fontSize: 12.5.sp, // 匹配
+                          color: Colors.grey.shade700,
+                          height: 1.35 // 匹配
+                      ),
                     ),
                   ],
                 ),
               ),
+            ],
+          ),
+
+          SizedBox(height: 14.h), // 匹配
+
+          // 底部：徽章（如果有） + 刷新按钮
+          Row(
+            children: [
               if (badge != vt.VerificationBadgeType.none)
                 Container(
-                  margin: EdgeInsets.only(left: 8.w),
                   padding:
                   EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16.r),
+                    border: Border.all(color: Colors.grey.shade200),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
+                        color: Colors.black.withOpacity(0.06),
                         blurRadius: 3.r,
                         offset: Offset(0, 1.h),
                       ),
@@ -479,25 +487,27 @@ class _VerificationPageState extends State<VerificationPage>
                     type: badge,
                     showIcon: true,
                   ),
-                ),
-            ],
-          ),
-          SizedBox(height: 12.h),
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: _refreshStatus,
-              icon: Icon(Icons.refresh_rounded, size: 16.w),
-              label: Text('Refresh Status', style: TextStyle(fontSize: 12.sp)),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF667EEA),
-                backgroundColor: Colors.white.withOpacity(0.8),
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.r),
+                )
+              else
+                const Spacer(), // 如果没有徽章，添加 Spacer 占位
+
+              const Spacer(), // 确保刷新按钮在最右侧
+
+              TextButton.icon(
+                onPressed: _refreshStatus,
+                icon: Icon(Icons.refresh_rounded, size: 16.w),
+                label: Text('Refresh Status', style: TextStyle(fontSize: 12.sp)),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF667EEA),
+                  backgroundColor: Colors.white,
+                  padding:
+                  EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -695,7 +705,7 @@ class _VerificationPageState extends State<VerificationPage>
     );
   }
 
-  // ✅ [MODIFIED] _buildOfficialVerificationCard 已被替换为你的新版本
+  // ✅ [MODIFIED] 这是你提供的最新版蓝色卡片
   Widget _buildOfficialVerificationCard() {
     // 统一使用官方蓝
     const Color kOfficialBlue = Color(0xFF1877F2);
@@ -729,8 +739,8 @@ class _VerificationPageState extends State<VerificationPage>
                   color: kOfficialBlue,
                   borderRadius: BorderRadius.circular(12.r),
                 ),
-                child:
-                Icon(Icons.verified_rounded, color: Colors.white, size: 22.w),
+                child: Icon(Icons.verified_rounded,
+                    color: Colors.white, size: 22.w),
               ),
               SizedBox(width: 12.w),
               Expanded(
@@ -809,8 +819,8 @@ class _VerificationPageState extends State<VerificationPage>
                   ),
                 );
               },
-              icon:
-              Icon(Icons.arrow_forward_rounded, size: 18.w, color: Colors.white),
+              icon: Icon(Icons.arrow_forward_rounded,
+                  size: 18.w, color: Colors.white),
               label: Text(
                 'Apply for Official Status',
                 style: TextStyle(
@@ -837,7 +847,7 @@ class _VerificationPageState extends State<VerificationPage>
       child: Row(
         children: [
           Icon(Icons.check_circle_rounded,
-              color: const Color(0xFF1877F2), size: 16.w), // ✅ 使用固定蓝色
+              color: const Color(0xFF1877F2), size: 16.w),
           SizedBox(width: 10.w),
           Expanded(
             child: Text(text, style: TextStyle(fontSize: 12.sp, height: 1.3)),

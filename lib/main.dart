@@ -3241,55 +3241,46 @@ class _WishlistPageState extends State<WishlistPage> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ 顶部蓝统一为 Facebook 蓝（0xFF1877F2），并按 iOS 紧凑高度
-    final statusBar = MediaQuery.of(context).padding.top;
-    final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
-    final double toolbarH = isIOS ? (statusBar + 38.0) : 44.0;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(toolbarH),
-        child: AppBar(
-          backgroundColor: const Color(0xFF1877F2),
-          title: Text(
-            'My Wishlist (${_wishlistItems.length})',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w600,
-            ),
+      appBar: AppBar(
+        backgroundColor: Colors.pink,
+        title: Text(
+          'My Wishlist (${_wishlistItems.length})',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w600,
           ),
-          elevation: 0,
-          toolbarHeight: toolbarH,
-          actions: [
-            if (_wishlistItems.isNotEmpty && !_isLoading)
-              PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert_rounded,
-                    color: Colors.white, size: 20.w),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.w)),
-                onSelected: (value) {
-                  if (value == 'clear_all') {
-                    _showClearAllDialog();
-                  }
-                },
-                itemBuilder: (BuildContext context) => [
-                  PopupMenuItem(
-                    value: 'clear_all',
-                    child: Row(
-                      children: [
-                        Icon(Icons.clear_all_rounded,
-                            color: Colors.red, size: 16.w),
-                        SizedBox(width: 10.w),
-                        Text('Clear All', style: TextStyle(fontSize: 13.sp)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-          ],
         ),
+        elevation: 0,
+        actions: [
+          if (_wishlistItems.isNotEmpty && !_isLoading)
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert_rounded,
+                  color: Colors.white, size: 20.w),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.w)),
+              onSelected: (value) {
+                if (value == 'clear_all') {
+                  _showClearAllDialog();
+                }
+              },
+              itemBuilder: (BuildContext context) => [
+                PopupMenuItem(
+                  value: 'clear_all',
+                  child: Row(
+                    children: [
+                      Icon(Icons.clear_all_rounded,
+                          color: Colors.red, size: 16.w),
+                      SizedBox(width: 10.w),
+                      Text('Clear All', style: TextStyle(fontSize: 13.sp)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ],
       ),
       body: _isLoading
           ? Center(
@@ -3461,7 +3452,6 @@ class _WishlistPageState extends State<WishlistPage> {
     }
   }
 }
-
 // 莽卢卢氓鈥衡€好┢捖ニ嗏€犆寂ellPage 氓鈥÷好モ€澛┞÷?(忙聛垄氓陇聧氓庐艗忙鈥⒙疵ヅ犈该ㄆ捖? 氓鈥櫯?NotificationPage 茅鈧∶嘎ッ┞÷?(盲陆驴莽鈥澛ぢ号捗ぢ嘎р€八喢ε撀♀€濻ervice茅鈥衡€犆λ喡?
 
 /* ---------------- Sell Page ---------------- */
@@ -3486,7 +3476,6 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     required bool centerTitle,
     Widget? trailing,
     double trailingTopAdjust = 0.0, // ↑ 右上角按钮相对标题的垂直微调
-    double trailingHeight = 28.0,   // ↑ 右上角按钮容器高度（用于与字号=28的标题居中对齐）
   }) {
     final double statusBar = MediaQuery.of(context).padding.top;
 
@@ -3543,10 +3532,10 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
               ),
             ),
           ),
-          // 右上角按钮（与标题行垂直居中；可用 trailingTopAdjust 再微调）
+          // 右上角按钮（与标题行对齐；可用 trailingTopAdjust 再微调）
           if (trailing != null)
             Positioned(
-              top: titleTop + ((28.0 - trailingHeight) / 2) + trailingTopAdjust,
+              top: titleTop + trailingTopAdjust,
               right: 12,
               child: trailing,
             ),
@@ -3634,8 +3623,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
               title: l10n.sellItem,
               centerTitle: true,
               trailing: _buildPlusButton(context),
-              trailingTopAdjust: 0.0, // 与标题垂直居中，如需微调可改为 -2.0 / +2.0
-              trailingHeight: 28.0,   // 与 _buildPlusButton 的外框一致
+              trailingTopAdjust: -6.0, // 若还偏低，调到 -8.0；偏高则 -4.0
             ),
           ),
           if (myListings.isEmpty)
@@ -6007,7 +5995,7 @@ class _ProfilePageState extends State<ProfilePage>
                               onTap: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (_) => TaskManagementPage()),
+                                  MaterialPageRoute(builder: (_) => CouponManagementPage()),
                                 );
                               },
                             ),
@@ -6472,25 +6460,15 @@ class HelpSupportPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
-    // ✅ 顶部蓝统一为 Facebook 蓝（0xFF1877F2），并按 iOS 紧凑高度
-    final statusBar = MediaQuery.of(context).padding.top;
-    final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
-    final double toolbarH = isIOS ? (statusBar + 38.0) : 44.0;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(toolbarH),
-        child: AppBar(
-          title: Text(l10n.helpSupport),
-          backgroundColor: const Color(0xFF1877F2),
-          elevation: 0,
-          toolbarHeight: toolbarH,
-        ),
+      appBar: AppBar(
+        title: Text(l10n.helpSupport),
+        backgroundColor: const Color(0xFF2563EB),
+        elevation: 0,
       ),
       body: SingleChildScrollView(
-        // ✅ iOS 首块内容与 AppBar 底之间 12dp；Android 保持 20
-        padding: EdgeInsets.fromLTRB(20, isIOS ? 12 : 20, 20, 20),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -6602,21 +6580,12 @@ class HelpSupportPage extends StatelessWidget {
 class AboutPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    // ✅ 顶部蓝统一为 Facebook 蓝（0xFF1877F2），并按 iOS 紧凑高度
-    final statusBar = MediaQuery.of(context).padding.top;
-    final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
-    final double toolbarH = isIOS ? (statusBar + 38.0) : 44.0;
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(toolbarH),
-        child: AppBar(
-          title: const Text('About'),
-          backgroundColor: const Color(0xFF1877F2),
-          elevation: 0,
-          toolbarHeight: toolbarH,
-        ),
+      appBar: AppBar(
+        title: const Text('About'),
+        backgroundColor: const Color(0xFF2563EB),
+        elevation: 0,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -6668,239 +6637,6 @@ class AboutPage extends StatelessWidget {
                       style: TextStyle(fontSize: 14, color: Colors.grey[600])),
                 ],
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/* ---------------- Account Settings Page ---------------- */
-class AccountSettingsPage extends StatelessWidget {
-  const AccountSettingsPage({super.key});
-
-  Future<void> _changePassword(BuildContext context) async {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Change Password'),
-        content: const Text(
-          'Implement your password change flow here (email link / in-app form).',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _manageDevices(BuildContext context) async {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Devices & Sessions'),
-        content: const Text(
-          'Show active sessions/devices and allow users to revoke sessions.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _signOut(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child:
-              const Icon(Icons.logout_rounded, color: Colors.red, size: 20),
-            ),
-            const SizedBox(width: 12),
-            const Text('Logout',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-          ],
-        ),
-        content: const Text(
-          'Are you sure you want to logout?',
-          style: TextStyle(fontSize: 15, height: 1.4),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text('Cancel',
-                style: TextStyle(fontSize: 15, color: Colors.grey[600])),
-          ),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.red,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text(
-                'Logout',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      try {
-        await Supabase.instance.client.auth.signOut();
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Signed out')),
-          );
-          Navigator.of(context).maybePop();
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.error_outline_rounded,
-                      color: Colors.white, size: 18),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text('Logout failed: $e',
-                        style: const TextStyle(fontSize: 14)),
-                  ),
-                ],
-              ),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-              margin: const EdgeInsets.all(16),
-            ),
-          );
-        }
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // ✅ 顶部蓝统一为 Facebook 蓝（0xFF1877F2），并按 iOS 紧凑高度
-    final statusBar = MediaQuery.of(context).padding.top;
-    final isIOS = Theme.of(context).platform == TargetPlatform.iOS;
-    final double toolbarH = isIOS ? (statusBar + 38.0) : 44.0;
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(toolbarH),
-        child: AppBar(
-          title: const Text('Account'),
-          backgroundColor: const Color(0xFF1877F2),
-          elevation: 0,
-          toolbarHeight: toolbarH,
-        ),
-      ),
-      body: SingleChildScrollView(
-        // ✅ iOS 首块内容与 AppBar 底之间 12dp；Android 保持 20
-        padding: EdgeInsets.fromLTRB(20, isIOS ? 12 : 20, 20, 20),
-        child: Column(
-          children: [
-            // Section: Password & Security
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Password & Security',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.grey[800],
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            _ProfileOptionEnhanced(
-              icon: Icons.lock_outline_rounded,
-              title: 'Change Password',
-              subtitle: 'Update your account password',
-              color: const Color(0xFF1877F2),
-              onTap: () => _changePassword(context),
-            ),
-            const SizedBox(height: 12),
-            _ProfileOptionEnhanced(
-              icon: Icons.devices_other_rounded,
-              title: 'Devices & Sessions',
-              subtitle: 'Manage your logged-in devices',
-              color: Colors.indigo,
-              onTap: () => _manageDevices(context),
-            ),
-
-            const SizedBox(height: 18),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Privacy & Data',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.grey[800],
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            _ProfileOptionEnhanced(
-              icon: Icons.privacy_tip_outlined,
-              title: 'Privacy Policy',
-              color: Colors.blueGrey,
-              onTap: () => launchUrl(Uri.parse(_kPrivacyUrl)),
-            ),
-            const SizedBox(height: 12),
-            _ProfileOptionEnhanced(
-              icon: Icons.delete_outline,
-              title: 'Data Deletion / How to delete my account',
-              color: Colors.deepOrange,
-              onTap: () => launchUrl(Uri.parse(_kDeleteUrl)),
-            ),
-
-            const SizedBox(height: 18),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Danger Zone',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.red[600],
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            _ProfileOptionEnhanced(
-              icon: Icons.logout_rounded,
-              title: 'Logout',
-              color: Colors.red,
-              onTap: () => _signOut(context),
             ),
           ],
         ),
