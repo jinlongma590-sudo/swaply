@@ -237,6 +237,16 @@ Download: https://www.swaply.cc
 
   @override
   Widget build(BuildContext context) {
+    // 状态栏设置 (确保浅色图标)
+    // 理论上这应该在路由切换或 main.dart 中全局设置
+    // 为确保此页面正确显示，在此处调用
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light, // iOS 浅色内容 (for dark bg)
+      statusBarBrightness: Brightness.dark, // Android 浅色内容 (for dark bg)
+    ));
+
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
       return _buildNotLoggedInView();
@@ -328,7 +338,9 @@ Download: https://www.swaply.cc
     // 标准数值
     const double kHeaderVisual = 38.0;
     const double kTitleTop = -6.0;
-    const double kSideTop = -1.0;
+    // ===== ⬇️ 必须修改点 1 ⬇️ =====
+    const double kSideTop = 2.0; // 原为 -1.0
+    // ===== ⬆️ 必须修改点 1 ⬆️ =====
     const double kSide = 16.0;
     const double kBtnSize = 36.0;
     const double kSpacing = 16.0;
@@ -373,7 +385,9 @@ Download: https://www.swaply.cc
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
-                  fontSize: 20.sp, // 匹配 Android AppBar 字体
+                  // ===== ⬇️ 必须修改点 2 ⬇️ =====
+                  fontSize: 16.sp, // 原为 20.sp
+                  // ===== ⬆️ 必须修改点 2 ⬆️ =====
                 ),
               ),
             ),

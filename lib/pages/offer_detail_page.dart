@@ -1,4 +1,5 @@
 // lib/pages/offer_detail_page.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -26,7 +27,6 @@ class OfferDetailPage extends StatefulWidget {
 class _OfferDetailPageState extends State<OfferDetailPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-
   Map<String, dynamic>? _offerDetails;
   List<Map<String, dynamic>> _messages = [];
   bool _isLoadingMessages = true;
@@ -64,7 +64,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
         setState(() => _offerDetails = widget.offerData);
         _refreshBlockStatus(); // 预置数据足够判断对方ID时，先查一次屏蔽状态
       }
-
       final details = await OfferService.getOfferDetails(widget.offerId);
       if (details != null && mounted) {
         setState(() => _offerDetails = details);
@@ -81,7 +80,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
   Future<void> _loadMessages() async {
     try {
       setState(() => _isLoadingMessages = true);
-
       final messages = await MessageService.getOfferMessages(
         offerId: widget.offerId,
       );
@@ -118,7 +116,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
   /// 订阅实时消息
   void _subscribeToMessages() {
     if (_messageChannel != null) return;
-
     _messageChannel = MessageService.subscribeToOfferMessages(
       offerId: widget.offerId,
       onMessageReceived: (message) {
@@ -171,7 +168,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
       final me = _currentUserId;
       final peer = _getPeerId();
       if (me == null || peer == null) return;
-
       final status = await OfferService.getBlockStatusBetween(a: me, b: peer);
       if (!mounted) return;
       setState(() {
@@ -207,7 +203,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
 
     final message = _messageController.text.trim();
     if (message.isEmpty || _isSendingMessage) return;
-
     if (_currentUserId == null || _offerDetails == null) return;
 
     setState(() => _isSendingMessage = true);
@@ -337,7 +332,8 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                 ),
                 // 状态标签
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  padding:
+                  EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                   decoration: BoxDecoration(
                     color: Color(offerStatus.color).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12.r),
@@ -496,10 +492,8 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
       _showSnackBar('Unable to report: user not found', isError: true);
       return;
     }
-
     String type = 'Spam';
     final TextEditingController descCtrl = TextEditingController();
-
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -596,7 +590,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
   Future<void> _toggleBlock() async {
     final peerId = _getPeerId();
     if (peerId == null) return;
-
     bool ok = false;
     if (_iBlockedOther) {
       ok = await OfferService.unblockUser(blockedId: peerId);
@@ -605,7 +598,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
       ok = await OfferService.blockUser(blockedId: peerId);
       if (ok) _showSnackBar('User has been blocked');
     }
-
     if (ok) {
       await _refreshBlockStatus();
       setState(() {}); // 刷新菜单文字/输入区域
@@ -617,7 +609,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
   /// 构建系统消息
   Widget _buildSystemMessage(Map<String, dynamic> message) {
     final messageText = message['message']?.toString() ?? '';
-
     return Center(
       child: Container(
         margin: EdgeInsets.symmetric(vertical: 8.h),
@@ -666,7 +657,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
         timeText = 'Now';
       }
     }
-
     return Align(
       alignment: isMyMessage ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -768,7 +758,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
         ),
       );
     }
-
     // 屏蔽提示条（出现在消息列表顶部）
     final List<Widget> children = [];
     if (_blockedEitherWay) {
@@ -795,7 +784,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
         ),
       ),
     );
-
     return Expanded(
       child: Column(
         children: children,
@@ -835,7 +823,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
   /// 构建输入区域
   Widget _buildInputArea() {
     final disabled = _blockedEitherWay;
-
     return Container(
       padding: EdgeInsets.fromLTRB(
           12.w, 8.h, 12.w, 8.h + MediaQuery.of(context).viewInsets.bottom),
@@ -856,7 +843,8 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: disabled ? Colors.grey.shade200 : Colors.grey.shade100,
+                  color:
+                  disabled ? Colors.grey.shade200 : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(25.r),
                 ),
                 child: TextField(
@@ -935,13 +923,26 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
     // ✅ 仅 iOS 调整 AppBar 高度，与 sell/通知/saved 对齐
     final double statusBar = MediaQuery.of(context).padding.top;
     final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    final double? iosToolbarHeight = _isIOS ? (statusBar + 38.0) : null;
-
+    final double _toolbarHeight =
+    _isIOS ? (statusBar + 38.0) : kToolbarHeight;
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        // ✅ 与基准页一致的顶部距离（仅 iOS 生效）
-        toolbarHeight: iosToolbarHeight,
+        centerTitle: true,
+        // ✅ 与基准页一致（iOS：statusBar+38；Android：系统默认）
+        toolbarHeight: _toolbarHeight,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        flexibleSpace: const DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        iconTheme: IconThemeData(color: Colors.white, size: 20.w),
         title: Text(
           'Offer Details',
           style: TextStyle(
@@ -950,18 +951,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
             fontSize: 18.sp,
           ),
         ),
-        backgroundColor: Colors.transparent,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        elevation: 0,
-        iconTheme: IconThemeData(color: Colors.white, size: 20.w),
       ),
       body: Column(
         children: [

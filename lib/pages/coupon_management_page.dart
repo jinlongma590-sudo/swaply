@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart'; // ✅ 导入 kIsWeb 和 defaultTargetPlatform
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart'; // ✅ 导入 ScreenUtil
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:swaply/services/coupon_service.dart';
@@ -397,31 +398,32 @@ class _CouponManagementPageState extends State<CouponManagementPage>
       ),
     );
 
-    // ✅ [MODIFIED] 移除 Expanded
-    final Widget titleColumn = const Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min, // ✅ 确保 Column 包裹内容
-      children: [
-        Text(
-          'My Coupons',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-          maxLines: 1, // 确保不换行
-          overflow: TextOverflow.ellipsis, // 超出时省略
+    // ✅ [MODIFIED] 移除 Expanded, 移除副标题, 更新字体
+    // Per Instruction A: Define separate titles for iOS (centered) and Android (left-aligned)
+    final Widget titleWidgetIOS = Text(
+      'My Coupons',
+      textAlign: TextAlign.center,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: 16.sp,
+        fontWeight: FontWeight.w600,
+      ),
+    );
+
+    // Per Instruction C: Keep Android left-aligned
+    final Widget titleWidgetAndroid = Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        'My Coupons',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 16.sp, // Match iOS
+          fontWeight: FontWeight.w600, // Match iOS
         ),
-        Text(
-          'Manage and use your coupons',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.white70,
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ],
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
     );
 
     final Widget refreshButton = GestureDetector(
@@ -454,7 +456,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
     if (_isIOS) {
       // ✅ ================== iOS: 精确值布局 ==================
       const double kHeaderVisual = 38.0; // 1. 头部可见高度
-      const double kSideWidgetTop = -1.0; // 3. 左右小组件顶部
+      const double kSideWidgetTop = 2.0; // 3. ✅ [MODIFIED] 左右小组件顶部 (was -1.0)
       const double kTitleTop = -6.0; // 2. 标题顶部
       const double kSide = 16.0; // 左右内边距
       const double kButtonWidth = 36.0; // 按钮估算宽度
@@ -488,7 +490,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
                 left: kSide + kButtonWidth + kSpacing,
                 right: kSide + kButtonWidth + kSpacing,
                 child:
-                titleColumn, // titleColumn 已移除 Expanded，可以被 Positioned 约束
+                titleWidgetIOS, // ✅ [MODIFIED] titleColumn replaced with centered Text
               ),
               // 3. 应用右侧小组件顶部
               Positioned(
@@ -522,7 +524,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
               children: [
                 backButton,
                 const SizedBox(width: 16),
-                Expanded(child: titleColumn), // Android 保持 Expanded
+                Expanded(child: titleWidgetAndroid), // ✅ [MODIFIED] titleColumn replaced
                 refreshButton,
               ],
             ),
@@ -549,7 +551,22 @@ class _CouponManagementPageState extends State<CouponManagementPage>
       ),
       // 还原原有的 24.0 间距 和 24.0 底部内边距
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
-      child: _buildQuickStats(),
+      // ✅ [MODIFIED] Per Instruction B: Add Column and move subtitle here
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(left: 2, right: 2, bottom: 12),
+            child: Text(
+              'Manage and use your coupons',
+              style: TextStyle(color: Colors.white70, fontSize: 12),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          _buildQuickStats(),
+        ],
+      ),
     );
   }
 

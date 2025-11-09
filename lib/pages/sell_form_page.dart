@@ -938,95 +938,102 @@ class _SellFormPageState extends State<SellFormPage>
 
   /* ------------------ UI ------------------ */
 
-  // ✅ [NEW] 统一的 AppBar 构建器
+  // ✅ 统一而更紧凑的 AppBar（只改这里，其它不动）
   PreferredSizeWidget _buildStandardAppBar(BuildContext context) {
     const String title = 'New Advert';
     final double statusBar = MediaQuery.of(context).padding.top;
     final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    const Color kBgColor = Color(0xFF2196F3); // 此页面的背景色
+    const Color kBgColor = Color(0xFF2196F3); // 维持你这页的蓝色
 
-    // ============== Android & 其他：保持原 AppBar 不变 ==============
+    // ===== ANDROID / 其它平台：更紧凑的 48dp，居中标题，白色状态栏字色 =====
     if (!isIOS) {
       return AppBar(
-        toolbarHeight: null, // (使用安卓默认)
-        systemOverlayStyle: null,
         backgroundColor: kBgColor,
-        title: Text(
-          title,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w600,
+        systemOverlayStyle: SystemUiOverlayStyle.light,
+        centerTitle: true,
+        elevation: 0,
+        toolbarHeight: 48, // ⬅️ 缩短高度
+        leadingWidth: 56,
+        leading: Padding(
+          padding: const EdgeInsets.only(left: 8.0, top: 2.0), // ⬅️ 轻微下移
+          child: IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon:
+            const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
           ),
         ),
-        leading: IconButton(
-          onPressed: () => Navigator.pop(context),
-          icon: Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20.r),
+        title: const Text(
+          title,
+          style:
+          TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 18),
+          overflow: TextOverflow.ellipsis,
         ),
-        elevation: 0,
-        centerTitle: true,
       );
     }
 
-    // ============== iOS：使用自定义头部 (VerificationPage 标准) ==============
-
-    // 1. 标准布局数值
-    const double kHeaderVisual = 38.0; // (使用 38.0 标准)
-    const double kTitleTop = -6.0;
-    const double kSideTop = 2.0;
+    // ===== iOS：与“基准页”一致，但整体更紧凑，标题与两侧按钮严格对齐 =====
+    // 数值规范（在你原来的基础上小幅收紧）
+    const double kHeaderVisual = 34.0; // ⬅️ 从 38 降到 34，缩短蓝色区域
+    const double kTitleTop = 0.0; // ⬅️ 原来是 -6，标题整体下移 6pt 与按钮对齐
+    const double kSideTop = 4.0; // ⬅️ 原来是 2，再下移一点点
     const double kSide = 16.0;
     const double kBtnSize = 36.0;
     const double kSpacing = 16.0;
 
-    // 2. 定义小组件
     final backBtn = GestureDetector(
       onTap: () => Navigator.pop(context),
       child: Container(
-        padding: const EdgeInsets.all(8),
+        width: kBtnSize,
+        height: kBtnSize,
+        alignment: Alignment.center,
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.15),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
+        child:
+        const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
       ),
     );
 
-    // 3. 构建布局
+    // 如需右上角按钮，把下面的 SizedBox 换成你的按钮即可（尺寸 36，与标题对齐）
+    final rightSlot = const SizedBox(width: kBtnSize, height: kBtnSize);
+
     return PreferredSize(
       preferredSize: Size.fromHeight(statusBar + kHeaderVisual),
       child: Container(
         color: kBgColor,
-        // (设置顶部状态栏文字为白色)
         child: AnnotatedRegion<SystemUiOverlayStyle>(
-          value: SystemUiOverlayStyle.light,
+          value: SystemUiOverlayStyle.light, // 白色状态栏文字/图标
           child: SizedBox(
             height: statusBar + kHeaderVisual,
             child: Stack(
               children: [
+                // 左返回
                 Positioned(
                   top: statusBar + kSideTop,
                   left: kSide,
                   child: backBtn,
                 ),
+                // 标题（与按钮同一视觉基线）
                 Positioned(
                   top: statusBar + kTitleTop,
                   left: kSide + kBtnSize + kSpacing,
                   right: kSide + kBtnSize + kSpacing,
-                  child: Text(
+                  child: const Text(
                     title,
                     textAlign: TextAlign.center,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle( // (应用标准 Style)
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 18,
-                    ),
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18),
                   ),
                 ),
+                // 右占位（或者换成你的加号/更多按钮组件）
                 Positioned(
                   top: statusBar + kSideTop,
                   right: kSide,
-                  child: const SizedBox(width: kBtnSize, height: kBtnSize),
+                  child: rightSlot,
                 ),
               ],
             ),

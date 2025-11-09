@@ -1,5 +1,6 @@
 // lib/pages/my_listings_page.dart - 完全重设计版本，解决所有问题
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // ✅ 1. 已添加 Import
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/listing_service.dart';
@@ -480,41 +481,55 @@ class _MyListingsPageState extends State<MyListingsPage>
     final double statusBar = MediaQuery.of(context).padding.top;
     final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
+    // ✅ (可选) 确保 iOS 状态栏是浅色图标
+    if (_isIOS) {
+      SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
+      ));
+    }
+
     // --- Extracted Widgets ---
 
+    // ✅ 2. 替换 backButton 定义
     final Widget backButton = GestureDetector(
       onTap: () => Navigator.pop(context),
       child: Container(
-        width: 32.w,
-        height: 32.h,
+        width: 36,
+        height: 36,
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(8.r),
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(10),
         ),
-        child: Icon(
+        child: const Icon(
           Icons.arrow_back_ios_new,
           color: Colors.white,
-          size: 16.r,
+          size: 18,
         ),
       ),
     );
 
+    // ✅ 2. 替换 titleText 定义
     final Widget titleText = Text(
       'My Listings',
       style: TextStyle(
         color: Colors.white,
-        fontSize: 18.sp,
+        fontSize: 16.sp,           // ✅ 统一：标题 16.sp
         fontWeight: FontWeight.w600,
       ),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
     );
 
+
     final Widget tabBarWidget = Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(8.r),
-      ),
+      // Container 样式保持不变 (使用您新 _buildHeader 里的 0.20/0.2)
+      // decoration: BoxDecoration(
+      //   color: Colors.white.withOpacity(0.2), // Android/Web
+      //   borderRadius: BorderRadius.circular(8.r),
+      // ),
       child: TabBar(
         controller: _tabController,
         labelColor: Colors.white,
@@ -565,7 +580,7 @@ class _MyListingsPageState extends State<MyListingsPage>
     );
   }
 
-  // ✅ [NEW] 平台感知的 Header Builder
+  // ✅ 3. 替换 _buildHeader 整段方法
   Widget _buildHeader(
       double statusBar,
       bool isIOS,
@@ -574,80 +589,21 @@ class _MyListingsPageState extends State<MyListingsPage>
       Widget tabBarWidget,
       ) {
     if (isIOS) {
-      // ✅ [MODIFIED] 严格按照 C1 要求进行布局
-      // C1. iOS 用 Stack+Positioned 精确定位（关键改动）
+      // ===== iOS：与认证页一致的几何规范 =====
+      const double kNavBar = 38.0;      // 可视导航条高度
+      const double kSide = 16.0;        // 左右内边距
+      const double kBtn = 36.0;         // 左/右按钮尺寸
+      const double kSpacing = 16.0;     // 标题与按钮的最小水平间距
+      const double kBtnTopDelta = 2.0;  // 按钮距 statusBar 顶部的偏移：statusBar + 2
+      const double kTitleTop = -6.0;    // 标题相对于 statusBar 的偏移：statusBar - 6
 
-      // 系统导航条高度
-      const double kNavBarHeight = 44.0;
-      // 左右按钮可视高度 (从 build 方法中得知 backButton 尺寸为 32.h)
-      final double kBtnSizeH = 32.h;
-      // 左右外边距
-      final double kSide = 16.w;
+      const double kTabsH = 32.0;       // 分段 TabBar 高度
+      const double kTabsTop = 8.0;      // TabBar 顶部外边距
+      const double kTabsBottom = 12.0;  // TabBar 底部外边距
 
-      // 左右按钮纵向定位 (导航条垂直居中)
-      // (44 - 32) / 2 = 6.0
-      final double kBtnTop = statusBar + (kNavBarHeight - kBtnSizeH) / 2;
-      // 标题纵向定位：与按钮同一行
-      final double kTitleTop = kBtnTop;
+      final double totalH =
+          statusBar + kNavBar + kTabsTop + kTabsH + kTabsBottom;
 
-      // TabBar 高度/上下边距
-      final double kTabBarHeight = 32.h;
-      final double kTabBarTopMargin = 8.h;
-      final double kTabBarBottomMargin = 12.h;
-
-      // 头部容器高度（决定蓝色背景铺到哪）
-      // 44 + 8 + 32 + 12 = 96.h
-      final double kTotalVisualHeight = kNavBarHeight +
-          kTabBarTopMargin +
-          kTabBarHeight +
-          kTabBarBottomMargin;
-
-      return Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF2563EB), // 颜色保持不变
-              Color(0xFF3B82F6), // 颜色保持不变
-              Color(0xFF60A5FA)  // 颜色保持不变
-            ],
-          ),
-        ),
-        // 外层 SizedBox.height = statusBar + kTotalVisualHeight
-        child: SizedBox(
-          height: statusBar + kTotalVisualHeight,
-          child: Stack(
-            children: [
-              // --- 标题行 ---
-              Positioned(
-                top: kBtnTop,
-                left: kSide,
-                child: backButton,
-              ),
-              Positioned(
-                top: kTitleTop, // 与按钮同一基线
-                left: kSide + 32.w + 12.w, // padding + button + spacing
-                right: kSide,
-                child: titleText,
-              ),
-
-              // --- TabBar ---
-              Positioned(
-                top: statusBar +
-                    kNavBarHeight +
-                    kTabBarTopMargin, // 状态栏 + 导航条(44) + 间距(8)
-                left: kSide,
-                right: kSide,
-                height: kTabBarHeight,
-                child: tabBarWidget,
-              ),
-            ],
-          ),
-        ),
-      );
-    } else {
-      // ✅ Android: 保持你原有的布局 (SafeArea + Column) - 此处完全不变
       return Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -656,45 +612,89 @@ class _MyListingsPageState extends State<MyListingsPage>
             colors: [
               Color(0xFF2563EB),
               Color(0xFF3B82F6),
-              Color(0xFF60A5FA)
+              Color(0xFF60A5FA),
             ],
           ),
         ),
-        child: SafeArea(
-          bottom: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+        child: SizedBox(
+          height: totalH, // ✅ 蓝色只铺到这里
+          child: Stack(
             children: [
-              // 标题栏 (Original)
-              Container(
-                height: 44.h,
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                child: Row(
-                  children: [
-                    backButton,
-                    SizedBox(width: 12.w),
-                    Expanded(
-                      child: titleText,
-                    ),
-                  ],
-                ),
+              // 左返回
+              Positioned(
+                top: statusBar + kBtnTopDelta,
+                left: kSide,
+                child: backButton,
               ),
-              // Tab栏 (Original)
-              Container(
-                margin: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
-                height: 32.h,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(8.r),
+
+              // 居中标题（左右各预留一个 36 按钮 + 16 间距的占位，保证真正居中）
+              Positioned(
+                top: statusBar + kTitleTop,
+                left: kSide + kBtn + kSpacing,
+                right: kSide + kBtn + kSpacing,
+                child: titleText,
+              ),
+
+              // 底部分段 TabBar
+              Positioned(
+                top: statusBar + kNavBar + kTabsTop,
+                left: kSide,
+                right: kSide,
+                height: kTabsH,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.20),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: tabBarWidget,
                 ),
-                child: tabBarWidget,
               ),
             ],
           ),
         ),
       );
     }
+
+    // ===== Android/Web：保持你原来的实现（安全区域 + Column） =====
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF2563EB), Color(0xFF3B82F6), Color(0xFF60A5FA)],
+        ),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              height: 44,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  backButton,
+                  const SizedBox(width: 12),
+                  Expanded(child: titleText),
+                ],
+              ),
+            ),
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              height: 32,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: tabBarWidget,
+            ),
+          ],
+        ),
+      ),
+    );
   }
+
 
   Widget _buildListingsTab() {
     if (_isLoadingListings) {

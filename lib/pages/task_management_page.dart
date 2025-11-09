@@ -19,6 +19,7 @@ import 'package:swaply/services/reward_service.dart';
 import 'package:swaply/services/coupon_service.dart';
 import 'package:swaply/models/coupon.dart';
 import 'package:swaply/pages/sell_form_page.dart';
+import 'package:flutter/services.dart'; // 引入 SystemUiOverlayStyle
 
 class TaskManagementPage extends StatefulWidget {
   final int initialTab;
@@ -509,7 +510,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
             ),
           );
         } else {
-          // ===== Android 等平台：保持原 AppBar 行为 =====
+          // ===== Android 等平台：保持原 AppBar 行为 (恢复到原始版本) =====
           return Scaffold(
             backgroundColor: const Color(0xFFF8F9FA),
             appBar: AppBar(
@@ -562,13 +563,14 @@ class _TaskManagementPageState extends State<TaskManagementPage>
     );
   }
 
-  // ===== iOS 自定义头部（与基准页像素对齐） =====
+  // ===== ✅ [MODIFIED] iOS 自定义头部（与基准页像素对齐） =====
   Widget _buildHeaderIOSRewards(BuildContext context) {
     final double statusBar = MediaQuery.of(context).padding.top;
 
-    const double kHeaderVisual = 38.0; // 头部可视高度
-    const double kTitleTop = -6.0;     // 标题相对 statusBar 的顶距
-    const double kSideTop = -1.0;      // 左/右角按钮相对 statusBar 的顶距
+    // ⬇️ 新基准：更紧凑且对齐（跟 Sell/Saved/Notifications 一致）
+    const double kHeaderVisual = 34.0; // 原 38 → 34，蓝/绿条更短
+    const double kTitleTop = 0.0; // 原 -6 → 0，标题与按钮同高
+    const double kSideTop = 4.0; // 原 -1/2 → 4，按钮微下移
     const double kSide = 16.0;
     const double kBtnSize = 36.0;
     const double kSpacing = 16.0;
@@ -607,36 +609,38 @@ class _TaskManagementPageState extends State<TaskManagementPage>
       ),
     );
 
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF4CAF50), Color(0xFF45A049), Color(0xFF2E7D32)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light, // 白色状态栏字色
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF4CAF50), Color(0xFF45A049), Color(0xFF2E7D32)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
         ),
-      ),
-      child: SizedBox(
-        height: statusBar + kHeaderVisual,
-        child: Stack(
-          children: [
-            Positioned(top: statusBar + kSideTop, left: kSide, child: back),
-            Positioned(
-              top: statusBar + kTitleTop,
-              left: kSide + kBtnSize + kSpacing,
-              right: kSide + kBtnSize + kSpacing,
-              child: Text(
-                'My Rewards',
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 18.sp,
+        child: SizedBox(
+          height: statusBar + kHeaderVisual,
+          child: Stack(
+            children: [
+              Positioned(top: statusBar + kSideTop, left: kSide, child: back),
+              Positioned(
+                top: statusBar + kTitleTop,
+                left: kSide + kBtnSize + kSpacing,
+                right: kSide + kBtnSize + kSpacing,
+                child: Text(
+                  'My Rewards',
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18.sp),
                 ),
               ),
-            ),
-            Positioned(top: statusBar + kSideTop, right: kSide, child: refresh),
-          ],
+              Positioned(top: statusBar + kSideTop, right: kSide, child: refresh),
+            ],
+          ),
         ),
       ),
     );
