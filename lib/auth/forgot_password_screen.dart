@@ -16,6 +16,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   bool _isLoading = false;
   bool _isEmailSent = false;
 
+  // ✅ 统一整个 App 的 Auth 回调地址（与 Google/Facebook/Apple 登录相同）
+  //    注意：你需要在 Supabase「URL Configuration → Additional Redirect URLs」
+  //    中加入这个地址，并在 Supabase.initialize 里设置
+  //    authCallbackUrlHostname: 'login-callback'
+  static const String kAuthRedirectUrl = 'swaply://login-callback';
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -27,10 +33,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     setState(() => _isLoading = true);
     try {
-      // ✅ 关键修正：带上自定义回调，强制回到 App，而不是跳官网
+      // ✅ 关键修正：与 OAuth 统一的回调，避免会话丢失
       await Supabase.instance.client.auth.resetPasswordForEmail(
         _emailController.text.trim(),
-        redirectTo: 'swaply://reset-password',
+        redirectTo: kAuthRedirectUrl,
       );
 
       if (!mounted) return;

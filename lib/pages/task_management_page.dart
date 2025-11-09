@@ -567,48 +567,73 @@ class _TaskManagementPageState extends State<TaskManagementPage>
   Widget _buildHeaderIOSRewards(BuildContext context) {
     final double statusBar = MediaQuery.of(context).padding.top;
 
-    // ⬇️ 新基准：更紧凑且对齐（跟 Sell/Saved/Notifications 一致）
-    const double kHeaderVisual = 34.0; // 原 38 → 34，蓝/绿条更短
-    const double kTitleTop = 0.0; // 原 -6 → 0，标题与按钮同高
-    const double kSideTop = 4.0; // 原 -1/2 → 4，按钮微下移
-    const double kSide = 16.0;
-    const double kBtnSize = 36.0;
-    const double kSpacing = 16.0;
+    // 1. 定义标准 (来自 verification_page.dart)
+    const double kNavBarHeight = 44.0; // 标准导航条高度
+    const double kButtonSize = 32.0; // 标准按钮尺寸
+    const double kSidePadding = 16.0; // 标准左右内边距
+    const double kButtonSpacing = 12.0; // 标准间距
 
-    final refresh = GestureDetector(
-      onTap: _isRefreshing ? null : _refreshData,
-      child: Container(
-        width: kBtnSize,
-        height: kBtnSize,
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(10),
+    // 2. 构建 32x32 返回按钮
+    final Widget iosBackButton = SizedBox(
+      width: kButtonSize,
+      height: kButtonSize,
+      child: GestureDetector(
+        onTap: () => Navigator.pop(context),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(10), // 保持圆角
+          ),
+          alignment: Alignment.center,
+          child: const Icon(Icons.arrow_back_ios_new,
+              size: 18, color: Colors.white), // 保持图标
         ),
-        child: _isRefreshing
-            ? const CircularProgressIndicator(
-          strokeWidth: 2,
-          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-        )
-            : const Icon(Icons.refresh, color: Colors.white, size: 18),
       ),
     );
 
-    final back = GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Container(
-        width: kBtnSize,
-        height: kBtnSize,
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(10),
+    // 3. 构建 32x32 刷新按钮
+    final Widget iosRefreshButton = SizedBox(
+      width: kButtonSize,
+      height: kButtonSize,
+      child: GestureDetector(
+        onTap: _isRefreshing ? null : _refreshData,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(10), // 保持圆角
+          ),
+          alignment: Alignment.center,
+          child: _isRefreshing
+              ? const SizedBox(
+            width: 18, // 匹配图标大小
+            height: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white,
+            ),
+          )
+              : const Icon(Icons.refresh,
+              color: Colors.white, size: 18), // 匹配图标
         ),
-        child:
-        const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18),
       ),
     );
 
+    // 4. 构建居中标题
+    final Widget iosTitle = Expanded(
+      child: Text(
+        'My Rewards',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center, // 保证居中
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 18.sp, // 保持 18.sp
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+
+    // 5. 组装 (使用 Row 布局，确保对齐)
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light, // 白色状态栏字色
       child: Container(
@@ -619,27 +644,21 @@ class _TaskManagementPageState extends State<TaskManagementPage>
             end: Alignment.bottomRight,
           ),
         ),
+        padding: EdgeInsets.only(top: statusBar), // 让出状态栏
         child: SizedBox(
-          height: statusBar + kHeaderVisual,
-          child: Stack(
-            children: [
-              Positioned(top: statusBar + kSideTop, left: kSide, child: back),
-              Positioned(
-                top: statusBar + kTitleTop,
-                left: kSide + kBtnSize + kSpacing,
-                right: kSide + kBtnSize + kSpacing,
-                child: Text(
-                  'My Rewards',
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 18.sp),
-                ),
-              ),
-              Positioned(top: statusBar + kSideTop, right: kSide, child: refresh),
-            ],
+          height: kNavBarHeight, // 44pt
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: kSidePadding), // 16
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center, // 垂直居中
+              children: [
+                iosBackButton, // 32x32
+                const SizedBox(width: kButtonSpacing), // 12
+                iosTitle, // Expanded
+                const SizedBox(width: kButtonSpacing), // 12
+                iosRefreshButton, // 32x32
+              ],
+            ),
           ),
         ),
       ),
@@ -1331,14 +1350,14 @@ class _TaskManagementPageState extends State<TaskManagementPage>
 
   String _getTaskDisplayName(String? taskType) {
     switch (taskType) {
-      case 'publish_items':
-        return 'Publish Items';
-      case 'invite_friends':
-        return 'Invite Friends';
-      case 'daily_check':
-        return 'Daily Check-in';
-      default:
-        return 'Task';
+    case 'publish_items':
+    return 'Publish Items';
+    case 'invite_friends':
+    return 'Invite Friends';
+    case 'daily_check':
+    return 'Daily Check-in';
+    default:
+    return 'Task';
     }
   }
 

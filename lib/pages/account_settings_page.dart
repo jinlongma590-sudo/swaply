@@ -181,7 +181,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     }
   }
 
-  // ✅ [NEW] 统一的 AppBar 构建器
+  // ✅ [NEW] 统一的 AppBar 构建器 (已按 verification_page.dart 标准重写)
   PreferredSizeWidget _buildStandardAppBar(BuildContext context) {
     const String title = 'Account';
     final double statusBar = MediaQuery.of(context).padding.top;
@@ -211,64 +211,72 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
       );
     }
 
-    // ============== iOS：使用自定义头部 (VerificationPage 标准) ==============
+    // ===== ✅ [MODIFIED] iOS：使用“基准页” (verification_page.dart) 的 44pt Row 布局 =====
 
     // 1. 标准布局数值
-    const double kHeaderVisual = 38.0;
-    const double kTitleTop = -6.0;
-    const double kSideTop = 2.0;
-    const double kSide = 16.0;
-    const double kBtnSize = 36.0;
-    const double kSpacing = 16.0;
+    const double kNavBarHeight = 44.0; // 标准导航条高度
+    const double kButtonSize = 32.0; // 标准按钮尺寸
+    const double kSidePadding = 16.0; // 标准左右内边距
+    const double kButtonSpacing = 12.0; // 标准间距
 
-    // 2. 定义小组件
-    final backBtn = GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(10),
+    // 2. 构建 32x32 返回按钮
+    final Widget iosBackButton = SizedBox(
+      width: kButtonSize,
+      height: kButtonSize,
+      child: GestureDetector(
+        onTap: () => Navigator.pop(context),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(10), // 保持原圆角
+          ),
+          alignment: Alignment.center,
+          child: const Icon(Icons.arrow_back_ios_new, // 保持原图标
+              size: 18,
+              color: Colors.white),
         ),
-        child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
       ),
     );
 
-    // 3. 构建布局
+    // 3. 构建居中标题
+    final Widget iosTitle = Expanded(
+      child: Text(
+        title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center, // 保证居中
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          fontSize: 18, // 保持原字体大小
+        ),
+      ),
+    );
+
+    // 4. 构建 32x32 右侧占位
+    final Widget iosRightPlaceholder =
+    const SizedBox(width: kButtonSize, height: kButtonSize);
+
+    // 5. 组装
     return PreferredSize(
-      preferredSize: Size.fromHeight(statusBar + kHeaderVisual),
+      preferredSize: Size.fromHeight(statusBar + kNavBarHeight), // ✅ 44pt + statusBar
       child: Container(
         color: kBgColor,
+        padding: EdgeInsets.only(top: statusBar), // 让出状态栏
         child: SizedBox(
-          height: statusBar + kHeaderVisual,
-          child: Stack(
-            children: [
-              Positioned(
-                top: statusBar + kSideTop,
-                left: kSide,
-                child: backBtn,
-              ),
-              Positioned(
-                top: statusBar + kTitleTop,
-                left: kSide + kBtnSize + kSpacing,
-                right: kSide + kBtnSize + kSpacing,
-                child: Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 18, // (应用标准 fontSize)
-                  ),
-                ),
-              ),
-              Positioned(
-                top: statusBar + kSideTop,
-                right: kSide,
-                child: const SizedBox(width: kBtnSize, height: kBtnSize),
-              ),
-            ],
+          height: kNavBarHeight, // 44pt
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: kSidePadding), // 16
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center, // 垂直居中
+              children: [
+                iosBackButton, // 32x32
+                const SizedBox(width: kButtonSpacing), // 12
+                iosTitle, // Expanded
+                const SizedBox(width: kButtonSpacing), // 12
+                iosRightPlaceholder, // 32x32 占位
+              ],
+            ),
           ),
         ),
       ),

@@ -26,13 +26,17 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   @override
   void initState() {
     super.initState();
-    // 初始判断当前是否已带会话（通过邮件重置链接回来应自动携带）
+    // 首次判断是否已有 recovery 会话
     _hasSession = Supabase.instance.client.auth.currentSession != null;
 
-    // 监听会话变化，防止深链处理稍晚导致取不到会话
+    // 监听会话变化；当用户通过邮件链接进入 App 时，SDK 会发出 passwordRecovery 事件
     _sub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       final has = Supabase.instance.client.auth.currentSession != null;
-      if (mounted && has != _hasSession) {
+
+      // 如果收到 passwordRecovery，确保允许提交
+      if (data.event == AuthChangeEvent.passwordRecovery && mounted) {
+        setState(() => _hasSession = true);
+      } else if (mounted && has != _hasSession) {
         setState(() => _hasSession = has);
       }
     });
@@ -49,7 +53,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    // 必须存在会话（recovery 链接点开后 SDK 会自动创建）
+    // 必须存在 recovery 会话（通过邮件链接回来 SDK 自动携带）
     if (!_hasSession) {
       _toast('Reset link is invalid or expired. Please request a new one.');
       return;
@@ -70,7 +74,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
         ),
       );
 
-      // ✅ 成功后回登录页
+      // 成功后回登录页
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
     } on AuthException catch (e) {
       if (!mounted) return;
@@ -119,7 +123,11 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                   child: Text(
                     'Open the password reset link from your email on this device. '
                         'If this page was opened manually, please go back and request a new reset email.',
-                    style: TextStyle(fontSize: 13.sp, color: Colors.black87, height: 1.35),
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      color: Colors.black87,
+                      height: 1.35,
+                    ),
                   ),
                 ),
                 SizedBox(
@@ -128,8 +136,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                     onPressed: _busy
                         ? null
                         : () {
-                      // 返回登录页，让用户从“Forgot Password”重新发邮件
-                      Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
+                      Navigator.of(context)
+                          .pushNamedAndRemoveUntil('/login', (r) => false);
                     },
                     child: const Text('Back to Login'),
                   ),
@@ -209,7 +217,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
           borderSide: BorderSide(color: Color(0xFF2196F3), width: 1.5),
         ),
         suffixIcon: IconButton(
-          icon: Icon(show ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+          icon: Icon(
+            show ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+          ),
           onPressed: onToggle,
         ),
         contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
@@ -217,7 +227,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
       validator: (v) {
         if (v == null || v.isEmpty) return 'Please enter password';
         if (v.length < 6) return 'Password must be at least 6 characters';
-        if (confirmOf != null && v != confirmOf.text) return 'Passwords do not match';
+        if (confirmOf != null && v != confirmOf.text) {
+          return 'Passwords do not match';
+        }
         return null;
       },
     );

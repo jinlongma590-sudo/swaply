@@ -320,7 +320,7 @@ String _fixUtf8Mojibake(String? raw) {
   if (raw == null || raw.isEmpty) return raw ?? '';
   var s = raw;
 
-// 鑻ヤ笉瀛樺湪鍏稿瀷涔辩爜鐥曡抗锛岀洿鎺ヨ繑鍥?
+  // 鑻ヤ笉瀛樺湪鍏稿瀷涔辩爜鐥曡抗锛岀洿鎺ヨ繑鍥?
   if (!s.contains('冒') && !s.contains('脙') && !s.contains('芒')) return s;
 
   const map = <String, String>{};
@@ -542,14 +542,14 @@ Future<void> main() async {
     );
   };
 
-  // ✅ Supabase 初始化
+  // ✅ Supabase 初始化（关键：authCallbackUrlHostname 与你的回调 host 一致）
   await Supabase.initialize(
     url: 'https://rhckybselarzglkmlyqs.supabase.co',
-    anonKey:
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoY2t5YnNlbGFyemdsa21seXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTM0NTgsImV4cCI6MjA3MDU4OTQ1OH0.3I0T2DidiF-q9l2tWeHOjB31QogXHDqRtEjDn0RfVbU',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoY2t5YnNlbGFyemdsa21seXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTM0NTgsImV4cCI6MjA3MDU4OTQ1OH0.3I0T2DidiF-q9l2tWeHOjB31QogXHDqRtEjDn0RfVbU',
     authOptions: const FlutterAuthClientOptions(
       autoRefreshToken: true,
     ),
+    // debug: true,
   );
 
   // ❌ 不需要：SupabaseAuth.instance.initialize();
@@ -688,7 +688,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     );
   }
 }
-
 
 // 莽禄搂莽禄颅忙路禄氓艩  MainNavigationPage 氓鈥櫯捗モ€β睹ぢ烩€撁甭?..
 // [盲赂潞盲潞鈥犆ㄅ犫€毭撀伱┞好┾€斅疵寂捗库劉茅鈥∨捗ぢ柯澝ε捖伱モ€β睹ぢ解劉盲禄拢莽 聛盲赂聧氓聫藴]
@@ -1513,7 +1512,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           // 右上角操作按钮（可选）
           if (trailing != null)
             Positioned(
-              top: statusBar - 1, // 避开刘海/状态栏
+              // ✅ 顶部对齐更贴近标题（避免过高）
+              top: statusBar - 1,
               right: 16,
               child: trailing,
             ),
@@ -1523,31 +1523,54 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   }
 
   // ✅ 提取右上角菜单按钮以传递给 _blueHeader
+  // ✅ 改为“自定义 child + 轻下沉”样式，与标题垂直对齐更稳
   Widget _buildMenuButton() {
-    return PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert_rounded,
-          color: Colors.white, size: 18.w),
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.w)),
-      onSelected: (value) {
-        if (value == 'clear_all') {
-          _showClearAllDialog();
-        }
-      },
-      itemBuilder: (BuildContext context) => [
-        PopupMenuItem(
-          value: 'clear_all',
-          child: Row(
-            children: [
-              Icon(Icons.clear_all_rounded,
-                  color: Colors.red, size: 12.w),
-              SizedBox(width: 8.w),
-              Text('Clear All',
-                  style: TextStyle(fontSize: 11.sp)),
-            ],
+    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
+    return Transform.translate(
+      // ✅ iOS 稍微下沉，避免顶到状态栏；Android 轻微下沉
+      offset: Offset(0, _isIOS ? 6.0 : 2.0),
+      child: PopupMenuButton<String>(
+        padding: EdgeInsets.zero,
+        offset: const Offset(0, 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.w),
+        ),
+        onSelected: (value) {
+          if (value == 'clear_all') {
+            _showClearAllDialog();
+          }
+        },
+        itemBuilder: (BuildContext context) => [
+          PopupMenuItem(
+            value: 'clear_all',
+            child: Row(
+              children: [
+                Icon(Icons.clear_all_rounded, color: Colors.red, size: 12.w),
+                SizedBox(width: 8.w),
+                Text('Clear All', style: TextStyle(fontSize: 11.sp)),
+              ],
+            ),
+          ),
+        ],
+        // ✅ 自定义外观：小圆形半透明按钮，更贴合你首页风格
+        child: SizedBox(
+          height: 40.w,
+          width: 40.w,
+          child: Material(
+            color: Colors.white.withOpacity(0.15),
+            shape: const StadiumBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: Center(
+              child: Icon(
+                _isIOS ? Icons.more_horiz_rounded : Icons.more_vert_rounded,
+                color: Colors.white,
+                size: 20.w,
+              ),
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 
@@ -2696,6 +2719,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 }
+
 /* ---------------- Wishlist Page 收藏夹页面 - 统一服务 ---------------- */
 
 class WishlistPage extends StatefulWidget {
@@ -3324,7 +3348,7 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  // ✅ [NEW] 统一的 AppBar 构建器
+  // ✅ [MODIFIED] 统一的 AppBar 构建器 (已按 verification_page.dart 标准重写)
   PreferredSizeWidget _buildStandardAppBar(BuildContext context) {
     final double statusBar = MediaQuery.of(context).padding.top;
     final bool isIOS = Theme.of(context).platform == TargetPlatform.iOS;
@@ -3381,75 +3405,78 @@ class _WishlistPageState extends State<WishlistPage> {
       );
     }
 
-    // ============== iOS：使用自定义头部 (VerificationPage 标准) ==============
+    // ===== ✅ [MODIFIED] iOS：使用“基准页” (verification_page.dart) 的 44pt Row 布局 =====
 
     // 1. 标准布局数值
-    const double kHeaderVisual = 38.0;
-    const double kTitleTop = -6.0;
-    const double kSideTop = 2.0;
-    const double kSide = 16.0;
-    const double kBtnSize = 36.0;
-    const double kSpacing = 16.0;
+    const double kNavBarHeight = 44.0; // 标准导航条高度
+    const double kButtonSize = 32.0; // 标准按钮尺寸
+    const double kSidePadding = 16.0; // 标准左右内边距
+    const double kButtonSpacing = 12.0; // 标准间距
 
-    // 2. 定义小组件
-    final backBtn = GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(10),
+    // 2. 构建 32x32 返回按钮
+    final Widget iosBackButton = SizedBox(
+      width: kButtonSize,
+      height: kButtonSize,
+      child: GestureDetector(
+        onTap: () => Navigator.pop(context),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(10), // 保持原圆角
+          ),
+          alignment: Alignment.center,
+          child: const Icon(Icons.arrow_back_ios_new, // 保持原图标
+              size: 18,
+              color: Colors.white),
         ),
-        child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
       ),
     );
 
-    // 3. 构建布局
+    // 3. 构建居中标题
+    final Widget iosTitle = Expanded(
+      child: Text(
+        title, // 动态标题
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center, // 保证居中
+        style: const TextStyle(
+          // (应用标准 Style)
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          fontSize: 18,
+        ),
+      ),
+    );
+
+    // 4. 构建 32x32 右侧 Action
+    final Widget iosRightButton = SizedBox(
+      width: kButtonSize,
+      height: kButtonSize,
+      child: actionsWidget != null
+          ? Center(child: actionsWidget) // 居中 Action
+          : null, // 如果没有 Action，则为空
+    );
+
+    // 5. 组装
     return PreferredSize(
-      preferredSize: Size.fromHeight(statusBar + kHeaderVisual),
+      preferredSize: Size.fromHeight(statusBar + kNavBarHeight), // ✅ 44pt + statusBar
       child: Container(
         color: kBgColor,
+        padding: EdgeInsets.only(top: statusBar), // 让出状态栏
         child: SizedBox(
-          height: statusBar + kHeaderVisual,
-          child: Stack(
-            children: [
-              // 左按钮
-              Positioned(
-                top: statusBar + kSideTop,
-                left: kSide,
-                child: backBtn,
-              ),
-              // 居中标题
-              Positioned(
-                top: statusBar + kTitleTop,
-                left: kSide + kBtnSize + kSpacing,
-                right: kSide + kBtnSize + kSpacing,
-                child: Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle( // (应用标准 Style)
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-              // 右侧 Action
-              Positioned(
-                top: statusBar + kSideTop,
-                right: kSide,
-                // (包裹一层 SizedBox 确保大小)
-                child: SizedBox(
-                  width: kBtnSize,
-                  height: kBtnSize,
-                  // (居中对齐 Action)
-                  child: Center(
-                    child: actionsWidget ?? const SizedBox.shrink(),
-                  ),
-                ),
-              ),
-            ],
+          height: kNavBarHeight, // 44pt
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: kSidePadding), // 16
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center, // 垂直居中
+              children: [
+                iosBackButton, // 32x32
+                const SizedBox(width: kButtonSpacing), // 12
+                iosTitle, // Expanded
+                const SizedBox(width: kButtonSpacing), // 12
+                iosRightButton, // 32x32 (Action 或空占位)
+              ],
+            ),
           ),
         ),
       ),
@@ -3633,7 +3660,6 @@ class _WishlistPageState extends State<WishlistPage> {
   }
 }
 // 莽卢卢氓鈥衡€好┢捖ニ嗏€犆寂ellPage 氓鈥÷好モ€澛┞÷?(忙聛垄氓陇聧氓庐艗忙鈥⒙疵ヅ犈该ㄆ捖? 氓鈥櫯?NotificationPage 茅鈧∶嘎ッ┞÷?(盲陆驴莽鈥澛ぢ号捗ぢ嘎р€八喢ε撀♀€濻ervice茅鈥衡€犆λ喡?
-
 /* ---------------- Sell Page ---------------- */
 
 class SellPage extends StatefulWidget {
@@ -6761,7 +6787,7 @@ class HelpSupportPage extends StatelessWidget {
     );
   }
 
-  // ✅ [NEW] 统一的 AppBar 构建器
+  // ✅ [MODIFIED] 统一的 AppBar 构建器 (已按 verification_page.dart 标准重写)
   PreferredSizeWidget _buildStandardAppBar(BuildContext context, String title) {
     final double statusBar = MediaQuery.of(context).padding.top;
     // 使用 Theme.of(context).platform 因为它不需要 'foundation.dart'
@@ -6777,64 +6803,72 @@ class HelpSupportPage extends StatelessWidget {
       );
     }
 
-    // ============== iOS：使用自定义头部 (VerificationPage 标准) ==============
+    // ===== ✅ [MODIFIED] iOS：使用“基准页” (verification_page.dart) 的 44pt Row 布局 =====
 
     // 1. 标准布局数值
-    const double kHeaderVisual = 38.0;
-    const double kTitleTop = -6.0;
-    const double kSideTop = 2.0;
-    const double kSide = 16.0;
-    const double kBtnSize = 36.0;
-    const double kSpacing = 16.0;
+    const double kNavBarHeight = 44.0; // 标准导航条高度
+    const double kButtonSize = 32.0; // 标准按钮尺寸
+    const double kSidePadding = 16.0; // 标准左右内边距
+    const double kButtonSpacing = 12.0; // 标准间距
 
-    // 2. 定义小组件
-    final backBtn = GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(10),
+    // 2. 构建 32x32 返回按钮
+    final Widget iosBackButton = SizedBox(
+      width: kButtonSize,
+      height: kButtonSize,
+      child: GestureDetector(
+        onTap: () => Navigator.pop(context),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(10), // 保持原圆角
+          ),
+          alignment: Alignment.center,
+          child: const Icon(Icons.arrow_back_ios_new, // 保持原图标
+              size: 18,
+              color: Colors.white),
         ),
-        child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
       ),
     );
 
-    // 3. 构建布局
+    // 3. 构建居中标题
+    final Widget iosTitle = Expanded(
+      child: Text(
+        title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center, // 保证居中
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          fontSize: 18, // 保持原字体大小
+        ),
+      ),
+    );
+
+    // 4. 构建 32x32 右侧占位
+    final Widget iosRightPlaceholder =
+    const SizedBox(width: kButtonSize, height: kButtonSize);
+
+    // 5. 组装
     return PreferredSize(
-      preferredSize: Size.fromHeight(statusBar + kHeaderVisual),
+      preferredSize: Size.fromHeight(statusBar + kNavBarHeight), // ✅ 44pt + statusBar
       child: Container(
         color: kBgColor,
+        padding: EdgeInsets.only(top: statusBar), // 让出状态栏
         child: SizedBox(
-          height: statusBar + kHeaderVisual,
-          child: Stack(
-            children: [
-              Positioned(
-                top: statusBar + kSideTop,
-                left: kSide,
-                child: backBtn,
-              ),
-              Positioned(
-                top: statusBar + kTitleTop,
-                left: kSide + kBtnSize + kSpacing,
-                right: kSide + kBtnSize + kSpacing,
-                child: Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 18, // (应用标准 fontSize)
-                  ),
-                ),
-              ),
-              Positioned(
-                top: statusBar + kSideTop,
-                right: kSide,
-                child: const SizedBox(width: kBtnSize, height: kBtnSize),
-              ),
-            ],
+          height: kNavBarHeight, // 44pt
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: kSidePadding), // 16
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center, // 垂直居中
+              children: [
+                iosBackButton, // 32x32
+                const SizedBox(width: kButtonSpacing), // 12
+                iosTitle, // Expanded
+                const SizedBox(width: kButtonSpacing), // 12
+                iosRightPlaceholder, // 32x32 占位
+              ],
+            ),
           ),
         ),
       ),
@@ -6955,7 +6989,7 @@ class AboutPage extends StatelessWidget {
     );
   }
 
-  // ✅ [NEW] 统一的 AppBar 构建器
+  // ✅ [MODIFIED] 统一的 AppBar 构建器 (已按 verification_page.dart 标准重写)
   PreferredSizeWidget _buildStandardAppBar(BuildContext context, String title) {
     final double statusBar = MediaQuery.of(context).padding.top;
     // 使用 Theme.of(context).platform 因为它不需要 'foundation.dart'
@@ -6971,64 +7005,72 @@ class AboutPage extends StatelessWidget {
       );
     }
 
-    // ============== iOS：使用自定义头部 (VerificationPage 标准) ==============
+    // ===== ✅ [MODIFIED] iOS：使用“基准页” (verification_page.dart) 的 44pt Row 布局 =====
 
     // 1. 标准布局数值
-    const double kHeaderVisual = 38.0;
-    const double kTitleTop = -6.0;
-    const double kSideTop = 2.0;
-    const double kSide = 16.0;
-    const double kBtnSize = 36.0;
-    const double kSpacing = 16.0;
+    const double kNavBarHeight = 44.0; // 标准导航条高度
+    const double kButtonSize = 32.0; // 标准按钮尺寸
+    const double kSidePadding = 16.0; // 标准左右内边距
+    const double kButtonSpacing = 12.0; // 标准间距
 
-    // 2. 定义小组件
-    final backBtn = GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(10),
+    // 2. 构建 32x32 返回按钮
+    final Widget iosBackButton = SizedBox(
+      width: kButtonSize,
+      height: kButtonSize,
+      child: GestureDetector(
+        onTap: () => Navigator.pop(context),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(10), // 保持原圆角
+          ),
+          alignment: Alignment.center,
+          child: const Icon(Icons.arrow_back_ios_new, // 保持原图标
+              size: 18,
+              color: Colors.white),
         ),
-        child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
       ),
     );
 
-    // 3. 构建布局
+    // 3. 构建居中标题
+    final Widget iosTitle = Expanded(
+      child: Text(
+        title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center, // 保证居中
+        style: const TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          fontSize: 18, // 保持原字体大小
+        ),
+      ),
+    );
+
+    // 4. 构建 32x32 右侧占位
+    final Widget iosRightPlaceholder =
+    const SizedBox(width: kButtonSize, height: kButtonSize);
+
+    // 5. 组装
     return PreferredSize(
-      preferredSize: Size.fromHeight(statusBar + kHeaderVisual),
+      preferredSize: Size.fromHeight(statusBar + kNavBarHeight), // ✅ 44pt + statusBar
       child: Container(
         color: kBgColor,
+        padding: EdgeInsets.only(top: statusBar), // 让出状态栏
         child: SizedBox(
-          height: statusBar + kHeaderVisual,
-          child: Stack(
-            children: [
-              Positioned(
-                top: statusBar + kSideTop,
-                left: kSide,
-                child: backBtn,
-              ),
-              Positioned(
-                top: statusBar + kTitleTop,
-                left: kSide + kBtnSize + kSpacing,
-                right: kSide + kBtnSize + kSpacing,
-                child: Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 18, // (应用标准 fontSize)
-                  ),
-                ),
-              ),
-              Positioned(
-                top: statusBar + kSideTop,
-                right: kSide,
-                child: const SizedBox(width: kBtnSize, height: kBtnSize),
-              ),
-            ],
+          height: kNavBarHeight, // 44pt
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: kSidePadding), // 16
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center, // 垂直居中
+              children: [
+                iosBackButton, // 32x32
+                const SizedBox(width: kButtonSpacing), // 12
+                iosTitle, // Expanded
+                const SizedBox(width: kButtonSpacing), // 12
+                iosRightPlaceholder, // 32x32 占位
+              ],
+            ),
           ),
         ),
       ),
