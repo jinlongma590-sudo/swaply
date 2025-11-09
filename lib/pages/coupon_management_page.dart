@@ -1,18 +1,24 @@
 // lib/pages/coupon_management_page.dart - 防循环版本（30s页面级TTL + Future缓存）
-import 'dart:async';
-import 'package:flutter/foundation.dart'; // ✅ 导入 kIsWeb 和 defaultTargetPlatform
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart'; // ✅ 导入 ScreenUtil
-import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'dart:async';
+
+import 'package:flutter/foundation.dart'; // ✅ 导入 kIsWeb 和 defaultTargetPlatform
+
+import 'package:flutter/material.dart';
+
+import 'package:flutter/services.dart';
+
+import 'package:flutter_screenutil/flutter_screenutil.dart'; // ✅ 导入 ScreenUtil
+
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/coupon_service.dart';
+
 import 'package:swaply/models/coupon.dart';
+
 import 'package:swaply/pages/sell_form_page.dart';
 
 class CouponManagementPage extends StatefulWidget {
   const CouponManagementPage({Key? key}) : super(key: key);
-
   @override
   State<CouponManagementPage> createState() => _CouponManagementPageState();
 }
@@ -20,35 +26,42 @@ class CouponManagementPage extends StatefulWidget {
 class _CouponManagementPageState extends State<CouponManagementPage>
     with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   // ========== 防循环：TTL + Future缓存 ==========
+
   static const _ttl = Duration(seconds: 30);
+
   DateTime? _lastFetchAt;
+
   bool _loading = false; // 并发锁
-
   // 缓存的Future，避免每次build重建
+
   Future<void>? _dataFuture;
-
   late TabController _tabController;
+
   late AnimationController _animationController;
+
   late Animation<double> _fadeAnimation;
-
   bool _isRefreshing = false;
-
   List<CouponModel> _allCoupons = [];
+
   List<CouponModel> _activeCoupons = [];
+
   List<CouponModel> _usedCoupons = [];
+
   List<CouponModel> _expiredCoupons = [];
-
   Map<String, dynamic> _trendingQuotaStatus = {};
-  Map<String, dynamic> _couponStats = {};
 
+  Map<String, dynamic> _couponStats = {};
   @override
   void initState() {
     super.initState();
+
     _tabController = TabController(length: 4, vsync: this);
+
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
+
     _fadeAnimation = CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeInOut,
@@ -66,6 +79,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
   }
 
   // ========== 核心：防循环的数据加载 ==========
+
   Future<void> _loadDataOnce({bool force = false}) async {
     if (_loading) return; // 防并发
 
@@ -79,7 +93,6 @@ class _CouponManagementPageState extends State<CouponManagementPage>
 
     _loading = true;
     _lastFetchAt = now;
-
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) {
       setState(() {
@@ -93,7 +106,6 @@ class _CouponManagementPageState extends State<CouponManagementPage>
       _loading = false;
       return;
     }
-
     try {
       await Future.wait([
         _loadCoupons(),
@@ -117,19 +129,21 @@ class _CouponManagementPageState extends State<CouponManagementPage>
   }
 
   // ========== 手动刷新（强制绕过TTL） ==========
+
   Future<void> _onPullToRefresh() async {
     setState(() => _isRefreshing = true);
 
     // 强制刷新，同时更新_dataFuture
     _dataFuture = _loadDataOnce(force: true);
     await _dataFuture;
-
     setState(() => _isRefreshing = false);
   }
 
   // ========== 增强版数据加载方法 - 确保包含welcome券 + 健壮性处理 ==========
+
   Future<void> _loadCoupons() async {
     final user = Supabase.instance.client.auth.currentUser;
+
     if (user == null) return;
 
     try {
@@ -200,7 +214,9 @@ class _CouponManagementPageState extends State<CouponManagementPage>
   Future<void> _loadTrendingQuotaStatus() async {
     try {
       final trendingAds = await CouponService.getTrendingPinnedAds();
+
       final usedCount = trendingAds.length;
+
       const maxCount = 20;
 
       if (mounted) {
@@ -229,6 +245,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
   }
 
   // ========== 增强版统计方法 - 添加空值保护 ==========
+
   Future<void> _loadCouponStats() async {
     final now = DateTime.now();
 
@@ -316,6 +333,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
   }
 
   // ========== UI构建：修复导航问题 ==========
+
   @override
   Widget build(BuildContext context) {
     super.build(context); // for AutomaticKeepAliveClientMixin
@@ -374,10 +392,14 @@ class _CouponManagementPageState extends State<CouponManagementPage>
   }
 
   // ✅ [MODIFIED] _buildCustomAppBar
+
   // 严格按照 SacedPage/NotificationPage 的 iOS 标准进行布局
+
   Widget _buildCustomAppBar() {
     final double statusBar = MediaQuery.of(context).padding.top;
+
     // ✅ 检查是否为 iOS
+
     final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
     // --- 提取的通用 Widgets ---
@@ -397,7 +419,6 @@ class _CouponManagementPageState extends State<CouponManagementPage>
         ),
       ),
     );
-
     // ✅ [MODIFIED] 移除 Expanded, 移除副标题, 更新字体
     // Per Instruction A: Define separate titles for iOS (centered) and Android (left-aligned)
     final Widget titleWidgetIOS = Text(
@@ -410,7 +431,6 @@ class _CouponManagementPageState extends State<CouponManagementPage>
         fontWeight: FontWeight.w600,
       ),
     );
-
     // Per Instruction C: Keep Android left-aligned
     final Widget titleWidgetAndroid = Align(
       alignment: Alignment.centerLeft,
@@ -425,7 +445,6 @@ class _CouponManagementPageState extends State<CouponManagementPage>
         overflow: TextOverflow.ellipsis,
       ),
     );
-
     final Widget refreshButton = GestureDetector(
       onTap: _isRefreshing ? null : _onPullToRefresh,
       child: Container(
@@ -451,12 +470,12 @@ class _CouponManagementPageState extends State<CouponManagementPage>
         ),
       ),
     );
-
     // --- 平台特定布局 ---
     if (_isIOS) {
       // ✅ ================== iOS: 精确值布局 ==================
       const double kHeaderVisual = 38.0; // 1. 头部可见高度
-      const double kSideWidgetTop = 2.0; // 3. ✅ [MODIFIED] 左右小组件顶部 (was -1.0)
+      const double kSideWidgetTop =
+      -6.0; // 3. ✅ [MODIFIED] 左右小组件顶部（上移并与标题对齐，原为 2.0）
       const double kTitleTop = -6.0; // 2. 标题顶部
       const double kSide = 16.0; // 左右内边距
       const double kButtonWidth = 36.0; // 按钮估算宽度
@@ -519,12 +538,15 @@ class _CouponManagementPageState extends State<CouponManagementPage>
         child: SafeArea(
           bottom: false, // 确保只应用 top
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0), // 移除底部 Sizedbox 间距
+            padding:
+            const EdgeInsets.fromLTRB(16, 16, 16, 0), // 移除底部 Sizedbox 间距
             child: Row(
               children: [
                 backButton,
                 const SizedBox(width: 16),
-                Expanded(child: titleWidgetAndroid), // ✅ [MODIFIED] titleColumn replaced
+                Expanded(
+                    child:
+                    titleWidgetAndroid), // ✅ [MODIFIED] titleColumn replaced
                 refreshButton,
               ],
             ),
@@ -535,7 +557,9 @@ class _CouponManagementPageState extends State<CouponManagementPage>
   }
 
   // ✅ [NEW] _buildQuickStatsWrapper
+
   // 渲染 QuickStats 卡片，并为其提供无缝衔接的蓝色背景和间距
+
   Widget _buildQuickStatsWrapper() {
     return Container(
       decoration: const BoxDecoration(
@@ -549,9 +573,13 @@ class _CouponManagementPageState extends State<CouponManagementPage>
           ],
         ),
       ),
+
       // 还原原有的 24.0 间距 和 24.0 底部内边距
+
       padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+
       // ✅ [MODIFIED] Per Instruction B: Add Column and move subtitle here
+
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -572,8 +600,11 @@ class _CouponManagementPageState extends State<CouponManagementPage>
 
   Widget _buildTrendingQuotaCard() {
     final used = _trendingQuotaStatus['used_count'] as int? ?? 0;
+
     final max = _trendingQuotaStatus['max_count'] as int? ?? 20;
+
     final remaining = _trendingQuotaStatus['remaining'] as int? ?? 20;
+
     final available = _trendingQuotaStatus['available'] as bool? ?? true;
 
     return Container(
@@ -669,8 +700,11 @@ class _CouponManagementPageState extends State<CouponManagementPage>
 
   Widget _buildTabBar() {
     final availableCount = _activeCoupons.length;
+
     final usedCount = _usedCoupons.length;
+
     final expiredCount = _expiredCoupons.length;
+
     final allCount = _allCoupons.length;
 
     return Container(
@@ -768,8 +802,8 @@ class _CouponManagementPageState extends State<CouponManagementPage>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildQuickStatItem('Available', _activeCoupons.length.toString(),
-              Icons.card_giftcard),
+          _buildQuickStatItem(
+              'Available', _activeCoupons.length.toString(), Icons.card_giftcard),
           Container(width: 1, height: 30, color: Colors.white.withOpacity(0.3)),
           _buildQuickStatItem(
               'Used', _usedCoupons.length.toString(), Icons.check_circle),
@@ -855,6 +889,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
   }
 
   // 新增错误状态UI
+
   Widget _buildErrorState(String error) {
     return Center(
       child: Padding(
@@ -983,7 +1018,9 @@ class _CouponManagementPageState extends State<CouponManagementPage>
 
   Widget _buildCouponCard(CouponModel coupon) {
     // 安全的过期检查
+
     bool isExpiringSoon = false;
+
     try {
       isExpiringSoon = coupon.daysUntilExpiry <= 3 && coupon.isUsable;
     } catch (e) {
@@ -1177,8 +1214,8 @@ class _CouponManagementPageState extends State<CouponManagementPage>
                           ),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: _getCouponColor(coupon.type),
-                            side:
-                            BorderSide(color: _getCouponColor(coupon.type)),
+                            side: BorderSide(
+                                color: _getCouponColor(coupon.type)),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -1205,7 +1242,8 @@ class _CouponManagementPageState extends State<CouponManagementPage>
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _getCouponColor(coupon.type),
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              padding:
+                              const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -1230,20 +1268,26 @@ class _CouponManagementPageState extends State<CouponManagementPage>
       case CouponType.trending:
       case CouponType.trendingPin:
         return const Color(0xFFFF6B35);
+
       case CouponType.category:
       case CouponType.pinned:
       case CouponType.featured:
       case CouponType.premium:
         return const Color(0xFF2196F3);
+
       case CouponType.boost:
         return const Color(0xFF9C27B0);
+
       case CouponType.registerBonus:
       case CouponType.welcome:
         return const Color(0xFF4CAF50);
+
       case CouponType.activityBonus:
         return const Color(0xFFFF9800);
+
       case CouponType.referralBonus:
         return const Color(0xFFE91E63);
+
       default:
         return const Color(0xFF2196F3);
     }
@@ -1254,20 +1298,26 @@ class _CouponManagementPageState extends State<CouponManagementPage>
       case CouponType.trending:
       case CouponType.trendingPin:
         return Icons.local_fire_department;
+
       case CouponType.category:
       case CouponType.pinned:
       case CouponType.featured:
       case CouponType.premium:
         return Icons.push_pin;
+
       case CouponType.boost:
         return Icons.rocket_launch;
+
       case CouponType.registerBonus:
       case CouponType.welcome:
         return Icons.card_giftcard;
+
       case CouponType.activityBonus:
         return Icons.task_alt;
+
       case CouponType.referralBonus:
         return Icons.group_add;
+
       default:
         return Icons.card_giftcard;
     }
@@ -1278,21 +1328,28 @@ class _CouponManagementPageState extends State<CouponManagementPage>
       case CouponType.trending:
       case CouponType.trendingPin:
         return 'Hot Pin';
+
       case CouponType.category:
       case CouponType.pinned:
       case CouponType.featured:
       case CouponType.premium:
         return 'Category Pin';
+
       case CouponType.boost:
         return 'Search Boost';
+
       case CouponType.registerBonus:
         return 'Register Bonus';
+
       case CouponType.welcome:
         return 'Welcome Reward';
+
       case CouponType.activityBonus:
         return 'Activity Bonus';
+
       case CouponType.referralBonus:
         return 'Referral Bonus';
+
       default:
         return 'Coupon';
     }
@@ -1300,6 +1357,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
 
   void _copyCouponCode(String code) {
     Clipboard.setData(ClipboardData(text: code));
+
     _showSnackBar('Coupon code copied: $code');
   }
 
@@ -1319,16 +1377,20 @@ class _CouponManagementPageState extends State<CouponManagementPage>
     );
   }
 
+  // ✅ [FIXED]
   void _onUseNow(CouponModel coupon) {
     if (coupon.canPin) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => const SellFormPage(),
+          // ✅ [FIXED]
+          builder: (context) => const SellFormPage(),
           settings: RouteSettings(arguments: {'couponId': coupon.id}),
         ),
       );
+
       _showSnackBar(
-          'Tip: select this coupon in the posting page to pin your item.');
+        'Tip: select this coupon in the posting page to pin your item.',
+      );
     } else {
       _showUseCouponDialog(coupon);
     }
@@ -1370,6 +1432,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
                 ),
                 const SizedBox(height: 8),
                 Text(
+                  // ✅ [FIXED]
                   'Type: ${_readableType(coupon.type)}',
                   style: const TextStyle(fontSize: 14, color: Colors.black54),
                 ),
@@ -1417,7 +1480,8 @@ class _CouponManagementPageState extends State<CouponManagementPage>
                 Navigator.pop(context);
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const SellFormPage(),
+                    // ✅ [FIXED]
+                    builder: (context) => const SellFormPage(),
                     settings: RouteSettings(arguments: {'couponId': coupon.id}),
                   ),
                 );
@@ -1482,11 +1546,13 @@ class _CouponManagementPageState extends State<CouponManagementPage>
                   color: const Color(0xFF2196F3).withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                      color: const Color(0xFF2196F3).withOpacity(0.3)),
+                    color: const Color(0xFF2196F3).withOpacity(0.3),
+                  ),
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.lightbulb, color: Color(0xFF2196F3), size: 20),
+                    Icon(Icons.lightbulb,
+                        color: Color(0xFF2196F3), size: 20),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(

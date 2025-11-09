@@ -287,7 +287,6 @@ Download: https://www.swaply.cc
       ),
     );
 
-
     if (_isIOS) {
       // ===== ✅ iOS: 使用自定义 Stack 头部 =====
       return Scaffold(
@@ -338,9 +337,9 @@ Download: https://www.swaply.cc
     // 标准数值
     const double kHeaderVisual = 38.0;
     const double kTitleTop = -6.0;
-    // ===== ⬇️ 必须修改点 1 ⬇️ =====
-    const double kSideTop = 2.0; // 原为 -1.0
-    // ===== ⬆️ 必须修改点 1 ⬆️ =====
+    // ===== ⬇️ 必须修改点 1 (已修复) ⬇️ =====
+    const double kSideTop = -6.0; // 原为 2.0，导致错位
+    // ===== ⬆️ 必须修改点 1 (已修复) ⬆️ =====
     const double kSide = 16.0;
     const double kBtnSize = 36.0;
     const double kSpacing = 16.0;
@@ -355,7 +354,8 @@ Download: https://www.swaply.cc
           color: Colors.white.withOpacity(0.15),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
+        child:
+        const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
       ),
     );
 
@@ -802,8 +802,8 @@ Download: https://www.swaply.cc
               decoration: BoxDecoration(
                 color: const Color(0xFFF8F9FA),
                 borderRadius: BorderRadius.circular(12.r),
-                border:
-                Border.all(color: const Color(0xFF4CAF50).withOpacity(0.3)),
+                border: Border.all(
+                    color: const Color(0xFF4CAF50).withOpacity(0.3)),
               ),
               child: Column(
                 children: [
