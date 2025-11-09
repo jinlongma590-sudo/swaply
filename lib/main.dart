@@ -1512,8 +1512,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           // 右上角操作按钮（可选）
           if (trailing != null)
             Positioned(
-              // ✅ 顶部对齐更贴近标题（避免过高）
-              top: statusBar - 1,
+              // ✅ 顶部对齐更贴近标题（避免过高） ——（修改处：与标题同一“行高”对齐）
+              top: statusBar + kTitleTop + 2,
               right: 16,
               child: trailing,
             ),
@@ -1528,8 +1528,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
     return Transform.translate(
-      // ✅ iOS 稍微下沉，避免顶到状态栏；Android 轻微下沉
-      offset: Offset(0, _isIOS ? 6.0 : 2.0),
+      // ✅（修改处）去掉额外下沉，交由 _blueHeader 的 Positioned 统一控制对齐
+      offset: const Offset(0, 0),
       child: PopupMenuButton<String>(
         padding: EdgeInsets.zero,
         offset: const Offset(0, 12),
@@ -1850,7 +1850,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  /// 猫沤路氓聫鈥撁モ€⑩€犆モ€溌伱モ€郝久р€扳€?- 氓庐鈥懊モ€βр€八喢ε撀?
+  /// 猫沤路氓聫鈥撁モ€⑩€犆モ€溌伱モ€郝久р€扳€?- 氓庐鈥懊モ€βρ
   String _getListingImage(Map<String, dynamic> listing) {
     try {
       final images = listing['images'] ?? listing['image_urls'];
@@ -4817,7 +4817,8 @@ class _NotificationPageState extends State<NotificationPage> {
           // 右上角操作按钮（可选）
           if (trailing != null)
             Positioned(
-              top: statusBar - 1, // 避开刘海/状态栏
+              // ✅ 与 SavedPage 一致：让按钮与标题在同一“行高”，不顶到状态栏
+              top: statusBar + kTitleTop + 2,
               right: 16,
               child: trailing,
             ),
@@ -4826,14 +4827,17 @@ class _NotificationPageState extends State<NotificationPage> {
     );
   }
 
-  // ✅ 提取右上角菜单按钮以传递给 _blueHeader
+  // ✅ 提取右上角菜单按钮以传递给 _blueHeader（与 SavedPage 保持一致的结构与外观，不遮盖）
   Widget _buildMenuButton() {
     final l10n = AppLocalizations.of(context)!;
+    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
     return PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert_rounded,
-          color: Colors.white, size: 18.r),
+      padding: EdgeInsets.zero,
+      offset: const Offset(0, 12),
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.r)),
+        borderRadius: BorderRadius.circular(10.w),
+      ),
       onSelected: (value) {
         if (value == 'mark_all_read') {
           _markAllAsRead();
@@ -4846,11 +4850,9 @@ class _NotificationPageState extends State<NotificationPage> {
           value: 'mark_all_read',
           child: Row(
             children: [
-              Icon(Icons.done_all_rounded,
-                  size: 14.r, color: Colors.grey.shade600),
+              Icon(Icons.done_all_rounded, size: 14.r, color: Colors.grey.shade600),
               SizedBox(width: 8.w),
-              Text(l10n.markAllAsRead,
-                  style: TextStyle(fontSize: 12.sp)),
+              Text(l10n.markAllAsRead, style: TextStyle(fontSize: 12.sp)),
             ],
           ),
         ),
@@ -4858,16 +4860,30 @@ class _NotificationPageState extends State<NotificationPage> {
           value: 'clear_all',
           child: Row(
             children: [
-              Icon(Icons.clear_all_rounded,
-                  color: Colors.red, size: 14.r),
+              Icon(Icons.clear_all_rounded, color: Colors.red, size: 14.r),
               SizedBox(width: 8.w),
-              Text(l10n.clearAll,
-                  style: TextStyle(
-                      fontSize: 12.sp, color: Colors.red)),
+              Text(l10n.clearAll, style: TextStyle(fontSize: 12.sp, color: Colors.red)),
             ],
           ),
         ),
       ],
+      // ✅ 自定义 child：40x40 半透明圆角按钮，图标根据平台切换，与 SavedPage 完全一致
+      child: SizedBox(
+        height: 40.w,
+        width: 40.w,
+        child: Material(
+          color: Colors.white.withOpacity(0.15),
+          shape: const StadiumBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: Center(
+            child: Icon(
+              _isIOS ? Icons.more_horiz_rounded : Icons.more_vert_rounded,
+              color: Colors.white,
+              size: 20.w,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -5621,6 +5637,7 @@ class NoGlowScrollBehavior extends ScrollBehavior {
 
 const _kPrivacyUrl = 'https://www.swaply.cc/privacy';
 const _kDeleteUrl = 'https://www.swaply.cc/delete-account';
+
 //---------------- Profile Page 个人资料页 ----------------
 class ProfilePage extends StatefulWidget {
   final bool isGuest;
