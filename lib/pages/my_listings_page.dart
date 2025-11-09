@@ -492,37 +492,11 @@ class _MyListingsPageState extends State<MyListingsPage>
 
     // --- Extracted Widgets ---
 
-    // ✅ 2. 替换 backButton 定义
-    final Widget backButton = GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Container(
-        width: 36,
-        height: 36,
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: const Icon(
-          Icons.arrow_back_ios_new,
-          color: Colors.white,
-          size: 18,
-        ),
-      ),
-    );
+    // ✅ [REMOVED] 2. 移除旧的 36x36 backButton 定义
+    // final Widget backButton = ...
 
-    // ✅ 2. 替换 titleText 定义
-    final Widget titleText = Text(
-      'My Listings',
-      style: TextStyle(
-        color: Colors.white,
-        fontSize: 16.sp,           // ✅ 统一：标题 16.sp
-        fontWeight: FontWeight.w600,
-      ),
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-    );
-
+    // ✅ [REMOVED] 2. 移除旧的 titleText 定义
+    // final Widget titleText = ...
 
     final Widget tabBarWidget = Container(
       // Container 样式保持不变 (使用您新 _buildHeader 里的 0.20/0.2)
@@ -557,11 +531,13 @@ class _MyListingsPageState extends State<MyListingsPage>
       body: Column(
         children: [
           // ✅ [MODIFIED] 调用平台感知的 Header
+          // ✅ [MODIFIED] 移除 backButton 和 titleText 参数，因为 _buildHeader (iOS)
+          // 现在会自行构建它们以确保 32x32 尺寸
           _buildHeader(
             statusBar,
             _isIOS,
-            backButton,
-            titleText,
+            // backButton,  <-- 移除
+            // titleText,   <-- 移除
             tabBarWidget,
           ),
 
@@ -584,27 +560,65 @@ class _MyListingsPageState extends State<MyListingsPage>
   Widget _buildHeader(
       double statusBar,
       bool isIOS,
-      Widget backButton,
-      Widget titleText,
+      // Widget backButton, // (移除)
+      // Widget titleText,  // (移除)
       Widget tabBarWidget,
       ) {
     if (isIOS) {
-      // ===== iOS：与认证页一致的几何规范 =====
-      const double kNavBar = 38.0;      // 可视导航条高度
-      const double kSide = 16.0;        // 左右内边距
-      const double kBtn = 36.0;         // 左/右按钮尺寸
-      const double kSpacing = 16.0;     // 标题与按钮的最小水平间距
-      const double kBtnTopDelta = 2.0;  // 按钮距 statusBar 顶部的偏移：statusBar + 2
-      const double kTitleTop = -6.0;    // 标题相对于 statusBar 的偏移：statusBar - 6
+      // ===== iOS：与认证页一致的几何规范 (44pt Row + Tabs) =====
 
-      const double kTabsH = 32.0;       // 分段 TabBar 高度
-      const double kTabsTop = 8.0;      // TabBar 顶部外边距
-      const double kTabsBottom = 12.0;  // TabBar 底部外边距
+      // 1. 定义标准 (来自 verification_page.dart)
+      const double kNavBarHeight = 44.0; // 标准导航条高度
+      const double kButtonSize = 32.0; // 标准按钮尺寸 (替换 36.0)
+      const double kSidePadding = 16.0; // 标准左右内边距
+      const double kButtonSpacing = 12.0; // 标准间距 (替换 16.0)
 
-      final double totalH =
-          statusBar + kNavBar + kTabsTop + kTabsH + kTabsBottom;
+      // 2. Tab bar 尺寸 (来自你原来的 iOS implementation)
+      const double kTabsH = 32.0;
+      const double kTabsTop = 8.0;
+      const double kTabsBottom = 12.0;
 
+      // 3. 构建新的 32x32 backButton (本地构建，确保尺寸正确)
+      final Widget iosBackButton = SizedBox(
+        width: kButtonSize,
+        height: kButtonSize,
+        child: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10), // 保持你的圆角
+            ),
+            alignment: Alignment.center,
+            child: const Icon(Icons.arrow_back_ios_new,
+                size: 18, color: Colors.white), // 保持你的图标
+          ),
+        ),
+      );
+
+      // 4. 构建新的 Expanded title (本地构建，确保布局正确)
+      final Widget iosTitle = Expanded(
+        child: Text(
+          'My Listings',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center, // 保证居中
+          style: TextStyle(
+            // 保持你的字体样式
+            color: Colors.white,
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+
+      // 5. 构建新的 32x32 right placeholder (用于居中)
+      final Widget iosRightPlaceholder =
+      const SizedBox(width: kButtonSize, height: kButtonSize);
+
+      // 6. 组装 (Column[NavBar, TabBar])
       return Container(
+        // 保持原有的蓝色渐变
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -616,46 +630,76 @@ class _MyListingsPageState extends State<MyListingsPage>
             ],
           ),
         ),
-        child: SizedBox(
-          height: totalH, // ✅ 蓝色只铺到这里
-          child: Stack(
-            children: [
-              // 左返回
-              Positioned(
-                top: statusBar + kBtnTopDelta,
-                left: kSide,
-                child: backButton,
-              ),
-
-              // 居中标题（左右各预留一个 36 按钮 + 16 间距的占位，保证真正居中）
-              Positioned(
-                top: statusBar + kTitleTop,
-                left: kSide + kBtn + kSpacing,
-                right: kSide + kBtn + kSpacing,
-                child: titleText,
-              ),
-
-              // 底部分段 TabBar
-              Positioned(
-                top: statusBar + kNavBar + kTabsTop,
-                left: kSide,
-                right: kSide,
-                height: kTabsH,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.20),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: tabBarWidget,
+        padding: EdgeInsets.only(top: statusBar), // 让出状态栏
+        child: Column(
+          // 垂直堆叠 Nav Bar 和 Tab Bar
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // --- Part 1: The 44pt Nav Bar (Row layout) ---
+            SizedBox(
+              height: kNavBarHeight,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: kSidePadding),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    iosBackButton,
+                    const SizedBox(width: kButtonSpacing),
+                    iosTitle,
+                    const SizedBox(width: kButtonSpacing),
+                    iosRightPlaceholder, // 占位符确保标题居中
+                  ],
                 ),
               ),
-            ],
-          ),
+            ),
+
+            // --- Part 2: The Tab Bar (Your original layout) ---
+            Container(
+              margin: const EdgeInsets.fromLTRB(
+                  kSidePadding, kTabsTop, kSidePadding, kTabsBottom),
+              height: kTabsH,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.20),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: tabBarWidget, // 使用传入的 TabBar
+            ),
+          ],
         ),
       );
     }
 
     // ===== Android/Web：保持你原来的实现（安全区域 + Column） =====
+    // (需要重新定义 36x36 backButton 和 titleText，因为它们不再被传入)
+    final Widget backButton = GestureDetector(
+      onTap: () => Navigator.pop(context),
+      child: Container(
+        width: 36,
+        height: 36,
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Icon(
+          Icons.arrow_back_ios_new,
+          color: Colors.white,
+          size: 18,
+        ),
+      ),
+    );
+
+    final Widget titleText = Text(
+      'My Listings',
+      style: TextStyle(
+        color: Colors.white,
+        fontSize: 16.sp, // ✅ 统一：标题 16.sp
+        fontWeight: FontWeight.w600,
+      ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+    );
+
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -674,9 +718,9 @@ class _MyListingsPageState extends State<MyListingsPage>
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  backButton,
+                  backButton, // Android/Web 使用 36x36 按钮
                   const SizedBox(width: 12),
-                  Expanded(child: titleText),
+                  Expanded(child: titleText), // Android/Web 左对齐标题
                 ],
               ),
             ),
@@ -694,7 +738,6 @@ class _MyListingsPageState extends State<MyListingsPage>
       ),
     );
   }
-
 
   Widget _buildListingsTab() {
     if (_isLoadingListings) {

@@ -267,25 +267,8 @@ Download: https://www.swaply.cc
     )
         : Icon(Icons.refresh, size: 20.r);
 
-    // ✅ [MODIFIED] 准备 iOS 刷新按钮（需要适配 Stack）
-    final iosRefreshBtn = GestureDetector(
-      onTap: _isRefreshing ? null : _refreshData,
-      child: Container(
-        width: 36.0, // kBtnSize
-        height: 36.0, // kBtnSize
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: _isRefreshing
-            ? const CircularProgressIndicator(
-          strokeWidth: 2,
-          color: Colors.white,
-        )
-            : const Icon(Icons.refresh, color: Colors.white, size: 18),
-      ),
-    );
+    // ✅ [REMOVED] 移除旧的 36x36 刷新按钮定义
+    // final iosRefreshBtn = ... (old 36x36 definition removed)
 
     if (_isIOS) {
       // ===== ✅ iOS: 使用自定义 Stack 头部 =====
@@ -293,7 +276,8 @@ Download: https://www.swaply.cc
         backgroundColor: const Color(0xFFF8F9FA),
         body: Column(
           children: [
-            _buildHeaderIOS(context, trailing: iosRefreshBtn),
+            // ✅ [MODIFIED] 'trailing' 参数现在用于判断是否显示刷新按钮
+            _buildHeaderIOS(context, trailing: true),
             Expanded(child: _buildBodyContent()),
           ],
         ),
@@ -330,75 +314,89 @@ Download: https://www.swaply.cc
     }
   }
 
-  /// ✅ [NEW] iOS 自定义头部 (基于 verification_page.dart 标准)
-  Widget _buildHeaderIOS(BuildContext context, {Widget? trailing}) {
+  /// ✅ [REBUILT] iOS 头部 (基于 verification_page.dart 标准 44pt Row 布局)
+  Widget _buildHeaderIOS(BuildContext context, {bool trailing = false}) {
     final double statusBar = MediaQuery.of(context).padding.top;
 
-    // 标准数值
-    const double kHeaderVisual = 38.0;
-    const double kTitleTop = -6.0;
-    // ===== ⬇️ 必须修改点 1 (已修复) ⬇️ =====
-    const double kSideTop = -6.0; // 原为 2.0，导致错位
-    // ===== ⬆️ 必须修改点 1 (已修复) ⬆️ =====
-    const double kSide = 16.0;
-    const double kBtnSize = 36.0;
-    const double kSpacing = 16.0;
-
-    final backBtn = GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Container(
-        width: kBtnSize,
-        height: kBtnSize,
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child:
-        const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
-      ),
-    );
-
+    // 2. 采用新的标准布局 (来自 verification_page.dart)
     return Container(
+      // 保持邀请页的绿色
       decoration: const BoxDecoration(
-        color: Color(0xFF4CAF50), // ✅ 保持邀请页的绿色
+        color: Color(0xFF4CAF50),
       ),
+      padding: EdgeInsets.only(top: statusBar), // 让出状态栏
       child: SizedBox(
-        height: statusBar + kHeaderVisual,
-        child: Stack(
-          children: [
-            // 左按钮
-            Positioned(
-              top: statusBar + kSideTop,
-              left: kSide,
-              child: backBtn,
-            ),
-            // 居中标题
-            Positioned(
-              top: statusBar + kTitleTop,
-              left: kSide + kBtnSize + kSpacing,
-              right: kSide + kBtnSize + kSpacing,
-              child: Text(
-                'Invite Friends',
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  // ===== ⬇️ 必须修改点 2 ⬇️ =====
-                  fontSize: 16.sp, // 原为 20.sp
-                  // ===== ⬆️ 必须修改点 2 ⬆️ =====
+        height: 44, // 标准导航条高度
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16), // 左右边距 16
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center, // 保证垂直居中
+            children: [
+              // 左侧 32×32 返回 (标准)
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10), // 匹配圆角
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.arrow_back_ios_new,
+                        size: 18, color: Colors.white), // 匹配图标
+                  ),
                 ),
               ),
-            ),
-            // 右按钮 (刷新)
-            if (trailing != null)
-              Positioned(
-                top: statusBar + kSideTop,
-                right: kSide,
-                child: trailing,
+              const SizedBox(width: 12), // 标准间距
+
+              // 标题：与左右按钮同一基线 (标准)
+              Expanded(
+                child: Text(
+                  'Invite Friends',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center, // 保持居中
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 18.sp, // ✅ 匹配 verification_page.dart 标准
+                  ),
+                ),
               ),
-          ],
+              const SizedBox(width: 12), // 标准间距
+
+              // 右侧 32×32 刷新或占位 (标准)
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: trailing // (trailing == true)
+                    ? GestureDetector(
+                  onTap: _isRefreshing ? null : _refreshData,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10), // 匹配圆角
+                    ),
+                    alignment: Alignment.center,
+                    child: _isRefreshing
+                        ? const SizedBox(
+                      width: 18, // 匹配图标大小
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                        : const Icon(Icons.refresh,
+                        color: Colors.white, size: 18), // 匹配图标
+                  ),
+                )
+                    : null, // (trailing == false)
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -447,7 +445,7 @@ Download: https://www.swaply.cc
         backgroundColor: const Color(0xFFF8F9FA),
         body: Column(
           children: [
-            _buildHeaderIOS(context, trailing: null), // ✅ 无刷新按钮
+            _buildHeaderIOS(context, trailing: false), // ✅ 无刷新按钮 (占位符)
             Expanded(child: _buildGuestBodyContent()),
           ],
         ),
