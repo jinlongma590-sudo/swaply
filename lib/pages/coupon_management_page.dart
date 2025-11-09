@@ -1,20 +1,12 @@
-// lib/pages/coupon_management_page.dart - 防循环版本（30s页面级TTL + Future缓存）
-
+// lib/pages/coupon_management_page.dart - iOS 头部对齐 + 顶部蓝色范围缩小 + Facebook 蓝统一 + WidgetBuilder 修正 + 防循环（30s TTL）
 import 'dart:async';
-
-import 'package:flutter/foundation.dart'; // ✅ 导入 kIsWeb 和 defaultTargetPlatform
-
+import 'package:flutter/foundation.dart'; // kIsWeb / defaultTargetPlatform
 import 'package:flutter/material.dart';
-
 import 'package:flutter/services.dart';
-
-import 'package:flutter_screenutil/flutter_screenutil.dart'; // ✅ 导入 ScreenUtil
-
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/coupon_service.dart';
-
 import 'package:swaply/models/coupon.dart';
-
 import 'package:swaply/pages/sell_form_page.dart';
 
 class CouponManagementPage extends StatefulWidget {
@@ -25,49 +17,37 @@ class CouponManagementPage extends StatefulWidget {
 
 class _CouponManagementPageState extends State<CouponManagementPage>
     with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
-  // ========== 防循环：TTL + Future缓存 ==========
+  // ======== 基础色：Facebook 蓝（与首页一致） ========
+  static const Color _PRIMARY_BLUE = Color(0xFF1877F2);
 
+  // ========== 防循环：TTL + Future 缓存 ==========
   static const _ttl = Duration(seconds: 30);
-
   DateTime? _lastFetchAt;
-
   bool _loading = false; // 并发锁
-  // 缓存的Future，避免每次build重建
+  Future<void>? _dataFuture; // 缓存的 Future，避免每次 build 重建
 
-  Future<void>? _dataFuture;
   late TabController _tabController;
-
   late AnimationController _animationController;
-
   late Animation<double> _fadeAnimation;
   bool _isRefreshing = false;
+
   List<CouponModel> _allCoupons = [];
-
   List<CouponModel> _activeCoupons = [];
-
   List<CouponModel> _usedCoupons = [];
-
   List<CouponModel> _expiredCoupons = [];
   Map<String, dynamic> _trendingQuotaStatus = {};
-
   Map<String, dynamic> _couponStats = {};
+
   @override
   void initState() {
     super.initState();
-
     _tabController = TabController(length: 4, vsync: this);
+    _animationController =
+        AnimationController(duration: const Duration(milliseconds: 800), vsync: this);
+    _fadeAnimation =
+        CurvedAnimation(parent: _animationController, curve: Curves.easeInOut);
 
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    );
-
-    // ✅ 只触发一次，存储Future
+    // 只触发一次，存储 Future
     _dataFuture = _loadDataOnce();
   }
 
@@ -79,12 +59,11 @@ class _CouponManagementPageState extends State<CouponManagementPage>
   }
 
   // ========== 核心：防循环的数据加载 ==========
-
   Future<void> _loadDataOnce({bool force = false}) async {
     if (_loading) return; // 防并发
 
     final now = DateTime.now();
-    // TTL限流：30s内不重复加载（除非force=true）
+    // TTL 限流：30s 内不重复加载（除非 force=true）
     if (!force &&
         _lastFetchAt != null &&
         now.difference(_lastFetchAt!) < _ttl) {
@@ -93,67 +72,58 @@ class _CouponManagementPageState extends State<CouponManagementPage>
 
     _loading = true;
     _lastFetchAt = now;
+
     final userId = Supabase.instance.client.auth.currentUser?.id;
     if (userId == null) {
-      setState(() {
-        _allCoupons = [];
-        _activeCoupons = [];
-        _usedCoupons = [];
-        _expiredCoupons = [];
-        _trendingQuotaStatus = {};
-        _couponStats = {};
-      });
+      if (mounted) {
+        setState(() {
+          _allCoupons = [];
+          _activeCoupons = [];
+          _usedCoupons = [];
+          _expiredCoupons = [];
+          _trendingQuotaStatus = {};
+          _couponStats = {};
+        });
+      }
       _loading = false;
       return;
     }
+
     try {
       await Future.wait([
         _loadCoupons(),
         _loadTrendingQuotaStatus(),
       ]);
-
       await _loadCouponStats();
-
-      if (mounted) {
-        _animationController.forward();
-      }
+      if (mounted) _animationController.forward();
     } catch (e) {
-      print('Failed to load coupon data: $e');
-      if (mounted) {
-        _showSnackBar('Failed to load data: $e', isError: true);
-      }
+      debugPrint('Failed to load coupon data: $e');
+      if (mounted) _showSnackBar('Failed to load data: $e', isError: true);
     } finally {
       _loading = false;
-      if (mounted) setState(() {}); // 仅用于UI刷新，不重新触发请求
+      if (mounted) setState(() {}); // 仅用于 UI 刷新，不重新触发请求
     }
   }
 
-  // ========== 手动刷新（强制绕过TTL） ==========
-
+  // ========== 手动刷新（强制绕过 TTL） ==========
   Future<void> _onPullToRefresh() async {
     setState(() => _isRefreshing = true);
-
-    // 强制刷新，同时更新_dataFuture
     _dataFuture = _loadDataOnce(force: true);
     await _dataFuture;
-    setState(() => _isRefreshing = false);
+    if (mounted) setState(() => _isRefreshing = false);
   }
 
-  // ========== 增强版数据加载方法 - 确保包含welcome券 + 健壮性处理 ==========
-
+  // ========== 数据加载：确保包含 welcome 券 + 健壮性处理 ==========
   Future<void> _loadCoupons() async {
     final user = Supabase.instance.client.auth.currentUser;
-
     if (user == null) return;
 
     try {
-      // 直接查询数据库，只按 user_id 查询，不限制 source 或 type
-      // 移除了 priority 排序，只按创建时间排序
       final rows = await Supabase.instance.client
           .from('coupons')
           .select('*')
-          .eq('user_id', user.id) // 只限定 user_id
-          .order('created_at', ascending: false) // 按创建时间排序
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false)
           .limit(500);
 
       final list = (rows as List).cast<Map<String, dynamic>>();
@@ -161,52 +131,32 @@ class _CouponManagementPageState extends State<CouponManagementPage>
       final coupons = <CouponModel>[];
       for (final map in list) {
         try {
-          // 确保关键字段不为null，提供默认值
           map['used_count'] ??= 0;
           map['max_uses'] ??= 1;
-
-          // 如果 expires_at 为空，设置为未来30天
+          // expires_at 为空时，给个宽松未来时间，避免解析异常
           if (map['expires_at'] == null) {
             map['expires_at'] =
                 DateTime.now().add(const Duration(days: 30)).toIso8601String();
           }
-
-          final coupon = CouponModel.fromMap(map);
-          coupons.add(coupon);
+          coupons.add(CouponModel.fromMap(map));
         } catch (e) {
           debugPrint('Failed to parse coupon: $e, data: $map');
-          continue; // 跳过解析失败的券，继续处理其他
         }
       }
 
-      debugPrint('Successfully loaded ${coupons.length} coupons from database');
-
       if (!mounted) return;
-      setState(() {
-        _allCoupons = coupons;
-      });
+      setState(() => _allCoupons = coupons);
     } catch (e) {
-      // 页面兜底失败 → 回退到 Service（如果存在）
       debugPrint('Direct coupons query failed: $e');
-
+      // 兜底：走 Service
       try {
-        final userId = user.id;
-        final coupons = await CouponService.getUserCoupons(userId: userId);
-
-        // 简化排序，只按创建时间
+        final coupons = await CouponService.getUserCoupons(userId: user.id);
         coupons.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-        debugPrint(
-            'Fallback loaded ${coupons.length} coupons via CouponService');
-
         if (!mounted) return;
         setState(() => _allCoupons = coupons);
       } catch (e2) {
         debugPrint('Fallback via CouponService failed: $e2');
-        // 最终失败，保持空列表
-        if (mounted) {
-          setState(() => _allCoupons = []);
-        }
+        if (mounted) setState(() => _allCoupons = []);
       }
     }
   }
@@ -214,9 +164,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
   Future<void> _loadTrendingQuotaStatus() async {
     try {
       final trendingAds = await CouponService.getTrendingPinnedAds();
-
       final usedCount = trendingAds.length;
-
       const maxCount = 20;
 
       if (mounted) {
@@ -230,7 +178,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
         });
       }
     } catch (e) {
-      print('Failed to load trending quota status: $e');
+      debugPrint('Failed to load trending quota status: $e');
       if (mounted) {
         setState(() {
           _trendingQuotaStatus = {
@@ -244,8 +192,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
     }
   }
 
-  // ========== 增强版统计方法 - 添加空值保护 ==========
-
+  // ========== 统计计算 ==========
   Future<void> _loadCouponStats() async {
     final now = DateTime.now();
 
@@ -255,46 +202,37 @@ class _CouponManagementPageState extends State<CouponManagementPage>
       final expiredCoupons = <CouponModel>[];
 
       for (final coupon in _allCoupons) {
-        // 健壮的过期判断 - null 视为未过期
+        // 健壮的过期判断（null 视为未过期）
         bool isCurrentlyExpired = false;
         try {
           isCurrentlyExpired =
           coupon.expiresAt != null ? now.isAfter(coupon.expiresAt) : false;
         } catch (e) {
-          debugPrint('Error checking expiry for coupon ${coupon.id}: $e');
           isCurrentlyExpired = false;
         }
 
-        // 安全的使用次数检查
         final usedCount = coupon.usedCount ?? 0;
         final maxUses = coupon.maxUses ?? 1;
 
         if (coupon.status == CouponStatus.used) {
           usedCoupons.add(coupon);
-        } else if (coupon.status == CouponStatus.expired ||
-            isCurrentlyExpired) {
+        } else if (coupon.status == CouponStatus.expired || isCurrentlyExpired) {
           expiredCoupons.add(coupon);
         } else if (coupon.status == CouponStatus.active &&
             !isCurrentlyExpired &&
             usedCount < maxUses) {
           activeCoupons.add(coupon);
         } else {
-          // 其他情况归类为过期
           expiredCoupons.add(coupon);
         }
       }
 
-      // 计算即将过期的券（3天内）
+      // 3 天内到期
       int expiringSoon = 0;
-      for (final coupon in activeCoupons) {
+      for (final c in activeCoupons) {
         try {
-          if (coupon.daysUntilExpiry <= 3) {
-            expiringSoon++;
-          }
-        } catch (e) {
-          // 忽略计算错误
-          debugPrint('Error calculating days until expiry: $e');
-        }
+          if (c.daysUntilExpiry <= 3) expiringSoon++;
+        } catch (_) {}
       }
 
       if (mounted) {
@@ -302,7 +240,6 @@ class _CouponManagementPageState extends State<CouponManagementPage>
           _activeCoupons = activeCoupons;
           _usedCoupons = usedCoupons;
           _expiredCoupons = expiredCoupons;
-
           _couponStats = {
             'total_coupons': _allCoupons.length,
             'active_coupons': activeCoupons.length,
@@ -312,12 +249,8 @@ class _CouponManagementPageState extends State<CouponManagementPage>
           };
         });
       }
-
-      debugPrint(
-          'Coupon stats - Total: ${_allCoupons.length}, Active: ${activeCoupons.length}, Used: ${usedCoupons.length}, Expired: ${expiredCoupons.length}');
     } catch (e) {
-      print('Failed to calculate coupon stats: $e');
-      // 失败时设置默认统计
+      debugPrint('Failed to calculate coupon stats: $e');
       if (mounted) {
         setState(() {
           _couponStats = {
@@ -332,8 +265,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
     }
   }
 
-  // ========== UI构建：修复导航问题 ==========
-
+  // ========== UI ==========
   @override
   Widget build(BuildContext context) {
     super.build(context); // for AutomaticKeepAliveClientMixin
@@ -342,28 +274,30 @@ class _CouponManagementPageState extends State<CouponManagementPage>
       backgroundColor: Colors.grey[50],
       body: Column(
         children: [
-          // 1. 调用新的、更短的、符合 iOS 标准的 AppBar
+          // 1) iOS 自定义短导航条（与 Saved/通知页面一致）；Android 同样用该头部，保持风格统一
           _buildCustomAppBar(),
-          // 2. 调用单独的、带背景的 QuickStats Wrapper
+
+          // 2) 顶部说明 + 统计卡（注意：不再使用整块蓝色背景，缩小“顶部蓝”范围）
           _buildQuickStatsWrapper(),
+
+          // 3) Trending 配额卡（蓝色卡片，与顶部背景无关）
           _buildTrendingQuotaCard(),
+
+          // 4) Tabs
           _buildTabBar(),
+
+          // 5) 内容
           Expanded(
             child: FutureBuilder<void>(
-              future: _dataFuture, // ✅ 只包装需要数据的部分
+              future: _dataFuture,
               builder: (context, snapshot) {
-                // 首次加载状态
                 if (snapshot.connectionState == ConnectionState.waiting &&
                     _allCoupons.isEmpty) {
                   return _buildLoadingState();
                 }
-
-                // 错误处理
                 if (snapshot.hasError) {
                   return _buildErrorState(snapshot.error.toString());
                 }
-
-                // 数据加载完成，显示TabBarView
                 return FadeTransition(
                   opacity: _fadeAnimation,
                   child: TabBarView(
@@ -385,70 +319,35 @@ class _CouponManagementPageState extends State<CouponManagementPage>
         onPressed: _showCouponTips,
         icon: const Icon(Icons.help_outline),
         label: const Text('Usage Guide'),
-        backgroundColor: const Color(0xFF2196F3),
+        backgroundColor: _PRIMARY_BLUE,
         foregroundColor: Colors.white,
       ),
     );
   }
 
-  // ✅ [MODIFIED] _buildCustomAppBar
-
-  // 严格按照 SacedPage/NotificationPage 的 iOS 标准进行布局
-
+  // ===== iOS/Android 统一的短导航条（顶部蓝色范围仅 StatusBar+44） =====
   Widget _buildCustomAppBar() {
     final double statusBar = MediaQuery.of(context).padding.top;
-
-    // ✅ 检查是否为 iOS
-
     final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
-    // --- 提取的通用 Widgets ---
+    // 左侧返回
     final Widget backButton = GestureDetector(
       onTap: () => Navigator.pop(context),
       child: Container(
-        // 保持 34x34 尺寸 (8+18+8)
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(8), // 34x34（8+18+8）
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.15),
           borderRadius: BorderRadius.circular(10),
         ),
-        child: const Icon(
-          Icons.arrow_back_ios_new,
-          color: Colors.white,
-          size: 18,
-        ),
+        child:
+        const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18),
       ),
     );
-    // ✅ [MODIFIED] 移除 Expanded, 移除副标题, 更新字体
-    // Per Instruction A: Define separate titles for iOS (centered) and Android (left-aligned)
-    final Widget titleWidgetIOS = Text(
-      'My Coupons',
-      textAlign: TextAlign.center,
-      overflow: TextOverflow.ellipsis,
-      style: TextStyle(
-        color: Colors.white,
-        fontSize: 16.sp,
-        fontWeight: FontWeight.w600,
-      ),
-    );
-    // Per Instruction C: Keep Android left-aligned
-    final Widget titleWidgetAndroid = Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        'My Coupons',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 16.sp, // Match iOS
-          fontWeight: FontWeight.w600, // Match iOS
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
+
+    // 右侧刷新
     final Widget refreshButton = GestureDetector(
       onTap: _isRefreshing ? null : _onPullToRefresh,
       child: Container(
-        // 保持 34x34 尺寸
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.15),
@@ -459,94 +358,81 @@ class _CouponManagementPageState extends State<CouponManagementPage>
           width: 18,
           height: 18,
           child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: Colors.white,
-          ),
+              strokeWidth: 2, color: Colors.white),
         )
-            : const Icon(
-          Icons.refresh,
-          color: Colors.white,
-          size: 18,
-        ),
+            : const Icon(Icons.refresh, color: Colors.white, size: 18),
       ),
     );
-    // --- 平台特定布局 ---
+
+    final Widget titleIOS = Text(
+      'My Coupons',
+      textAlign: TextAlign.center,
+      overflow: TextOverflow.ellipsis,
+      style: TextStyle(
+          color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.w600),
+    );
+
+    final Widget titleAndroid = Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        'My Coupons',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+            color: Colors.white, fontSize: 16.sp, fontWeight: FontWeight.w600),
+      ),
+    );
+
+    // 统一使用纯色 Facebook 蓝，缩小顶部蓝色面积
+    final BoxDecoration bg = const BoxDecoration(color: _PRIMARY_BLUE);
+
     if (_isIOS) {
-      // ✅ ================== iOS: 精确值布局 ==================
-      const double kHeaderVisual = 38.0; // 1. 头部可见高度
-      const double kSideWidgetTop =
-      -6.0; // 3. ✅ [MODIFIED] 左右小组件顶部（上移并与标题对齐，原为 2.0）
-      const double kTitleTop = -6.0; // 2. 标题顶部
-      const double kSide = 16.0; // 左右内边距
-      const double kButtonWidth = 36.0; // 按钮估算宽度
-      const double kSpacing = 16.0; // 间距
+      // iOS 精确像素：statusBar + 38 视觉高度；标题与左右按钮 top = -6 对齐
+      const double kHeaderVisual = 38.0;
+      const double kSide = 16.0;
+      const double kTitleTop = -6.0;
+      const double kSideWidgetTop = -6.0;
+      const double kButtonWidth = 36.0;
+      const double kSpacing = 16.0;
 
       return Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF2196F3),
-              Color(0xFF1976D2),
-              Color(0xFF1565C0),
-            ],
-          ),
-        ),
+        decoration: bg,
         child: SizedBox(
-          height: statusBar + kHeaderVisual, // 1. 应用高度
+          height: statusBar + kHeaderVisual,
           child: Stack(
             children: [
-              // 3. 应用左侧小组件顶部
               Positioned(
-                top: statusBar + kSideWidgetTop,
-                left: kSide,
-                child: backButton,
-              ),
-              // 2. 应用标题顶部
+                  top: statusBar + kSideWidgetTop,
+                  left: kSide,
+                  child: backButton),
               Positioned(
                 top: statusBar + kTitleTop,
                 left: kSide + kButtonWidth + kSpacing,
                 right: kSide + kButtonWidth + kSpacing,
-                child:
-                titleWidgetIOS, // ✅ [MODIFIED] titleColumn replaced with centered Text
+                child: titleIOS,
               ),
-              // 3. 应用右侧小组件顶部
               Positioned(
-                top: statusBar + kSideWidgetTop,
-                right: kSide,
-                child: refreshButton,
-              ),
+                  top: statusBar + kSideWidgetTop,
+                  right: kSide,
+                  child: refreshButton),
             ],
           ),
         ),
       );
     } else {
-      // ✅ Android: 保持原有布局 (SafeArea + Padding)
+      // Android：顶部也保持同样的短蓝条风格
       return Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF2196F3),
-              Color(0xFF1976D2),
-              Color(0xFF1565C0),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          bottom: false, // 确保只应用 top
+        decoration: bg,
+        padding: EdgeInsets.only(top: statusBar),
+        child: SizedBox(
+          height: 44,
           child: Padding(
-            padding:
-            const EdgeInsets.fromLTRB(16, 16, 16, 0), // 移除底部 Sizedbox 间距
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
                 backButton,
                 const SizedBox(width: 16),
-                Expanded(
-                    child:
-                    titleWidgetAndroid), // ✅ [MODIFIED] titleColumn replaced
+                Expanded(child: titleAndroid),
                 refreshButton,
               ],
             ),
@@ -556,66 +442,45 @@ class _CouponManagementPageState extends State<CouponManagementPage>
     }
   }
 
-  // ✅ [NEW] _buildQuickStatsWrapper
-
-  // 渲染 QuickStats 卡片，并为其提供无缝衔接的蓝色背景和间距
-
+  // ===== 顶部说明 + 统计卡（不再使用整块蓝色背景，缩小顶部蓝范围） =====
   Widget _buildQuickStatsWrapper() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF2196F3),
-            Color(0xFF1976D2),
-            Color(0xFF1565C0),
-          ],
-        ),
-      ),
-
-      // 还原原有的 24.0 间距 和 24.0 底部内边距
-
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
-
-      // ✅ [MODIFIED] Per Instruction B: Add Column and move subtitle here
-
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           const Padding(
-            padding: EdgeInsets.only(left: 2, right: 2, bottom: 12),
+            padding: EdgeInsets.only(left: 2, right: 2, bottom: 10),
             child: Text(
               'Manage and use your coupons',
-              style: TextStyle(color: Colors.white70, fontSize: 12),
+              style: TextStyle(color: Colors.black54, fontSize: 12),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          _buildQuickStats(),
+          _buildQuickStats(), // 已改为浅色卡片版本
         ],
       ),
     );
   }
 
+  // ===== Trending 配额卡（保持蓝色卡片，非顶部背景的一部分） =====
   Widget _buildTrendingQuotaCard() {
     final used = _trendingQuotaStatus['used_count'] as int? ?? 0;
-
     final max = _trendingQuotaStatus['max_count'] as int? ?? 20;
-
     final remaining = _trendingQuotaStatus['remaining'] as int? ?? 20;
-
     final available = _trendingQuotaStatus['available'] as bool? ?? true;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF2196F3),
+        color: _PRIMARY_BLUE,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF2196F3).withOpacity(0.3),
+            color: _PRIMARY_BLUE.withOpacity(0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -629,11 +494,8 @@ class _CouponManagementPageState extends State<CouponManagementPage>
               color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
-              Icons.local_fire_department,
-              color: Colors.white,
-              size: 24,
-            ),
+            child: const Icon(Icons.local_fire_department,
+                color: Colors.white, size: 24),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -643,20 +505,16 @@ class _CouponManagementPageState extends State<CouponManagementPage>
                 const Text(
                   'Today\'s Hot Pinning Quota',
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   available
                       ? 'Remaining $remaining free hot pins'
                       : 'Today\'s quota used up, try again tomorrow',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
                 const SizedBox(height: 10),
                 Container(
@@ -687,10 +545,9 @@ class _CouponManagementPageState extends State<CouponManagementPage>
             child: Text(
               '$used/$max',
               style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -700,11 +557,8 @@ class _CouponManagementPageState extends State<CouponManagementPage>
 
   Widget _buildTabBar() {
     final availableCount = _activeCoupons.length;
-
     final usedCount = _usedCoupons.length;
-
     final expiredCount = _expiredCoupons.length;
-
     final allCount = _allCoupons.length;
 
     return Container(
@@ -714,10 +568,9 @@ class _CouponManagementPageState extends State<CouponManagementPage>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2)),
         ],
       ),
       child: TabBar(
@@ -725,17 +578,10 @@ class _CouponManagementPageState extends State<CouponManagementPage>
         labelColor: Colors.white,
         unselectedLabelColor: Colors.grey[600],
         indicator: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          color: const Color(0xFF2196F3),
-        ),
-        labelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.normal,
-        ),
+            borderRadius: BorderRadius.circular(12), color: _PRIMARY_BLUE),
+        labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        unselectedLabelStyle:
+        const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
         indicatorSize: TabBarIndicatorSize.tab,
         indicatorPadding: EdgeInsets.zero,
         dividerColor: Colors.transparent,
@@ -744,70 +590,74 @@ class _CouponManagementPageState extends State<CouponManagementPage>
           Tab(
             height: 56,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('Available'),
-                const SizedBox(height: 2),
-                Text('($availableCount)', style: const TextStyle(fontSize: 10)),
-              ],
-            ),
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Available'),
+                  const SizedBox(height: 2),
+                  Text('($availableCount)', style: const TextStyle(fontSize: 10)),
+                ]),
           ),
           Tab(
             height: 56,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('Used'),
-                const SizedBox(height: 2),
-                Text('($usedCount)', style: const TextStyle(fontSize: 10)),
-              ],
-            ),
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Used'),
+                  const SizedBox(height: 2),
+                  Text('($usedCount)', style: const TextStyle(fontSize: 10)),
+                ]),
           ),
           Tab(
             height: 56,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('Expired'),
-                const SizedBox(height: 2),
-                Text('($expiredCount)', style: const TextStyle(fontSize: 10)),
-              ],
-            ),
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Expired'),
+                  const SizedBox(height: 2),
+                  Text('($expiredCount)', style: const TextStyle(fontSize: 10)),
+                ]),
           ),
           Tab(
             height: 56,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('All'),
-                const SizedBox(height: 2),
-                Text('($allCount)', style: const TextStyle(fontSize: 10)),
-              ],
-            ),
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('All'),
+                  const SizedBox(height: 2),
+                  Text('($allCount)', style: const TextStyle(fontSize: 10)),
+                ]),
           ),
         ],
       ),
     );
   }
 
+  // ====== 浅色卡片版 QuickStats（深色文字，蓝色点缀） ======
   Widget _buildQuickStats() {
     final expiringSoon = _couponStats['expiring_soon'] as int? ?? 0;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 4)),
+        ],
+        border: Border.all(color: Colors.grey.shade200, width: 1),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildQuickStatItem(
               'Available', _activeCoupons.length.toString(), Icons.card_giftcard),
-          Container(width: 1, height: 30, color: Colors.white.withOpacity(0.3)),
+          Container(width: 1, height: 30, color: Colors.grey.shade300),
           _buildQuickStatItem(
               'Used', _usedCoupons.length.toString(), Icons.check_circle),
-          Container(width: 1, height: 30, color: Colors.white.withOpacity(0.3)),
+          Container(width: 1, height: 30, color: Colors.grey.shade300),
           _buildQuickStatItem(
               'Expiring\nSoon', expiringSoon.toString(), Icons.schedule),
         ],
@@ -818,24 +668,18 @@ class _CouponManagementPageState extends State<CouponManagementPage>
   Widget _buildQuickStatItem(String label, String value, IconData icon) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white, size: 20),
+        Icon(icon, color: _PRIMARY_BLUE, size: 20),
         const SizedBox(height: 4),
         Text(
           value,
           style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+              color: Colors.black87, fontSize: 16, fontWeight: FontWeight.bold),
         ),
         Text(
           label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 10,
-            fontWeight: FontWeight.w500,
-          ),
           textAlign: TextAlign.center,
+          style: const TextStyle(
+              color: Colors.black54, fontSize: 10, fontWeight: FontWeight.w500),
         ),
       ],
     );
@@ -853,32 +697,28 @@ class _CouponManagementPageState extends State<CouponManagementPage>
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10))
               ],
             ),
             child: Column(
-              children: [
-                const SizedBox(
+              children: const [
+                SizedBox(
                   width: 40,
                   height: 40,
                   child: CircularProgressIndicator(
-                    strokeWidth: 3,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      Color(0xFF2196F3),
-                    ),
-                  ),
+                      strokeWidth: 3,
+                      valueColor:
+                      AlwaysStoppedAnimation<Color>(_PRIMARY_BLUE)),
                 ),
-                const SizedBox(height: 16),
-                const Text(
+                SizedBox(height: 16),
+                Text(
                   'Loading your coupons...',
                   style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w500,
-                  ),
+                      fontSize: 16,
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -888,8 +728,6 @@ class _CouponManagementPageState extends State<CouponManagementPage>
     );
   }
 
-  // 新增错误状态UI
-
   Widget _buildErrorState(String error) {
     return Center(
       child: Padding(
@@ -897,42 +735,29 @@ class _CouponManagementPageState extends State<CouponManagementPage>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red[400],
-            ),
+            Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
             const SizedBox(height: 16),
-            const Text(
-              'Failed to load coupons',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-            ),
+            const Text('Failed to load coupons',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87)),
             const SizedBox(height: 8),
-            Text(
-              error,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-              textAlign: TextAlign.center,
-            ),
+            Text(error,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey[600])),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _onPullToRefresh,
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2196F3),
+                backgroundColor: _PRIMARY_BLUE,
                 foregroundColor: Colors.white,
                 padding:
                 const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ],
@@ -943,8 +768,8 @@ class _CouponManagementPageState extends State<CouponManagementPage>
 
   Widget _buildCouponList(List<CouponModel> coupons, String emptyMessage) {
     return RefreshIndicator(
-      onRefresh: _onPullToRefresh, // ✅ 使用新的刷新方法
-      color: const Color(0xFF2196F3),
+      onRefresh: _onPullToRefresh,
+      color: _PRIMARY_BLUE,
       child: coupons.isEmpty
           ? _buildEmptyState(emptyMessage)
           : ListView.builder(
@@ -958,9 +783,8 @@ class _CouponManagementPageState extends State<CouponManagementPage>
               return Transform.translate(
                 offset: Offset(0, 20 * (1 - value)),
                 child: Opacity(
-                  opacity: value,
-                  child: _buildCouponCard(coupons[index]),
-                ),
+                    opacity: value,
+                    child: _buildCouponCard(coupons[index])),
               );
             },
           );
@@ -979,37 +803,24 @@ class _CouponManagementPageState extends State<CouponManagementPage>
               width: 100,
               height: 100,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    const Color(0xFF2196F3).withOpacity(0.1),
-                    const Color(0xFF1976D2).withOpacity(0.05),
-                  ],
-                ),
+                gradient: LinearGradient(colors: [
+                  _PRIMARY_BLUE.withOpacity(0.10),
+                  _PRIMARY_BLUE.withOpacity(0.05)
+                ]),
                 borderRadius: BorderRadius.circular(50),
               ),
-              child: const Icon(
-                Icons.card_giftcard_outlined,
-                size: 50,
-                color: Color(0xFF2196F3),
-              ),
+              child: const Icon(Icons.card_giftcard_outlined,
+                  size: 50, color: _PRIMARY_BLUE),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'No coupons',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-              ),
-            ),
+            const Text('No coupons',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87)),
             const SizedBox(height: 8),
-            Text(
-              message,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
+            Text(message,
+                style: TextStyle(fontSize: 14, color: Colors.grey[600])),
           ],
         ),
       ),
@@ -1017,13 +828,11 @@ class _CouponManagementPageState extends State<CouponManagementPage>
   }
 
   Widget _buildCouponCard(CouponModel coupon) {
-    // 安全的过期检查
-
     bool isExpiringSoon = false;
-
     try {
       isExpiringSoon = coupon.daysUntilExpiry <= 3 && coupon.isUsable;
     } catch (e) {
+      // ✅ 修复：将 catch() 替换为 catch (e)
       isExpiringSoon = false;
     }
 
@@ -1034,22 +843,20 @@ class _CouponManagementPageState extends State<CouponManagementPage>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: _getCouponColor(coupon.type).withOpacity(0.15),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
+              color: _getCouponColor(coupon.type).withOpacity(0.15),
+              blurRadius: 12,
+              offset: const Offset(0, 4)),
         ],
         border: isExpiringSoon
             ? Border.all(color: Colors.red.withOpacity(0.3), width: 2)
             : Border.all(
-          color: _getCouponColor(coupon.type).withOpacity(0.2),
-          width: 1,
-        ),
+            color: _getCouponColor(coupon.type).withOpacity(0.2), width: 1),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: Column(
           children: [
+            // 头部色带
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -1057,7 +864,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
                 gradient: LinearGradient(
                   colors: [
                     _getCouponColor(coupon.type),
-                    _getCouponColor(coupon.type).withOpacity(0.8),
+                    _getCouponColor(coupon.type).withOpacity(0.8)
                   ],
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
@@ -1073,41 +880,31 @@ class _CouponManagementPageState extends State<CouponManagementPage>
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4))
                       ],
                     ),
-                    child: Icon(
-                      _getCouponIcon(coupon.type),
-                      color: Colors.white,
-                      size: 28,
-                    ),
+                    child: Icon(_getCouponIcon(coupon.type),
+                        color: Colors.white, size: 28),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          coupon.title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                        Text(coupon.title,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold)),
                         const SizedBox(height: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
+                              horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(10)),
                           child: Text(
                             coupon.code,
                             style: const TextStyle(
@@ -1122,26 +919,24 @@ class _CouponManagementPageState extends State<CouponManagementPage>
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
+                    padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20)),
                     child: Text(
                       coupon.statusDescription,
                       style: TextStyle(
-                        color: _getCouponColor(coupon.type),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
+                          color: _getCouponColor(coupon.type),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
               ),
             ),
+
+            // 内容
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -1157,17 +952,15 @@ class _CouponManagementPageState extends State<CouponManagementPage>
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.warning,
-                              color: Colors.red, size: 20),
+                          const Icon(Icons.warning, color: Colors.red, size: 20),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               'Expiring soon! Use within ${coupon.daysUntilExpiry} days.',
                               style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.red.shade700,
-                                fontWeight: FontWeight.w600,
-                              ),
+                                  fontSize: 12,
+                                  color: Colors.red.shade700,
+                                  fontWeight: FontWeight.w600),
                             ),
                           ),
                         ],
@@ -1175,14 +968,9 @@ class _CouponManagementPageState extends State<CouponManagementPage>
                     ),
                     const SizedBox(height: 16),
                   ],
-                  Text(
-                    coupon.description,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[700],
-                      height: 1.5,
-                    ),
-                  ),
+                  Text(coupon.description,
+                      style:
+                      TextStyle(fontSize: 14, color: Colors.grey[700], height: 1.5)),
                   const SizedBox(height: 10),
                   if (coupon.isWelcome || coupon.pinScope != null) ...[
                     Row(
@@ -1193,10 +981,9 @@ class _CouponManagementPageState extends State<CouponManagementPage>
                         Text(
                           'Scope: ${coupon.isWelcome ? 'Category Pin' : (coupon.pinScope ?? 'N/A')}',
                           style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.orange[800],
-                            fontWeight: FontWeight.w600,
-                          ),
+                              fontSize: 12,
+                              color: Colors.orange[800],
+                              fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -1208,18 +995,15 @@ class _CouponManagementPageState extends State<CouponManagementPage>
                         child: OutlinedButton.icon(
                           onPressed: () => _copyCouponCode(coupon.code),
                           icon: const Icon(Icons.copy, size: 16),
-                          label: const Text(
-                            'Copy Code',
-                            style: TextStyle(fontSize: 14),
-                          ),
+                          label:
+                          const Text('Copy Code', style: TextStyle(fontSize: 14)),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: _getCouponColor(coupon.type),
-                            side: BorderSide(
-                                color: _getCouponColor(coupon.type)),
+                            side:
+                            BorderSide(color: _getCouponColor(coupon.type)),
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                                borderRadius: BorderRadius.circular(12)),
                           ),
                         ),
                       ),
@@ -1229,24 +1013,22 @@ class _CouponManagementPageState extends State<CouponManagementPage>
                           child: ElevatedButton.icon(
                             onPressed: () => _onUseNow(coupon),
                             icon: Icon(
-                              coupon.canPin
-                                  ? Icons.post_add
-                                  : Icons.info_outline,
-                              size: 16,
-                            ),
+                                coupon.canPin
+                                    ? Icons.post_add
+                                    : Icons.info_outline,
+                                size: 16),
                             label: Text(
-                              coupon.canPin ? 'Use Now' : 'How to Use',
-                              style: const TextStyle(
-                                  fontSize: 14, fontWeight: FontWeight.w600),
-                            ),
+                                coupon.canPin ? 'Use Now' : 'How to Use',
+                                style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600)),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: _getCouponColor(coupon.type),
                               foregroundColor: Colors.white,
                               padding:
                               const EdgeInsets.symmetric(vertical: 12),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                                  borderRadius: BorderRadius.circular(12)),
                               elevation: 2,
                             ),
                           ),
@@ -1263,31 +1045,26 @@ class _CouponManagementPageState extends State<CouponManagementPage>
     );
   }
 
+  // ===== 类型色/图标 =====
   Color _getCouponColor(CouponType type) {
     switch (type) {
       case CouponType.trending:
       case CouponType.trendingPin:
         return const Color(0xFFFF6B35);
-
       case CouponType.category:
       case CouponType.pinned:
       case CouponType.featured:
       case CouponType.premium:
         return const Color(0xFF2196F3);
-
       case CouponType.boost:
         return const Color(0xFF9C27B0);
-
       case CouponType.registerBonus:
       case CouponType.welcome:
         return const Color(0xFF4CAF50);
-
       case CouponType.activityBonus:
         return const Color(0xFFFF9800);
-
       case CouponType.referralBonus:
         return const Color(0xFFE91E63);
-
       default:
         return const Color(0xFF2196F3);
     }
@@ -1298,26 +1075,20 @@ class _CouponManagementPageState extends State<CouponManagementPage>
       case CouponType.trending:
       case CouponType.trendingPin:
         return Icons.local_fire_department;
-
       case CouponType.category:
       case CouponType.pinned:
       case CouponType.featured:
       case CouponType.premium:
         return Icons.push_pin;
-
       case CouponType.boost:
         return Icons.rocket_launch;
-
       case CouponType.registerBonus:
       case CouponType.welcome:
         return Icons.card_giftcard;
-
       case CouponType.activityBonus:
         return Icons.task_alt;
-
       case CouponType.referralBonus:
         return Icons.group_add;
-
       default:
         return Icons.card_giftcard;
     }
@@ -1328,28 +1099,21 @@ class _CouponManagementPageState extends State<CouponManagementPage>
       case CouponType.trending:
       case CouponType.trendingPin:
         return 'Hot Pin';
-
       case CouponType.category:
       case CouponType.pinned:
       case CouponType.featured:
       case CouponType.premium:
         return 'Category Pin';
-
       case CouponType.boost:
         return 'Search Boost';
-
       case CouponType.registerBonus:
         return 'Register Bonus';
-
       case CouponType.welcome:
         return 'Welcome Reward';
-
       case CouponType.activityBonus:
         return 'Activity Bonus';
-
       case CouponType.referralBonus:
         return 'Referral Bonus';
-
       default:
         return 'Coupon';
     }
@@ -1357,40 +1121,33 @@ class _CouponManagementPageState extends State<CouponManagementPage>
 
   void _copyCouponCode(String code) {
     Clipboard.setData(ClipboardData(text: code));
-
     _showSnackBar('Coupon code copied: $code');
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: isError ? Colors.red[600] : const Color(0xFF2196F3),
+        backgroundColor: isError ? Colors.red[600] : _PRIMARY_BLUE,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
       ),
     );
   }
 
-  // ✅ [FIXED]
+  // ===== 入口动作（修正为 WidgetBuilder 签名） =====
   void _onUseNow(CouponModel coupon) {
     if (coupon.canPin) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          // ✅ [FIXED]
-          builder: (context) => const SellFormPage(),
+          builder: (context) => const SellFormPage(), // ✅ 正确：WidgetBuilder
           settings: RouteSettings(arguments: {'couponId': coupon.id}),
         ),
       );
-
       _showSnackBar(
-        'Tip: select this coupon in the posting page to pin your item.',
-      );
+          'Tip: select this coupon in the posting page to pin your item.');
     } else {
       _showUseCouponDialog(coupon);
     }
@@ -1400,16 +1157,9 @@ class _CouponManagementPageState extends State<CouponManagementPage>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: const Text(
-          'How to Use',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('How to Use',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1417,71 +1167,54 @@ class _CouponManagementPageState extends State<CouponManagementPage>
             children: [
               if (coupon.canPin) ...[
                 const Text(
-                  'This coupon can pin your item to get more visibility.',
-                  style: TextStyle(fontSize: 16),
-                ),
+                    'This coupon can pin your item to get more visibility.',
+                    style: TextStyle(fontSize: 16)),
                 const SizedBox(height: 8),
                 const Text(
-                  'Post an item and choose this coupon during submission.',
-                  style: TextStyle(fontSize: 14, color: Colors.black54),
-                ),
+                    'Post an item and choose this coupon during submission.',
+                    style: TextStyle(fontSize: 14, color: Colors.black54)),
               ] else ...[
-                const Text(
-                  'This coupon cannot be used for pinning directly.',
-                  style: TextStyle(fontSize: 16),
-                ),
+                const Text('This coupon cannot be used for pinning directly.',
+                    style: TextStyle(fontSize: 16)),
                 const SizedBox(height: 8),
-                Text(
-                  // ✅ [FIXED]
-                  'Type: ${_readableType(coupon.type)}',
-                  style: const TextStyle(fontSize: 14, color: Colors.black54),
-                ),
+                Text('Type: ${_readableType(coupon.type)}',
+                    style: const TextStyle(fontSize: 14, color: Colors.black54)),
               ],
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8)),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      coupon.title,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Code: ${coupon.code}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                  ],
-                ),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(coupon.title,
+                          style: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 4),
+                      Text('Code: ${coupon.code}',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                              fontFamily: 'monospace')),
+                    ]),
               ),
             ],
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Close')),
           if (coupon.canPin)
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(context);
                 Navigator.of(context).push(
                   MaterialPageRoute(
-                    // ✅ [FIXED]
-                    builder: (context) => const SellFormPage(),
+                    builder: (context) =>
+                    const SellFormPage(), // ✅ 正确：WidgetBuilder
                     settings: RouteSettings(arguments: {'couponId': coupon.id}),
                   ),
                 );
@@ -1489,9 +1222,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
               icon: const Icon(Icons.post_add, size: 18),
               label: const Text('Go to Post'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2196F3),
-                foregroundColor: Colors.white,
-              ),
+                  backgroundColor: _PRIMARY_BLUE, foregroundColor: Colors.white),
             ),
         ],
       ),
@@ -1502,79 +1233,66 @@ class _CouponManagementPageState extends State<CouponManagementPage>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: const Text(
-          'How to Use Coupons',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('How to Use Coupons',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
         content: SingleChildScrollView(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildTipItem(
-                icon: Icons.local_fire_department,
-                title: 'Hot Pin Coupons',
-                description:
-                'Pin your items to the trending section on homepage for maximum visibility.',
-                color: const Color(0xFFFF6B35),
-              ),
-              const SizedBox(height: 16),
-              _buildTipItem(
-                icon: Icons.push_pin,
-                title: 'Category Pin Coupons',
-                description:
-                'Pin your items to the top of specific category pages.',
-                color: const Color(0xFF2196F3),
-              ),
-              const SizedBox(height: 16),
-              _buildTipItem(
-                icon: Icons.rocket_launch,
-                title: 'Boost Coupons',
-                description: 'Boost your item ranking in search results.',
-                color: const Color(0xFF9C27B0),
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2196F3).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: const Color(0xFF2196F3).withOpacity(0.3),
-                  ),
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildTipItem(
+                  icon: Icons.local_fire_department,
+                  title: 'Hot Pin Coupons',
+                  description:
+                  'Pin your items to the trending section on homepage for maximum visibility.',
+                  color: const Color(0xFFFF6B35),
                 ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.lightbulb,
-                        color: Color(0xFF2196F3), size: 20),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Tip: Use hot pin coupons during peak hours for best results!',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF1976D2),
-                          fontWeight: FontWeight.w500,
+                const SizedBox(height: 16),
+                _buildTipItem(
+                  icon: Icons.push_pin,
+                  title: 'Category Pin Coupons',
+                  description:
+                  'Pin your items to the top of specific category pages.',
+                  color: const Color(0xFF2196F3),
+                ),
+                const SizedBox(height: 16),
+                _buildTipItem(
+                  icon: Icons.rocket_launch,
+                  title: 'Boost Coupons',
+                  description: 'Boost your item ranking in search results.',
+                  color: const Color(0xFF9C27B0),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _PRIMARY_BLUE.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: _PRIMARY_BLUE.withOpacity(0.30)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.lightbulb, color: _PRIMARY_BLUE, size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Tip: Use hot pin coupons during peak hours for best results!',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF1366D1),
+                              fontWeight: FontWeight.w500),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ]),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Got it'),
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Got it'))
         ],
       ),
     );
@@ -1592,40 +1310,29 @@ class _CouponManagementPageState extends State<CouponManagementPage>
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8)),
           child: Icon(icon, color: color, size: 20),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
+          child:
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title,
                 style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                description,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87)),
+            const SizedBox(height: 4),
+            Text(description,
                 style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                  height: 1.3,
-                ),
-              ),
-            ],
-          ),
+                    fontSize: 12, color: Colors.grey[600], height: 1.3)),
+          ]),
         ),
       ],
     );
   }
 
   @override
-  bool get wantKeepAlive => true; // 保持状态，避免Tab切换重建
+  bool get wantKeepAlive => true; // 保持状态，避免 Tab 切换重建
 }

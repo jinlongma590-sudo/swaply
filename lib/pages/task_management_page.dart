@@ -9,9 +9,10 @@
 // 7) ✅ Realtime 历史频道改为监听 coupon_usages 表
 // 8) ✅ 历史卡片：第一行券标题，第二行友好化 reason（app/system/auto/空隐藏或映射）
 // 9) ✅ iOS 头部改为“基准页像素对齐”的自定义头；Android 保持 AppBar
+// 10) ✅ 顶部区域采用「导航条渐变 + 白色卡片（统计+Tab）」布局；标题与左右按钮像素对齐
 
 import 'dart:convert';
-import 'package:flutter/foundation.dart'; // kIsWeb / defaultTargetPlatform
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -19,7 +20,7 @@ import 'package:swaply/services/reward_service.dart';
 import 'package:swaply/services/coupon_service.dart';
 import 'package:swaply/models/coupon.dart';
 import 'package:swaply/pages/sell_form_page.dart';
-import 'package:flutter/services.dart'; // 引入 SystemUiOverlayStyle
+import 'package:flutter/services.dart';
 
 class TaskManagementPage extends StatefulWidget {
   final int initialTab;
@@ -101,8 +102,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
     final looksBroken = s.contains('Ã') ||
         s.contains('Â') ||
         s.contains('â') ||
-        s.contains('ð') ||
-        s.contains('');
+        s.contains('ð');
     if (!looksBroken) return s;
 
     try {
@@ -118,10 +118,10 @@ class _TaskManagementPageState extends State<TaskManagementPage>
         }
       }
       return utf8.decode(bytes, allowMalformed: true);
-    } catch (_) {
+    } catch (e) {
       try {
         return utf8.decode(latin1.encode(s), allowMalformed: true);
-      } catch (_) {
+      } catch (e) {
         return s;
       }
     }
@@ -180,7 +180,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
     try {
       ch.unsubscribe();
       Supabase.instance.client.removeChannel(ch);
-    } catch (_) {}
+    } catch (e) {}
   }
 
   void _subscribeRealtime() {
@@ -329,7 +329,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
       if (!mounted) return;
       _tasks = tasks;
       setState(() {});
-    } catch (_) {}
+    } catch (e) {}
   }
 
   /// ✅ 直接从 coupon_usages 加载历史
@@ -381,7 +381,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
               source = parsed['source'].toString();
             }
           }
-        } catch (_) {}
+        } catch (e) {}
 
         final String couponId = (u['coupon_id'] as String?) ?? '';
         final Map<String, dynamic>? c = couponById[couponId];
@@ -399,7 +399,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
 
       if (!mounted) return;
       setState(() => _rewardHistory = history);
-    } catch (_) {
+    } catch (e) {
       // 静默失败
     }
   }
@@ -412,7 +412,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
       final stats = await RewardService.getUserRewardStats(user.id);
       if (!mounted) return;
       setState(() => _rewardStats = stats);
-    } catch (_) {}
+    } catch (e) {}
   }
 
   /// 放宽查询条件，只按 user_id + status=active；本地再过滤奖励券
@@ -437,12 +437,12 @@ class _TaskManagementPageState extends State<TaskManagementPage>
           if (_isRewardCoupon(c.type) && !c.isExpired) {
             all.add(c);
           }
-        } catch (_) {}
+        } catch (e) {}
       }
 
       if (!mounted) return;
       setState(() => _rewardCoupons = all);
-    } catch (_) {
+    } catch (e) {
       // 回退：走服务封装
       try {
         final user = Supabase.instance.client.auth.currentUser;
@@ -458,7 +458,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
 
         if (!mounted) return;
         setState(() => _rewardCoupons = rewardCoupons);
-      } catch (_) {}
+      } catch (e) {}
     }
   }
 
@@ -488,7 +488,6 @@ class _TaskManagementPageState extends State<TaskManagementPage>
   Widget build(BuildContext context) {
     super.build(context);
 
-    final double statusBar = MediaQuery.of(context).padding.top;
     final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
     return FutureBuilder<void>(
@@ -499,7 +498,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
                 _lastFetchAt == null;
 
         if (_isIOS) {
-          // ===== iOS：使用自定义头部（像素对齐基准页） =====
+          // ===== iOS：自定义头部（绿色渐变仅用于导航条） + 白色卡片 =====
           return Scaffold(
             backgroundColor: const Color(0xFFF8F9FA),
             body: Column(
@@ -510,7 +509,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
             ),
           );
         } else {
-          // ===== Android 等平台：保持原 AppBar 行为 (恢复到原始版本) =====
+          // ===== Android：保持 AppBar，但主体同样使用白色卡片样式 =====
           return Scaffold(
             backgroundColor: const Color(0xFFF8F9FA),
             appBar: AppBar(
@@ -556,24 +555,26 @@ class _TaskManagementPageState extends State<TaskManagementPage>
                 ),
               ],
             ),
-            body: _buildBodyMain(isInitialLoading),
+            body: Column(
+              children: [
+                _buildBodyMain(isInitialLoading),
+              ],
+            ),
           );
         }
       },
     );
   }
 
-  // ===== ✅ [MODIFIED] iOS 自定义头部（与基准页像素对齐） =====
+  // ===== ✅ iOS 自定义头部（与基准页像素对齐，仅导航条用渐变） =====
   Widget _buildHeaderIOSRewards(BuildContext context) {
     final double statusBar = MediaQuery.of(context).padding.top;
 
-    // 1. 定义标准 (来自 verification_page.dart)
     const double kNavBarHeight = 44.0; // 标准导航条高度
     const double kButtonSize = 32.0; // 标准按钮尺寸
     const double kSidePadding = 16.0; // 标准左右内边距
     const double kButtonSpacing = 12.0; // 标准间距
 
-    // 2. 构建 32x32 返回按钮
     final Widget iosBackButton = SizedBox(
       width: kButtonSize,
       height: kButtonSize,
@@ -582,16 +583,15 @@ class _TaskManagementPageState extends State<TaskManagementPage>
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(10), // 保持圆角
+            borderRadius: BorderRadius.circular(10),
           ),
           alignment: Alignment.center,
           child: const Icon(Icons.arrow_back_ios_new,
-              size: 18, color: Colors.white), // 保持图标
+              size: 18, color: Colors.white),
         ),
       ),
     );
 
-    // 3. 构建 32x32 刷新按钮
     final Widget iosRefreshButton = SizedBox(
       width: kButtonSize,
       height: kButtonSize,
@@ -600,42 +600,39 @@ class _TaskManagementPageState extends State<TaskManagementPage>
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(10), // 保持圆角
+            borderRadius: BorderRadius.circular(10),
           ),
           alignment: Alignment.center,
           child: _isRefreshing
               ? const SizedBox(
-            width: 18, // 匹配图标大小
+            width: 18,
             height: 18,
             child: CircularProgressIndicator(
               strokeWidth: 2,
               color: Colors.white,
             ),
           )
-              : const Icon(Icons.refresh,
-              color: Colors.white, size: 18), // 匹配图标
+              : const Icon(Icons.refresh, color: Colors.white, size: 18),
         ),
       ),
     );
 
-    // 4. 构建居中标题
     final Widget iosTitle = Expanded(
       child: Text(
         'My Rewards',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.center, // 保证居中
+        textAlign: TextAlign.center,
         style: TextStyle(
           color: Colors.white,
-          fontSize: 18.sp, // 保持 18.sp
+          fontSize: 18.sp,
           fontWeight: FontWeight.w600,
         ),
       ),
     );
 
-    // 5. 组装 (使用 Row 布局，确保对齐)
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle.light, // 白色状态栏字色
+      value: SystemUiOverlayStyle.light,
       child: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -644,19 +641,19 @@ class _TaskManagementPageState extends State<TaskManagementPage>
             end: Alignment.bottomRight,
           ),
         ),
-        padding: EdgeInsets.only(top: statusBar), // 让出状态栏
+        padding: EdgeInsets.only(top: statusBar),
         child: SizedBox(
-          height: kNavBarHeight, // 44pt
+          height: kNavBarHeight, // 仅 44pt 导航条高度
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: kSidePadding), // 16
+            padding: const EdgeInsets.symmetric(horizontal: kSidePadding),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center, // 垂直居中
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                iosBackButton, // 32x32
-                const SizedBox(width: kButtonSpacing), // 12
-                iosTitle, // Expanded
-                const SizedBox(width: kButtonSpacing), // 12
-                iosRefreshButton, // 32x32
+                iosBackButton,
+                const SizedBox(width: kButtonSpacing),
+                iosTitle,
+                const SizedBox(width: kButtonSpacing),
+                iosRefreshButton,
               ],
             ),
           ),
@@ -665,91 +662,40 @@ class _TaskManagementPageState extends State<TaskManagementPage>
     );
   }
 
-  // ===== 主体内容（iOS / Android 共用） =====
+  // ===== 主体内容：白色卡片（统计 + Tab） + 内容区 =====
   Widget _buildBodyMain(bool isInitialLoading) {
     return Expanded(
       child: Column(
         children: [
-          // 头部统计信息（绿色渐变条）
-          Container(
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF4CAF50),
-                  Color(0xFF45A049),
-                  Color(0xFF2E7D32),
+          // 顶部白色卡片（替代原先整块绿色背景）
+          Padding(
+            padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 8.h),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16.r),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 16.r,
+                    offset: Offset(0, 6.h),
+                  ),
                 ],
               ),
-            ),
-            child: Column(
-              children: [
-                Padding(
-                  padding: EdgeInsets.all(20.w),
-                  child: _buildQuickStats(),
+              child: Padding(
+                padding: EdgeInsets.all(16.r),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildQuickStatsCardStyle(),
+                    SizedBox(height: 12.h),
+                    _buildTabsCardStyle(),
+                  ],
                 ),
-                // Tab 导航
-                Container(
-                  margin: EdgeInsets.fromLTRB(20.w, 0, 20.w, 20.h),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12.r),
-                  ),
-                  child: TabBar(
-                    controller: _tabController,
-                    labelColor: Colors.white,
-                    unselectedLabelColor: Colors.white.withOpacity(0.7),
-                    indicator: BoxDecoration(
-                      color: Colors.white.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                    labelStyle: TextStyle(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    unselectedLabelStyle: TextStyle(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.normal,
-                    ),
-                    tabs: [
-                      Tab(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.assignment, size: 16.r),
-                            SizedBox(width: 6.w),
-                            const Text('Tasks'),
-                          ],
-                        ),
-                      ),
-                      Tab(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.card_giftcard, size: 16.r),
-                            SizedBox(width: 6.w),
-                            const Text('Coupons'),
-                          ],
-                        ),
-                      ),
-                      Tab(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.history, size: 16.r),
-                            SizedBox(width: 6.w),
-                            const Text('History'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
+
           // Tab 内容
           Expanded(
             child: isInitialLoading
@@ -771,44 +717,45 @@ class _TaskManagementPageState extends State<TaskManagementPage>
     );
   }
 
-  Widget _buildQuickStats() {
+  // ====== 白卡版 QuickStats（深色文字，绿色点缀） ======
+  Widget _buildQuickStatsCardStyle() {
     final activeTasks = _tasks.length; // 活跃任务
     final completedTasks = (_rewardStats['completed_tasks'] as int?) ?? 0;
     final availableCoupons = _rewardCoupons.length;
 
     return Container(
-      padding: EdgeInsets.all(16.r),
+      padding: EdgeInsets.all(14.r),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(16.r),
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: Colors.green.shade100),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildQuickStatItem(
+          _buildQuickStatItemCard(
               'Active\nTasks', activeTasks.toString(), Icons.assignment),
-          Container(
-              width: 1, height: 30.h, color: Colors.white.withOpacity(0.3)),
-          _buildQuickStatItem(
+          Container(width: 1, height: 28.h, color: Colors.green.shade200),
+          _buildQuickStatItemCard(
               'Completed', completedTasks.toString(), Icons.check_circle),
-          Container(
-              width: 1, height: 30.h, color: Colors.white.withOpacity(0.3)),
-          _buildQuickStatItem(
+          Container(width: 1, height: 28.h, color: Colors.green.shade200),
+          _buildQuickStatItemCard(
               'Coupons', availableCoupons.toString(), Icons.card_giftcard),
         ],
       ),
     );
   }
 
-  Widget _buildQuickStatItem(String label, String value, IconData icon) {
+  Widget _buildQuickStatItemCard(
+      String label, String value, IconData icon) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white, size: 20.r),
+        Icon(icon, color: const Color(0xFF4CAF50), size: 20.r),
         SizedBox(height: 4.h),
         Text(
           value,
           style: TextStyle(
-            color: Colors.white,
+            color: Colors.black87,
             fontSize: 16.sp,
             fontWeight: FontWeight.bold,
           ),
@@ -816,13 +763,80 @@ class _TaskManagementPageState extends State<TaskManagementPage>
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.9),
+            color: Colors.black54,
             fontSize: 10.sp,
             fontWeight: FontWeight.w500,
           ),
           textAlign: TextAlign.center,
         ),
       ],
+    );
+  }
+
+  // ====== 白卡内的分段 Tab ======
+  Widget _buildTabsCardStyle() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.grey.shade700,
+        indicator: BoxDecoration(
+          color: const Color(0xFF4CAF50),
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        labelStyle: TextStyle(
+          fontSize: 13.sp,
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelStyle: TextStyle(
+          fontSize: 13.sp,
+          fontWeight: FontWeight.normal,
+        ),
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicatorPadding: EdgeInsets.zero,
+        dividerColor: Colors.transparent,
+        overlayColor: MaterialStateProperty.all(Colors.transparent),
+        tabs: [
+          Tab(
+            height: 44.h,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.assignment, size: 16.r),
+                SizedBox(width: 6.w),
+                const Text('Tasks'),
+              ],
+            ),
+          ),
+          Tab(
+            height: 44.h,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.card_giftcard, size: 16.r),
+                SizedBox(width: 6.w),
+                const Text('Coupons'),
+              ],
+            ),
+          ),
+          Tab(
+            height: 44.h,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.history, size: 16.r),
+                SizedBox(width: 6.w),
+                const Text('History'),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1181,7 +1195,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
     final createdAt =
         DateTime.tryParse(reward['created_at'] ?? '') ?? DateTime.now();
 
-    // 第一行券标题；第二行友好化 reason，app/system/auto 隐藏或映射
+    // 第一行券标题；第二行友好化 reason
     final couponTitle = _normalizeSeparators(
       _fixUtf8Mojibake(reward['coupon_title'] ?? 'Coupon Reward'),
     );
@@ -1198,7 +1212,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
           case 'activity_bonus':
             return 'Task reward';
           default:
-            return ''; // 隐藏
+            return '';
         }
       }
       return _normalizeSeparators(_fixUtf8Mojibake(raw));
@@ -1328,7 +1342,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
     if (!coupon.canPin || !coupon.isUsable) return;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => const SellFormPage(),
+        builder: (context) => const SellFormPage(), // ✅ 正确的 WidgetBuilder
         settings: RouteSettings(arguments: {'couponId': coupon.id}),
       ),
     );
@@ -1350,14 +1364,14 @@ class _TaskManagementPageState extends State<TaskManagementPage>
 
   String _getTaskDisplayName(String? taskType) {
     switch (taskType) {
-    case 'publish_items':
-    return 'Publish Items';
-    case 'invite_friends':
-    return 'Invite Friends';
-    case 'daily_check':
-    return 'Daily Check-in';
-    default:
-    return 'Task';
+      case 'publish_items':
+        return 'Publish Items';
+      case 'invite_friends':
+        return 'Invite Friends';
+      case 'daily_check':
+        return 'Daily Check-in';
+      default:
+        return 'Task';
     }
   }
 
