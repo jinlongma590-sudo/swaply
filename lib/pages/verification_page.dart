@@ -3,7 +3,7 @@
 // ✅ 最小可用流程：输入验证码 → 调服务 → 读表 → 刷新本页 UI → Navigator.pop(true)
 // ✅ 你已有复杂 UI：已把“提交逻辑”按最小版搬入（_verifyCode）
 // ✅ 判定是否已认证 / 徽章类型：统一走 utils（基于 user_verifications 行）
-// ✅ 本次改动：iOS 顶部间距与标准页一致（statusBar+38，标题-6，左右按钮-1）；官方认证卡片固定 Facebook 蓝
+// ✅ 本次改动：[DONE] iOS 顶部改为 statusBar + 44pt Row 布局，移除魔法数。
 
 import 'dart:async';
 
@@ -278,30 +278,22 @@ class _VerificationPageState extends State<VerificationPage>
     );
   }
 
-  // ================= iOS 头部（标准数值） =================
+  // ================= [MODIFIED] iOS 头部（标准 44pt Row 布局） =================
   Widget _buildHeaderIOS() {
     final double statusBar = MediaQuery.of(context).padding.top;
 
-    const double kHeaderVisual = 38.0; // 头部可见高度
-    const double kTitleTop = -6.0; // 标题顶距（相对 statusBar）
-    const double kSideTop = 2.0; // 左/右角小组件顶距（原 -1.0，向下微调以与标题对齐）
-    const double kSide = 16.0; // 左右内边距
-    const double kBtnSize = 36.0; // 左右按钮大致占位宽度（用于居中标题）
-    const double kSpacing = 16.0;
+    // 1. 移除所有旧的魔法数常量
+    // const double kHeaderVisual = 38.0;
+    // const double kTitleTop = -6.0;
+    // const double kSideTop = 2.0;
+    // const double kSide = 16.0;
+    // const double kBtnSize = 36.0;
+    // const double kSpacing = 16.0;
+    // 移除旧的 backBtn 变量定义
 
-    final backBtn = GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
-      ),
-    );
-
+    // 2. 采用新的标准布局
     return Container(
+      // 仍用你现在的渐变/颜色，不改
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
@@ -309,39 +301,53 @@ class _VerificationPageState extends State<VerificationPage>
           end: Alignment.bottomRight,
         ),
       ),
+      padding: EdgeInsets.only(top: statusBar), // 让出状态栏
       child: SizedBox(
-        height: statusBar + kHeaderVisual,
-        child: Stack(
-          children: [
-            // 左按钮
-            Positioned(
-              top: statusBar + kSideTop,
-              left: kSide,
-              child: backBtn,
-            ),
-            // 居中标题（用等宽占位保持居中）
-            Positioned(
-              top: statusBar + kTitleTop,
-              left: kSide + kBtnSize + kSpacing,
-              right: kSide + kBtnSize + kSpacing,
-              child: Text(
-                'Account Verification',
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 18.sp, // 保持你原 AppBar 字号，不改风格
+        height: 44, // 标准导航条高度
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16), // 左右边距 16
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center, // 保证垂直居中
+            children: [
+              // 左侧 32×32 返回
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10), // 匹配旧版圆角
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.arrow_back_ios_new,
+                        size: 18, color: Colors.white), // 匹配旧版图标
+                  ),
                 ),
               ),
-            ),
-            // 右侧占位（保证标题真正居中；无按钮也保留空间）
-            Positioned(
-              top: statusBar + kSideTop,
-              right: kSide,
-              child: const SizedBox(width: kBtnSize, height: kBtnSize),
-            ),
-          ],
+              const SizedBox(width: 12),
+
+              // 标题：与左右按钮同一基线（Row 天然垂直居中）
+              Expanded(
+                child: Text(
+                  'Account Verification',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center, // 保持居中（按你要求）
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18.sp, // 保持你原字号
+                  ),
+                ),
+              ),
+
+              // 右侧占位：保留一个 32 占位以保持标题绝对居中
+              const SizedBox(width: 12),
+              const SizedBox(width: 32, height: 32),
+            ],
+          ),
         ),
       ),
     );

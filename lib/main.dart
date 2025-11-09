@@ -14,6 +14,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:uni_links/uni_links.dart'; // ✅ 深链支持
 
 // ====== 链」鐩唴鐨勪緷璧?======
 import 'package:swaply/auth/login_screen.dart';
@@ -54,6 +55,9 @@ import 'startup_screen.dart';
 bool _authHookWired = false;
 StreamSubscription<AuthState>? _globalAuthSub;
 final GlobalKey<NavigatorState> appNavKey = GlobalKey<NavigatorState>();
+
+// ✅ 深链订阅（全局保存，便于取消）
+StreamSubscription? _deeplinkSub;
 
 class AppLocalizations {
   final Locale locale;
@@ -399,31 +403,107 @@ void _showWelcomeGiftDialog() {
   );
 }
 
+// ✅ 统一处理 Supabase 深链（兼容旧版 SDK：解析 fragment / query）
+// ⚠️ 这里把参数改成 Uri?，内部空值早退
+Future<void> _handleSupabaseUri(Uri? uri) async {
+  if (uri == null) return;
+  try {
+    // 拼出所有参数（有的放在 query，有的放在 fragment）
+    final params = <String, String>{};
+    params.addAll(uri.queryParameters);
+    if (uri.fragment.isNotEmpty) {
+      try {
+        params.addAll(Uri.splitQueryString(uri.fragment));
+      } catch (_) {
+        // 某些厂商邮箱可能把 # 之后的内容做了编码，尽量兜底
+        final frag = uri.fragment.replaceAll('#', '').replaceAll('?', '&');
+        params.addAll(Uri.splitQueryString(frag));
+      }
+    }
+
+    final type = (params['type'] ?? params['event'] ?? '').toLowerCase();
+    final code = params['code'];
+    final refreshToken = params['refresh_token'];
+
+    if (code != null && code.isNotEmpty) {
+      // OAuth(PKCE) 场景
+      await Supabase.instance.client.auth.exchangeCodeForSession(code);
+      debugPrint('[DeepLink] exchangeCodeForSession ok');
+    } else if (refreshToken != null && refreshToken.isNotEmpty) {
+      // recovery / magic link 场景
+      await Supabase.instance.client.auth.setSession(refreshToken);
+      debugPrint('[DeepLink] setSession(refresh_token) ok');
+    } else {
+      debugPrint('[DeepLink] no code/refresh_token in uri: $uri');
+    }
+
+    // 找回密码：自动进入设置新密码页
+    if (type == 'recovery') {
+      final ctx = appNavKey.currentContext;
+      if (ctx != null) {
+        appNavKey.currentState?.push(
+          MaterialPageRoute(builder: (_) => const ResetPasswordPage()),
+        );
+      }
+    }
+  } catch (e) {
+    debugPrint('[DeepLink] handle uri error: $e');
+  }
+}
+
+// ✅ 获取初始深链并尝试恢复会话（参数也改为传 Uri?）
+Future<void> _recoverInitialSupabaseSession() async {
+  try {
+    final uri = await getInitialUri();
+    await _handleSupabaseUri(uri);
+    if (uri != null) {
+      debugPrint('[DeepLink] initial uri handled: $uri');
+    }
+  } catch (e) {
+    debugPrint('[DeepLink] initial recover error: $e');
+  }
+}
+
+// ✅ 持续监听后续深链（App 已在前台时再次点击邮件）
+// ⚠️ 监听器现在是 (Uri? uri)
+void _listenDeepLinksForSupabase() {
+  _deeplinkSub?.cancel();
+  _deeplinkSub = getUriLinksStream().listen((Uri? uri) async {
+    try {
+      await _handleSupabaseUri(uri);
+      debugPrint('[DeepLink] stream uri handled: $uri');
+    } catch (e) {
+      debugPrint('[DeepLink] stream recover error: $e');
+    }
+  }, onError: (e) {
+    debugPrint('[DeepLink] stream error: $e');
+  });
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ 全局：内容延伸到屏幕边缘 + 状态栏透明并使用白色图标（Jiji/微信同款效果）
+  // ✅ 全局：内容延伸到屏幕边缘 + 状态栏透明并使用白色图标
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,        // 露出你自己的彩色背景
-    statusBarIconBrightness: Brightness.light, // Android：白色图标
-    statusBarBrightness: Brightness.dark,      // iOS：白色图标
+    statusBarColor: Colors.transparent,
+    statusBarIconBrightness: Brightness.light,
+    statusBarBrightness: Brightness.dark,
   ));
 
-  // === 闈欓煶 Supabase 鐨?refresh session 鍣煶锛堜粎寮€鍙戞湡锛?===
+  // === 屏蔽 Supabase 刷新 session 的日志（开发期） ===
       {
     final _orig = debugPrint;
     debugPrint = (String? message, {int? wrapWidth}) {
       if (message != null &&
           message.contains('supabase.auth: INFO: Refresh session')) {
-        return; // 蹇界暐杩欐潯鏃ュ織
+        return;
       }
       _orig(message, wrapWidth: wrapWidth);
     };
   }
-  // =====================================================
 
-  // ========= 鍏ㄥ眬閿欒鍏滃簳 =========
+  // ========= 全局错误兜底 =========
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
   };
@@ -462,23 +542,27 @@ Future<void> main() async {
     );
   };
 
-  // 鉁?鍚敤 PKCE OAuth锛堢Щ鍔ㄧ蹇呴』锛?
+  // ✅ Supabase 初始化
   await Supabase.initialize(
     url: 'https://rhckybselarzglkmlyqs.supabase.co',
     anonKey:
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoY2t5YnNlbGFyemdsa21seXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTM0NTgsImV4cCI6MjA3MDU4OTQ1OH0.3I0T2DidiF-q9l2tWeHOjB31QogXHDqRtEjDn0RfVbU',
     authOptions: const FlutterAuthClientOptions(
-      // 馃憟 鍏抽敭锛屽埆鍐欐垚 flowType
       autoRefreshToken: true,
     ),
   );
 
-  // 鉁?鍦?Supabase 鍒濆鍖栧悗锛宺unApp 涔嬪墠璋冪敤鍏ㄥ眬鐩戝惉鍣?
+  // ❌ 不需要：SupabaseAuth.instance.initialize();
+
+  // ✅ 处理“首次通过邮件深链打开 App”的场景
+  await _recoverInitialSupabaseSession();
+
+  // ✅ 全局 Auth 事件监听
   wireAuthHook();
 
-  // ✅ 方案 B：启动时补档 + 注册登录时监听（来自您的方案）
-  await _ensureProfileForCurrentUserOnce(); // 启动时，若已登录则补档一次
-  _setupAuthListener(); // 以后每次登录都自动补档
+  // ✅ 方案 B：启动时补档 + 注册/登录时监听
+  await _ensureProfileForCurrentUserOnce();
+  _setupAuthListener();
 
   runApp(
     ChangeNotifierProvider(
@@ -486,6 +570,9 @@ Future<void> main() async {
       child: const MyApp(),
     ),
   );
+
+  // ✅ 前台监听后续深链
+  _listenDeepLinksForSupabase();
 }
 
 class MyApp extends StatefulWidget {
@@ -505,6 +592,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _deeplinkSub?.cancel(); // ✅ 释放深链订阅
     super.dispose();
   }
 
@@ -514,8 +602,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     switch (state) {
       case AppLifecycleState.resumed:
         debugPrint('App resumed - clearing notifications if needed');
-        // 涓嶅啀涓诲姩 refreshSession锛岄伩鍏嶈嚜鍔ㄧ櫥鍑?
-        // AuthService().refreshSession(minInterval: const Duration(minutes: 15));
         break;
       case AppLifecycleState.paused:
         debugPrint('App paused');
@@ -584,13 +670,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   ),
                 ),
               ),
-              // 鉁?浠呬娇鐢?initialRoute锛岄伩鍏嶅悓鏃惰缃?home 閫犳垚璺敱鍐茬獊
+              // ✅ 用 initialRoute，避免 home 冲突
               initialRoute: hasSession ? '/home' : '/welcome',
               routes: {
-                // 鉁?Welcome 鈫?Startup
                 '/welcome': (_) => const WelcomeScreen(),
                 '/login': (_) => const LoginScreen(),
-                // ✅ 修改：/home 指向带五栏的 MainNavigationPage
                 '/home': (_) => MainNavigationPage(
                   isGuest:
                   Supabase.instance.client.auth.currentSession == null,
@@ -604,6 +688,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     );
   }
 }
+
 
 // 莽禄搂莽禄颅忙路禄氓艩  MainNavigationPage 氓鈥櫯捗モ€β睹ぢ烩€撁甭?..
 // [盲赂潞盲潞鈥犆ㄅ犫€毭撀伱┞好┾€斅疵寂捗库劉茅鈥∨捗ぢ柯澝ε捖伱モ€β睹ぢ解劉盲禄拢莽 聛盲赂聧氓聫藴]

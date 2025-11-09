@@ -298,14 +298,14 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
     );
   }
 
-  // ✅ [NEW] 提取 AppBar 构建逻辑，应用 verification_page 标准
+  // ✅ [MODIFIED] 替换为标准 44pt Row 布局（移除魔法数）
   PreferredSizeWidget _buildStandardAppBar(
       BuildContext context, String title) {
     final double statusBar = MediaQuery.of(context).padding.top;
     final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    const Color kBgColor = Color(0xFF2196F3); // 此页面的背景色
+    const Color kBgColor = Color(0xFF2196F3); // 保持本页原有蓝色
 
-    // ============== Android & 其他：保持原 AppBar 不变 ==============
+    // Android/其它：保持原 AppBar
     if (!isIOS) {
       return AppBar(
         backgroundColor: kBgColor,
@@ -314,80 +314,68 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        centerTitle: false, // 保持此页面的 Android 样式
+        centerTitle: false,
         elevation: 0,
       );
     }
 
-    // ============== iOS：使用自定义头部 (VerificationPage 标准) ==============
-
-    // 1. 标准布局数值 (来自 verification_page.dart)
-    const double kHeaderVisual = 38.0; // 头部可见高度
-    const double kTitleTop = -6.0; // 标题顶距（相对 statusBar）
-    const double kSideTop = 2.0; // 左/右角小组件顶距
-    const double kSide = 16.0; // 左右内边距
-    const double kBtnSize = 36.0; // 左右按钮大致占位宽度
-    const double kSpacing = 16.0;
-
-    // 2. 定义此页面的小组件
-    final backBtn = GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        // (使用此页面的 Icon，但应用标准尺寸)
-        child: const Icon(Icons.arrow_back, size: 18, color: Colors.white),
-      ),
-    );
-
-    // 3. 构建布局
+    // iOS：标准 44pt 导航条（无任何魔法数）
     return PreferredSize(
-      preferredSize: Size.fromHeight(statusBar + kHeaderVisual),
+      preferredSize: Size.fromHeight(statusBar + 44),
       child: Container(
-        color: kBgColor, // ✅ [Requirement] 保持此页面的背景颜色
+        color: kBgColor,                    // 颜色不变
+        padding: EdgeInsets.only(top: statusBar),
         child: SizedBox(
-          height: statusBar + kHeaderVisual,
-          child: Stack(
-            children: [
-              // 左按钮
-              Positioned(
-                top: statusBar + kSideTop,
-                left: kSide,
-                child: backBtn,
-              ),
-
-              // 居中标题
-              Positioned(
-                top: statusBar + kTitleTop,
-                left: kSide + kBtnSize + kSpacing,
-                right: kSide + kBtnSize + kSpacing,
-                child: Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700, // (应用标准 fontWeight)
-                    fontSize: 18, // (应用标准 fontSize, 不使用 .sp)
+          height: 44,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // 左侧返回（32×32）
+                SizedBox(
+                  width: 32, height: 32,
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.arrow_back, // 此页面的返回图标
+                          size: 18, color: Colors.white),
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 12),
 
-              // 右侧占位（此页面无 Action）
-              Positioned(
-                top: statusBar + kSideTop,
-                right: kSide,
-                child: const SizedBox(width: kBtnSize, height: kBtnSize),
-              ),
-            ],
+                // 标题 —— 与左右按钮垂直居中对齐
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,   // 保持居中
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+
+                // 右侧占位（保证标题绝对居中；将来有按钮可替换）
+                const SizedBox(width: 12),
+                const SizedBox(width: 32, height: 32),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+
 
   /// 铺满容器（网络/本地都可），失败时灰底占位
   Widget _thumb(Map<String, dynamic> p) {
