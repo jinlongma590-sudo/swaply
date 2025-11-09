@@ -386,41 +386,47 @@ class _CouponManagementPageState extends State<CouponManagementPage>
     // 统一使用纯色 Facebook 蓝，缩小顶部蓝色面积
     final BoxDecoration bg = const BoxDecoration(color: _PRIMARY_BLUE);
 
+    // ==================== MODIFICATION START ====================
+    //
+    // 切换到与“我的奖励”页面一致的布局 (Row-based)
+    //
     if (_isIOS) {
-      // iOS 精确像素：statusBar + 38 视觉高度；标题与左右按钮 top = -6 对齐
-      const double kHeaderVisual = 38.0;
-      const double kSide = 16.0;
-      const double kTitleTop = -6.0;
-      const double kSideWidgetTop = -6.0;
-      const double kButtonWidth = 36.0;
-      const double kSpacing = 16.0;
+      // ✅ 采用「奖励页面」的像素对齐布局
+      const double kNavBarHeight = 44.0; // 标准导航条高度
+      const double kSidePadding = 16.0; // 标准左右内边距
 
-      return Container(
-        decoration: bg,
-        child: SizedBox(
-          height: statusBar + kHeaderVisual,
-          child: Stack(
-            children: [
-              Positioned(
-                  top: statusBar + kSideWidgetTop,
-                  left: kSide,
-                  child: backButton),
-              Positioned(
-                top: statusBar + kTitleTop,
-                left: kSide + kButtonWidth + kSpacing,
-                right: kSide + kButtonWidth + kSpacing,
-                child: titleIOS,
+      // 按钮 (34px) 和模板 (32px) 有 2px 差异
+      // 模板: 16 (pad) + 32 (btn) + 12 (space) = 60
+      // 本页: 16 (pad) + 34 (btn) + 10 (space) = 60
+      // 这样可以保持标题的左右边距与模板页一致
+      const double kButtonSpacing = 10.0;
+
+      return AnnotatedRegion<SystemUiOverlayStyle>(
+        value: SystemUiOverlayStyle.light, // 保持状态栏文字为白色
+        child: Container(
+          decoration: bg,
+          padding: EdgeInsets.only(top: statusBar),
+          child: SizedBox(
+            height: kNavBarHeight, // 仅 44pt 导航条高度
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: kSidePadding),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  backButton, // 使用上面定义的 34x34 按钮
+                  const SizedBox(width: kButtonSpacing),
+                  Expanded(child: titleIOS), // 使用上面定义的居中标题
+                  const SizedBox(width: kButtonSpacing),
+                  refreshButton, // 使用上面定义的 34x34 按钮
+                ],
               ),
-              Positioned(
-                  top: statusBar + kSideWidgetTop,
-                  right: kSide,
-                  child: refreshButton),
-            ],
+            ),
           ),
         ),
       );
     } else {
-      // Android：顶部也保持同样的短蓝条风格
+      // ==================== MODIFICATION END ====================
+      // Android：顶部也保持同样的短蓝条风格 (此部分不变)
       return Container(
         decoration: bg,
         padding: EdgeInsets.only(top: statusBar),

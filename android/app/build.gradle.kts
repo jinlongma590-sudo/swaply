@@ -1,9 +1,10 @@
 // android/app/build.gradle.kts
+
 import java.util.Properties
 
 plugins {
     id("com.android.application")
-    id("kotlin-android")
+    id("org.jetbrains.kotlin.android")
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -23,7 +24,7 @@ android {
         applicationId = "com.example.swaply"
         minSdk = 21
         targetSdk = 35
-        versionCode = flutter.versionCode
+        versionCode = flutter.versionCode.toInt()
         versionName = flutter.versionName
     }
 
@@ -31,6 +32,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlinOptions { jvmTarget = "11" }
 
     // ★ 正式签名配置（读取 key.properties）

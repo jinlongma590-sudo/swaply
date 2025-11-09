@@ -1439,13 +1439,12 @@ class _ProfileRoot extends StatelessWidget {
 }
 
 /* ---------------- Saved Page (收藏页) START ---------------- */
-
 class SavedPage extends StatefulWidget {
   final bool isGuest;
   final VoidCallback? onNavigateToHome;
+
   const SavedPage({Key? key, this.isGuest = false, this.onNavigateToHome})
       : super(key: key);
-
   @override
   State<SavedPage> createState() => _SavedPageState();
 }
@@ -1453,7 +1452,6 @@ class SavedPage extends StatefulWidget {
 class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   // ✅ 修复：添加您在其他页面使用的 _PRIMARY_BLUE 常量 (Facebook 蓝色)
   static const Color _PRIMARY_BLUE = Color(0xFF1877F2);
-
   List<Map<String, dynamic>> _favoriteItems = [];
   bool _isLoading = true;
   bool _isRefreshing = false;
@@ -1461,7 +1459,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   Timer? _autoRefreshTimer;
   StreamSubscription<FavoriteUpdateEvent>? _favoritesSubscription;
 
-  // ✅ A) 统一蓝色头部：高度自适应；提供是否居中、右上角按钮位
+  // ✅ A) 统一蓝色头部：固定规范（statusBar + 64），标题与右上角按钮同基线
   Widget _blueHeader({
     required BuildContext context,
     required String title,
@@ -1469,52 +1467,47 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     Widget? trailing, // 右上角按钮（可选）
   }) {
     final double statusBar = MediaQuery.of(context).padding.top;
-
-    // iOS 收紧，Android 保持原样
-    final bool _isIOS       = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    final double kHeaderVisual = _isIOS ? 38.0 : 76.0;  // 头部视觉高度
-    final double kTitleTop     = _isIOS ? -6.0 : 20.0;  // 标题距顶
-    const double kSide         = 20.0;                  // 左右内边距
+    // ✅ 统一规范：头部总高 = 状态栏 + 64；内容距顶 12；左右 20
+    const double kHeaderContent = 64.0;
+    const double kTitleTop = 12.0;
+    const double kSide = 20.0;
 
     return SizedBox(
-      height: statusBar + kHeaderVisual,
+      height: statusBar + kHeaderContent,
       child: Stack(
         children: [
-          // 背景
+          // 背景（与首页一致的纯 Facebook 蓝）
           Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft, end: Alignment.bottomRight,
-                  // ✅ 修复：使用您首页的 Facebook 蓝色 (0xFF1877F2)
-                  colors: [_PRIMARY_BLUE, Color(0xFF1E88E5)],
-                ),
-              ),
-            ),
+            child: Container(color: _PRIMARY_BLUE),
           ),
-          // 标题
+          // 标题（与右上角按钮同一“行高”对齐）
           Positioned(
             top: statusBar + kTitleTop,
-            left: centerTitle ? kSide : kSide,
-            right: centerTitle ? kSide : null,
+            left: kSide,
+            // 若有右侧按钮，给标题预留 64 的空间，避免遮挡
+            right: centerTitle ? kSide : (trailing != null ? 64.0 : null),
             child: SizedBox(
-              width: centerTitle ? MediaQuery.of(context).size.width - kSide * 2 : null,
+              width: centerTitle
+                  ? MediaQuery.of(context).size.width - kSide * 2
+                  : null,
               child: Text(
                 title,
                 textAlign: centerTitle ? TextAlign.center : TextAlign.left,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
+                  height: 1.1,
                 ),
               ),
             ),
           ),
-          // 右上角操作按钮（可选）
+          // 右上角操作按钮（可选）— 放在同一行，触控区≥44×44
           if (trailing != null)
             Positioned(
-              // ✅ 顶部对齐更贴近标题（避免过高） ——（修改处：与标题同一“行高”对齐）
-              top: statusBar + kTitleTop + 2,
-              right: 16,
+              top: statusBar + 8.0, // 与标题（+12）保持轻微上移，视觉居中
+              right: 16.0,
               child: trailing,
             ),
         ],
@@ -1523,50 +1516,44 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   }
 
   // ✅ 提取右上角菜单按钮以传递给 _blueHeader
-  // ✅ 改为“自定义 child + 轻下沉”样式，与标题垂直对齐更稳
+  // ✅ 触控区 44×44，半透明浅色，iOS/Android 分别用 … 和 ⋮
   Widget _buildMenuButton() {
     final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-
-    return Transform.translate(
-      // ✅（修改处）去掉额外下沉，交由 _blueHeader 的 Positioned 统一控制对齐
-      offset: const Offset(0, 0),
-      child: PopupMenuButton<String>(
-        padding: EdgeInsets.zero,
-        offset: const Offset(0, 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.w),
-        ),
-        onSelected: (value) {
-          if (value == 'clear_all') {
-            _showClearAllDialog();
-          }
-        },
-        itemBuilder: (BuildContext context) => [
-          PopupMenuItem(
-            value: 'clear_all',
-            child: Row(
-              children: [
-                Icon(Icons.clear_all_rounded, color: Colors.red, size: 12.w),
-                SizedBox(width: 8.w),
-                Text('Clear All', style: TextStyle(fontSize: 11.sp)),
-              ],
-            ),
+    return PopupMenuButton<String>(
+      padding: EdgeInsets.zero,
+      offset: const Offset(0, 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10.w),
+      ),
+      onSelected: (value) {
+        if (value == 'clear_all') {
+          _showClearAllDialog();
+        }
+      },
+      itemBuilder: (BuildContext context) => [
+        PopupMenuItem(
+          value: 'clear_all',
+          child: Row(
+            children: [
+              Icon(Icons.clear_all_rounded, color: Colors.red, size: 12.w),
+              SizedBox(width: 8.w),
+              Text('Clear All', style: TextStyle(fontSize: 11.sp)),
+            ],
           ),
-        ],
-        // ✅ 自定义外观：小圆形半透明按钮，更贴合你首页风格
-        child: SizedBox(
-          height: 40.w,
-          width: 40.w,
-          child: Material(
-            color: Colors.white.withOpacity(0.15),
-            shape: const StadiumBorder(),
-            clipBehavior: Clip.antiAlias,
-            child: Center(
-              child: Icon(
-                _isIOS ? Icons.more_horiz_rounded : Icons.more_vert_rounded,
-                color: Colors.white,
-                size: 20.w,
-              ),
+        ),
+      ],
+      child: SizedBox(
+        height: 44.w,
+        width: 44.w,
+        child: Material(
+          color: Colors.white.withOpacity(0.15),
+          shape: const StadiumBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: Center(
+            child: Icon(
+              _isIOS ? Icons.more_horiz_rounded : Icons.more_vert_rounded,
+              color: Colors.white,
+              size: 20.w,
             ),
           ),
         ),
@@ -1574,17 +1561,13 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-
     if (!widget.isGuest) {
       _loadFavorites();
-      // 氓聬炉氓艩篓猫鈥÷ヅ犅ニ喡访︹€撀懊ヂ∶︹€斅睹モ劉篓茂录藛忙炉聫30莽搂鈥櫭βｂ偓忙鸥楼盲赂鈧β∶尖€?
       _startAutoRefresh();
-      // 猫庐戮莽陆庐忙鈥澛睹ㄢ€斅徝︹€郝疵︹€撀懊р€衡€樏ヂ惵?
       _setupFavoritesListener();
     } else {
       setState(() => _isLoading = false);
@@ -1599,60 +1582,46 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  // 芒艙鈥?盲驴庐氓陇聧茂录拧猫驴鈩⒚┾€∨捗ヂ衡€澝ッλ溌р€澟该モ€樎矫モ€樎ε撆该モ€号久捌捗寂捗ㄢ偓艗盲赂聧忙藴炉猫路炉莽鈥澛泵β澛∶р€郝?
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && !widget.isGuest) {
-      // 氓潞鈥澝р€澛┾€÷嵜︹€撀懊β库偓忙麓禄忙鈥斅睹ニ喡访︹€撀懊︹€⒙懊β嵚?
       _loadFavorites();
     }
   }
 
   /// 猫庐戮莽陆庐忙鈥澛睹ㄢ€斅徝︹€郝疵︹€撀懊р€衡€樏ヂ惵?
   void _setupFavoritesListener() {
-    _favoritesSubscription = FavoritesUpdateService().favoritesStream.listen(
-          (event) {
-        if (!mounted || widget.isGuest) return;
-
-        if (kDebugMode) {}
-
-        if (event.isAdded && event.listingData != null) {
-          // 忙路禄氓艩 氓藛掳忙鈥澛睹ㄢ€斅徝寂∶€姑ヂ嵚趁β仿幻ヅ?氓藛掳忙艙卢氓艙掳氓藛鈥斆÷?
-          _addToLocalFavorites(event.listingData!);
-        } else if (!event.isAdded) {
-          // 盲禄沤忙鈥澛睹ㄢ€斅徝幻┾劉陇茂录拧莽芦鈥姑ヂ嵚趁ぢ慌矫ε撀ヅ撀懊ニ嗏€斆÷幻┾劉隴
-          _removeFromLocalFavorites(event.listingId);
-        }
-      },
-      onError: (error) {
-        if (kDebugMode) print('Error in favorites stream: $error');
-      },
-    );
+    _favoritesSubscription =
+        FavoritesUpdateService().favoritesStream.listen((event) {
+          if (!mounted || widget.isGuest) return;
+          if (kDebugMode) {}
+          if (event.isAdded && event.listingData != null) {
+            _addToLocalFavorites(event.listingData!);
+          } else if (!event.isAdded) {
+            _removeFromLocalFavorites(event.listingId);
+          }
+        }, onError: (error) {
+          if (kDebugMode) print('Error in favorites stream: $error');
+        });
   }
 
   /// 莽芦鈥姑ヂ嵚趁β仿幻ヅ?氓藛掳忙艙卢氓艙掳忙鈥澛睹ㄢ€斅徝ニ嗏€斆÷?
   void _addToLocalFavorites(Map<String, dynamic> listingData) {
     try {
-      // 忙拢鈧ε嘎ッλ溌ヂ惵γヂ仿裁ヂ溍ヅ撀?
       final listingId = listingData['id']?.toString();
       if (listingId == null) return;
-
       final exists = _favoriteItems.any((item) =>
       item['listing_id']?.toString() == listingId ||
           item['listing']?['id']?.toString() == listingId);
-
       if (!exists) {
-        // 忙啪鈥灻┾偓 莽卢娄氓聬藛忙鈥澛睹ㄢ€斅徝?录氓录聫莽拧鈥灻︹€⒙懊β嵚?
         final favoriteItem = {
           'listing_id': listingId,
           'listing': _safeMapConvert(listingData),
           'created_at': DateTime.now().toIso8601String(),
         };
-
         setState(() {
           _favoriteItems.insert(0, favoriteItem); // 忙聫鈥櫭モ€βッニ喡懊ニ嗏€斆÷ヂ尖偓氓陇麓
         });
-
         if (kDebugMode) {}
       }
     } catch (e) {
@@ -1660,17 +1629,15 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  /// 莽芦鈥姑ヂ嵚趁ぢ慌矫ε撀ヅ撀懊︹€澛睹ㄢ€斅徝ニ嗏€斆÷幻┾劉陇
+  /// 莽芦鈥姑ヂ嵚趁ぢ慌矫ε撀ヅ撀懊︹€澛睹ㄢ€斅徝ニ嗏€斆÷幻┾劉隴
   void _removeFromLocalFavorites(String listingId) {
     try {
       final initialLength = _favoriteItems.length;
-
       setState(() {
         _favoriteItems.removeWhere((item) =>
         item['listing_id']?.toString() == listingId ||
             item['listing']?['id']?.toString() == listingId);
       });
-
       if (_favoriteItems.length < initialLength) {
         if (kDebugMode) {}
       }
@@ -1690,10 +1657,9 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     });
   }
 
-  /// 氓庐鈥懊モ€β♀€灻甭幻ヅ锯€姑铰β嵚⒚︹€撀姑β斥€?
+  /// 氓庐鈥懊モ€β♀€灻甭幻ヅ鋸€姑铰β嵚⒚︹€撀姑β斥€?
   Map<String, dynamic> _safeMapConvert(dynamic input) {
     if (input == null) return <String, dynamic>{};
-
     if (input is Map<String, dynamic>) {
       return input;
     } else if (input is Map) {
@@ -1704,7 +1670,6 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         return <String, dynamic>{};
       }
     }
-
     return <String, dynamic>{};
   }
 
@@ -1729,21 +1694,17 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       });
       return;
     }
-
     try {
       setState(() {
         _isLoading = true;
         _errorMessage = null;
       });
-
       if (kDebugMode) {}
-
       // 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService 猫沤路氓聫鈥撁︹€澛睹ㄢ€斅徝ニ嗏€斆÷妓喢ぢ慌?favorites 猫隆篓茂录鈥?
       final rawItems = await DualFavoritesService.getUserFavorites(
         userId: user.id,
         limit: 100,
       );
-
       if (mounted) {
         // 氓庐鈥懊モ€β铰β嵚⒚︹€⒙懊β嵚?
         final safeItems = <Map<String, dynamic>>[];
@@ -1757,17 +1718,14 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
             safeItems.add(safeItem);
           }
         }
-
         setState(() {
           _favoriteItems = safeItems;
           _isLoading = false;
         });
-
         if (kDebugMode) {}
       }
     } catch (e) {
       if (kDebugMode) {}
-
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -1788,25 +1746,21 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   Future<void> _removeFromFavorites(String listingId, int index) async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
-
     try {
       // 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼莽搂禄茅鈩⒙?
       final success = await DualFavoritesService.removeFromFavorites(
         userId: user.id,
         listingId: listingId,
       );
-
       if (success && mounted) {
         setState(() {
           _favoriteItems.removeAt(index);
         });
-
         // 氓聫鈥樏┾偓聛氓庐啪忙鈥斅睹︹€郝疵︹€撀懊┾偓拧莽鸥楼
         FavoritesUpdateService().notifyFavoriteChanged(
           listingId: listingId,
           isAdded: false,
         );
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -1819,8 +1773,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
             ),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6.w)),
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.w)),
             margin: EdgeInsets.all(8.w),
           ),
         );
@@ -1829,7 +1783,6 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       }
     } catch (e) {
       if (kDebugMode) {}
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -1866,16 +1819,13 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   /// 忙 录氓录聫氓艗鈥撁ぢ宦访?录 - 氓庐鈥懊モ€βр€八喢ε撀?
   String _formatPrice(dynamic price) {
     if (price == null) return 'Price not available';
-
     try {
       final priceStr = price.toString();
       if (priceStr.startsWith('\$')) return priceStr;
-
       final numPrice = double.tryParse(priceStr);
       if (numPrice != null) {
         return '\$${numPrice.toStringAsFixed(0)}';
       }
-
       return priceStr.isNotEmpty ? priceStr : 'Price not available';
     } catch (e) {
       if (kDebugMode) print('Error formatting price: $e');
@@ -1886,27 +1836,23 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   /// 忙啪鈥灻ヂ宦好モ€⑩€犆モ€溌伱ヂ嵚∶р€扳€?- 盲驴庐氓陇聧莽鈥八喢ε撀?
   Widget _buildFavoriteCard(Map<String, dynamic> item, int index) {
     try {
-      // 氓庐鈥懊モ€β♀€灻甭幻ヅ锯€姑铰β嵚?- 莽禄鸥盲赂鈧ぢ铰棵р€澛?'listing' 茅鈥澛?
+      // 氓庐鈥懊モ€β♀€灻甭幻ヅ鋸€姑铰β嵚?- 莽禄鸥盲赂鈧ぢ铰棵р€澛?'listing' 茅鈥澛?
       final safeListing = _safeMapConvert(item['listing'] ?? {});
       final safeItem = _safeMapConvert(item);
-
       final listingId = _safeGetString(safeItem, 'listing_id');
       if (listingId.isEmpty) {
         if (kDebugMode)
           print('Warning: Empty listing ID for item at index $index');
         return const SizedBox.shrink();
       }
-
       final title =
       _safeGetString(safeListing, 'title', defaultValue: 'Unknown Item');
       final price = _formatPrice(safeListing['price']);
       final city = _safeGetString(safeListing, 'city');
       final imageUrl = _getListingImage(safeListing);
       final createdAt = _safeGetString(safeItem, 'created_at');
-
       // 忙 录氓录聫氓艗鈥撁︹€澛睹ㄢ€斅徝︹€斅睹┾€斅?
       final timeAdded = DualFavoritesService.formatSavedTime(createdAt);
-
       return Card(
         margin: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
         elevation: 0,
@@ -1962,8 +1908,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                             ? Image.network(
                           imageUrl,
                           fit: BoxFit.cover,
-                          loadingBuilder:
-                              (context, child, loadingProgress) {
+                          loadingBuilder: (context, child, loadingProgress) {
                             if (loadingProgress == null) return child;
                             return Center(
                               child: SizedBox(
@@ -2402,14 +2347,13 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    // 氓庐鈥懊モ€βㄅ铰访ヂ忊€撁ε撀ヅ撀懊ヅ掆€撁寂捗┞伮棵モ€β嵜ぢ嘎好┞?
+    // 氓庐鈥懊莫€βㄅ铰访ヂ忊€撁ε撀ヅ撀懊ヅ掆€撁寂捗┞伮棵莫€β嵜ぢ嘎好┞?
     AppLocalizations? l10n;
     try {
       l10n = AppLocalizations.of(context);
     } catch (e) {
       if (kDebugMode) {}
     }
-
     // 猫庐驴氓庐垄莽艩露忙鈧?
     if (widget.isGuest) {
       // Guest View: 统一蓝色
@@ -2483,14 +2427,14 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                       ),
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          Navigator.of(context)
-                              .pushNamedAndRemoveUntil('/welcome', (route) => false);
+                          Navigator.of(context).pushNamedAndRemoveUntil(
+                              '/welcome', (route) => false);
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
-                          padding:
-                          EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 16.w, vertical: 8.h),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8.w),
                           ),
@@ -2515,7 +2459,6 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         ),
       );
     }
-
     // 氓路虏莽鈩⒙幻ヂ解€⒚犅睹︹偓聛
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -2651,20 +2594,16 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   Future<void> _clearAllFavorites() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
-
     try {
       // 氓鈥λ喢ぢ柯澝ヂ溍ヂ解€溍モ€奥嵜ニ嗏€斆÷┞÷姑寂捗р€澛ぢ号矫ヂ忊€樏┾偓聛茅鈧∶嘎?
       final currentItems = List<Map<String, dynamic>>.from(_favoriteItems);
-
       // 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼忙赂鈥γ┞?
       final success =
       await DualFavoritesService.clearUserFavorites(userId: user.id);
-
       if (success && mounted) {
         setState(() {
           _favoriteItems.clear();
         });
-
         // 氓聫鈥樏┾偓聛氓庐啪忙鈥斅睹β糕€γ┞好┾偓拧莽鸥楼
         for (final item in currentItems) {
           final listingId = item['listing_id']?.toString();
@@ -2675,7 +2614,6 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
             );
           }
         }
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -2688,8 +2626,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
             ),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6.w)),
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.w)),
             margin: EdgeInsets.all(8.w),
           ),
         );
@@ -2698,7 +2636,6 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       }
     } catch (e) {
       if (kDebugMode) {}
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -2719,7 +2656,6 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 }
-
 /* ---------------- Wishlist Page 收藏夹页面 - 统一服务 ---------------- */
 
 class WishlistPage extends StatefulWidget {
@@ -4737,8 +4673,8 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   }
 }
 // ---------------- Notification Page ----------------
-/* ---------------- Notification Page 茅鈧∶嘎ッ┞÷?(莽麓搂氓鈥♀€樏九矫ヅ掆€撁р€八喢ε撀? ---------------- */
 
+/* ---------------- Notification Page (莽麓搂氓鈥♀€樏九矫ヅ掆€撁р€八喢ε撀? ---------------- */
 class NotificationPage extends StatefulWidget {
   final VoidCallback? onClearBadge;
   final bool isGuest;
@@ -4774,10 +4710,10 @@ class _NotificationPageState extends State<NotificationPage> {
 
     // 统一视觉高度（缩放后依然舒服）：statusBar + 132
     // iOS 收紧，Android 保持原样
-    final bool _isIOS       = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    final double kHeaderVisual = _isIOS ? 38.0 : 76.0;  // 头部视觉高度
-    final double kTitleTop     = _isIOS ? -6.0 : 20.0;  // 标题距顶
-    const double kSide         = 20.0;                  // 左右内边距
+    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final double kHeaderVisual = _isIOS ? 38.0 : 76.0; // 头部视觉高度
+    final double kTitleTop = _isIOS ? -6.0 : 20.0; // 标题距顶
+    const double kSide = 20.0; // 左右内边距
     // ✅ 修复：使用您首页的 Facebook 蓝色 (0xFF1877F2)
     const Color kUserPrimaryBlue = Color(0xFF1877F2);
 
@@ -4790,7 +4726,8 @@ class _NotificationPageState extends State<NotificationPage> {
             child: Container(
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
-                  begin: Alignment.topLeft, end: Alignment.bottomRight,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                   // ✅ 修复：使用 0xFF1877F2 的近似渐变
                   colors: [kUserPrimaryBlue, Color(0xFF1E88E5)],
                 ),
@@ -4803,13 +4740,17 @@ class _NotificationPageState extends State<NotificationPage> {
             left: centerTitle ? kSide : kSide,
             right: centerTitle ? kSide : null,
             child: SizedBox(
-              width: centerTitle ? MediaQuery.of(context).size.width - kSide * 2 : null,
+              width: centerTitle
+                  ? MediaQuery.of(context).size.width - kSide * 2
+                  : null,
               child: Text(
                 title,
                 textAlign: centerTitle ? TextAlign.center : TextAlign.left,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
-                  color: Colors.white, fontSize: 28, fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
@@ -4817,8 +4758,8 @@ class _NotificationPageState extends State<NotificationPage> {
           // 右上角操作按钮（可选）
           if (trailing != null)
             Positioned(
-              // ✅ 与 SavedPage 一致：让按钮与标题在同一“行高”，不顶到状态栏
-              top: statusBar + kTitleTop + 2,
+              // ✅ 仅此处修改：与 SavedPage 一致的定位（下移对齐标题、不顶到状态栏）
+              top: statusBar + 8.0,
               right: 16,
               child: trailing,
             ),
@@ -4850,7 +4791,8 @@ class _NotificationPageState extends State<NotificationPage> {
           value: 'mark_all_read',
           child: Row(
             children: [
-              Icon(Icons.done_all_rounded, size: 14.r, color: Colors.grey.shade600),
+              Icon(Icons.done_all_rounded,
+                  size: 14.r, color: Colors.grey.shade600),
               SizedBox(width: 8.w),
               Text(l10n.markAllAsRead, style: TextStyle(fontSize: 12.sp)),
             ],
@@ -4862,15 +4804,16 @@ class _NotificationPageState extends State<NotificationPage> {
             children: [
               Icon(Icons.clear_all_rounded, color: Colors.red, size: 14.r),
               SizedBox(width: 8.w),
-              Text(l10n.clearAll, style: TextStyle(fontSize: 12.sp, color: Colors.red)),
+              Text(l10n.clearAll,
+                  style: TextStyle(fontSize: 12.sp, color: Colors.red)),
             ],
           ),
         ),
       ],
-      // ✅ 自定义 child：40x40 半透明圆角按钮，图标根据平台切换，与 SavedPage 完全一致
+      // ✅ 仅此处尺寸对齐 SavedPage：44x44 半透明圆角按钮
       child: SizedBox(
-        height: 40.w,
-        width: 40.w,
+        height: 44.w,
+        width: 44.w,
         child: Material(
           color: Colors.white.withOpacity(0.15),
           shape: const StadiumBorder(),
@@ -4888,7 +4831,6 @@ class _NotificationPageState extends State<NotificationPage> {
   }
 
   // ⛔️ [_buildCustomHeader 已被删除，由 _blueHeader 替代]
-
   @override
   void initState() {
     super.initState();
@@ -4898,7 +4840,6 @@ class _NotificationPageState extends State<NotificationPage> {
     } else {
       setState(() => _isLoading = false);
     }
-
     if (widget.onClearBadge != null) {
       WidgetsBinding.instance
           .addPostFrameCallback((_) => widget.onClearBadge!());
@@ -4914,12 +4855,10 @@ class _NotificationPageState extends State<NotificationPage> {
   Future<void> _loadNotifications() async {
     try {
       setState(() => _isLoading = true);
-
       final notifications = await NotificationService.getUserNotifications(
         limit: 100,
         includeRead: true,
       );
-
       if (mounted) {
         setState(() {
           _notifications = notifications;
@@ -4935,15 +4874,12 @@ class _NotificationPageState extends State<NotificationPage> {
     }
   }
 
-  // 芒艙鈥?盲驴庐忙颅拢茂录拧盲陆驴莽鈥澛βＣ÷♀€灻ヂ忊€毭︹€⒙懊捌捗р€澛?
   Future<void> _subscribeToNotifications() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
-
     await NotificationService.subscribeUser(
-      user.id, // 盲陆聧莽陆庐氓聫鈥毭︹€⒙?
+      user.id,
       onEvent: (Map<String, dynamic> notification) {
-        // 氓鈥樎矫ヂ惵嵜ヂ忊€毭︹€⒙?
         if (!mounted) return;
         setState(() {
           _notifications.insert(0, notification);
@@ -4968,12 +4904,10 @@ class _NotificationPageState extends State<NotificationPage> {
   Future<void> _markAsRead(int index) async {
     final notification = _notifications[index];
     if (notification['is_read'] == true) return;
-
     try {
       final success = await NotificationService.markNotificationAsRead(
         notification['id'].toString(),
       );
-
       if (success && mounted) {
         setState(() {
           _notifications[index]['is_read'] = true;
@@ -4989,12 +4923,10 @@ class _NotificationPageState extends State<NotificationPage> {
   Future<void> _deleteNotification(int index) async {
     final l10n = AppLocalizations.of(context)!;
     final notification = _notifications[index];
-
     try {
       final success = await NotificationService.deleteNotification(
         notification['id'].toString(),
       );
-
       if (success && mounted) {
         setState(() => _notifications.removeAt(index));
         _updateUnreadCount();
@@ -5011,8 +4943,8 @@ class _NotificationPageState extends State<NotificationPage> {
             ),
             backgroundColor: Colors.green.shade600,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6.r)),
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.r)),
             margin: EdgeInsets.all(8.w),
             duration: Duration(seconds: 2),
           ),
@@ -5045,7 +4977,6 @@ class _NotificationPageState extends State<NotificationPage> {
   Future<void> _markAllAsRead() async {
     try {
       final success = await NotificationService.markAllNotificationsAsRead();
-
       if (success && mounted) {
         setState(() {
           for (var notification in _notifications) {
@@ -5063,7 +4994,6 @@ class _NotificationPageState extends State<NotificationPage> {
   Future<void> _clearAll() async {
     try {
       final success = await NotificationService.clearAllNotifications();
-
       if (success && mounted) {
         setState(() => _notifications.clear());
         _updateUnreadCount();
@@ -5076,7 +5006,6 @@ class _NotificationPageState extends State<NotificationPage> {
   Widget _getNotificationIcon(String type) {
     final color = Color(NotificationService.getNotificationColor(type));
     IconData iconData;
-
     switch (type) {
       case 'offer':
         iconData = Icons.local_offer_rounded;
@@ -5097,7 +5026,6 @@ class _NotificationPageState extends State<NotificationPage> {
       default:
         iconData = Icons.notifications_rounded;
     }
-
     return Container(
       width: 32.w,
       height: 32.w,
@@ -5130,16 +5058,9 @@ class _NotificationPageState extends State<NotificationPage> {
     if (index >= 0) {
       _markAsRead(index);
     }
-
-    // 忙路禄氓艩 猫掳茠猫炉鈥⒚︹€斅ッヂ库€?
-
     final type = notification['type']?.toString() ?? '';
-
-    // 氓掳聺猫炉鈥⒚ぢ慌矫ヂづ∶ぢ嘎ぢ铰嵜铰ㄅ铰访ヂ忊€揑D盲驴隆忙聛炉
     String? listingId = notification['listing_id']?.toString();
     String? offerId = notification['offer_id']?.toString();
-
-    // 氓娄鈥毭ε九撁р€郝疵ε铰ッヂ€斆β得ぢ嘎好┞好寂捗ヂ奥澝€⒚ぢ慌絧ayload盲赂颅猫沤路氓聫鈥?
     final payload = notification['payload'] as Map<String, dynamic>? ?? {};
     if ((listingId == null || listingId.isEmpty) && payload.isNotEmpty) {
       listingId = payload['listing_id']?.toString();
@@ -5147,8 +5068,6 @@ class _NotificationPageState extends State<NotificationPage> {
     if ((offerId == null || offerId.isEmpty) && payload.isNotEmpty) {
       offerId = payload['offer_id']?.toString();
     }
-
-    // 盲鹿鸥氓掳聺猫炉鈥⒚ぢ慌絤etadata盲赂颅猫沤路氓聫鈥?
     final metadata = notification['metadata'] as Map<String, dynamic>? ?? {};
     if ((listingId == null || listingId.isEmpty) && metadata.isNotEmpty) {
       listingId = metadata['listing_id']?.toString();
@@ -5156,15 +5075,11 @@ class _NotificationPageState extends State<NotificationPage> {
     if ((offerId == null || offerId.isEmpty) && metadata.isNotEmpty) {
       offerId = metadata['offer_id']?.toString();
     }
-
     final notificationId = notification['id']?.toString();
-
-    // 忙拢鈧ε嘎ッ︹€⒙懊β嵚ヂ捗︹€⒙疵︹偓搂
     if (type.isEmpty) {
       _showSnack('Notification data is incomplete', isError: true);
       return;
     }
-
     switch (type) {
       case 'message':
         if (offerId != null && offerId.isNotEmpty) {
@@ -5229,9 +5144,7 @@ class _NotificationPageState extends State<NotificationPage> {
       Map<String, dynamic> notification) {
     final metadata = notification['metadata'] as Map<String, dynamic>? ?? {};
     final offerId = notification['offer_id']?.toString();
-
     if (offerId == null) return null;
-
     return {
       'id': offerId,
       'offer_amount': metadata['offer_amount'],
@@ -5327,8 +5240,8 @@ class _NotificationPageState extends State<NotificationPage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
                           shadowColor: Colors.transparent,
-                          padding:
-                          EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 20.w, vertical: 10.h),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10.r),
                           ),
@@ -5353,12 +5266,10 @@ class _NotificationPageState extends State<NotificationPage> {
         ),
       );
     }
-
     final unreadCount =
         _notifications.where((n) => n['is_read'] != true).length;
     final displayTitle =
         '${l10n.notifications}${unreadCount > 0 ? ' ($unreadCount)' : ''}';
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       // ✅ 移除 AppBar
@@ -5408,7 +5319,8 @@ class _NotificationPageState extends State<NotificationPage> {
                           width: 20.w,
                           height: 20.w,
                           child: CircularProgressIndicator(
-                            valueColor: const AlwaysStoppedAnimation<Color>(
+                            valueColor:
+                            const AlwaysStoppedAnimation<Color>(
                                 _PRIMARY_BLUE), // 统一颜色
                             strokeWidth: 2.5,
                           ),
@@ -5447,7 +5359,8 @@ class _NotificationPageState extends State<NotificationPage> {
                       ),
                       borderRadius: BorderRadius.circular(30.r),
                       border: Border.all(
-                        color: _PRIMARY_BLUE.withOpacity(0.2), // 统一颜色
+                        color: _PRIMARY_BLUE
+                            .withOpacity(0.2), // 统一颜色
                         width: 1,
                       ),
                     ),
@@ -5512,28 +5425,32 @@ class _NotificationPageState extends State<NotificationPage> {
                       ),
                     ),
                     direction: DismissDirection.endToStart,
-                    onDismissed: (direction) => _deleteNotification(index),
+                    onDismissed: (direction) =>
+                        _deleteNotification(index),
                     child: Container(
                       color: isRead
                           ? Colors.white
-                          : _PRIMARY_BLUE.withOpacity(0.03), // 统一颜色
+                          : _PRIMARY_BLUE
+                          .withOpacity(0.03), // 统一颜色
                       margin: EdgeInsets.only(bottom: 0.5.h),
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: () => _handleNotificationTap(notification),
+                          onTap: () =>
+                              _handleNotificationTap(notification),
                           // ✅ 修复：将 _PRIMARY_BRAVO 替换为 _PRIMARY_BLUE
-                          splashColor:
-                          _PRIMARY_BLUE.withOpacity(0.1), // 统一颜色
-                          highlightColor:
-                          _PRIMARY_BLUE.withOpacity(0.05), // 统一颜色
+                          splashColor: _PRIMARY_BLUE
+                              .withOpacity(0.1), // 统一颜色
+                          highlightColor: _PRIMARY_BLUE
+                              .withOpacity(0.05), // 统一颜色
                           child: Container(
                             padding: EdgeInsets.symmetric(
                               horizontal: 12.w,
                               vertical: 8.h,
                             ),
                             child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                              crossAxisAlignment:
+                              CrossAxisAlignment.start,
                               children: [
                                 _getNotificationIcon(type),
                                 SizedBox(width: 10.w),
@@ -5584,7 +5501,8 @@ class _NotificationPageState extends State<NotificationPage> {
                                           height: 1.4,
                                         ),
                                         maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
+                                        overflow:
+                                        TextOverflow.ellipsis,
                                       ),
                                       SizedBox(height: 4.h),
                                       Row(
@@ -5592,7 +5510,8 @@ class _NotificationPageState extends State<NotificationPage> {
                                           Icon(
                                             Icons.access_time_rounded,
                                             size: 10.r,
-                                            color: Colors.grey.shade400,
+                                            color:
+                                            Colors.grey.shade400,
                                           ),
                                           SizedBox(width: 2.w),
                                           Text(
@@ -5601,7 +5520,8 @@ class _NotificationPageState extends State<NotificationPage> {
                                                 createdAt),
                                             style: TextStyle(
                                               fontSize: 10.sp,
-                                              color: Colors.grey.shade400,
+                                              color: Colors
+                                                  .grey.shade400,
                                             ),
                                           ),
                                         ],
@@ -5625,7 +5545,6 @@ class _NotificationPageState extends State<NotificationPage> {
     );
   }
 }
-
 
 class NoGlowScrollBehavior extends ScrollBehavior {
   @override
