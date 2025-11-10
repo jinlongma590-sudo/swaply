@@ -14,7 +14,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:uni_links/uni_links.dart'; // ✅ 深链支持
+import 'package:app_links/app_links.dart'; // ✅ 深链支持（替代 uni_links）
 
 // ====== 链」鐩唴鐨勪緷璧?======
 import 'package:swaply/auth/login_screen.dart';
@@ -454,7 +454,7 @@ Future<void> _handleSupabaseUri(Uri? uri) async {
 // ✅ 获取初始深链并尝试恢复会话（参数也改为传 Uri?）
 Future<void> _recoverInitialSupabaseSession() async {
   try {
-    final uri = await getInitialUri();
+    final uri = await AppLinks().getInitialLink();
     await _handleSupabaseUri(uri);
     if (uri != null) {
       debugPrint('[DeepLink] initial uri handled: $uri');
@@ -465,10 +465,11 @@ Future<void> _recoverInitialSupabaseSession() async {
 }
 
 // ✅ 持续监听后续深链（App 已在前台时再次点击邮件）
-// ⚠️ 监听器现在是 (Uri? uri)
+// ⚠️ 使用 app_links 的 uriLinkStream（非 uni_links）
 void _listenDeepLinksForSupabase() {
   _deeplinkSub?.cancel();
-  _deeplinkSub = getUriLinksStream().listen((Uri? uri) async {
+  final _links = AppLinks();
+  _deeplinkSub = _links.uriLinkStream.listen((Uri uri) async {
     try {
       await _handleSupabaseUri(uri);
       debugPrint('[DeepLink] stream uri handled: $uri');
@@ -1459,7 +1460,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   Timer? _autoRefreshTimer;
   StreamSubscription<FavoriteUpdateEvent>? _favoritesSubscription;
 
-  // ✅ A) 统一蓝色头部：固定规范（statusBar + 64），标题与右上角按钮同基线
+  // ✅ A) 统一蓝色头部：与通知页一致（渐变、标题与右上角按钮同一行，按钮缩小且不被遮挡）
   Widget _blueHeader({
     required BuildContext context,
     required String title,
@@ -1467,56 +1468,62 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     Widget? trailing, // 右上角按钮（可选）
   }) {
     final double statusBar = MediaQuery.of(context).padding.top;
-    // ✅ 统一规范：头部总高 = 状态栏 + 64；内容距顶 12；左右 20
-    const double kHeaderContent = 64.0;
-    const double kTitleTop = 12.0;
+    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
+    // 与通知页保持一致：头部总高 = 状态栏 + (iOS 64 / Android 76)
+    final double kHeaderVisual = _isIOS ? 64.0 : 76.0;
     const double kSide = 20.0;
 
     return SizedBox(
-      height: statusBar + kHeaderContent,
+      height: statusBar + kHeaderVisual,
       child: Stack(
         children: [
-          // 背景（与首页一致的纯 Facebook 蓝）
+          // 背景（与通知页一致的渐变）
           Positioned.fill(
-            child: Container(color: _PRIMARY_BLUE),
-          ),
-          // 标题（与右上角按钮同一“行高”对齐）
-          Positioned(
-            top: statusBar + kTitleTop,
-            left: kSide,
-            // 若有右侧按钮，给标题预留 64 的空间，避免遮挡
-            right: centerTitle ? kSide : (trailing != null ? 64.0 : null),
-            child: SizedBox(
-              width: centerTitle
-                  ? MediaQuery.of(context).size.width - kSide * 2
-                  : null,
-              child: Text(
-                title,
-                textAlign: centerTitle ? TextAlign.center : TextAlign.left,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  height: 1.1,
+            child: const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF1877F2), Color(0xFF1E88E5)],
                 ),
               ),
             ),
           ),
-          // 右上角操作按钮（可选）— 放在同一行，触控区≥44×44
-          if (trailing != null)
-            Positioned(
-              top: statusBar + 8.0, // 与标题（+12）保持轻微上移，视觉居中
-              right: 16.0,
-              child: trailing,
+          // 标题 + 右上角按钮 同一行（天然垂直居中对齐，不会被下方内容遮住）
+          Positioned(
+            left: kSide,
+            right: 16.0,
+            top: statusBar + 12.0, // 与通知页一致
+            child: SizedBox(
+              height: 44.0,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      textAlign: centerTitle ? TextAlign.center : TextAlign.left,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        height: 1.1,
+                      ),
+                    ),
+                  ),
+                  if (trailing != null) trailing, // 与标题同一行显示
+                ],
+              ),
             ),
+          ),
         ],
       ),
     );
   }
 
-  // ✅ 提取右上角菜单按钮以传递给 _blueHeader
-  // ✅ 触控区 44×44，半透明浅色，iOS/Android 分别用 … 和 ⋮
+  // ✅ 右上角菜单按钮（与通知页一致：32×32，图标 20，半透明）
   Widget _buildMenuButton() {
     final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
     return PopupMenuButton<String>(
@@ -1543,8 +1550,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         ),
       ],
       child: SizedBox(
-        height: 44.w,
-        width: 44.w,
+        height: 32.w,
+        width: 32.w,
         child: Material(
           color: Colors.white.withOpacity(0.15),
           shape: const StadiumBorder(),
@@ -1700,18 +1707,15 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         _errorMessage = null;
       });
       if (kDebugMode) {}
-      // 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService 猫沤路氓聫鈥撁︹€澛睹ㄢ€斅徝ニ嗏€斆÷妓喢ぢ慌?favorites 猫隆篓茂录鈥?
       final rawItems = await DualFavoritesService.getUserFavorites(
         userId: user.id,
         limit: 100,
       );
       if (mounted) {
-        // 氓庐鈥懊モ€β铰β嵚⒚︹€⒙懊β嵚?
         final safeItems = <Map<String, dynamic>>[];
         for (final item in rawItems) {
           final safeItem = _safeMapConvert(item);
           if (safeItem.isNotEmpty) {
-            // 莽隆庐盲驴聺 listing 忙鈥⒙懊β嵚ぢ古该λ溌ヂ€懊モ€β铰β嵚⒚♀€?
             if (safeItem.containsKey('listing')) {
               safeItem['listing'] = _safeMapConvert(safeItem['listing']);
             }
@@ -1747,7 +1751,6 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
     try {
-      // 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼莽搂禄茅鈩⒙?
       final success = await DualFavoritesService.removeFromFavorites(
         userId: user.id,
         listingId: listingId,
@@ -1756,7 +1759,6 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         setState(() {
           _favoriteItems.removeAt(index);
         });
-        // 氓聫鈥樏┾偓聛氓庐啪忙鈥斅睹︹€郝疵︹€撀懊┾偓拧莽鸥楼
         FavoritesUpdateService().notifyFavoriteChanged(
           listingId: listingId,
           isAdded: false,
@@ -1836,7 +1838,6 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   /// 忙啪鈥灻ヂ宦好モ€⑩€犆モ€溌伱ヂ嵚∶р€扳€?- 盲驴庐氓陇聧莽鈥八喢ε撀?
   Widget _buildFavoriteCard(Map<String, dynamic> item, int index) {
     try {
-      // 氓庐鈥懊モ€β♀€灻甭幻ヅ鋸€姑铰β嵚?- 莽禄鸥盲赂鈧ぢ铰棵р€澛?'listing' 茅鈥澛?
       final safeListing = _safeMapConvert(item['listing'] ?? {});
       final safeItem = _safeMapConvert(item);
       final listingId = _safeGetString(safeItem, 'listing_id');
@@ -1851,7 +1852,6 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       final city = _safeGetString(safeListing, 'city');
       final imageUrl = _getListingImage(safeListing);
       final createdAt = _safeGetString(safeItem, 'created_at');
-      // 忙 录氓录聫氓艗鈥撁︹€澛睹ㄢ€斅徝︹€斅睹┾€斅?
       final timeAdded = DualFavoritesService.formatSavedTime(createdAt);
       return Card(
         margin: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
@@ -1870,7 +1870,6 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                   ),
                 ),
               ).then((_) {
-                // 盲禄沤氓鈥⑩€犆モ€溌伱γζ掆€γ┞÷得库€澝モ€号久ヂ恻矫ニ喡访︹€撀懊ニ嗏€斆÷?
                 _loadFavorites();
               });
             }
@@ -1892,7 +1891,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 氓鈥⑩€犆モ€溌伱モ€郝久р€扳€?- 莽录漏氓掳聫
+                  // 图片
                   Hero(
                     tag: 'favorite_image_$listingId',
                     child: ClipRRect(
@@ -1908,7 +1907,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                             ? Image.network(
                           imageUrl,
                           fit: BoxFit.cover,
-                          loadingBuilder: (context, child, loadingProgress) {
+                          loadingBuilder:
+                              (context, child, loadingProgress) {
                             if (loadingProgress == null) return child;
                             return Center(
                               child: SizedBox(
@@ -1961,7 +1961,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                   ),
                   SizedBox(width: 8.w),
 
-                  // 氓鈥⑩€犆モ€溌伱ぢ柯∶β伮?- 莽录漏氓掳聫氓颅鈥斆ぢ解€溍モ€櫯捗┾€斅疵仿?
+                  // 文案
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2039,7 +2039,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                     ),
                   ),
 
-                  // 莽搂禄茅鈩⒙っε掆€懊┾€櫬?- 莽录漏氓掳聫
+                  // 取消收藏
                   Container(
                     margin: EdgeInsets.only(left: 4.w),
                     decoration: BoxDecoration(
@@ -2070,7 +2070,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       );
     } catch (e, stackTrace) {
       if (kDebugMode) {}
-      // 猫驴鈥澝モ€号久┾€濃劉猫炉炉氓聧隆莽鈥扳€∶ㄢ偓艗盲赂聧忙藴炉氓麓漏忙潞茠
+      // 兜底错误卡片
       return Container(
         margin: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
         padding: EdgeInsets.all(16.w),
@@ -2163,7 +2163,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  /// 忙啪鈥灻ヂ宦好┞好犅睹︹偓聛 - 莽麓搂氓鈥♀€樏р€八?
+  /// 空态
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -2237,11 +2237,9 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
               ),
               child: ElevatedButton.icon(
                 onPressed: () {
-                  // 盲驴庐氓隴聧茂录拧盲陆驴莽鈥澛モ€号久捌捗モ€÷矫︹€⒙懊ヂ济ㄋ喡ニ喡懊┞︹€撁┞÷?
                   if (widget.onNavigateToHome != null) {
                     widget.onNavigateToHome!();
                   } else {
-                    // 氓陇鈥∶р€澛︹€撀姑β∷喢寂∶ヂ悸姑モ€÷好ニ喡懊┞÷睹ヂ扁€?
                     Navigator.of(context).popUntil((route) => route.isFirst);
                   }
                 },
@@ -2254,8 +2252,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                     borderRadius: BorderRadius.circular(8.w),
                   ),
                 ),
-                icon: Icon(Icons.explore_rounded,
-                    size: 12.w, color: Colors.white),
+                icon:
+                Icon(Icons.explore_rounded, size: 12.w, color: Colors.white),
                 label: Text(
                   'Browse Items',
                   style: TextStyle(
@@ -2272,7 +2270,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  /// 忙啪鈥灻ヂ宦好┾€濃劉猫炉炉莽艩露忙鈧?
+  /// 错误态
   Widget _buildErrorState() {
     return Center(
       child: Padding(
@@ -2347,28 +2345,26 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    // 氓庐鈥懊莫€βㄅ铰访ヂ忊€撁ε撀ヅ撀懊ヅ掆€撁寂捗┞伮棵莫€β嵜ぢ嘎好┞?
     AppLocalizations? l10n;
     try {
       l10n = AppLocalizations.of(context);
     } catch (e) {
       if (kDebugMode) {}
     }
-    // 猫庐驴氓庐垄莽艩露忙鈧?
     if (widget.isGuest) {
       // Guest View: 统一蓝色
       return Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
         // ✅ 移除 AppBar
-        body: Column( // ✅ 改为 Column
+        body: Column(
           children: [
-            _blueHeader( // ✅ C.1: 使用新头部
+            _blueHeader(
               context: context,
               title: l10n?.myFavorites ?? 'My Favorites',
-              centerTitle: false, // ✅ C.1: 左对齐
+              centerTitle: false,
               trailing: null,
             ),
-            Expanded( // ✅ 内容区域
+            Expanded(
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -2413,7 +2409,6 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          // 统一蓝色
                           colors: [_PRIMARY_BLUE, const Color(0xFF1E88E5)],
                         ),
                         borderRadius: BorderRadius.circular(8.w),
@@ -2459,21 +2454,20 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         ),
       );
     }
-    // 氓路虏莽鈩⒙幻ヂ解€⒚犅睹︹偓聛
+    // 登录视图
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       // ✅ 移除 AppBar
-      body: Column( // ✅ 改为 Column
+      body: Column(
         children: [
-          _blueHeader( // ✅ C.1: 使用新头部
+          _blueHeader(
             context: context,
             title: 'My Favorites (${_favoriteItems.length})',
-            centerTitle: false, // ✅ C.1: 左对齐
-            trailing: (_favoriteItems.isNotEmpty && !_isLoading)
-                ? _buildMenuButton() // ✅ 传递菜单按钮
-                : null,
+            centerTitle: false,
+            trailing:
+            (_favoriteItems.isNotEmpty && !_isLoading) ? _buildMenuButton() : null,
           ),
-          Expanded( // ✅ 内容区域
+          Expanded(
             child: _isLoading
                 ? Center(
               child: Column(
@@ -2508,15 +2502,19 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
               color: _PRIMARY_BLUE, // 统一蓝色
               backgroundColor: Colors.white,
               strokeWidth: 2.w,
-              child: ListView.builder(
-                physics: const AlwaysScrollableScrollPhysics(),
-                // ✅ C.2: 统一顶部间距为 16
-                padding: EdgeInsets.only(top: 16.h),
-                itemCount: _favoriteItems.length,
-                itemBuilder: (context, index) {
-                  return _buildFavoriteCard(
-                      _favoriteItems[index], index);
-                },
+              // ✅ 去掉“蓝色头部与第一条卡片之间的白缝”
+              child: MediaQuery.removePadding(
+                context: context,
+                removeTop: true,
+                child: ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
+                  itemCount: _favoriteItems.length,
+                  itemBuilder: (context, index) {
+                    return _buildFavoriteCard(
+                        _favoriteItems[index], index);
+                  },
+                ),
               ),
             ),
           ),
@@ -2590,21 +2588,18 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  /// 忙赂鈥γ┞好︹€扳偓忙舱鈥懊︹€澛睹ㄢ€斅?- 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼忙赂鈥γ┞?
+  /// 清空收藏
   Future<void> _clearAllFavorites() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
     try {
-      // 氓鈥λ喢ぢ柯澝ヂ溍ヂ解€溍モ€奥嵜ニ嗏€斆÷┞÷姑寂捗р€澛ぢ号矫ヂ忊€樏┾偓聛茅鈧∶嘎?
       final currentItems = List<Map<String, dynamic>>.from(_favoriteItems);
-      // 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼忙赂鈥γ┞?
       final success =
       await DualFavoritesService.clearUserFavorites(userId: user.id);
       if (success && mounted) {
         setState(() {
           _favoriteItems.clear();
         });
-        // 氓聫鈥樏┾偓聛氓庐啪忙鈥斅睹β糕€γ┞好┾偓拧莽鸥楼
         for (final item in currentItems) {
           final listingId = item['listing_id']?.toString();
           if (listingId != null) {
@@ -2656,6 +2651,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 }
+
 /* ---------------- Wishlist Page 收藏夹页面 - 统一服务 ---------------- */
 
 class WishlistPage extends StatefulWidget {
@@ -4698,8 +4694,7 @@ class _NotificationPageState extends State<NotificationPage> {
   // ✅ 修复：添加您在其他页面使用的 _PRIMARY_BLUE 常量 (Facebook 蓝色)
   static const Color _PRIMARY_BLUE = Color(0xFF1877F2);
 
-  // ✅ A) 统一一个蓝色头部写法
-  // 统一蓝色头部：高度自适应；提供是否居中、右上角按钮位
+  // ✅ A) 统一一个蓝色头部写法（按钮缩小并与标题对齐；不再被下方列表遮挡）
   Widget _blueHeader({
     required BuildContext context,
     required String title,
@@ -4708,12 +4703,11 @@ class _NotificationPageState extends State<NotificationPage> {
   }) {
     final double statusBar = MediaQuery.of(context).padding.top;
 
-    // 统一视觉高度（缩放后依然舒服）：statusBar + 132
-    // iOS 收紧，Android 保持原样
+    // iOS 适当加高以容纳按钮，Android 保持原样
     final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    final double kHeaderVisual = _isIOS ? 38.0 : 76.0; // 头部视觉高度
-    final double kTitleTop = _isIOS ? -6.0 : 20.0; // 标题距顶
+    final double kHeaderVisual = _isIOS ? 64.0 : 76.0; // ⬅️ iOS 从 38 提升到 64，避免被下方内容遮挡
     const double kSide = 20.0; // 左右内边距
+
     // ✅ 修复：使用您首页的 Facebook 蓝色 (0xFF1877F2)
     const Color kUserPrimaryBlue = Color(0xFF1877F2);
 
@@ -4728,47 +4722,46 @@ class _NotificationPageState extends State<NotificationPage> {
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  // ✅ 修复：使用 0xFF1877F2 的近似渐变
+                  // ✅ 使用 0xFF1877F2 的近似渐变
                   colors: [kUserPrimaryBlue, Color(0xFF1E88E5)],
                 ),
               ),
             ),
           ),
-          // 标题
+          // 标题 + 右上角按钮 同一行（天然垂直居中对齐）
           Positioned(
-            top: statusBar + kTitleTop,
-            left: centerTitle ? kSide : kSide,
-            right: centerTitle ? kSide : null,
+            left: kSide,
+            right: 16,
+            top: statusBar + 12, // ⬅️ 统一标题与按钮的上边距，避开状态栏
             child: SizedBox(
-              width: centerTitle
-                  ? MediaQuery.of(context).size.width - kSide * 2
-                  : null,
-              child: Text(
-                title,
-                textAlign: centerTitle ? TextAlign.center : TextAlign.left,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                ),
+              height: 44, // 工具栏高度
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      textAlign: centerTitle ? TextAlign.center : TextAlign.left,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        height: 1.05,
+                      ),
+                    ),
+                  ),
+                  if (trailing != null) trailing, // ⬅️ 与标题在同一行，保证不被下方内容遮挡
+                ],
               ),
             ),
           ),
-          // 右上角操作按钮（可选）
-          if (trailing != null)
-            Positioned(
-              // ✅ 仅此处修改：与 SavedPage 一致的定位（下移对齐标题、不顶到状态栏）
-              top: statusBar + 8.0,
-              right: 16,
-              child: trailing,
-            ),
         ],
       ),
     );
   }
 
-  // ✅ 提取右上角菜单按钮以传递给 _blueHeader（与 SavedPage 保持一致的结构与外观，不遮盖）
+  // ✅ 右上角菜单按钮缩小（32x32，图标 20），与标题对齐；保持 PopupMenu 外观
   Widget _buildMenuButton() {
     final l10n = AppLocalizations.of(context)!;
     final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
@@ -4810,10 +4803,10 @@ class _NotificationPageState extends State<NotificationPage> {
           ),
         ),
       ],
-      // ✅ 仅此处尺寸对齐 SavedPage：44x44 半透明圆角按钮
+      // ⬇️ 缩小按钮尺寸，并与标题同一行摆放（不再越出头部高度）
       child: SizedBox(
-        height: 44.w,
-        width: 44.w,
+        height: 32.w,
+        width: 32.w,
         child: Material(
           color: Colors.white.withOpacity(0.15),
           shape: const StadiumBorder(),
@@ -5168,15 +5161,15 @@ class _NotificationPageState extends State<NotificationPage> {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
         // ✅ 移除 AppBar
-        body: Column( // ✅ 改为 Column
+        body: Column(
           children: [
-            _blueHeader( // ✅ D.1: 使用新头部
+            _blueHeader(
               context: context,
               title: l10n.notifications,
-              centerTitle: false, // ✅ D.1: 左对齐
+              centerTitle: false,
               trailing: null,
             ),
-            Expanded( // ✅ 内容区域
+            Expanded(
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -5273,17 +5266,15 @@ class _NotificationPageState extends State<NotificationPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       // ✅ 移除 AppBar
-      body: Column( // ✅ 改为 Column
+      body: Column(
         children: [
-          _blueHeader( // ✅ D.1: 使用新头部
+          _blueHeader(
             context: context,
             title: displayTitle,
-            centerTitle: false, // ✅ D.1: 左对齐
-            trailing: _notifications.isNotEmpty
-                ? _buildMenuButton() // ✅ 传递菜单按钮
-                : null,
+            centerTitle: false,
+            trailing: _notifications.isNotEmpty ? _buildMenuButton() : null,
           ),
-          Expanded( // ✅ 内容区域
+          Expanded(
             child: _isLoading
                 ? Center(
               child: Container(
@@ -5359,8 +5350,8 @@ class _NotificationPageState extends State<NotificationPage> {
                       ),
                       borderRadius: BorderRadius.circular(30.r),
                       border: Border.all(
-                        color: _PRIMARY_BLUE
-                            .withOpacity(0.2), // 统一颜色
+                        color:
+                        _PRIMARY_BLUE.withOpacity(0.2), // 统一颜色
                         width: 1,
                       ),
                     ),
@@ -5400,143 +5391,145 @@ class _NotificationPageState extends State<NotificationPage> {
               color: _PRIMARY_BLUE, // 统一颜色
               backgroundColor: Colors.white,
               strokeWidth: 2.w,
-              child: ListView.builder(
-                physics: const AlwaysScrollableScrollPhysics(),
-                // ✅ D.2: 统一顶部间距为 16
-                padding: EdgeInsets.only(top: 16.h),
-                itemCount: _notifications.length,
-                itemBuilder: (context, index) {
-                  final notification = _notifications[index];
-                  final isRead = notification['is_read'] == true;
-                  final type = notification['type']?.toString() ?? '';
-                  final createdAt =
-                      notification['created_at']?.toString() ?? '';
+              // ✅ 去除“蓝色头部与第一条之间的白色缝隙”
+              child: MediaQuery.removePadding(
+                context: context,
+                removeTop: true,
+                child: ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero, // 顶部 0
+                  itemCount: _notifications.length,
+                  itemBuilder: (context, index) {
+                    final notification = _notifications[index];
+                    final isRead = notification['is_read'] == true;
+                    final type = notification['type']?.toString() ?? '';
+                    final createdAt =
+                        notification['created_at']?.toString() ?? '';
 
-                  return Dismissible(
-                    key: Key('${notification['id']}'),
-                    background: Container(
-                      color: Colors.red.shade600,
-                      alignment: Alignment.centerRight,
-                      padding: EdgeInsets.only(right: 12.w),
-                      child: Icon(
-                        Icons.delete_rounded,
-                        color: Colors.white,
-                        size: 20.r,
+                    return Dismissible(
+                      key: Key('${notification['id']}'),
+                      background: Container(
+                        color: Colors.red.shade600,
+                        alignment: Alignment.centerRight,
+                        padding: EdgeInsets.only(right: 12.w),
+                        child: Icon(
+                          Icons.delete_rounded,
+                          color: Colors.white,
+                          size: 20.r,
+                        ),
                       ),
-                    ),
-                    direction: DismissDirection.endToStart,
-                    onDismissed: (direction) =>
-                        _deleteNotification(index),
-                    child: Container(
-                      color: isRead
-                          ? Colors.white
-                          : _PRIMARY_BLUE
-                          .withOpacity(0.03), // 统一颜色
-                      margin: EdgeInsets.only(bottom: 0.5.h),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () =>
-                              _handleNotificationTap(notification),
-                          // ✅ 修复：将 _PRIMARY_BRAVO 替换为 _PRIMARY_BLUE
-                          splashColor: _PRIMARY_BLUE
-                              .withOpacity(0.1), // 统一颜色
-                          highlightColor: _PRIMARY_BLUE
-                              .withOpacity(0.05), // 统一颜色
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 12.w,
-                              vertical: 8.h,
-                            ),
-                            child: Row(
-                              crossAxisAlignment:
-                              CrossAxisAlignment.start,
-                              children: [
-                                _getNotificationIcon(type),
-                                SizedBox(width: 10.w),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              '${notification['title'] ?? ''}',
-                                              style: TextStyle(
-                                                fontWeight: isRead
-                                                    ? FontWeight.w500
-                                                    : FontWeight.w600,
-                                                fontSize: 13.sp,
-                                                color: Colors.black87,
-                                                height: 1.3,
-                                              ),
-                                              maxLines: 2,
-                                              overflow:
-                                              TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          if (!isRead)
-                                            Container(
-                                              width: 6.w,
-                                              height: 6.w,
-                                              margin: EdgeInsets.only(
-                                                  left: 6.w),
-                                              decoration:
-                                              const BoxDecoration(
-                                                color:
-                                                _PRIMARY_BLUE, // 统一颜色
-                                                shape: BoxShape.circle,
+                      direction: DismissDirection.endToStart,
+                      onDismissed: (direction) =>
+                          _deleteNotification(index),
+                      child: Container(
+                        color: isRead
+                            ? Colors.white
+                            : _PRIMARY_BLUE
+                            .withOpacity(0.03), // 统一颜色
+                        margin: EdgeInsets.only(bottom: 0.5.h),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () =>
+                                _handleNotificationTap(notification),
+                            splashColor:
+                            _PRIMARY_BLUE.withOpacity(0.1), // 统一颜色
+                            highlightColor:
+                            _PRIMARY_BLUE.withOpacity(0.05), // 统一颜色
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 12.w,
+                                vertical: 8.h,
+                              ),
+                              child: Row(
+                                crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                                children: [
+                                  _getNotificationIcon(type),
+                                  SizedBox(width: 10.w),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                '${notification['title'] ?? ''}',
+                                                style: TextStyle(
+                                                  fontWeight: isRead
+                                                      ? FontWeight.w500
+                                                      : FontWeight.w600,
+                                                  fontSize: 13.sp,
+                                                  color: Colors.black87,
+                                                  height: 1.3,
+                                                ),
+                                                maxLines: 2,
+                                                overflow:
+                                                TextOverflow.ellipsis,
                                               ),
                                             ),
-                                        ],
-                                      ),
-                                      SizedBox(height: 2.h),
-                                      Text(
-                                        '${notification['message'] ?? ''}',
-                                        style: TextStyle(
-                                          fontSize: 11.sp,
-                                          color: Colors.grey.shade600,
-                                          height: 1.4,
+                                            if (!isRead)
+                                              Container(
+                                                width: 6.w,
+                                                height: 6.w,
+                                                margin:
+                                                EdgeInsets.only(left: 6.w),
+                                                decoration:
+                                                const BoxDecoration(
+                                                  color:
+                                                  _PRIMARY_BLUE, // 统一颜色
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              ),
+                                          ],
                                         ),
-                                        maxLines: 2,
-                                        overflow:
-                                        TextOverflow.ellipsis,
-                                      ),
-                                      SizedBox(height: 4.h),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.access_time_rounded,
-                                            size: 10.r,
-                                            color:
-                                            Colors.grey.shade400,
+                                        SizedBox(height: 2.h),
+                                        Text(
+                                          '${notification['message'] ?? ''}',
+                                          style: TextStyle(
+                                            fontSize: 11.sp,
+                                            color: Colors.grey.shade600,
+                                            height: 1.4,
                                           ),
-                                          SizedBox(width: 2.w),
-                                          Text(
-                                            NotificationService
-                                                .formatNotificationTime(
-                                                createdAt),
-                                            style: TextStyle(
-                                              fontSize: 10.sp,
-                                              color: Colors
-                                                  .grey.shade400,
+                                          maxLines: 2,
+                                          overflow:
+                                          TextOverflow.ellipsis,
+                                        ),
+                                        SizedBox(height: 4.h),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.access_time_rounded,
+                                              size: 10.r,
+                                              color: Colors.grey.shade400,
                                             ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
+                                            SizedBox(width: 2.w),
+                                            Text(
+                                              NotificationService
+                                                  .formatNotificationTime(
+                                                  createdAt),
+                                              style: TextStyle(
+                                                fontSize: 10.sp,
+                                                color: Colors
+                                                    .grey.shade400,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ),
           ),

@@ -20,6 +20,9 @@ android {
     namespace = "com.example.swaply"
     compileSdk = 35
 
+    // ✅ 钉死 NDK 版本，避免找错目录
+    ndkVersion = "26.1.10909125"
+
     defaultConfig {
         applicationId = "com.example.swaply"
         minSdk = 21
@@ -74,4 +77,13 @@ flutter {
 dependencies {
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation("androidx.core:core-ktx:1.13.1")
+}
+// --- 关键修复：强制所有插件使用统一的 Kotlin 版本 ---
+configurations.all {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.jetbrains.kotlin" && requested.name.startsWith("kotlin-")) {
+            // 在 settings.gradle 中我们定义了 1.9.24，所以这里也用 1.9.24
+            useVersion("1.9.24")
+        }
+    }
 }
