@@ -1,0 +1,26 @@
+pluginManagement {
+    def props = new Properties()
+    def f = new File(settingsDir, "local.properties")
+    if (f.exists()) { f.withInputStream { props.load(it) } }
+    def flutterSdk = props.getProperty("flutter.sdk")
+    if (flutterSdk == null) {
+        throw new GradleException("Missing 'flutter.sdk' in local.properties.")
+    }
+
+    // ✅ includeBuild 必须在 pluginManagement 里面
+    includeBuild("${flutterSdk}/packages/flutter_tools/gradle")
+
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+// ✅ 仅声明 loader，本身不写版本
+plugins {
+    id "dev.flutter.flutter-plugin-loader"
+}
+
+rootProject.name = "swaply"
+include(":app")

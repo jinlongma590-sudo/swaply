@@ -1,0 +1,31 @@
+gradle.settingsEvaluated { settings ->
+    def props = new Properties()
+    def f = new File(settings.settingsDir, "local.properties")
+    if (f.exists()) { f.withInputStream { props.load(it) } }
+    def flutterSdk = props.getProperty("flutter.sdk")
+
+    gradle.rootProject {
+        allprojects {
+            buildscript {
+                repositories {
+                    google()
+                    mavenCentral()
+                    gradlePluginPortal()
+                    if (flutterSdk != null) {
+                        maven { url uri("${flutterSdk}/bin/cache/artifacts/engine") }
+                    }
+                    maven { url "https://storage.googleapis.com/download.flutter.io" }
+                }
+            }
+            repositories {
+                google()
+                mavenCentral()
+                if (flutterSdk != null) {
+                    maven { url uri("${flutterSdk}/bin/cache/artifacts/engine") }
+                }
+                maven { url "https://storage.googleapis.com/download.flutter.io" }
+                gradlePluginPortal()
+            }
+        }
+    }
+}

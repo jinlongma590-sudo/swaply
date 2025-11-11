@@ -1,8 +1,8 @@
 // android/settings.gradle (Groovy 脚本)
 // --------------------------------------------------
-// 最终修复版 v4：
+// 最终修复版 v5：
 // 1. 保持 Groovy，保持硬编码 C:/flutter
-// 2. (关键) 把 Kotlin 插件版本从 2.0.21 降回 1.9.24，以匹配 AGP 8.6.1
+// 2. (关键) 升级 Kotlin 插件到 2.0.0 (AGP 8.6.1 的官方兼容版)
 // 3. 保持 PREFER_PROJECT 避免仓库冲突
 // --------------------------------------------------
 
@@ -30,8 +30,8 @@ plugins {
     // 保持 AGP 8.6.1
     id "com.android.application" version "8.6.1" apply false
 
-    // ★ 关键：必须换回 1.9.24 才能和 AGP 8.6.1 兼容 ★
-    id "org.jetbrains.kotlin.android" version "1.9.24" apply false
+    // ★ 关键：必须使用 2.0.0 (或 2.0.21) 来匹配 AGP 8.6.1 ★
+    id "org.jetbrains.kotlin.android" version "2.0.0" apply false
 }
 
 dependencyResolutionManagement {

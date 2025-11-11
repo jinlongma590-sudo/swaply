@@ -1438,7 +1438,6 @@ class _ProfileRoot extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ProfilePage(isGuest: isGuest);
 }
-
 /* ---------------- Saved Page (收藏页) START ---------------- */
 class SavedPage extends StatefulWidget {
   final bool isGuest;
@@ -1451,8 +1450,9 @@ class SavedPage extends StatefulWidget {
 }
 
 class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
-  // ✅ 修复：添加您在其他页面使用的 _PRIMARY_BLUE 常量 (Facebook 蓝色)
+  // ✅ 统一 Facebook 蓝
   static const Color _PRIMARY_BLUE = Color(0xFF1877F2);
+
   List<Map<String, dynamic>> _favoriteItems = [];
   bool _isLoading = true;
   bool _isRefreshing = false;
@@ -1460,7 +1460,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   Timer? _autoRefreshTimer;
   StreamSubscription<FavoriteUpdateEvent>? _favoritesSubscription;
 
-  // ✅ A) 统一蓝色头部：与通知页一致（渐变、标题与右上角按钮同一行，按钮缩小且不被遮挡）
+  // ✅ A) 精简版蓝色头部（与通知页完全一致：更短、更上移；标题与右上角按钮同一基线）
   Widget _blueHeader({
     required BuildContext context,
     required String title,
@@ -1468,19 +1468,15 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     Widget? trailing, // 右上角按钮（可选）
   }) {
     final double statusBar = MediaQuery.of(context).padding.top;
-    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-
-    // 与通知页保持一致：头部总高 = 状态栏 + (iOS 64 / Android 76)
-    final double kHeaderVisual = _isIOS ? 64.0 : 76.0;
+    const double kHeaderVisual = 48.0;
     const double kSide = 20.0;
 
     return SizedBox(
       height: statusBar + kHeaderVisual,
       child: Stack(
         children: [
-          // 背景（与通知页一致的渐变）
-          Positioned.fill(
-            child: const DecoratedBox(
+          const Positioned.fill(
+            child: DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
@@ -1490,13 +1486,12 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
               ),
             ),
           ),
-          // 标题 + 右上角按钮 同一行（天然垂直居中对齐，不会被下方内容遮住）
           Positioned(
             left: kSide,
-            right: 16.0,
-            top: statusBar + 12.0, // 与通知页一致
+            right: 12.0,
+            top: statusBar + 6.0,
             child: SizedBox(
-              height: 44.0,
+              height: 36.0,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -1513,7 +1508,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                       ),
                     ),
                   ),
-                  if (trailing != null) trailing, // 与标题同一行显示
+                  if (trailing != null) trailing,
                 ],
               ),
             ),
@@ -1523,12 +1518,12 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  // ✅ 右上角菜单按钮（与通知页一致：32×32，图标 20，半透明）
+  // ✅ B) 右上角菜单按钮（更小 28×28，与标题对齐）
   Widget _buildMenuButton() {
     final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
     return PopupMenuButton<String>(
       padding: EdgeInsets.zero,
-      offset: const Offset(0, 12),
+      offset: const Offset(0, 10),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10.w),
       ),
@@ -1550,17 +1545,17 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         ),
       ],
       child: SizedBox(
-        height: 32.w,
-        width: 32.w,
+        height: 28.w,
+        width: 28.w,
         child: Material(
-          color: Colors.white.withOpacity(0.15),
+          color: Colors.white.withOpacity(0.18),
           shape: const StadiumBorder(),
           clipBehavior: Clip.antiAlias,
           child: Center(
             child: Icon(
               _isIOS ? Icons.more_horiz_rounded : Icons.more_vert_rounded,
               color: Colors.white,
-              size: 20.w,
+              size: 18.w,
             ),
           ),
         ),
@@ -1574,7 +1569,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     if (!widget.isGuest) {
       _loadFavorites();
-      _startAutoRefresh();
+      _startAutoRefresh();           // ✅ 这里需要下面的方法
       _setupFavoritesListener();
     } else {
       setState(() => _isLoading = false);
@@ -1596,6 +1591,18 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
+  /// ✅ 自动刷新（每30秒），避免并发；离开页面在 dispose 中已取消
+  void _startAutoRefresh() {
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer =
+        Timer.periodic(const Duration(seconds: 30), (timer) {
+          if (!widget.isGuest && mounted && !_isRefreshing) {
+            if (kDebugMode) print('Auto-refresh favorites…');
+            _loadFavorites();
+          }
+        });
+  }
+
   /// 猫庐戮莽陆庐忙鈥澛睹ㄢ€斅徝︹€郝疵︹€撀懊р€衡€樏ヂ惵?
   void _setupFavoritesListener() {
     _favoritesSubscription =
@@ -1612,7 +1619,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         });
   }
 
-  /// 莽芦鈥姑ヂ嵚趁β仿幻ヅ?氓藛掳忙艙卢氓艙掳忙鈥澛睹ㄢ€斅徝ニ嗏€斆÷?
+  /// 莽芦鈥姑ヂ嵚趁β仿幻ヅ?氓藛掳忙艙卢氓艙掳忙鈥澛睹ㄢ€斅徝ニ嗏€斆铰β?
   void _addToLocalFavorites(Map<String, dynamic> listingData) {
     try {
       final listingId = listingData['id']?.toString();
@@ -1627,7 +1634,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           'created_at': DateTime.now().toIso8601String(),
         };
         setState(() {
-          _favoriteItems.insert(0, favoriteItem); // 忙聫鈥櫭モ€βッニ喡懊ニ嗏€斆÷ヂ尖偓氓陇麓
+          _favoriteItems.insert(0, favoriteItem);
         });
         if (kDebugMode) {}
       }
@@ -1654,17 +1661,6 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   }
 
   /// 氓聬炉氓艩篓猫鈥÷ヅ犅ニ喡访︹€撀懊ヂ∶︹€斅睹モ劉篓
-  void _startAutoRefresh() {
-    _autoRefreshTimer?.cancel();
-    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
-      if (!widget.isGuest && mounted && !_isRefreshing) {
-        if (kDebugMode) print('猫鈥÷ヅ犅ニ喡访︹€撀懊︹€澛睹ㄢ€斅徝ニ嗏€斆÷?..');
-        _loadFavorites();
-      }
-    });
-  }
-
-  /// 氓庐鈥懊モ€β♀€灻甭幻ヅ鋸€姑铰β嵚⒚︹€撀姑β斥€?
   Map<String, dynamic> _safeMapConvert(dynamic input) {
     if (input == null) return <String, dynamic>{};
     if (input is Map<String, dynamic>) {
@@ -1680,7 +1676,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     return <String, dynamic>{};
   }
 
-  /// 氓庐鈥懊モ€βㄅ铰访ヂ忊€撁ヂ€斆γぢ嘎裁モ偓录
+  /// 氓庐鈥懊莫€βㄅ铰访ヂ忊€撁ヂ€斆γぢ嘎裁モ偓录
   String _safeGetString(Map<String, dynamic> map, String key,
       {String defaultValue = ''}) {
     try {
@@ -1691,7 +1687,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  /// 氓艩 猫陆陆忙鈥澛睹ㄢ€斅徝ニ嗏€斆÷?- 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService
+  /// 氓艩 猫陆陆忙鈥澛睹ㄢ€斅徝ニ嗏€斆÷?- DualFavoritesService
   Future<void> _loadFavorites() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
@@ -1746,7 +1742,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     setState(() => _isRefreshing = false);
   }
 
-  /// 盲禄沤忙鈥澛睹ㄢ€斅徝ヂぢ姑幻┾劉隴氓鈥⑩€犆モ€溌?- 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService
+  /// 盲禄沤忙鈥澛睹ㄢ€斅徝ヂぢ姑幻┾劉隴氓鈥⑩€犆モ€溌?- DualFavoritesService
   Future<void> _removeFromFavorites(String listingId, int index) async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
@@ -1805,7 +1801,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  /// 猫沤路氓聫鈥撁モ€⑩€犆モ€溌伱モ€郝久р€扳€?- 氓庐鈥懊モ€βρ
+  /// 猫沤路氓聫鈥撁モ€⑩€犆モ€溌伱モ€郝久р€扳€?- 莽录漏氓掳聫
   String _getListingImage(Map<String, dynamic> listing) {
     try {
       final images = listing['images'] ?? listing['image_urls'];
@@ -1818,7 +1814,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     return 'assets/images/placeholder.jpg';
   }
 
-  /// 忙 录氓录聫氓艗鈥撁ぢ宦访?录 - 氓庐鈥懊モ€βр€八喢ε撀?
+  /// 忙 录氓录聫氓艗鈥撁ぢ宦访?录
   String _formatPrice(dynamic price) {
     if (price == null) return 'Price not available';
     try {
@@ -1835,15 +1831,14 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  /// 忙啪鈥灻ヂ宦好モ€⑩€犆モ€溌伱ヂ嵚∶р€扳€?- 盲驴庐氓陇聧莽鈥八喢ε撀?
+  /// 忙啪鈥灻ヂ宦好┞好-卡片
   Widget _buildFavoriteCard(Map<String, dynamic> item, int index) {
     try {
       final safeListing = _safeMapConvert(item['listing'] ?? {});
       final safeItem = _safeMapConvert(item);
       final listingId = _safeGetString(safeItem, 'listing_id');
       if (listingId.isEmpty) {
-        if (kDebugMode)
-          print('Warning: Empty listing ID for item at index $index');
+        if (kDebugMode) print('Warning: Empty listing ID for item at $index');
         return const SizedBox.shrink();
       }
       final title =
@@ -1853,6 +1848,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       final imageUrl = _getListingImage(safeListing);
       final createdAt = _safeGetString(safeItem, 'created_at');
       final timeAdded = DualFavoritesService.formatSavedTime(createdAt);
+
       return Card(
         margin: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
         elevation: 0,
@@ -1869,9 +1865,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                     productData: safeListing,
                   ),
                 ),
-              ).then((_) {
-                _loadFavorites();
-              });
+              ).then((_) => _loadFavorites());
             }
           },
           borderRadius: BorderRadius.circular(8.w),
@@ -1961,7 +1955,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                   ),
                   SizedBox(width: 8.w),
 
-                  // 文案
+                  // 文本信息
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2039,7 +2033,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                     ),
                   ),
 
-                  // 取消收藏
+                  // 右侧按钮
                   Container(
                     margin: EdgeInsets.only(left: 4.w),
                     decoration: BoxDecoration(
@@ -2049,7 +2043,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () => _showRemoveDialog(listingId, title, index),
+                        onTap: () => _showRemoveDialog(title, listingId, index),
                         borderRadius: BorderRadius.circular(6.w),
                         child: Padding(
                           padding: EdgeInsets.all(6.w),
@@ -2070,7 +2064,6 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       );
     } catch (e, stackTrace) {
       if (kDebugMode) {}
-      // 兜底错误卡片
       return Container(
         margin: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
         padding: EdgeInsets.all(16.w),
@@ -2098,8 +2091,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  /// 忙藴戮莽陇潞莽搂禄茅鈩⒙っ÷っヂ姑澝β♀€?
-  void _showRemoveDialog(String listingId, String title, int index) {
+  /// 删除确认
+  void _showRemoveDialog(String title, String listingId, int index) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -2252,8 +2245,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                     borderRadius: BorderRadius.circular(8.w),
                   ),
                 ),
-                icon:
-                Icon(Icons.explore_rounded, size: 12.w, color: Colors.white),
+                icon: Icon(Icons.explore_rounded,
+                    size: 12.w, color: Colors.white),
                 label: Text(
                   'Browse Items',
                   style: TextStyle(
@@ -2270,7 +2263,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  /// 错误态
+  /// 错态
   Widget _buildErrorState() {
     return Center(
       child: Padding(
@@ -2351,11 +2344,10 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     } catch (e) {
       if (kDebugMode) {}
     }
+
     if (widget.isGuest) {
-      // Guest View: 统一蓝色
       return Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
-        // ✅ 移除 AppBar
         body: Column(
           children: [
             _blueHeader(
@@ -2454,10 +2446,9 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         ),
       );
     }
-    // 登录视图
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      // ✅ 移除 AppBar
       body: Column(
         children: [
           _blueHeader(
@@ -2477,8 +2468,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                     width: 24.w,
                     height: 24.w,
                     child: CircularProgressIndicator(
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                          _PRIMARY_BLUE), // 统一蓝色
+                      valueColor:
+                      const AlwaysStoppedAnimation<Color>(_PRIMARY_BLUE),
                       strokeWidth: 2.w,
                     ),
                   ),
@@ -2499,22 +2490,18 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                 ? _buildEmptyState()
                 : RefreshIndicator(
               onRefresh: _refreshFavorites,
-              color: _PRIMARY_BLUE, // 统一蓝色
+              color: _PRIMARY_BLUE,
               backgroundColor: Colors.white,
               strokeWidth: 2.w,
-              // ✅ 去掉“蓝色头部与第一条卡片之间的白缝”
-              child: MediaQuery.removePadding(
-                context: context,
-                removeTop: true,
-                child: ListView.builder(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.zero,
-                  itemCount: _favoriteItems.length,
-                  itemBuilder: (context, index) {
-                    return _buildFavoriteCard(
-                        _favoriteItems[index], index);
-                  },
-                ),
+              child: ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                // ✅ 统一更紧凑的顶部间距：12
+                padding: EdgeInsets.only(top: 12.h),
+                itemCount: _favoriteItems.length,
+                itemBuilder: (context, index) {
+                  return _buildFavoriteCard(
+                      _favoriteItems[index], index);
+                },
               ),
             ),
           ),
@@ -2523,7 +2510,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  /// 忙藴戮莽陇潞忙赂鈥γ┞好︹€扳偓忙舱鈥懊÷っヂ姑澝β♀€?
+  /// 清空确认
   void _showClearAllDialog() {
     showDialog(
       context: context,
@@ -2588,7 +2575,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  /// 清空收藏
+  /// 清空所有收藏
   Future<void> _clearAllFavorites() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
@@ -4691,10 +4678,10 @@ class _NotificationPageState extends State<NotificationPage> {
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
 
-  // ✅ 修复：添加您在其他页面使用的 _PRIMARY_BLUE 常量 (Facebook 蓝色)
+  // ✅ 统一使用首页的 Facebook 蓝
   static const Color _PRIMARY_BLUE = Color(0xFF1877F2);
 
-  // ✅ A) 统一一个蓝色头部写法（按钮缩小并与标题对齐；不再被下方列表遮挡）
+  // ✅ A) 精简版蓝色头部（与 Sell 页一致：更短、更上移；标题与右上角按钮同一基线）
   Widget _blueHeader({
     required BuildContext context,
     required String title,
@@ -4702,39 +4689,32 @@ class _NotificationPageState extends State<NotificationPage> {
     Widget? trailing, // 右上角按钮（可选）
   }) {
     final double statusBar = MediaQuery.of(context).padding.top;
-
-    // iOS 适当加高以容纳按钮，Android 保持原样
-    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    final double kHeaderVisual = _isIOS ? 64.0 : 76.0; // ⬅️ iOS 从 38 提升到 64，避免被下方内容遮挡
-    const double kSide = 20.0; // 左右内边距
-
-    // ✅ 修复：使用您首页的 Facebook 蓝色 (0xFF1877F2)
-    const Color kUserPrimaryBlue = Color(0xFF1877F2);
+    const double kHeaderVisual = 48.0; // 头部视觉高度（更短）
+    const double kSide = 20.0;
 
     return SizedBox(
       height: statusBar + kHeaderVisual,
       child: Stack(
         children: [
-          // 背景
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
+          // 背景（渐变）
+          const Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  // ✅ 使用 0xFF1877F2 的近似渐变
-                  colors: [kUserPrimaryBlue, Color(0xFF1E88E5)],
+                  colors: [Color(0xFF1877F2), Color(0xFF1E88E5)],
                 ),
               ),
             ),
           ),
-          // 标题 + 右上角按钮 同一行（天然垂直居中对齐）
+          // 标题 + 右上角按钮：同一行、整体上移
           Positioned(
             left: kSide,
-            right: 16,
-            top: statusBar + 12, // ⬅️ 统一标题与按钮的上边距，避开状态栏
+            right: 12.0,
+            top: statusBar + 6.0,
             child: SizedBox(
-              height: 44, // 工具栏高度
+              height: 36.0,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -4747,11 +4727,11 @@ class _NotificationPageState extends State<NotificationPage> {
                         color: Colors.white,
                         fontSize: 28,
                         fontWeight: FontWeight.w700,
-                        height: 1.05,
+                        height: 1.1,
                       ),
                     ),
                   ),
-                  if (trailing != null) trailing, // ⬅️ 与标题在同一行，保证不被下方内容遮挡
+                  if (trailing != null) trailing,
                 ],
               ),
             ),
@@ -4761,14 +4741,14 @@ class _NotificationPageState extends State<NotificationPage> {
     );
   }
 
-  // ✅ 右上角菜单按钮缩小（32x32，图标 20），与标题对齐；保持 PopupMenu 外观
+  // ✅ B) 右上角菜单按钮：更小(28×28)并与标题对齐；弹出层更贴合
   Widget _buildMenuButton() {
     final l10n = AppLocalizations.of(context)!;
     final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
     return PopupMenuButton<String>(
       padding: EdgeInsets.zero,
-      offset: const Offset(0, 12),
+      offset: const Offset(0, 10),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10.w),
       ),
@@ -4803,19 +4783,18 @@ class _NotificationPageState extends State<NotificationPage> {
           ),
         ),
       ],
-      // ⬇️ 缩小按钮尺寸，并与标题同一行摆放（不再越出头部高度）
       child: SizedBox(
-        height: 32.w,
-        width: 32.w,
+        height: 28.w,
+        width: 28.w,
         child: Material(
-          color: Colors.white.withOpacity(0.15),
+          color: Colors.white.withOpacity(0.18),
           shape: const StadiumBorder(),
           clipBehavior: Clip.antiAlias,
           child: Center(
             child: Icon(
               _isIOS ? Icons.more_horiz_rounded : Icons.more_vert_rounded,
               color: Colors.white,
-              size: 20.w,
+              size: 18.w,
             ),
           ),
         ),
@@ -5160,7 +5139,6 @@ class _NotificationPageState extends State<NotificationPage> {
     if (widget.isGuest) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
-        // ✅ 移除 AppBar
         body: Column(
           children: [
             _blueHeader(
@@ -5213,12 +5191,12 @@ class _NotificationPageState extends State<NotificationPage> {
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
-                          colors: [_PRIMARY_BLUE, const Color(0xFF1E88E5)], // 统一颜色
+                          colors: [_PRIMARY_BLUE, const Color(0xFF1E88E5)],
                         ),
                         borderRadius: BorderRadius.circular(10.r),
                         boxShadow: [
                           BoxShadow(
-                            color: _PRIMARY_BLUE.withOpacity(0.3), // 统一颜色
+                            color: _PRIMARY_BLUE.withOpacity(0.3),
                             blurRadius: 8.r,
                             offset: Offset(0, 3.h),
                           ),
@@ -5259,13 +5237,14 @@ class _NotificationPageState extends State<NotificationPage> {
         ),
       );
     }
+
     final unreadCount =
         _notifications.where((n) => n['is_read'] != true).length;
     final displayTitle =
         '${l10n.notifications}${unreadCount > 0 ? ' ($unreadCount)' : ''}';
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      // ✅ 移除 AppBar
       body: Column(
         children: [
           _blueHeader(
@@ -5284,7 +5263,7 @@ class _NotificationPageState extends State<NotificationPage> {
                   borderRadius: BorderRadius.circular(16.r),
                   boxShadow: [
                     BoxShadow(
-                      color: _PRIMARY_BLUE.withOpacity(0.08), // 统一颜色
+                      color: _PRIMARY_BLUE.withOpacity(0.08),
                       blurRadius: 10.r,
                       offset: Offset(0, 4.h),
                     ),
@@ -5299,8 +5278,8 @@ class _NotificationPageState extends State<NotificationPage> {
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
-                            _PRIMARY_BLUE.withOpacity(0.2), // 统一颜色
-                            _PRIMARY_BLUE.withOpacity(0.1), // 统一颜色
+                            _PRIMARY_BLUE.withOpacity(0.2),
+                            _PRIMARY_BLUE.withOpacity(0.1),
                           ],
                         ),
                         borderRadius: BorderRadius.circular(20.r),
@@ -5312,7 +5291,7 @@ class _NotificationPageState extends State<NotificationPage> {
                           child: CircularProgressIndicator(
                             valueColor:
                             const AlwaysStoppedAnimation<Color>(
-                                _PRIMARY_BLUE), // 统一颜色
+                                _PRIMARY_BLUE),
                             strokeWidth: 2.5,
                           ),
                         ),
@@ -5322,7 +5301,7 @@ class _NotificationPageState extends State<NotificationPage> {
                     Text(
                       'Loading notifications...',
                       style: TextStyle(
-                        color: _PRIMARY_BLUE, // 统一颜色
+                        color: _PRIMARY_BLUE,
                         fontSize: 13.sp,
                         fontWeight: FontWeight.w500,
                       ),
@@ -5342,7 +5321,7 @@ class _NotificationPageState extends State<NotificationPage> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          _PRIMARY_BLUE.withOpacity(0.1), // 统一颜色
+                          _PRIMARY_BLUE.withOpacity(0.1),
                           const Color(0xFF1E88E5).withOpacity(0.05),
                         ],
                         begin: Alignment.topLeft,
@@ -5351,14 +5330,14 @@ class _NotificationPageState extends State<NotificationPage> {
                       borderRadius: BorderRadius.circular(30.r),
                       border: Border.all(
                         color:
-                        _PRIMARY_BLUE.withOpacity(0.2), // 统一颜色
+                        _PRIMARY_BLUE.withOpacity(0.2),
                         width: 1,
                       ),
                     ),
                     child: Icon(
                       Icons.notifications_none_rounded,
                       size: 30.r,
-                      color: _PRIMARY_BLUE, // 统一颜色
+                      color: _PRIMARY_BLUE,
                     ),
                   ),
                   SizedBox(height: 16.h),
@@ -5388,148 +5367,147 @@ class _NotificationPageState extends State<NotificationPage> {
             )
                 : RefreshIndicator(
               onRefresh: _loadNotifications,
-              color: _PRIMARY_BLUE, // 统一颜色
+              color: _PRIMARY_BLUE,
               backgroundColor: Colors.white,
               strokeWidth: 2.w,
-              // ✅ 去除“蓝色头部与第一条之间的白色缝隙”
-              child: MediaQuery.removePadding(
-                context: context,
-                removeTop: true,
-                child: ListView.builder(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: EdgeInsets.zero, // 顶部 0
-                  itemCount: _notifications.length,
-                  itemBuilder: (context, index) {
-                    final notification = _notifications[index];
-                    final isRead = notification['is_read'] == true;
-                    final type = notification['type']?.toString() ?? '';
-                    final createdAt =
-                        notification['created_at']?.toString() ?? '';
+              child: ListView.builder(
+                physics: const AlwaysScrollableScrollPhysics(),
+                // ✅ 统一更紧凑的顶部间距：12
+                padding: EdgeInsets.only(top: 12.h),
+                itemCount: _notifications.length,
+                itemBuilder: (context, index) {
+                  final notification = _notifications[index];
+                  final isRead = notification['is_read'] == true;
+                  final type = notification['type']?.toString() ?? '';
+                  final createdAt =
+                      notification['created_at']?.toString() ?? '';
 
-                    return Dismissible(
-                      key: Key('${notification['id']}'),
-                      background: Container(
-                        color: Colors.red.shade600,
-                        alignment: Alignment.centerRight,
-                        padding: EdgeInsets.only(right: 12.w),
-                        child: Icon(
-                          Icons.delete_rounded,
-                          color: Colors.white,
-                          size: 20.r,
-                        ),
+                  return Dismissible(
+                    key: Key('${notification['id']}'),
+                    background: Container(
+                      color: Colors.red.shade600,
+                      alignment: Alignment.centerRight,
+                      padding: EdgeInsets.only(right: 12.w),
+                      child: Icon(
+                        Icons.delete_rounded,
+                        color: Colors.white,
+                        size: 20.r,
                       ),
-                      direction: DismissDirection.endToStart,
-                      onDismissed: (direction) =>
-                          _deleteNotification(index),
-                      child: Container(
-                        color: isRead
-                            ? Colors.white
-                            : _PRIMARY_BLUE
-                            .withOpacity(0.03), // 统一颜色
-                        margin: EdgeInsets.only(bottom: 0.5.h),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () =>
-                                _handleNotificationTap(notification),
-                            splashColor:
-                            _PRIMARY_BLUE.withOpacity(0.1), // 统一颜色
-                            highlightColor:
-                            _PRIMARY_BLUE.withOpacity(0.05), // 统一颜色
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 12.w,
-                                vertical: 8.h,
-                              ),
-                              child: Row(
-                                crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                                children: [
-                                  _getNotificationIcon(type),
-                                  SizedBox(width: 10.w),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Expanded(
-                                              child: Text(
-                                                '${notification['title'] ?? ''}',
-                                                style: TextStyle(
-                                                  fontWeight: isRead
-                                                      ? FontWeight.w500
-                                                      : FontWeight.w600,
-                                                  fontSize: 13.sp,
-                                                  color: Colors.black87,
-                                                  height: 1.3,
-                                                ),
-                                                maxLines: 2,
-                                                overflow:
-                                                TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                            if (!isRead)
-                                              Container(
-                                                width: 6.w,
-                                                height: 6.w,
-                                                margin:
-                                                EdgeInsets.only(left: 6.w),
-                                                decoration:
-                                                const BoxDecoration(
-                                                  color:
-                                                  _PRIMARY_BLUE, // 统一颜色
-                                                  shape: BoxShape.circle,
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                        SizedBox(height: 2.h),
-                                        Text(
-                                          '${notification['message'] ?? ''}',
-                                          style: TextStyle(
-                                            fontSize: 11.sp,
-                                            color: Colors.grey.shade600,
-                                            height: 1.4,
-                                          ),
-                                          maxLines: 2,
-                                          overflow:
-                                          TextOverflow.ellipsis,
-                                        ),
-                                        SizedBox(height: 4.h),
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.access_time_rounded,
-                                              size: 10.r,
-                                              color: Colors.grey.shade400,
-                                            ),
-                                            SizedBox(width: 2.w),
-                                            Text(
-                                              NotificationService
-                                                  .formatNotificationTime(
-                                                  createdAt),
+                    ),
+                    direction: DismissDirection.endToStart,
+                    onDismissed: (direction) =>
+                        _deleteNotification(index),
+                    child: Container(
+                      color: isRead
+                          ? Colors.white
+                          : _PRIMARY_BLUE.withOpacity(0.03),
+                      margin: EdgeInsets.only(bottom: 0.5.h),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () =>
+                              _handleNotificationTap(notification),
+                          splashColor:
+                          _PRIMARY_BLUE.withOpacity(0.1),
+                          highlightColor:
+                          _PRIMARY_BLUE.withOpacity(0.05),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 12.w,
+                              vertical: 8.h,
+                            ),
+                            child: Row(
+                              crossAxisAlignment:
+                              CrossAxisAlignment.start,
+                              children: [
+                                _getNotificationIcon(type),
+                                SizedBox(width: 10.w),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              '${notification['title'] ?? ''}',
                                               style: TextStyle(
-                                                fontSize: 10.sp,
-                                                color: Colors
-                                                    .grey.shade400,
+                                                fontWeight: isRead
+                                                    ? FontWeight.w500
+                                                    : FontWeight.w600,
+                                                fontSize: 13.sp,
+                                                color: Colors.black87,
+                                                height: 1.3,
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow
+                                                  .ellipsis,
+                                            ),
+                                          ),
+                                          if (!isRead)
+                                            Container(
+                                              width: 6.w,
+                                              height: 6.w,
+                                              margin:
+                                              EdgeInsets.only(
+                                                  left: 6.w),
+                                              decoration:
+                                              const BoxDecoration(
+                                                color:
+                                                _PRIMARY_BLUE,
+                                                shape:
+                                                BoxShape.circle,
                                               ),
                                             ),
-                                          ],
+                                        ],
+                                      ),
+                                      SizedBox(height: 2.h),
+                                      Text(
+                                        '${notification['message'] ?? ''}',
+                                        style: TextStyle(
+                                          fontSize: 11.sp,
+                                          color:
+                                          Colors.grey.shade600,
+                                          height: 1.4,
                                         ),
-                                      ],
-                                    ),
+                                        maxLines: 2,
+                                        overflow:
+                                        TextOverflow.ellipsis,
+                                      ),
+                                      SizedBox(height: 4.h),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.access_time_rounded,
+                                            size: 10.r,
+                                            color: Colors
+                                                .grey.shade400,
+                                          ),
+                                          SizedBox(width: 2.w),
+                                          Text(
+                                            NotificationService
+                                                .formatNotificationTime(
+                                                createdAt),
+                                            style: TextStyle(
+                                              fontSize: 10.sp,
+                                              color: Colors
+                                                  .grey.shade400,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  );
+                },
               ),
             ),
           ),
@@ -5549,6 +5527,7 @@ class NoGlowScrollBehavior extends ScrollBehavior {
 
 const _kPrivacyUrl = 'https://www.swaply.cc/privacy';
 const _kDeleteUrl = 'https://www.swaply.cc/delete-account';
+
 
 //---------------- Profile Page 个人资料页 ----------------
 class ProfilePage extends StatefulWidget {

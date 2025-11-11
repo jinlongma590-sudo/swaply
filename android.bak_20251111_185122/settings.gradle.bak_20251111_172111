@@ -1,0 +1,55 @@
+// android/settings.gradle (Groovy 鑴氭湰)
+// --------------------------------------------------
+// 鏈€缁堜慨澶嶇増 v5锛?
+// 1. 淇濇寔 Groovy锛屼繚鎸佺‖缂栫爜 C:/flutter
+// 2. (鍏抽敭) 鍗囩骇 Kotlin 鎻掍欢鍒?2.0.0 (AGP 8.6.1 鐨勫畼鏂瑰吋瀹圭増)
+// 3. 淇濇寔 PREFER_PROJECT 閬垮厤浠撳簱鍐茬獊
+// --------------------------------------------------
+
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id.startsWith("org.jetbrains.kotlin")) {
+                useVersion("2.0.21")
+            }
+        }
+    }
+}}
+
+    // 2. 浠?*鐜鍙橀噺* 璇诲彇 SDK 璺緞
+    def flutterSdkPath = System.getenv("FLUTTER_ROOT")
+    if (flutterSdkPath == null) {
+        flutterSdkPath = "C:/flutter" // 鍥為€€鍒扮‖缂栫爜
+    }
+
+    // 3. 寮曞叆 Flutter 鐨?Gradle 鎻掍欢
+    includeBuild "$flutterSdkPath/packages/flutter_tools/gradle"
+}
+
+plugins {
+    id "dev.flutter.flutter-plugin-loader" version "1.0.0"
+
+    // 淇濇寔 AGP 8.6.1
+    id "com.android.application" version "8.6.1" apply false
+
+    // 鈽?鍏抽敭锛氬繀椤讳娇鐢?2.0.0 (鎴?2.0.21) 鏉ュ尮閰?AGP 8.6.1 鈽?
+    id "org.jetbrains.kotlin.android" version "2.0.21" apply false
+}
+
+dependencyResolutionManagement {
+    // 鈽?鍏抽敭锛氫繚鎸?PREFER_PROJECT 浠ラ伩鍏嶄粨搴撳啿绐?鈽?
+    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://storage.googleapis.com/download.flutter.io' }
+    }
+}
+
+rootProject.name = "swaply"
+include ":app"
