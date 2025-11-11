@@ -3594,33 +3594,34 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  // ✅ [MODIFIED] 统一蓝色头部（iOS 已按 standard 布局修改）
+  // ✅ [MODIFIED] 统一蓝色头部（iOS 已按 standard 布局；Android 改为与 iOS 同构的行布局，标题与右上角按钮严格对齐，并缩短蓝色区域）
   Widget _blueHeader({
     required BuildContext context,
     required String title,
     required bool centerTitle,
     Widget? trailing,
-    double trailingTopAdjust = 0.0, // (此参数仅 Android 侧保留使用)
+    double trailingTopAdjust = 0.0, // (参数保留；Android 新布局不再需要额外上移)
   }) {
     final double statusBar = MediaQuery.of(context).padding.top;
     final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
     const Color kUserPrimaryBlue = Color(0xFF1877F2);
 
-    // ============== Android (Original Logic) ==============
+    // ============== Android (NEW: 同构行布局，蓝区更短) ==============
     if (!_isIOS) {
-      final double kHeaderVisual = 76.0;
-      final double kTitleTop = 20.0;
-      const double kSide = 20.0;
-      final double titleTop = statusBar + kTitleTop;
+      const double kHeaderVisual = 44.0;   // ✅ 缩短蓝色区域
+      const double kSideTop = 2.0;         // ✅ 顶部行距
+      const double kSide = 16.0;           // ✅ 左右边距
+      const double kBtnSize = 32.0;        // ✅ 右上角按钮尺寸
+      const double kSpacing = 16.0;        // ✅ 占位与标题间距
+      const double kTitleTop = -5.0;       // ✅ 轻微上移标题，和按钮基线视觉对齐
 
       return SizedBox(
         height: statusBar + kHeaderVisual,
         child: Stack(
           children: [
-            // 背景
-            Positioned.fill(
-              child: Container(
-                decoration: const BoxDecoration(
+            const Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
@@ -3629,22 +3630,17 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                 ),
               ),
             ),
-            // 标题
+            // 左侧占位（保持标题真正居中）
             Positioned(
-              top: titleTop,
+              top: statusBar + kSideTop,
               left: kSide,
-              right: centerTitle ? kSide : null,
-              child: SizedBox(
-                width: centerTitle
-                    ? MediaQuery.of(context).size.width - kSide * 2
-                    : null,
-                child: const Text(''), // 占位避免抖动（可保留）
-              ),
+              child: const SizedBox(width: kBtnSize, height: kBtnSize),
             ),
+            // 标题（左右各预留按钮+间距，确保与右侧按钮处于同一“行”）
             Positioned(
-              top: titleTop,
-              left: kSide,
-              right: centerTitle ? kSide : null,
+              top: statusBar + kTitleTop,
+              left: kSide + kBtnSize + kSpacing,
+              right: kSide + kBtnSize + kSpacing,
               child: Text(
                 title,
                 textAlign: centerTitle ? TextAlign.center : TextAlign.left,
@@ -3656,12 +3652,12 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                 ),
               ),
             ),
-            // 右上角按钮（与标题行对齐；可用 trailingTopAdjust 再微调）
+            // 右上角按钮 —— 与标题同一行顶距（已对齐）
             if (trailing != null)
               Positioned(
-                top: titleTop + trailingTopAdjust, // (Android 保持原逻辑)
-                right: 12, // (Android 保持原逻辑)
-                child: trailing,
+                top: statusBar + kSideTop, // ✅ 与标题“行”对齐
+                right: kSide,
+                child: SizedBox(height: kBtnSize, width: kBtnSize, child: trailing),
               ),
           ],
         ),
@@ -3669,23 +3665,20 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     }
 
     // ============== iOS (Verification Page Standard Logic) ==============
-
-    // 1. 标准布局数值
     const double kHeaderVisual = 38.0; // Standard
-    const double kTitleTop = -6.0;     // Standard
+    const double kTitleTop = -7.0;     // Standard
     const double kSideTop = 2.0;       // Standard
-    const double kSide = 16.0;       // Standard
-    const double kBtnSize = 28.0;      // (来自 _buildPlusButton 的 28.0)
-    const double kSpacing = 16.0;      // Standard
+    const double kSide = 16.0;         // Standard
+    const double kBtnSize = 32.0;
+    const double kSpacing = 16.0;
 
     return SizedBox(
       height: statusBar + kHeaderVisual,
       child: Stack(
         children: [
-          // 背景
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
+          const Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -3694,34 +3687,31 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
               ),
             ),
           ),
-          // 左侧占位（保证标题居中）
           Positioned(
             top: statusBar + kSideTop,
             left: kSide,
             child: const SizedBox(width: kBtnSize, height: kBtnSize),
           ),
-          // 标题
           Positioned(
-            top: statusBar + kTitleTop, // (statusBar - 6.0)
-            left: kSide + kBtnSize + kSpacing, // (16 + 28 + 16)
-            right: kSide + kBtnSize + kSpacing, // (16 + 28 + 16)
+            top: statusBar + kTitleTop,
+            left: kSide + kBtnSize + kSpacing,
+            right: kSide + kBtnSize + kSpacing,
             child: Text(
               title,
               textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 color: Colors.white,
-                fontSize: 28, // (保持此页面的大字体)
+                fontSize: 28,
                 fontWeight: FontWeight.w700,
               ),
             ),
           ),
-          // 右上角按钮 (Trailing)
           if (trailing != null)
             Positioned(
-              top: statusBar + kSideTop, // ✅ 标准对齐 (statusBar + 2.0)
-              right: kSide, // ✅ 标准边距 (16.0)
-              child: trailing,
+              top: statusBar + kSideTop,
+              right: kSide,
+              child: SizedBox(height: kBtnSize, width: kBtnSize, child: trailing),
             ),
         ],
       ),
@@ -3730,8 +3720,8 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
 
   // 右上角「+」按钮（外框 28×28，更小更紧凑）
   Widget _buildPlusButton(BuildContext context) {
-    const double box = 28.0;   // 外部矩形尺寸
-    const double icon = 17.0;  // 图标尺寸
+    const double box = 32.0;
+    const double icon = 19.0;
 
     return Container(
       width: box,
@@ -3807,7 +3797,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
               title: l10n.sellItem,
               centerTitle: true,
               trailing: _buildPlusButton(context),
-              trailingTopAdjust: -6.0, // ✅ (此参数仅 Android 生效)
+              trailingTopAdjust: -6.0, // （Android 新布局已对齐，此值不再生效，但保留参数）
             ),
           ),
           if (myListings.isEmpty)
@@ -4655,6 +4645,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     }
   }
 }
+
 // ---------------- Notification Page ----------------
 
 /* ---------------- Notification Page (莽麓搂氓鈥♀€樏九矫ヅ掆€撁р€八喢ε撀? ---------------- */
