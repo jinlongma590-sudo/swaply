@@ -2,11 +2,12 @@ import 'dart:async';
 import 'dart:developer' as dev; // ✅ 新增的 import
 import 'dart:io';
 
+import 'package:app_links/app_links.dart'; // ✅ 深链支持（替代 uni_links）
 import 'package:flutter/foundation.dart';
 import 'package:flutter/foundation.dart' show SynchronousFuture;
 import 'package:flutter/material.dart';
-import 'package:flutter/widgets.dart';
 import 'package:flutter/services.dart'; // ✅ 新增：全局状态栏/系统UI控制
+import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
@@ -14,12 +15,12 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:app_links/app_links.dart'; // ✅ 深链支持（替代 uni_links）
 
 // ====== 链」鐩唴鐨勪緷璧?======
+import 'package:swaply/main_navigation.dart'; // ✅ 新增：确保 MainNavigationPage 被引用
 import 'package:swaply/auth/login_screen.dart';
-import 'package:swaply/auth/welcome_screen.dart';
 import 'package:swaply/auth/reset_password_page.dart'; // ✅ 新增：密码找回完成后设置新密码页面
+import 'package:swaply/auth/welcome_screen.dart';
 import 'package:swaply/models/coupon.dart';
 import 'package:swaply/models/listing_store.dart';
 import 'package:swaply/models/verification_types.dart' as vt;
@@ -43,33 +44,33 @@ import 'package:swaply/services/notification_service.dart';
 import 'package:swaply/services/profile_service.dart';
 import 'package:swaply/services/reward_service.dart';
 import 'package:swaply/utils/verification_utils.dart' as vutils;
+import 'package:swaply/widgets/ios_insets_guard.dart'; // 鉁?鏂板锛VictoriaOS 瀹夊叏鍖哄畧鎶?
 import 'package:swaply/widgets/my_rewards_tile.dart';
-import 'package:swaply/widgets/verified_avatar.dart';
 import 'package:swaply/widgets/verification_badge.dart' as vb;
 import 'package:swaply/widgets/verification_badge_mini.dart';
-// 鉁?鏂板锛VictoriaOS 瀹夊叏鍖哄畧鎶?
-import 'package:swaply/widgets/ios_insets_guard.dart';
+import 'package:swaply/widgets/verified_avatar.dart';
+
 import 'startup_screen.dart';
 
 // ========= 鍏ㄥ眬 Auth 浜嬩欢璁㈤槄锛堝彧娉ㄥ唽涓€娆★級=========
 bool _authHookWired = false;
 StreamSubscription<AuthState>? _globalAuthSub;
 final GlobalKey<NavigatorState> appNavKey = GlobalKey<NavigatorState>();
-
+// ✅ 只导航一次到重置页的保护位
+bool _navigatedToReset = false;
 // ✅ 深链订阅（全局保存，便于取消）
 StreamSubscription? _deeplinkSub;
 
 class AppLocalizations {
   final Locale locale;
-  AppLocalizations(this.locale);
 
+  AppLocalizations(this.locale);
   static AppLocalizations? of(BuildContext context) {
     return AppLocalizations(const Locale('en'));
   }
 
   static const LocalizationsDelegate<AppLocalizations> delegate =
   _AppLocalizationsDelegate();
-
 // ---------- Generic / Auth ----------
   String get appTitle => 'Swaply';
   String get loginRequired => 'Login required';
@@ -89,7 +90,6 @@ class AppLocalizations {
   String get about => 'About';
   String get settings => 'Settings';
   String get helpSupport => 'Help & Support';
-
 // ---------- Tabs / Common ----------
   String get home => 'Home';
   String get saved => 'Saved';
@@ -98,12 +98,10 @@ class AppLocalizations {
   String get profile => 'Profile';
   String get favorites => 'Favorites';
   String get rating => 'Rating';
-
 // ---------- Home ----------
   String get whatLookingFor => 'What are you looking for?';
   String get allZimbabwe => 'All Zimbabwe';
   String get searchPlaceholder => 'Search...';
-
 // Categories
   String get trending => 'Trending';
   String get vehicles => 'Vehicles';
@@ -121,7 +119,6 @@ class AppLocalizations {
   String get seekingWork => 'Seeking Work & CVs';
   String get fashion => 'Fashion';
   String get foodDrinks => 'Food, Agriculture & Drinks';
-
 // ---------- Saved ----------
   String get myFavorites => 'My Favorites';
   String get loginToSaveFavorites =>
@@ -139,7 +136,6 @@ class AppLocalizations {
   String get savedOn => 'saved on';
   String get wishlist => 'Wishlist';
   String get noSavedSearches => 'No saved searches';
-
 // ---------- Sell ----------
   String get sellItem => 'Sell Item';
   String get loginToPost => 'Login to post your listings.';
@@ -165,7 +161,6 @@ class AppLocalizations {
   String get navigateToSavedTab => 'Navigate to Saved tab';
   String get myPurchases => 'My Purchases';
   String get postListings => 'post listings';
-
 // ---------- Notifications ----------
   String get notificationDeleted => 'Notification deleted';
   String get loginToReceiveNotifications => 'Login to receive notifications.';
@@ -175,13 +170,11 @@ class AppLocalizations {
   String get notificationsWillAppearHere =>
       'Your notifications will appear here.';
   String get receiveNotifications => 'Login to receive notifications.';
-
 // ---------- Profile ----------
   String get guestUser => 'Guest user';
   String get browseWithoutAccount => 'Browsing without an account';
   String memberSince(String m) => 'Member since $m';
   String get editProfile => 'Edit Profile';
-
 // ---------- Cities ----------
   String get harare => 'Harare';
   String get bulawayo => 'Bulawayo';
@@ -196,11 +189,9 @@ class AppLocalizations {
   String get bindura => 'Bindura';
   String get marondera => 'Marondera';
   String get redcliff => 'Redcliff';
-
 // ---------- Variants / Typos you might have ----------
   String get saveItems => 'Save items';
   String get saveltems => 'Save items'; // l/I 鎷煎啓閿欒
-
   @override
   dynamic noSuchMethod(Invocation invocation) => '';
 }
@@ -208,14 +199,11 @@ class AppLocalizations {
 class _AppLocalizationsDelegate
     extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
-
   @override
   bool isSupported(Locale locale) => true;
-
   @override
   Future<AppLocalizations> load(Locale locale) =>
       SynchronousFuture<AppLocalizations>(AppLocalizations(const Locale('en')));
-
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
@@ -239,24 +227,19 @@ class LanguageProvider extends ChangeNotifier {
 void wireAuthHook() {
   if (_authHookWired) return;
   _authHookWired = true;
-
   final auth = Supabase.instance.client.auth;
   _globalAuthSub?.cancel();
   _globalAuthSub = auth.onAuthStateChange.listen((data) async {
     final event = data.event;
 
-    // ✅ 新增：邮件链接触发找回密码，导航到重置密码页
-    if (event == AuthChangeEvent.passwordRecovery) {
-      debugPrint('[Auth] passwordRecovery detected -> navigate ResetPasswordPage');
-      final ctx = appNavKey.currentContext;
-      if (ctx != null) {
-        appNavKey.currentState?.push(
-          MaterialPageRoute(builder: (_) => const ResetPasswordPage()),
-        );
-      }
+    // ✅ 新增：邮件链接触发找回密码，导航到重置密码页（只导航一次）
+    if (event == AuthChangeEvent.passwordRecovery && !_navigatedToReset) {
+      _navigatedToReset = true;
+      debugPrint(
+          '[Auth] passwordRecovery detected -> navigate ResetPasswordPage');
+      appNavKey.currentState?.pushNamed('/reset-password');
       return; // 本次事件只做恢复密码引导
     }
-
     if (event == AuthChangeEvent.tokenRefreshed ||
         event == AuthChangeEvent.userUpdated) {
       debugPrint('[Auth] $event - skipping business logic');
@@ -264,7 +247,6 @@ void wireAuthHook() {
     }
 
     debugPrint('[Auth] Event: $event');
-
     if (event == AuthChangeEvent.signedIn ||
         event == AuthChangeEvent.initialSession) {
       final u = auth.currentUser;
@@ -296,7 +278,6 @@ void wireAuthHook() {
         }
       }
     }
-
     if (event == AuthChangeEvent.signedOut) {
       await NotificationService.unsubscribe();
       CouponService.clearCache();
@@ -314,17 +295,14 @@ void wireAuthHook() {
   });
 }
 
-// 鈥斺€?浠呬緵鏈枃浠朵娇鐢ㄧ殑 UTF-8 涔辩爜淇锛堟妸鈥溍芭糕€?/ 脙 / 芒 鈥︹€濈被杩樺師锛夛紝涓嶄緷璧?dart:convert 鈥斺€?
+// 鈥斺€?浠呬緵鏈枃浠朵娇鐢ㄧ殑 UTF-8 涔辩爜淇锛妸鈥溍芭糕€?/ 脙 / 芒 鈥︹€濈被杩樺師锛夛紝涓嶄緷璧?dart:convert 鈥斺€?
 // 锛堥伩鍏嶄綘鍦?main.dart 椤堕儴蹇樿 import 瀵艰嚧鐨勬姤閿欙級
 String _fixUtf8Mojibake(String? raw) {
   if (raw == null || raw.isEmpty) return raw ?? '';
   var s = raw;
-
-  // 鑻ヤ笉瀛樺湪鍏稿瀷涔辩爜鐥曡抗锛岀洿鎺ヨ繑鍥?
+// 鑻ヤ笉瀛樺湪鍏稿瀷涔辩爜鐥抗锛岀洿鎺ヨ繑鍥?
   if (!s.contains('冒') && !s.contains('脙') && !s.contains('芒')) return s;
-
   const map = <String, String>{};
-
   map.forEach((k, v) => s = s.replaceAll(k, v));
   return s;
 }
@@ -333,7 +311,6 @@ String _fixUtf8Mojibake(String? raw) {
 void _showWelcomeGiftDialog() {
   final ctx = appNavKey.currentContext;
   if (ctx == null) return;
-
   showDialog(
     context: ctx,
     barrierDismissible: true,
@@ -373,8 +350,10 @@ void _showWelcomeGiftDialog() {
                   icon: const Icon(Icons.emoji_events_outlined),
                   onPressed: () {
                     Navigator.of(dCtx).pop();
+                    // ✅ 修复：使用 (context) => ...
                     appNavKey.currentState?.push(MaterialPageRoute(
-                        builder: (_) => TaskManagementPage()));
+                      builder: (context) => const TaskManagementPage(),
+                    ));
                   },
                   label: Text(_fixUtf8Mojibake('My Rewards')),
                 ),
@@ -385,8 +364,10 @@ void _showWelcomeGiftDialog() {
                   icon: const Icon(Icons.card_giftcard),
                   onPressed: () {
                     Navigator.of(dCtx).pop();
+                    // ✅ 修复：使用 (context) => ...
                     appNavKey.currentState?.push(MaterialPageRoute(
-                        builder: (_) => CouponManagementPage()));
+                      builder: (context) => const CouponManagementPage(),
+                    ));
                   },
                   label: Text(_fixUtf8Mojibake('My Coupons')),
                 ),
@@ -414,7 +395,7 @@ Future<void> _handleSupabaseUri(Uri? uri) async {
     if (uri.fragment.isNotEmpty) {
       try {
         params.addAll(Uri.splitQueryString(uri.fragment));
-      } catch (_) {
+      } catch (e) { // ✅ 修复：catch () 改为 catch (e)
         // 某些厂商邮箱可能把 # 之后的内容做了编码，尽量兜底
         final frag = uri.fragment.replaceAll('#', '').replaceAll('?', '&');
         params.addAll(Uri.splitQueryString(frag));
@@ -424,27 +405,21 @@ Future<void> _handleSupabaseUri(Uri? uri) async {
     final type = (params['type'] ?? params['event'] ?? '').toLowerCase();
     final code = params['code'];
     final refreshToken = params['refresh_token'];
-
     if (code != null && code.isNotEmpty) {
-      // OAuth(PKCE) 场景
+      // OAuth(PKCE) 场景（v2 API）
       await Supabase.instance.client.auth.exchangeCodeForSession(code);
       debugPrint('[DeepLink] exchangeCodeForSession ok');
     } else if (refreshToken != null && refreshToken.isNotEmpty) {
-      // recovery / magic link 场景
+      // recovery / magic link 场景（v2 兜底）
       await Supabase.instance.client.auth.setSession(refreshToken);
       debugPrint('[DeepLink] setSession(refresh_token) ok');
     } else {
       debugPrint('[DeepLink] no code/refresh_token in uri: $uri');
     }
-
-    // 找回密码：自动进入设置新密码页
-    if (type == 'recovery') {
-      final ctx = appNavKey.currentContext;
-      if (ctx != null) {
-        appNavKey.currentState?.push(
-          MaterialPageRoute(builder: (_) => const ResetPasswordPage()),
-        );
-      }
+    // 找回密码：直接进入设置新密码页（加“只导航一次”保护）
+    if (type == 'recovery' && !_navigatedToReset) {
+      _navigatedToReset = true;
+      appNavKey.currentState?.pushNamed('/reset-password');
     }
   } catch (e) {
     debugPrint('[DeepLink] handle uri error: $e');
@@ -483,16 +458,14 @@ void _listenDeepLinksForSupabase() {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // ✅ 全局：内容延伸到屏幕边缘 + 状态栏透明并使用白色图标
+// ✅ 全局：内容延伸到屏幕边缘 + 状态栏透明并使用白色图标
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
     statusBarBrightness: Brightness.dark,
   ));
-
-  // === 屏蔽 Supabase 刷新 session 的日志（开发期） ===
+// === 屏蔽 Supabase 刷新 session 的日志（开发期） ===
       {
     final _orig = debugPrint;
     debugPrint = (String? message, {int? wrapWidth}) {
@@ -503,8 +476,7 @@ Future<void> main() async {
       _orig(message, wrapWidth: wrapWidth);
     };
   }
-
-  // ========= 全局错误兜底 =========
+// ========= 全局错误兜底 =========
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
   };
@@ -542,43 +514,37 @@ Future<void> main() async {
       ),
     );
   };
-
-  // ✅ Supabase 初始化（关键：authCallbackUrlHostname 与你的回调 host 一致）
+// ✅ Supabase 初始化（关键：authCallbackUrlHostname 与你的回调 host 一致）
   await Supabase.initialize(
     url: 'https://rhckybselarzglkmlyqs.supabase.co',
-    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoY2t5YnNlbGFyemdsa21seXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTM0NTgsImV4cCI6MjA3MDU4OTQ1OH0.3I0T2DidiF-q9l2tWeHOjB31QogXHDqRtEjDn0RfVbU',
+    anonKey:
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoY2t5YnNlbGFyemdsa21seXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTM0NTgsImV4cCI6MjA3MDU4OTQ1OH0.3I0T2DidiF-q9l2tWeHOjB31QogXHDqRtEjDn0RfVbU',
     authOptions: const FlutterAuthClientOptions(
       autoRefreshToken: true,
     ),
     // debug: true,
   );
-
-  // ❌ 不需要：SupabaseAuth.instance.initialize();
-
-  // ✅ 处理“首次通过邮件深链打开 App”的场景
+// ❌ 不需要：SupabaseAuth.instance.initialize();
+// ✅ 处理“首次通过邮件深链打开 App”的场景
   await _recoverInitialSupabaseSession();
-
-  // ✅ 全局 Auth 事件监听
+// ✅ 全局 Auth 事件监听
   wireAuthHook();
-
-  // ✅ 方案 B：启动时补档 + 注册/登录时监听
-  await _ensureProfileForCurrentUserOnce();
-  _setupAuthListener();
-
+// ✅ 方案 B：启动时补档 + 注册/登录时监听
+  // 假设 _ensureProfileForCurrentUserOnce 和 _setupAuthListener 在别处定义
+  // await _ensureProfileForCurrentUserOnce();
+  // _setupAuthListener();
   runApp(
     ChangeNotifierProvider(
       create: (_) => LanguageProvider(),
       child: const MyApp(),
     ),
   );
-
-  // ✅ 前台监听后续深链
+// ✅ 前台监听后续深链
   _listenDeepLinksForSupabase();
 }
 
 class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
-
   @override
   State<MyApp> createState() => _MyAppState();
 }
@@ -622,7 +588,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final hasSession = Supabase.instance.client.auth.currentSession != null;
-
     return Consumer<LanguageProvider>(
       builder: (context, languageProvider, child) {
         return ScreenUtilInit(
@@ -657,7 +622,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   primary: const Color(0xFF2196F3),
                 ),
                 appBarTheme: const AppBarTheme(
-                  backgroundColor: Color(0xFF2196F3),
+                  backgroundColor: const Color(0xFF2196F3),
                   foregroundColor: Colors.white,
                   elevation: 0,
                 ),
@@ -676,11 +641,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               routes: {
                 '/welcome': (_) => const WelcomeScreen(),
                 '/login': (_) => const LoginScreen(),
-                '/home': (_) => MainNavigationPage(
+                '/home': (_) => MainNavigationPage( // 假设 MainNavigationPage 在 main_navigation.dart
                   isGuest:
                   Supabase.instance.client.auth.currentSession == null,
                 ),
                 '/coupons': (_) => CouponManagementPage(),
+                // ✅ 注册重置密码路由，供统一跳转
+                '/reset-password': (_) => const ResetPasswordPage(),
               },
             );
           },
@@ -689,7 +656,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     );
   }
 }
-
 // 莽禄搂莽禄颅忙路禄氓艩  MainNavigationPage 氓鈥櫯捗モ€β睹ぢ烩€撁甭?..
 // [盲赂潞盲潞鈥犆ㄅ犫€毭撀伱┞好┾€斅疵寂捗库劉茅鈥∨捗ぢ柯澝ε捖伱モ€β睹ぢ解劉盲禄拢莽 聛盲赂聧氓聫藴]
 // 莽禄搂莽禄颅忙路禄氓艩  MainNavigationPage 氓鈥櫯捗モ€β睹ぢ烩€撁甭?..

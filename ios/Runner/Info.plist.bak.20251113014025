@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
   <dict>
@@ -62,15 +62,15 @@
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
 
-    <!-- 淇敼澶?锛氬厑璁告樉绀虹姸鎬佹爮 -->
+    <!-- 修改处1：允许显示状态栏 -->
     <key>UIStatusBarHidden</key>
     <false/>
 
-    <!-- 淇敼澶?锛氱敱鎺у埗鍣ㄥ喅瀹氱姸鎬佹爮鏍峰紡 -->
+    <!-- 修改处2：由控制器决定状态栏样式 -->
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <true/>
 
-    <!-- 闅愮鏉冮檺 -->
+    <!-- 隐私权限 -->
     <key>NSCameraUsageDescription</key>
     <string>This app needs camera access to take photos for your listing.</string>
     <key>NSPhotoLibraryUsageDescription</key>
@@ -78,36 +78,34 @@
     <key>NSPhotoLibraryAddUsageDescription</key>
     <string>This app needs permission to save photos to your library when you save or export images.</string>
 
-    <!-- Flutter 娣遍摼杞彂 -->
+    <!-- Flutter 深链转发 -->
     <key>FlutterDeepLinkingEnabled</key>
     <true/>
 
-    <!-- URL Schemes锛氬厛鍔?Supabase 榛樿锛屽啀淇濈暀浣犵殑 swaply -->
+    <!-- URL Schemes：先加 Supabase 默认，再保留你的 swaply -->
     <key>CFBundleURLTypes</key>
     <array>
-      <!-- Supabase Flutter 榛樿 iOS 鍥炶皟 Scheme锛堝繀椤绘湁锛?-->
+      <!-- Supabase Flutter 默认 iOS 回调 Scheme（必须有） -->
       <dict>
         <key>CFBundleURLName</key>
         <string>supabase.auth</string>
         <key>CFBundleURLSchemes</key>
         <array>
-        <string>cc.swaply.app</string>
           <string>io.supabase.flutter</string>
         </array>
       </dict>
-      <!-- 浣犵殑鑷畾涔?scheme锛堝彲閫変繚鐣欙級 -->
+      <!-- 你的自定义 scheme（可选保留） -->
       <dict>
         <key>CFBundleURLName</key>
         <string>swaply.login</string>
         <key>CFBundleURLSchemes</key>
         <array>
-        <string>cc.swaply.app</string>
           <string>swaply</string>
         </array>
       </dict>
     </array>
 
-    <!-- 鍏佽 canOpenURL 鐨勫閮?App 鐧藉悕鍗?-->
+    <!-- 允许 canOpenURL 的外部 App 白名单 -->
     <key>LSApplicationQueriesSchemes</key>
     <array>
       <string>whatsapp</string>
@@ -125,4 +123,3 @@
     </array>
   </dict>
 </plist>
-

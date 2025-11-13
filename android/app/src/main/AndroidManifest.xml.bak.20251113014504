@@ -1,66 +1,54 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.example.swaply">
-
-    <!-- 网络 / 相机 / 媒体权限 -->
+    <!--  网络/媒体/相机权限  -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
-
-    <!-- Android 13+ 读取图片 -->
+    <!--  Android 13+ 读取图片  -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <!-- Android 12 及以下外部存储读取 -->
+    <!--  Android 12 及以下外部存储读取  -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-
-    <application
-        android:label="Swaply"
-        android:icon="@mipmap/ic_launcher"
-        android:usesCleartextTraffic="true"
-        android:requestLegacyExternalStorage="true"
-        android:enableOnBackInvokedCallback="true">
-
-        <!-- 入口 Activity -->
-        <activity
-            android:name=".MainActivity"
-            android:exported="true"
-            android:launchMode="singleTask"
-            android:theme="@style/LaunchTheme"
-            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
-            android:hardwareAccelerated="true"
-            android:windowSoftInputMode="adjustResize">
-
-            <meta-data
-                android:name="io.flutter.embedding.android.NormalTheme"
-                android:resource="@style/NormalTheme" />
-
-            <!-- 启动 -->
+    <application android:label="Swaply" android:icon="@mipmap/ic_launcher" android:usesCleartextTraffic="true" android:requestLegacyExternalStorage="true">
+        <!--  入口 Activity  -->
+        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTask" android:theme="@style/LaunchTheme" android:configChanges="keyboard|keyboardHidden|orientation|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode" android:hardwareAccelerated="true" android:windowSoftInputMode="adjustResize">
+            <meta-data android:name="io.flutter.embedding.android.NormalTheme" android:resource="@style/NormalTheme" />
+            <!--  启动  -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-
-            <!-- ✅ Supabase 默认 OAuth 回调：io.supabase.flutter://callback -->
+            <!--  深链：swaply://login-callback（严格匹配 host）  -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="io.supabase.flutter" android:host="callback" />
+                <data android:scheme="cc.swaply.app" android:host="login-callback" android:pathPrefix="/" />
             </intent-filter>
-
-            <!-- 你的自定义深链：cc.swaply.app://login-callback 和 cc.swaply.app://reset-password -->
+            <!--  兜底：只要是 swaply://* 都接（有些 ROM 对多 <data> 组合有兼容问题）  -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="cc.swaply.app" android:host="login-callback" />
+                <data android:scheme="cc.swaply.app" />
+            </intent-filter>
+            <!--  深链（可选）：swaply://reset-password  -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="cc.swaply.app" android:host="reset-password" />
             </intent-filter>
-
+            <!--  ✅ Supabase 默认 OAuth 回调：io.supabase.flutter://callback  -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                
+            </intent-filter>
         </activity>
-
         <meta-data android:name="flutterEmbedding" android:value="2" />
     </application>
-
-    <!-- Android 11+ 包可见性 -->
+    <!--  Android 11+ 包可见性  -->
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT" />
@@ -73,5 +61,4 @@
         <package android:name="com.facebook.orca" />
         <package android:name="com.android.chrome" />
     </queries>
-
 </manifest>

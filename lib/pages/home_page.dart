@@ -14,6 +14,9 @@ import 'package:swaply/pages/sell_form_page.dart';
 import 'package:swaply/services/coupon_service.dart';
 import 'package:swaply/listing_api.dart';
 
+import 'dart:async'; // ✅ 新增
+import 'package:swaply/services/listing_events_bus.dart'; // ✅ 新增
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -34,6 +37,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   // 趋势数据
   List<Map<String, dynamic>> _trendingRemote = [];
   bool _loadingTrending = false;
+
+  StreamSubscription? _listingPubSub; // ✅ 新增：订阅句柄
 
   // Facebook亮蓝色配色方案
   static const Color _primaryBlue = Color(0xFF1877F2); // Facebook亮蓝色
@@ -121,6 +126,16 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       curve: Curves.easeInOut,
     );
     _loadTrending();
+
+    // ✅ [MODIFIED] 按照要求 1) 确保监听并触发刷新
+    _listingPubSub = ListingEventsBus.instance.stream.listen((e) {
+      if (e is ListingPublishedEvent) {
+        // ✅ 加这两行
+        // ignore: avoid_print
+        print('[Home] Received ListingPublishedEvent -> refresh(bypassCache: true)');
+        _loadTrending(bypassCache: true); // ✅ 适配：调用 _loadTrending
+      }
+    });
   }
 
   @override
@@ -128,6 +143,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _scrollController.dispose();
     _searchCtrl.dispose();
     _fadeController.dispose();
+    _listingPubSub?.cancel(); // ✅ 新增
     super.dispose();
   }
 
@@ -135,7 +151,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   double _iosBump(BuildContext context) {
     if (!Platform.isIOS) return 0;
     final top = MediaQuery.of(context).padding.top; // 灵动岛/状态栏安全区
-    return top + 17; // ⬅️ 你要求使用 +5
+    // ⬇️ 保持你文件中的 +17 设置
+    return top + 17;
   }
 
   /* ===================== 数据加载 ===================== */
@@ -173,16 +190,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   /// 混合趋势：置顶优先 + 最新填充
+  /// ✅ [MODIFIED] 按照要求 2) 确保 bypassCache 被接收并透传
   Future<List<Map<String, dynamic>>> _fetchTrendingMixed({
     String? city,
     int pinnedLimit = 6,
     int latestLimit = 36,
     int total = 12,
+    bool bypassCache = false, // ✅ 接收
   }) async {
     // 1) 置顶广告 -> 列表（仅趋势类型）
     final pinnedAds = await CouponService.getTrendingPinnedAds(
       city: city,
       limit: pinnedLimit,
+      // (按要求，bypassCache 仅传递给 ListingApi)
     );
 
     final list = <Map<String, dynamic>>[];
@@ -203,6 +223,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
 
     // 2) 最新列表
+    // ✅ [MODIFIED] 按照要求 2) 确保 bypassCache (即 forceNetwork) 被透传
     final latest = await ListingApi.fetchListings(
       city: city,
       limit: latestLimit,
@@ -210,6 +231,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       orderBy: 'created_at',
       ascending: false,
       status: 'active',
+      forceNetwork: bypassCache, // ✅ 把 bypassCache 透传给 API
     );
 
     // 3) 去重并填充
@@ -234,22 +256,29 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     return list.take(total).toList();
   }
 
-  Future<void> _loadTrending() async {
+  /// ✅ [MODIFIED] 按照要求 2) 适配 _refresh，即 _loadTrending
+  Future<void> _loadTrending({bool bypassCache = false}) async {
     setState(() => _loadingTrending = true);
     try {
       final city =
       _selectedLocation == 'All Zimbabwe' ? null : _selectedLocation;
+      // ✅ [MODIFIED] 按照要求 2) 确保 bypassCache 被透传
       final rows = await _fetchTrendingMixed(
         city: city,
         pinnedLimit: 6,
         latestLimit: 36,
         total: 12,
+        bypassCache: bypassCache, // ✅ 透传参数
       );
       if (mounted) {
         setState(() => _trendingRemote = rows);
-        _fadeController.forward();
+        // [FIX] 修复：仅在首次加载时（非 bypassCache）或数据为空时才播放动画
+        if (!bypassCache || _trendingRemote.isEmpty) {
+          _fadeController.forward();
+        }
       }
     } catch (e) {
+      // 失败稳态：仅打印日志，UI依靠 _trendingRemote.isEmpty (或 _loadingTrending) 展示
       debugPrint('Error loading trending: $e');
     } finally {
       if (mounted) setState(() => _loadingTrending = false);
@@ -564,6 +593,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
+  // =================================================================
+  // ⬇️ 唯一修改的函数 ⬇️
+  // =================================================================
+
+  /// 关键修复：分类网格单元用“比例切分”，防 1~2px 溢出（模拟器专属）
   Widget _buildCompactCategoriesGrid() {
     return Padding(
       padding: EdgeInsets.fromLTRB(12.w, 12.h, 12.w, 16.h),
@@ -583,81 +617,127 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
           return GestureDetector(
             onTap: () => _navigateToCategory(cat['id']!, cat['label']!),
-            child: Container(
-              decoration: BoxDecoration(
-                color: isTrending ? Colors.orange.shade50 : Colors.grey[50],
-                borderRadius: BorderRadius.circular(10.r),
-                border: Border.all(
-                  color:
-                  isTrending ? Colors.orange.shade200 : Colors.transparent,
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 2,
-                    offset: const Offset(0, 1),
+            // ✅ 修复 2: 添加保险剪裁，裁剪掉 0.5px 的渲染毛刺
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10.r),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isTrending ? Colors.orange.shade50 : Colors.grey[50],
+                  // borderRadius: BorderRadius.circular(10.r), // ClipRRect 已处理
+                  border: Border.all(
+                    color: isTrending
+                        ? Colors.orange.shade200
+                        : Colors.transparent,
+                    width: 1,
                   ),
-                ],
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 44.w,
-                    height: 44.h,
-                    decoration: BoxDecoration(
-                      color: isTrending ? Colors.orange.shade100 : Colors.white,
-                      borderRadius: BorderRadius.circular(10.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                          blurRadius: 3,
-                          offset: const Offset(0, 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.02),
+                      blurRadius: 2,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                // ✅ 修复 1 & 3: 使用 LayoutBuilder 进行比例切分
+                child: LayoutBuilder(
+                  builder: (ctx, c) {
+                    // 按单元格高度拆分：图标区 58%、间隔 8%、文字区 34%
+                    final double h = c.maxHeight;
+                    final double iconBoxH = h * 0.58;
+                    final double gapH = h * 0.08;
+                    final double textBoxH = h * 0.34;
+
+                    // ✅ 修复 1: 图标尺寸也使用比例计算，替换固定的 44/28
+                    final double iconContainerSize = iconBoxH * 0.75;
+                    final double iconImageSize = iconBoxH * 0.45;
+
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // 1. 图标容器 (比例高度)
+                        SizedBox(
+                          height: iconBoxH,
+                          child: Center(
+                            child: Container(
+                              width: iconContainerSize,
+                              height: iconContainerSize,
+                              decoration: BoxDecoration(
+                                color: isTrending
+                                    ? Colors.orange.shade100
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(10.r),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.03),
+                                    blurRadius: 3,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: SizedBox(
+                                  width: iconImageSize,
+                                  height: iconImageSize,
+                                  child: Image.asset(
+                                    'assets/icons/${cat['icon']}.png',
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (_, __, ___) {
+                                      return Image.asset(
+                                        'assets/icons/${cat['icon']}.jpg',
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (_, __, ___) => Icon(
+                                          isTrending
+                                              ? Icons.local_fire_department
+                                              : Icons.category,
+                                          size: iconImageSize, // 使用比例尺寸
+                                          color: isTrending
+                                              ? Colors.orange
+                                              : Colors.grey,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        // 2. 间隔 (比例高度)
+                        SizedBox(height: gapH),
+                        // 3. 文本容器 (比例高度 + FittedBox 兜底)
+                        SizedBox(
+                          height: textBoxH,
+                          child: Center(
+                            // ✅ 修复 1: 缩放兜底
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 2.w),
+                                child: Text(
+                                  cat['label']!,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  // ✅ 修复 1: 去掉多余的下伸空间
+                                  textHeightBehavior: const TextHeightBehavior(
+                                    applyHeightToFirstAscent: false,
+                                    applyHeightToLastDescent: false,
+                                  ),
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey[700],
+                                    height: 1.1,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ],
-                    ),
-                    child: Center(
-                      child: SizedBox(
-                        width: 28.w,
-                        height: 28.h,
-                        child: Image.asset(
-                          'assets/icons/${cat['icon']}.png',
-                          fit: BoxFit.contain,
-                          errorBuilder: (_, __, ___) {
-                            return Image.asset(
-                              'assets/icons/${cat['icon']}.jpg',
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => Icon(
-                                isTrending
-                                    ? Icons.local_fire_department
-                                    : Icons.category,
-                                size: 26.sp,
-                                color: isTrending ? Colors.orange : Colors.grey,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 2.w),
-                    child: Text(
-                      cat['label']!,
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey[700],
-                        height: 1.1,
-                      ),
-                    ),
-                  ),
-                ],
+                    );
+                  },
+                ),
               ),
             ),
           );
@@ -665,6 +745,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       ),
     );
   }
+
+  // =================================================================
+  // ⬆️ 唯一修改的函数 ⬆️
+  // =================================================================
 
   Widget _buildTrendingSection() {
     return Column(
@@ -736,7 +820,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   borderRadius:
                   BorderRadius.vertical(top: Radius.circular(10.r)),
                 ),
-                child: Center(
+                child: const Center(
                   child: CircularProgressIndicator(
                       strokeWidth: 2, color: _primaryBlue),
                 ),
@@ -775,6 +859,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildTrendingGrid() {
+    // 稳态展示：即使 _loadTrending 失败，_trendingRemote 也会是 []，展示空态
     if (_trendingRemote.isEmpty) {
       return Container(
         height: 100.h,
@@ -1173,6 +1258,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       height: double.infinity,
       fit: BoxFit.cover, // 完全覆盖容器
       alignment: Alignment.center,
+      // 稳态处理：确保网络图片加载失败时 UI 不崩溃
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
         return Container(
@@ -1212,7 +1298,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               SizedBox(height: 2.h),
               Text(
                 'Image failed to load',
-                style: TextStyle(fontSize: 8.sp, color: Colors.grey[500]),
+                style:
+                TextStyle(fontSize: 8.sp, color: Colors.grey[500]),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -1243,7 +1330,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               SizedBox(height: 2.h),
               Text(
                 'Image not found',
-                style: TextStyle(fontSize: 8.sp, color: Colors.grey[500]),
+                style:
+                TextStyle(fontSize: 8.sp, color: Colors.grey[500]),
                 textAlign: TextAlign.center,
               ),
             ],

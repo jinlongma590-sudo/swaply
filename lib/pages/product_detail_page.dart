@@ -235,7 +235,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     }
   }
 
-  /// ✅ 新增：通过公开 RPC 读取卖家认证（只在 initState / 卖家变更时调用，避免抖动）
+  /// ✅ [MODIFIED] 使用新的 VerificationBadgeUtil 解析徽章
   Future<void> _loadSellerVerification() async {
     final sellerId =
         _sellerId ?? (product['user_id'] ?? product['seller_id'])?.toString();
@@ -250,19 +250,18 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       // ignore: avoid_print
       print('[ProductDetail] public verify row = $row');
 
-      final verified = (row?['email_verified_at'] != null) ||
-          (row?['badge_type'] == 'verified');
+      // ✅ [MODIFIED] 使用新的 VerificationBadgeUtil.getVerificationTypeFromUser
+      final badge = vt.VerificationBadgeUtil.getVerificationTypeFromUser(row);
 
       if (!mounted) return;
       setState(() {
         _sellerVerifyRow = row;
-        _sellerVerified = verified;
 
-        // 你的原有小徽章 Widget 走 boolean 显隐即可；
-        // 这里也把 enum 传给 VerifiedAvatar，保持 UI 一致（只区分 verified / none）
-        _sellerBadge = verified
-            ? vt.VerificationBadgeType.verified
-            : vt.VerificationBadgeType.none;
+        // ✅ [MODIFIED] 1. _sellerBadge (枚举) 是唯一数据源
+        _sellerBadge = badge;
+
+        // ✅ [MODIFIED] 2. _sellerVerified (布尔) 由枚举派生
+        _sellerVerified = (badge != vt.VerificationBadgeType.none);
       });
     } catch (e) {
       // ignore: avoid_print
@@ -297,7 +296,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
           builder: (context) => SellerProfileViewPage(
             sellerId: sellerId,
             initialSellerData: sellerInfo,
-            verificationType: _sellerBadge, // ✅ 传递新徽章（由 _sellerVerified 推导）
+            verificationType: _sellerBadge, // ✅ [CORRECT] 传递正确的徽章枚举
           ),
         ),
       );
@@ -885,7 +884,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     final percentage =
                     price > 0 ? ((offer / price) * 100).round() : 0;
                     return InkWell(
-                      onTap: () => offerController.text = offer.toStringAsFixed(0),
+                      onTap: () =>
+                      offerController.text = offer.toStringAsFixed(0),
                       borderRadius: BorderRadius.circular(8.r),
                       child: Container(
                         padding: EdgeInsets.symmetric(
@@ -1766,7 +1766,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                         avatarUrl:
                         (avatarUrl?.isNotEmpty == true) ? avatarUrl : null,
                         radius: 18.r,
-                        verificationType: _sellerBadge, // ✅ 使用公开 RPC 结果
+                        verificationType: _sellerBadge, // ✅ [CORRECT] 使用 _sellerBadge
                         defaultIcon: Icons.person,
                         onTap: _navigateToSellerProfile,
                       ),

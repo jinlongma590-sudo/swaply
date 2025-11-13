@@ -8,7 +8,7 @@
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart' as sf;
-import 'package:swaply/config/auth_config.dart'; // kAuthRedirectUri = 'cc.swaply.app://login-callback'
+import 'package:swaply/config/auth_config.dart'; // kAuthRedirectUri = 'swaply://login-callback'
 
 class OAuthService {
   OAuthService._();
@@ -40,5 +40,4 @@ class OAuthService {
     );
   }
 }
-
 

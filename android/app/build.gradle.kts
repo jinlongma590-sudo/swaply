@@ -1,3 +1,5 @@
+// android/app/build.gradle.kts
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -7,7 +9,9 @@ plugins {
 
 android {
     namespace = "com.example.swaply"
-    compileSdk = flutter.compileSdkVersion
+
+    // ✅ 提升到 36，满足各插件与 AndroidX 1.10/1.16 的要求（仅影响编译期，不改变旧机型行为）
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -22,18 +26,20 @@ android {
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.swaply"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+
+        // 保持与工程一致
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+
+        // 保持 34，不触发更高 target 行为变更
+        targetSdk = 34
+
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // 使用 debug 签名以便 `flutter run --release`
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -41,4 +47,7 @@ android {
 
 flutter {
     source = "../.."
+}
+dependencies {
+    implementation("androidx.core:core-splashscreen:1.0.1")
 }

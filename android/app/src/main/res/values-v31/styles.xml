@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Android 12+ 开屏样式（仅 API 31+ 生效） -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <!-- 背景：Facebook 蓝 -->
+        <item name="android:windowSplashScreenBackground">#1877F2</item>
+
+        <!-- 图标：使用 drawable/splash_icon.png（建议放在 drawable-nodpi/） -->
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+
+        <!-- 动画时长 0，保持静态品牌屏 -->
+        <item name="android:windowSplashScreenAnimationDuration">0</item>
+
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+
+        <!-- 品牌文字：指向 drawable-nodpi/splash_brand_text_720_nodpi.png，防缩放、防拉伸 -->
+        <item name="android:windowSplashScreenBrandingImage">
+            @drawable/splash_brand_text_720_nodpi
+        </item>
+
+        <!-- 进入 Flutter 首帧后的主题（注意：这里不要加 android: 前缀） -->
+        <item name="postSplashScreenTheme">@style/NormalTheme</item>
+    </style>
+
+    <!-- Flutter 首帧后的窗口背景（透明，避免白屏） -->
+    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
+        <item name="android:windowBackground">@android:color/transparent</item>
+    </style>
+
+</resources>

@@ -112,7 +112,7 @@ class AuthService {
     try {
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: (kIsWeb ? 'https://swaply.cc/auth/callback' : 'cc.swaply.app://login-callback'),
+        redirectTo: Platform.isIOS ? _kIOSRedirect : null,
         authScreenLaunchMode: LaunchMode.externalApplication,
       );
 
@@ -145,7 +145,7 @@ class AuthService {
     try {
       await Supabase.instance.client.auth.signInWithOAuth(
         OAuthProvider.facebook,
-        redirectTo: (kIsWeb ? 'https://swaply.cc/auth/callback' : 'cc.swaply.app://login-callback'),
+        redirectTo: Platform.isIOS ? _kIOSRedirect : null,
         authScreenLaunchMode: LaunchMode.externalApplication,
         // 濡傛灉浣犻渶瑕?email锛屽彲鍦?Facebook 搴旂敤閲屽惎鐢?email 鏉冮檺锛涙澶勪笉棰濆浼?scopes 浠ラ伩鍏嶇増鏈樊寮傜紪璇戦敊璇?
       );
@@ -291,7 +291,7 @@ class AuthService {
     try {
       await supabase.auth.resetPasswordForEmail(
         email.trim().toLowerCase(),
-        redirectTo: (kIsWeb ? 'https://swaply.cc/auth/callback' : 'cc.swaply.app://login-callback'), // <- 缁熶竴鍥炶皟
+        redirectTo: kAuthRedirectUri, // <- 缁熶竴鍥炶皟
       );
     } on AuthException catch (e) {
       throw Exception('Password reset failed: ${e.message}');
@@ -405,5 +405,4 @@ class AuthService {
   // 瀵瑰鏆撮湶 Supabase 鐨勫師濮嬩簨浠舵祦锛堜笉鍦ㄦ湰鏂囦欢鍐呰嚜寤虹洃鍚級
   Stream<AuthState> get authStateChanges => supabase.auth.onAuthStateChange;
 }
-
 

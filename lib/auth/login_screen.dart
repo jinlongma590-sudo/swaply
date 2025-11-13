@@ -1,4 +1,4 @@
-// lib/auth/login_screen.dart - 最终修复：Apple 登录改回 OAuth 流程
+﻿// lib/auth/login_screen.dart - 鏈€缁堜慨澶嶏細Apple 鐧诲綍鏀瑰洖 OAuth 娴佺▼
 
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 import 'package:flutter/material.dart';
@@ -8,10 +8,10 @@ import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
 
-// ✅ 修复：移除了 'as sf' 别名
+// 鉁?淇锛氱Щ闄や簡 'as sf' 鍒悕
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// ✅ 统一定义 iOS 和 Android 的回调 URL（用于 Google/Facebook/Apple）
+// 鉁?缁熶竴瀹氫箟 iOS 鍜?Android 鐨勫洖璋?URL锛堢敤浜?Google/Facebook/Apple锛?
 const String _kMobileRedirect = 'swaply://login-callback';
 
 class LoginScreen extends StatefulWidget {
@@ -37,7 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // ✅ 这个函数现在给 Google, Facebook, 和 Apple 统一使用
+  // 鉁?杩欎釜鍑芥暟鐜板湪缁?Google, Facebook, 鍜?Apple 缁熶竴浣跨敤
   Future<void> _oauthSignIn(
       OAuthProvider provider, {
         String? scopes,
@@ -55,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     await Supabase.instance.client.auth.signInWithOAuth(
       provider,
-      redirectTo: redirectUrl,
+      redirectTo: (kIsWeb ? 'https://swaply.cc/auth/callback' : 'cc.swaply.app://login-callback'),
       authScreenLaunchMode: LaunchMode.externalApplication,
       scopes: scopes,
       queryParams: queryParams,
@@ -94,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (msg.contains('cancel') ||
           msg.contains('canceled') ||
           msg.contains('popup_closed')) {
-        // 用户取消，不提示
+        // 鐢ㄦ埛鍙栨秷锛屼笉鎻愮ず
       } else {
         _showError('Google sign-in error: ${e.message}');
       }
@@ -120,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } on AuthException catch (e) {
       _showError(e.message);
     } catch (_) {
-      _showError('Facebook 登录启动失败，请稍后再试');
+      _showError('Facebook 鐧诲綍鍚姩澶辫触锛岃绋嶅悗鍐嶈瘯');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -130,7 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (_busy) return;
     setState(() => _busy = true);
     try {
-      // ✅ 最终修复：Apple 必须使用 _oauthSignIn，因为它现在是唯一正确配置的回调方式
+      // 鉁?鏈€缁堜慨澶嶏細Apple 蹇呴』浣跨敤 _oauthSignIn锛屽洜涓哄畠鐜板湪鏄敮涓€姝ｇ‘閰嶇疆鐨勫洖璋冩柟寮?
       await _oauthSignIn(
         OAuthProvider.apple,
         scopes: 'name email',
@@ -138,7 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } on AuthException catch (e) {
       _showError(e.message);
     } catch (_) {
-      _showError('Apple 登录启动失败，请稍后再试');
+      _showError('Apple 鐧诲綍鍚姩澶辫触锛岃绋嶅悗鍐嶈瘯');
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -277,7 +277,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     Flexible(
                       child: GestureDetector(
-                        // ✅ 修复：点击进入忘记密码页
+                        // 鉁?淇锛氱偣鍑昏繘鍏ュ繕璁板瘑鐮侀〉
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
@@ -404,7 +404,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           color: Colors.grey[600], fontSize: 12.sp),
                     ),
                     GestureDetector(
-                      // ✅ 修复：将 _showError 替换为实际导航
+                      // 鉁?淇锛氬皢 _showError 鏇挎崲涓哄疄闄呭鑸?
                       onTap: () => Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
@@ -576,3 +576,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+

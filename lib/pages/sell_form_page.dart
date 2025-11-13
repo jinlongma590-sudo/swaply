@@ -21,6 +21,7 @@ import 'package:swaply/models/coupon.dart';
 // ✅ 关键操作守卫（未验证则引导验证）
 import 'package:swaply/services/verification_guard.dart';
 import 'package:flutter/services.dart'; // ✅ 用于 iOS 顶部状态栏文字颜色（仅 iOS 传入）
+import 'package:swaply/services/listing_events_bus.dart'; // ✅ 新增
 
 class SellFormPage extends StatefulWidget {
   const SellFormPage({super.key});
@@ -612,6 +613,20 @@ class _SellFormPageState extends State<SellFormPage>
 
       _toast('Posted successfully!');
 
+      // ✅ [MODIFIED] 按照清单要求修改：
+      // 假设你拿到了新商品ID（如果拿不到，可以传 null，不影响刷新）
+      final String? newId = (row?['id'] as String?);
+
+      // ✅ 1) 广播发布成功
+      ListingEventsBus.instance.emitPublished(newId);
+
+      // ✅ 2) 带 true 返回给上级（保持“当前返回路径”不变）
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
+
+      /*
+      // [REMOVED] 原始代码是 pushReplacement 到详情页，按要求改为 pop(true)
       // Navigate to detail page（直接带上我们刚上传的 urls 以保证可展示）
       final productId = row['id'].toString();
       final productData = {
@@ -638,6 +653,7 @@ class _SellFormPageState extends State<SellFormPage>
           ),
         ),
       );
+      */
     } catch (e) {
       if (!mounted) return;
       _toast('Post failed: $e');

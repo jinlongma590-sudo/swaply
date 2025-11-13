@@ -1,3 +1,4 @@
+﻿import 'package:flutter/foundation.dart';
 // lib/auth/forgot_password_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -17,10 +18,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   bool _isEmailSent = false;
 
   // ✅ 统一整个 App 的 Auth 回调地址（与 Google/Facebook/Apple 登录相同）
-  //    注意：你需要在 Supabase「URL Configuration → Additional Redirect URLs」
+  //    注意：你需要在 Supabase https://supabase.com/docs/guides/auth/redirect-urls
   //    中加入这个地址，并在 Supabase.initialize 里设置
   //    authCallbackUrlHostname: 'login-callback'
-  static const String kAuthRedirectUrl = 'swaply://login-callback';
+  // ✅ 修正：确保常量名与指令一致
+  static const String kAuthRedirectUri = 'cc.swaply.app://login-callback';
 
   @override
   void dispose() {
@@ -33,10 +35,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     setState(() => _isLoading = true);
     try {
-      // ✅ 关键修正：与 OAuth 统一的回调，避免会话丢失
+      // ✅ 关键修正：使用 redirectTo 和 kAuthRedirectUri
       await Supabase.instance.client.auth.resetPasswordForEmail(
         _emailController.text.trim(),
-        redirectTo: kAuthRedirectUrl,
+        redirectTo: kAuthRedirectUri, // ← 用 redirectTo
       );
 
       if (!mounted) return;

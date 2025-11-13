@@ -40,16 +40,19 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
   List<Map<String, dynamic>> _sellerListings = [];
   int _totalListings = 0;
 
-  /// 新方案状态（来自公开 RPC）
-  bool _isVerified = false;
+  /// ✅ [MODIFIED] 新方案状态（来自公开 RPC）
+  // bool _isVerified = false; // 🔴 [REMOVED] 不再使用布尔值
   Map<String, dynamic>? _verifyRow;
+  // ✅ [ADDED] 使用徽章枚举作为唯一数据源
+  vt.VerificationBadgeType _sellerBadge = vt.VerificationBadgeType.none;
 
   @override
   void initState() {
     super.initState();
 
-    // 若有上层传来的初始徽章，先用它决定首屏是否显示徽章；随后以 RPC 结果为准
-    _isVerified = widget.verificationType != vt.VerificationBadgeType.none;
+    // ✅ [MODIFIED] 若有上层传来的初始徽章，先用它
+    _sellerBadge = widget.verificationType;
+    // 🔴 [REMOVED] _isVerified = widget.verificationType != vt.VerificationBadgeType.none;
 
     if (widget.initialSellerData != null) {
       _fullSellerInfo = widget.initialSellerData;
@@ -63,7 +66,7 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
     });
   }
 
-  /// 仅负责拉取「认证展示字段」并计算是否认证（不依赖旧工具）
+  /// ✅ [MODIFIED] 仅负责拉取「认证展示字段」，并使用 VerificationBadgeUtil 解析
   Future<void> _loadSellerVerifyPublic() async {
     final sellerUserId = widget.sellerId; // 资料页接收到的卖家 user_id
     if (sellerUserId.isEmpty) return;
@@ -74,13 +77,14 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
       // ignore: avoid_print
       print('[SellerProfile] public verify row = $row');
 
-      final verified = (row?['email_verified_at'] != null) ||
-          (row?['badge_type'] == 'verified');
+      // ✅ [MODIFIED] 使用新的 VerificationBadgeUtil 解析徽章
+      final badge = vt.VerificationBadgeUtil.getVerificationTypeFromUser(row);
 
       if (!mounted) return; // 避免 setState after dispose
       setState(() {
         _verifyRow = row;
-        _isVerified = verified;
+        _sellerBadge = badge; // ✅ [MODIFIED] 保存徽章枚举
+        // 🔴 [REMOVED] _isVerified = verified;
       });
     } catch (e) {
       if (kDebugMode) {
@@ -109,7 +113,7 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
       final listingsResponse = await Supabase.instance.client
           .from('listings')
           .select(
-              'id, title, price, images, image_urls, city, created_at, views_count')
+          'id, title, price, images, image_urls, city, created_at, views_count')
           .eq('user_id', widget.sellerId)
           .order('created_at', ascending: false)
           .limit(50);
@@ -167,6 +171,36 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
     }
   }
 
+  /// ✅ [MODIFIED] 根据徽章类型，获取“统计卡片”要显示的图标
+  /// (这个逻辑与 lib/widgets/verification_badge.dart 的 iconOf 保持一致)
+  IconData _getVerificationIcon(vt.VerificationBadgeType type) {
+    switch (type) {
+    // 官方/政府 (蓝色对勾)
+      case vt.VerificationBadgeType.official:
+      case vt.VerificationBadgeType.government:
+        return Icons.verified_rounded;
+
+    // 基础认证 (绿色盾牌)
+      case vt.VerificationBadgeType.verified:
+      case vt.VerificationBadgeType.blue:
+        return Icons.verified_user_rounded; // ✅ 修正为这个图标
+
+    // 付费/金标 (星星)
+      case vt.VerificationBadgeType.premium:
+      case vt.VerificationBadgeType.gold:
+        return Icons.workspace_premium_rounded;
+
+    // 商家 (建筑)
+      case vt.VerificationBadgeType.business:
+        return Icons.apartment_rounded;
+
+    // 默认/None
+      case vt.VerificationBadgeType.none:
+      default:
+        return Icons.help_outline; // 默认图标
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -188,10 +222,10 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
     final avatarUrl = _fullSellerInfo?['avatar_url'];
     final memberSince = _getMemberSince();
 
-    // 统一把布尔认证态映射为头像需要的枚举
-    final badgeType = _isVerified
-        ? vt.VerificationBadgeType.verified
-        : vt.VerificationBadgeType.none;
+    // ✅ [MODIFIED] 1. 徽章枚举是唯一数据源
+    final badgeType = _sellerBadge;
+    // ✅ [MODIFIED] 2. 布尔值由徽章枚举派生
+    final bool _isVerified = (badgeType != vt.VerificationBadgeType.none);
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -245,7 +279,7 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
                               avatarUrl: avatarUrl,
                               radius: 40.r,
                               verificationType:
-                                  badgeType, // ✅ 使用 _isVerified 映射
+                              badgeType, // ✅ [CORRECT] 现在传递的是正确的枚举
                               defaultIcon: Icons.person,
                             ),
                           ),
@@ -308,11 +342,13 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
                     label: 'Listings',
                     value: _totalListings.toString(),
                   ),
+                  // ✅ [CORRECT] 现在使用派生的 _isVerified
                   if (_isVerified)
                     _buildStatItem(
-                      icon: Icons.verified_outlined,
+                      icon: _getVerificationIcon(badgeType), // ✅ [MODIFIED] 动态图标
                       label: 'Status',
                       value: 'Verified',
+                      // ✅ [CORRECT] 颜色来自正确的 badgeType
                       color: _getVerificationColor(badgeType),
                     ),
                 ],
@@ -364,7 +400,7 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
                   mainAxisSpacing: 12.w,
                 ),
                 delegate: SliverChildBuilderDelegate(
-                  (context, index) {
+                      (context, index) {
                     final listing = _sellerListings[index];
                     return _buildListingCard(listing);
                   },
@@ -403,7 +439,7 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
   Widget _buildListingCard(Map<String, dynamic> listing) {
     final images = listing['images'] ?? listing['image_urls'] ?? [];
     final imageUrl =
-        images is List && images.isNotEmpty ? images[0].toString() : '';
+    images is List && images.isNotEmpty ? images[0].toString() : '';
 
     return InkWell(
       onTap: () {
@@ -444,20 +480,20 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
                 borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
                 child: imageUrl.isNotEmpty
                     ? Image.network(
-                        imageUrl,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Center(
-                            child: Icon(Icons.image,
-                                size: 32.sp, color: Colors.grey[400]),
-                          );
-                        },
-                      )
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Center(
+                      child: Icon(Icons.image,
+                          size: 32.sp, color: Colors.grey[400]),
+                    );
+                  },
+                )
                     : Center(
-                        child: Icon(Icons.image,
-                            size: 32.sp, color: Colors.grey[400]),
-                      ),
+                  child: Icon(Icons.image,
+                      size: 32.sp, color: Colors.grey[400]),
+                ),
               ),
             ),
             // 信息（与你原来的布局一致）

@@ -1,12 +1,22 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Modify this file to customize your launch splash screen -->
+﻿<?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@android:color/white" />
 
-    <!-- You can insert your own image assets here -->
-    <!-- <item>
+    <!-- 背景：Facebook 蓝 -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#1877F2" />
+        </shape>
+    </item>
+
+    <!-- 底部品牌字样：不设宽高，避免拉伸；仅做底部间距和水平居中 -->
+    <item
+        android:gravity="bottom|center_horizontal"
+        android:bottom="28dp">
         <bitmap
-            android:gravity="center"
-            android:src="@mipmap/launch_image" />
-    </item> -->
+            android:src="@drawable/splash_brand_text"
+            android:tileMode="disabled"
+            android:antialias="true"
+            android:filter="false" />
+    </item>
+
 </layer-list>

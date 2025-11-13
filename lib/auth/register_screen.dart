@@ -1,4 +1,4 @@
-// lib/auth/register_screen.dart — 最终修复：统一回调为 swaply://
+﻿// lib/auth/register_screen.dart 鈥?鏈€缁堜慨澶嶏細缁熶竴鍥炶皟涓?swaply://
 
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 import 'package:flutter/material.dart';
@@ -6,16 +6,16 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 import 'package:swaply/services/reward_service.dart';
 
-// ✅ 修复：移除了 'as sf' 别名
+// 鉁?淇锛氱Щ闄や簡 'as sf' 鍒悕
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// 仅保留全局配置（用于 emailRedirectTo 等）
+// 浠呬繚鐣欏叏灞€閰嶇疆锛堢敤浜?emailRedirectTo 绛夛級
 import 'package:swaply/config/auth_config.dart';
 
-// ✅ 修复：添加此 import 以便跳转
+// 鉁?淇锛氭坊鍔犳 import 浠ヤ究璺宠浆
 import 'login_screen.dart';
 
-// ✅ 修复：使常量与 login_screen.dart 保持一致
+// 鉁?淇锛氫娇甯搁噺涓?login_screen.dart 淇濇寔涓€鑷?
 const String _kMobileRedirect = 'swaply://login-callback';
 
 class RegisterScreen extends StatefulWidget {
@@ -65,24 +65,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // ✅ 修复：使用与 login_screen.dart 完全相同的 _oauthSignIn 函数
+  // 鉁?淇锛氫娇鐢ㄤ笌 login_screen.dart 瀹屽叏鐩稿悓鐨?_oauthSignIn 鍑芥暟
   Future<void> _oauthSignIn(
       OAuthProvider provider, {
         String? scopes,
         Map<String, String>? queryParams,
       }) async {
-    String? redirectUrl; // 变量名从 redirect 改为 redirectUrl 以匹配
+    String? redirectUrl; // 鍙橀噺鍚嶄粠 redirect 鏀逛负 redirectUrl 浠ュ尮閰?
     if (kIsWeb) {
       redirectUrl = null;
     } else {
       if (defaultTargetPlatform == TargetPlatform.iOS ||
           defaultTargetPlatform == TargetPlatform.android) {
-        redirectUrl = _kMobileRedirect; // ✅ 统一使用 swaply://
+        redirectUrl = _kMobileRedirect; // 鉁?缁熶竴浣跨敤 swaply://
       }
     }
     await Supabase.instance.client.auth.signInWithOAuth(
       provider,
-      redirectTo: redirectUrl,
+      redirectTo: (kIsWeb ? 'https://swaply.cc/auth/callback' : 'cc.swaply.app://login-callback'),
       authScreenLaunchMode: LaunchMode.externalApplication,
       scopes: scopes,
       queryParams: queryParams,
@@ -198,7 +198,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } on AuthException catch (e) {
       _showError(e.message);
     } catch (_) {
-      _showError('Facebook 登录启动失败，请稍后再试');
+      _showError('Facebook 鐧诲綍鍚姩澶辫触锛岃绋嶅悗鍐嶈瘯');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -211,7 +211,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final code = _pickCodeFromUI();
       await _maybeBindInviteCode(code);
 
-      // ✅ 修复：Apple 必须使用 _oauthSignIn
+      // 鉁?淇锛欰pple 蹇呴』浣跨敤 _oauthSignIn
       await _oauthSignIn(
         OAuthProvider.apple,
         scopes: 'name email',
@@ -221,7 +221,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } on AuthException catch (e) {
       _showError(e.message);
     } catch (_) {
-      _showError('Apple 登录启动失败，请稍后再试');
+      _showError('Apple 鐧诲綍鍚姩澶辫触锛岃绋嶅悗鍐嶈瘯');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -532,7 +532,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: TextStyle(color: Colors.grey[600], fontSize: 12.sp),
                     ),
                     GestureDetector(
-                      // ✅ 修复：将 _showInfo 替换为实际导航
+                      // 鉁?淇锛氬皢 _showInfo 鏇挎崲涓哄疄闄呭鑸?
                       onTap: () => Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
