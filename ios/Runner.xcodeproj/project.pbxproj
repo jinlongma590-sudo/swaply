@@ -1,4 +1,4 @@
-﻿// !$*UTF8*$!
+// !$*UTF8*$!
 {
 	archiveVersion = 1;
 	classes = {
@@ -308,9 +308,7 @@
 		249021D3217E4FDB00AE95B9 /* Profile */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				
-\t\t\t\tCODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
-ALWAYS_SEARCH_USER_PATHS = NO;
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
@@ -363,9 +361,7 @@ ALWAYS_SEARCH_USER_PATHS = NO;
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 7AFA3C8E1D35360C0083082E /* Release.xcconfig */;
 			buildSettings = {
-				
-\t\t\t\tCODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
-ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				DEVELOPMENT_TEAM = KKMFJVK8MV;
@@ -388,9 +384,7 @@ ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 		331C8088294A63A400263BE5 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				
-\t\t\t\tCODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
-BUNDLE_LOADER = "$(TEST_HOST)";
+				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -407,9 +401,7 @@ BUNDLE_LOADER = "$(TEST_HOST)";
 		331C8089294A63A400263BE5 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				
-\t\t\t\tCODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
-BUNDLE_LOADER = "$(TEST_HOST)";
+				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -424,9 +416,7 @@ BUNDLE_LOADER = "$(TEST_HOST)";
 		331C808A294A63A400263BE5 /* Profile */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				
-\t\t\t\tCODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
-BUNDLE_LOADER = "$(TEST_HOST)";
+				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -441,9 +431,7 @@ BUNDLE_LOADER = "$(TEST_HOST)";
 		97C147031CF9000F007C117D /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				
-\t\t\t\tCODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
-ALWAYS_SEARCH_USER_PATHS = NO;
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = AppIcon;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
@@ -500,9 +488,7 @@ ALWAYS_SEARCH_USER_PATHS = NO;
 		97C147041CF9000F007C117D /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				
-\t\t\t\tCODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
-ALWAYS_SEARCH_USER_PATHS = NO;
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = AppIcon;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
@@ -557,9 +543,7 @@ ALWAYS_SEARCH_USER_PATHS = NO;
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 9740EEB21CF90195004384FC /* Debug.xcconfig */;
 			buildSettings = {
-				
-\t\t\t\tCODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
-ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				DEVELOPMENT_TEAM = KKMFJVK8MV;
@@ -584,9 +568,7 @@ ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 7AFA3C8E1D35360C0083082E /* Release.xcconfig */;
 			buildSettings = {
-				
-\t\t\t\tCODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements;
-ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
 				DEVELOPMENT_TEAM = KKMFJVK8MV;
@@ -643,4 +625,3 @@ ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 	};
 	rootObject = 97C146E61CF9000F007C117D /* Project object */;
 }
-

@@ -1,8 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- 背景：Facebook 蓝 -->
     <background android:drawable="@color/ic_launcher_background"/>
-    <!-- 前景：你的 432×432 白色 S（带四边内边距） -->
     <foreground android:drawable="@drawable/ic_launcher_foreground_inset"/>
-    <!-- 先不要 monochrome，避免被“主题图标”捕获成纯色 -->
+    <monochrome android:drawable="@drawable/ic_launcher_foreground_inset"/>
 </adaptive-icon>
