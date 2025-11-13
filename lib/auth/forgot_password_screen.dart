@@ -17,12 +17,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   bool _isLoading = false;
   bool _isEmailSent = false;
 
-  // ✅ 统一整个 App 的 Auth 回调地址（与 Google/Facebook/Apple 登录相同）
-  //    注意：你需要在 Supabase https://supabase.com/docs/guides/auth/redirect-urls
-  //    中加入这个地址，并在 Supabase.initialize 里设置
-  //    authCallbackUrlHostname: 'login-callback'
-  // ✅ 修正：确保常量名与指令一致
-  static const String kAuthRedirectUri = 'cc.swaply.app://login-callback';
+  // ✅ 关键修改：将重置密码的回调地址从自定义 Scheme 切换到 Universal Link (https)
+  //    这将修复 iOS 上无法从邮件 App 唤起的问题。
+  //    (OAuth 登录可以继续使用 cc.swaply.app://login-callback，两者不冲突)
+  static const String kAuthRedirectUri = 'https://swaply.cc/auth/callback';
 
   @override
   void dispose() {
@@ -35,10 +33,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     setState(() => _isLoading = true);
     try {
-      // ✅ 关键修正：使用 redirectTo 和 kAuthRedirectUri
+      // ✅ 关键修改：使用 redirectTo 并指向 https 的 Universal Link
       await Supabase.instance.client.auth.resetPasswordForEmail(
         _emailController.text.trim(),
-        redirectTo: kAuthRedirectUri, // ← 用 redirectTo
+        redirectTo: kAuthRedirectUri, // ← 现在指向 'https://swaply.cc/auth/callback'
       );
 
       if (!mounted) return;

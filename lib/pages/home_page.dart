@@ -1,5 +1,7 @@
 // lib/pages/home_page.dart
-// 使用Facebook亮蓝色和Jiji风格的自动图片调整功能
+// ✅ 功能：基于代码二（保留 Pub/Sub 自动刷新）
+// ✅ UI：  应用代码一的“紧凑型”分类网格 UI（44.w 图标）
+// ✅ 修复：将 LayoutBuilder 方案正确注入到 44.w 紧凑布局中
 
 import 'dart:io' show Platform; // ✅ 仅用于 iOS 判断
 
@@ -14,8 +16,8 @@ import 'package:swaply/pages/sell_form_page.dart';
 import 'package:swaply/services/coupon_service.dart';
 import 'package:swaply/listing_api.dart';
 
-import 'dart:async'; // ✅ 新增
-import 'package:swaply/services/listing_events_bus.dart'; // ✅ 新增
+import 'dart:async'; // ✅ 功能保留
+import 'package:swaply/services/listing_events_bus.dart'; // ✅ 功能保留
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -38,11 +40,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   List<Map<String, dynamic>> _trendingRemote = [];
   bool _loadingTrending = false;
 
-  StreamSubscription? _listingPubSub; // ✅ 新增：订阅句柄
+  StreamSubscription? _listingPubSub; // ✅ 功能保留
 
   // Facebook亮蓝色配色方案
   static const Color _primaryBlue = Color(0xFF1877F2); // Facebook亮蓝色
-  static const Color _lightBlue = Color(0xFFE3F2FD);
   static const Color _successGreen = Color(0xFF4CAF50);
 
   static const List<String> _locations = [
@@ -62,7 +63,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     'Redcliff',
   ];
 
-  // ✅ 仅调整了排序；文件名/ID/label 均保持不变
+  // 仅调整了排序；文件名/ID/label 均保持不变
   static const List<Map<String, String>> _categories = [
     {"id": "trending", "icon": "trending", "label": "Trending"},
 
@@ -127,13 +128,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
     _loadTrending();
 
-    // ✅ [MODIFIED] 按照要求 1) 确保监听并触发刷新
+    // ✅ 功能保留: 订阅事件
     _listingPubSub = ListingEventsBus.instance.stream.listen((e) {
       if (e is ListingPublishedEvent) {
-        // ✅ 加这两行
-        // ignore: avoid_print
-        print('[Home] Received ListingPublishedEvent -> refresh(bypassCache: true)');
-        _loadTrending(bypassCache: true); // ✅ 适配：调用 _loadTrending
+        _loadTrending(bypassCache: true);
       }
     });
   }
@@ -143,7 +141,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     _scrollController.dispose();
     _searchCtrl.dispose();
     _fadeController.dispose();
-    _listingPubSub?.cancel(); // ✅ 新增
+    _listingPubSub?.cancel(); // ✅ 功能保留: 取消订阅
     super.dispose();
   }
 
@@ -151,13 +149,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   double _iosBump(BuildContext context) {
     if (!Platform.isIOS) return 0;
     final top = MediaQuery.of(context).padding.top; // 灵动岛/状态栏安全区
-    // ⬇️ 保持你文件中的 +17 设置
     return top + 17;
   }
 
   /* ===================== 数据加载 ===================== */
 
-  /// 修复的价格格式化函数
   String _formatPrice(dynamic priceData) {
     if (priceData == null) return '';
 
@@ -167,9 +163,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
 
     if (priceData is String) {
-      if (priceData.toLowerCase().contains('free') || priceData == '0') {
-        return 'Free';
-      }
+      final lower = priceData.toLowerCase();
+      if (lower.contains('free') || priceData == '0') return 'Free';
 
       final cleanPrice = priceData.replaceAll(RegExp(r'[^\d.]'), '');
       final parsedPrice = num.tryParse(cleanPrice);
@@ -189,20 +184,17 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     return priceData.toString();
   }
 
-  /// 混合趋势：置顶优先 + 最新填充
-  /// ✅ [MODIFIED] 按照要求 2) 确保 bypassCache 被接收并透传
+  // ✅ 功能保留: bypassCache
   Future<List<Map<String, dynamic>>> _fetchTrendingMixed({
     String? city,
     int pinnedLimit = 6,
     int latestLimit = 36,
     int total = 12,
-    bool bypassCache = false, // ✅ 接收
+    bool bypassCache = false,
   }) async {
-    // 1) 置顶广告 -> 列表（仅趋势类型）
     final pinnedAds = await CouponService.getTrendingPinnedAds(
       city: city,
       limit: pinnedLimit,
-      // (按要求，bypassCache 仅传递给 ListingApi)
     );
 
     final list = <Map<String, dynamic>>[];
@@ -222,8 +214,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       });
     }
 
-    // 2) 最新列表
-    // ✅ [MODIFIED] 按照要求 2) 确保 bypassCache (即 forceNetwork) 被透传
     final latest = await ListingApi.fetchListings(
       city: city,
       limit: latestLimit,
@@ -231,10 +221,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       orderBy: 'created_at',
       ascending: false,
       status: 'active',
-      forceNetwork: bypassCache, // ✅ 把 bypassCache 透传给 API
+      forceNetwork: bypassCache, // ✅ 功能保留
     );
 
-    // 3) 去重并填充
     final seen = <String>{...list.map((x) => x['id'].toString())};
     for (final r in latest) {
       final id = r['id']?.toString();
@@ -256,29 +245,27 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     return list.take(total).toList();
   }
 
-  /// ✅ [MODIFIED] 按照要求 2) 适配 _refresh，即 _loadTrending
+  // ✅ 功能保留: bypassCache
   Future<void> _loadTrending({bool bypassCache = false}) async {
     setState(() => _loadingTrending = true);
     try {
       final city =
       _selectedLocation == 'All Zimbabwe' ? null : _selectedLocation;
-      // ✅ [MODIFIED] 按照要求 2) 确保 bypassCache 被透传
       final rows = await _fetchTrendingMixed(
         city: city,
         pinnedLimit: 6,
         latestLimit: 36,
         total: 12,
-        bypassCache: bypassCache, // ✅ 透传参数
+        bypassCache: bypassCache, // ✅ 功能保留
       );
       if (mounted) {
         setState(() => _trendingRemote = rows);
-        // [FIX] 修复：仅在首次加载时（非 bypassCache）或数据为空时才播放动画
+        // ✅ 功能保留: 智能动画
         if (!bypassCache || _trendingRemote.isEmpty) {
           _fadeController.forward();
         }
       }
     } catch (e) {
-      // 失败稳态：仅打印日志，UI依靠 _trendingRemote.isEmpty (或 _loadingTrending) 展示
       debugPrint('Error loading trending: $e');
     } finally {
       if (mounted) setState(() => _loadingTrending = false);
@@ -352,7 +339,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         ),
       );
       if (goLogin == true && mounted) {
-        // ✅ 关键修复：把登录页推到“根 Navigator”，避免落到 Tab 的子 Navigator 里
         await Navigator.of(context, rootNavigator: true).pushNamed('/login');
       }
       if (Supabase.instance.client.auth.currentUser == null) return;
@@ -497,7 +483,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   // 紧凑搜索区域
                   _buildCompactSearchSection(),
 
-                  // 紧凑分类网格
+                  // 紧凑分类网格 (✅ UI: 已修正为 44.w + LayoutBuilder 方案)
                   _buildCompactCategoriesGrid(),
                 ],
               ),
@@ -593,37 +579,44 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
-  // =================================================================
-  // ⬇️ 唯一修改的函数 ⬇️
-  // =================================================================
-
-  /// 关键修复：分类网格单元用“比例切分”，防 1~2px 溢出（模拟器专属）
+  // ✅ UI: 这是“代码一”的紧凑 UI (44.w) + 你的 LayoutBuilder 溢出修复
   Widget _buildCompactCategoriesGrid() {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(12.w, 12.h, 12.w, 16.h),
-      child: GridView.builder(
-        physics: const NeverScrollableScrollPhysics(),
-        shrinkWrap: true,
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4,
-          childAspectRatio: 1.0,
-          crossAxisSpacing: 6.w,
-          mainAxisSpacing: 6.h,
-        ),
-        itemCount: _categories.length,
-        itemBuilder: (context, index) {
-          final cat = _categories[index];
-          final isTrending = index == 0;
+    // ✅ 锁定这个网格区域内的文本缩放为 1.0
+    final media = MediaQuery.of(context);
 
-          return GestureDetector(
-            onTap: () => _navigateToCategory(cat['id']!, cat['label']!),
-            // ✅ 修复 2: 添加保险剪裁，裁剪掉 0.5px 的渲染毛刺
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(10.r),
+    return MediaQuery(
+      data: media.copyWith(textScaler: const TextScaler.linear(1.0)),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(12.w, 12.h, 12.w, 16.h),
+        child: GridView.builder(
+          physics: const NeverScrollableScrollPhysics(),
+          shrinkWrap: true,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 4,
+            childAspectRatio: 1.0,
+            crossAxisSpacing: 6.w, // ✅ 紧凑间距
+            mainAxisSpacing: 6.h, // ✅ 紧凑间距
+          ),
+          itemCount: _categories.length,
+          itemBuilder: (context, index) {
+            final cat = _categories[index];
+            final isTrending = index == 0;
+
+            // ✅ 紧凑的视觉尺寸
+            const double iconBox = 44.0; // 紧凑图标容器 (44.w)
+            const double iconSize = 28.0; // 紧凑图标 (28.w)
+            const double iconFallbackSize = 26.0; // 紧凑图标 (26.sp)
+            const double gap = 8.0; // 图标与文字间距 (8.h)
+
+            return GestureDetector(
+              onTap: () => _navigateToCategory(cat['id']!, cat['label']!),
               child: Container(
+                // ⚠️ 注意：这里没有 padding，Column 会自动居中
                 decoration: BoxDecoration(
-                  color: isTrending ? Colors.orange.shade50 : Colors.grey[50],
-                  // borderRadius: BorderRadius.circular(10.r), // ClipRRect 已处理
+                  color: isTrending
+                      ? Colors.orange.shade50
+                      : Colors.grey[50], // 代码一的背景色
+                  borderRadius: BorderRadius.circular(10.r),
                   border: Border.all(
                     color: isTrending
                         ? Colors.orange.shade200
@@ -638,98 +631,76 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     ),
                   ],
                 ),
-                // ✅ 修复 1 & 3: 使用 LayoutBuilder 进行比例切分
                 child: LayoutBuilder(
+                  // ✅ 使用 LayoutBuilder 动态计算文本高度
                   builder: (ctx, c) {
-                    // 按单元格高度拆分：图标区 58%、间隔 8%、文字区 34%
-                    final double h = c.maxHeight;
-                    final double iconBoxH = h * 0.58;
-                    final double gapH = h * 0.08;
-                    final double textBoxH = h * 0.34;
-
-                    // ✅ 修复 1: 图标尺寸也使用比例计算，替换固定的 44/28
-                    final double iconContainerSize = iconBoxH * 0.75;
-                    final double iconImageSize = iconBoxH * 0.45;
+                    final double H = c.maxHeight;
+                    // ✅ 用实际可用高度反推“label 最大高度”
+                    final double labelMax =
+                    (H - iconBox - gap).clamp(0.0, 40.h);
 
                     return Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // 1. 图标容器 (比例高度)
-                        SizedBox(
-                          height: iconBoxH,
-                          child: Center(
-                            child: Container(
-                              width: iconContainerSize,
-                              height: iconContainerSize,
-                              decoration: BoxDecoration(
-                                color: isTrending
-                                    ? Colors.orange.shade100
-                                    : Colors.white,
-                                borderRadius: BorderRadius.circular(10.r),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.03),
-                                    blurRadius: 3,
-                                    offset: const Offset(0, 1),
-                                  ),
-                                ],
+                        Container(
+                          width: iconBox, // ✅ 紧凑 44.w
+                          height: iconBox, // ✅ 紧凑 44.h
+                          decoration: BoxDecoration(
+                            color: isTrending
+                                ? Colors.orange.shade100
+                                : Colors.white, // 代码一的图标背景
+                            borderRadius: BorderRadius.circular(10.r),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.03),
+                                blurRadius: 3,
+                                offset: const Offset(0, 1),
                               ),
-                              child: Center(
-                                child: SizedBox(
-                                  width: iconImageSize,
-                                  height: iconImageSize,
-                                  child: Image.asset(
-                                    'assets/icons/${cat['icon']}.png',
+                            ],
+                          ),
+                          child: Center(
+                            child: SizedBox(
+                              width: iconSize, // ✅ 紧凑 28.w
+                              height: iconSize, // ✅ 紧凑 28.h
+                              child: Image.asset(
+                                'assets/icons/${cat['icon']}.png',
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, __, ___) {
+                                  return Image.asset(
+                                    'assets/icons/${cat['icon']}.jpg',
                                     fit: BoxFit.contain,
-                                    errorBuilder: (_, __, ___) {
-                                      return Image.asset(
-                                        'assets/icons/${cat['icon']}.jpg',
-                                        fit: BoxFit.contain,
-                                        errorBuilder: (_, __, ___) => Icon(
-                                          isTrending
-                                              ? Icons.local_fire_department
-                                              : Icons.category,
-                                          size: iconImageSize, // 使用比例尺寸
-                                          color: isTrending
-                                              ? Colors.orange
-                                              : Colors.grey,
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
+                                    errorBuilder: (_, __, ___) => Icon(
+                                      isTrending
+                                          ? Icons.local_fire_department
+                                          : Icons.category,
+                                      size: iconFallbackSize, // ✅ 紧凑 26.sp
+                                      color: isTrending
+                                          ? Colors.orange
+                                          : Colors.grey,
+                                    ),
+                                  );
+                                },
                               ),
                             ),
                           ),
                         ),
-                        // 2. 间隔 (比例高度)
-                        SizedBox(height: gapH),
-                        // 3. 文本容器 (比例高度 + FittedBox 兜底)
-                        SizedBox(
-                          height: textBoxH,
-                          child: Center(
-                            // ✅ 修复 1: 缩放兜底
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 2.w),
-                                child: Text(
-                                  cat['label']!,
-                                  textAlign: TextAlign.center,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  // ✅ 修复 1: 去掉多余的下伸空间
-                                  textHeightBehavior: const TextHeightBehavior(
-                                    applyHeightToFirstAscent: false,
-                                    applyHeightToLastDescent: false,
-                                  ),
-                                  style: TextStyle(
-                                    fontSize: 11.sp,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.grey[700],
-                                    height: 1.1,
-                                  ),
-                                ),
+                        SizedBox(height: gap), // ✅ 紧凑 8.h
+
+                        // ✅ label 高度用“动态上限”
+                        ConstrainedBox(
+                          constraints: BoxConstraints(maxHeight: labelMax),
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 2.w),
+                            child: Text(
+                              cat['label']!,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11.sp, // ✅ 紧凑 11.sp
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey[700],
+                                height: 1.1,
                               ),
                             ),
                           ),
@@ -739,16 +710,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   },
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }
-
-  // =================================================================
-  // ⬆️ 唯一修改的函数 ⬆️
-  // =================================================================
 
   Widget _buildTrendingSection() {
     return Column(
@@ -788,6 +755,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
+  // ✅ UI: 保留代码二的简化版 Loading
   Widget _buildTrendingLoading() {
     return GridView.builder(
       physics: const NeverScrollableScrollPhysics(),
@@ -826,32 +794,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
               ),
             ),
-            Container(
-              height: 50.h,
-              padding: EdgeInsets.all(6.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    height: 10.h,
-                    width: 50.w,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[300],
-                      borderRadius: BorderRadius.circular(3.r),
-                    ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Container(
-                    height: 8.h,
-                    width: 80.w,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(3.r),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            SizedBox(height: 8.h),
           ],
         ),
       ),
@@ -859,7 +802,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   }
 
   Widget _buildTrendingGrid() {
-    // 稳态展示：即使 _loadTrending 失败，_trendingRemote 也会是 []，展示空态
     if (_trendingRemote.isEmpty) {
       return Container(
         height: 100.h,
@@ -895,14 +837,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 分离置顶广告和普通内容
           if (_trendingRemote.where((r) => r['pinned'] == true).isNotEmpty) ...[
-            // 置顶广告部分
             _buildFeaturedTrendingSection(),
             SizedBox(height: 16.h),
           ],
-
-          // 普通trending内容
           if (_trendingRemote.where((r) => r['pinned'] != true).isNotEmpty) ...[
             Padding(
               padding: EdgeInsets.only(bottom: 8.h),
@@ -929,7 +867,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 特色标题
         Padding(
           padding: EdgeInsets.only(bottom: 8.h),
           child: Row(
@@ -971,8 +908,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             ],
           ),
         ),
-
-        // 特色广告网格
         GridView.builder(
           physics: const NeverScrollableScrollPhysics(),
           shrinkWrap: true,
@@ -980,7 +915,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             crossAxisCount: 2,
             mainAxisSpacing: 8.h,
             crossAxisSpacing: 8.w,
-            childAspectRatio: 0.75, // 调整为更高的比例以显示完整图片
+            childAspectRatio: 0.75,
           ),
           itemCount: pinnedItems.length,
           itemBuilder: (context, i) {
@@ -988,8 +923,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             return _buildPremiumCard(r);
           },
         ),
-
-        // 分隔线
         Container(
           margin: EdgeInsets.symmetric(vertical: 12.h),
           height: 1.h,
@@ -1051,12 +984,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 图片区域
             Expanded(
               child: Stack(
                 children: [
                   _buildImageWidget(img),
-                  // 置顶标签
                   Positioned(
                     top: 6.h,
                     left: 6.w,
@@ -1088,8 +1019,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ],
               ),
             ),
-
-            // 内容区域
             Container(
               padding: EdgeInsets.all(8.w),
               child: Column(
@@ -1175,12 +1104,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 图片区域
             Expanded(
               child: _buildImageWidget(img),
             ),
-
-            // 内容区域
             Padding(
               padding: EdgeInsets.all(6.w),
               child: Column(
@@ -1191,8 +1117,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                     Text(
                       priceText,
                       style: TextStyle(
-                        color:
-                        priceText == 'Free' ? _successGreen : _successGreen,
+                        color: _successGreen,
                         fontWeight: FontWeight.bold,
                         fontSize: 12.sp,
                       ),
@@ -1250,15 +1175,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       );
     }
 
-    // Jiji风格的自动图片调整 - 完全填充容器
     final imgWidget = src.startsWith('http')
         ? Image.network(
       src,
       width: double.infinity,
       height: double.infinity,
-      fit: BoxFit.cover, // 完全覆盖容器
+      fit: BoxFit.cover,
       alignment: Alignment.center,
-      // 稳态处理：确保网络图片加载失败时 UI 不崩溃
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
         return Container(
@@ -1298,8 +1221,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               SizedBox(height: 2.h),
               Text(
                 'Image failed to load',
-                style:
-                TextStyle(fontSize: 8.sp, color: Colors.grey[500]),
+                style: TextStyle(fontSize: 8.sp, color: Colors.grey[500]),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -1330,8 +1252,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               SizedBox(height: 2.h),
               Text(
                 'Image not found',
-                style:
-                TextStyle(fontSize: 8.sp, color: Colors.grey[500]),
+                style: TextStyle(fontSize: 8.sp, color: Colors.grey[500]),
                 textAlign: TextAlign.center,
               ),
             ],

@@ -1,7 +1,7 @@
 name: swaply
 description: A marketplace app for Zimbabwe
 publish_to: 'none'
-version: 1.0.0+63
+version: 1.0.0+64
 
 environment:
   sdk: '>=3.3.0 <4.0.0'   # 与 supabase_flutter 2.7.x / sign_in_with_apple 7.x 兼容
@@ -44,16 +44,17 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^4.0.0
-  flutter_launcher_icons: ^0.13.1
+  flutter_launcher_icons: ^0.14.4
 
 flutter_launcher_icons:
-  ios: true
-  android: true
-  remove_alpha_ios: true
-  image_path: assets/app_icons/app_icon.png
-  adaptive_icon_foreground: assets/app_icons/app_icon_fg.png
-  adaptive_icon_background: assets/app_icons/app_icon_bg.png
-  # adaptive_icon_monochrome: assets/app_icons/app_icon_fg_mono.png
+  # 只生成人安卓自适应图标；不改 iOS
+  android: "adaptive"
+  ios: false
+  image_path_android: assets/ic_launcher_foreground_432.png
+  adaptive_icon_foreground: assets/ic_launcher_foreground_432.png
+  adaptive_icon_background: "#1877F2"   # Facebook 蓝
+  adaptive_icon_monochrome: assets/ic_launcher_foreground_432.png  # Android 13+ 单色图标
+  min_sdk_android: 21
 
 flutter:
   uses-material-design: true

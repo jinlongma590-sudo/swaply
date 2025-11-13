@@ -14,11 +14,13 @@
     <application
         android:label="Swaply"
         android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true"
         android:requestLegacyExternalStorage="true"
         android:enableOnBackInvokedCallback="true">
 
-        <!-- 入口 Activity -->
+
+    <!-- 入口 Activity -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -46,7 +48,7 @@
                 <data android:scheme="io.supabase.flutter" android:host="callback" />
             </intent-filter>
 
-            <!-- 你的自定义深链：cc.swaply.app://login-callback 和 cc.swaply.app://reset-password -->
+            <!-- 自定义深链 -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
