@@ -49,7 +49,7 @@ import 'package:swaply/widgets/my_rewards_tile.dart';
 import 'package:swaply/widgets/verification_badge.dart' as vb;
 import 'package:swaply/widgets/verification_badge_mini.dart';
 import 'package:swaply/widgets/verified_avatar.dart';
-
+import 'debug/recovery_probe.dart';
 import 'startup_screen.dart';
 
 // ========= 鍏ㄥ眬 Auth 浜嬩欢璁㈤槄锛堝彧娉ㄥ唽涓€娆★級=========
@@ -553,13 +553,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    RecoveryProbe.attach();   // 仅打印日志，不做导航
     WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _deeplinkSub?.cancel(); // ✅ 释放深链订阅
+    RecoveryProbe.dispose();// ✅ 释放深链订阅
     super.dispose();
   }
 

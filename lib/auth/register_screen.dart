@@ -16,7 +16,8 @@ import 'package:swaply/config/auth_config.dart';
 import 'login_screen.dart';
 
 // 鉁?淇锛氫娇甯搁噺涓?login_screen.dart 淇濇寔涓€鑷?
-const String _kMobileRedirect = 'swaply://login-callback';
+const String _kMobileRedirect = 'cc.swaply.app://login-callback';
+
 
 class RegisterScreen extends StatefulWidget {
   final String? invitationCode;
