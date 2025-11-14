@@ -603,8 +603,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             final isTrending = index == 0;
 
             // ✅ 紧凑的视觉尺寸
-            const double iconBox = 44.0; // 紧凑图标容器 (44.w)
-            const double iconSize = 28.0; // 紧凑图标 (28.w)
+            const double iconBox = 50.0; // 紧凑图标容器 (44.w)
+            const double iconSize = 34.0; // 紧凑图标 (28.w)
             const double iconFallbackSize = 26.0; // 紧凑图标 (26.sp)
             const double gap = 8.0; // 图标与文字间距 (8.h)
 

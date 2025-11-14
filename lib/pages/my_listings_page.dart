@@ -1,4 +1,5 @@
 // lib/pages/my_listings_page.dart - 完全重设计版本，解决所有问题
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // ✅ 1. 已添加 Import
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -14,7 +15,6 @@ import 'package:flutter/foundation.dart';
 
 class MyListingsPage extends StatefulWidget {
   const MyListingsPage({Key? key}) : super(key: key);
-
   @override
   State<MyListingsPage> createState() => _MyListingsPageState();
 }
@@ -24,13 +24,11 @@ class _MyListingsPageState extends State<MyListingsPage>
   late TabController _tabController;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-
   List<Map<String, dynamic>> _listings = [];
   List<OfferModel> _receivedOffers = [];
   bool _isLoadingListings = true;
   bool _isLoadingOffers = true;
   String? _errorMessage;
-
   @override
   void initState() {
     super.initState();
@@ -38,7 +36,7 @@ class _MyListingsPageState extends State<MyListingsPage>
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
-    );
+    )..value = 1.0; // ✅ 初始就完全不透明，避免 iOS 上动画阻挡列表显示
     _fadeAnimation = CurvedAnimation(
       parent: _animationController,
       curve: Curves.easeInOut,
@@ -303,8 +301,7 @@ class _MyListingsPageState extends State<MyListingsPage>
                   color: Colors.red.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(6.r),
                 ),
-                child:
-                Icon(Icons.delete_outline, color: Colors.red, size: 18.r),
+                child: Icon(Icons.delete_outline, color: Colors.red, size: 18.r),
               ),
               SizedBox(width: 10.w),
               Text('Delete Listing',
@@ -489,21 +486,7 @@ class _MyListingsPageState extends State<MyListingsPage>
         statusBarBrightness: Brightness.dark,
       ));
     }
-
-    // --- Extracted Widgets ---
-
-    // ✅ [REMOVED] 2. 移除旧的 36x36 backButton 定义
-    // final Widget backButton = ...
-
-    // ✅ [REMOVED] 2. 移除旧的 titleText 定义
-    // final Widget titleText = ...
-
     final Widget tabBarWidget = Container(
-      // Container 样式保持不变 (使用您新 _buildHeader 里的 0.20/0.2)
-      // decoration: BoxDecoration(
-      //   color: Colors.white.withOpacity(0.2), // Android/Web
-      //   borderRadius: BorderRadius.circular(8.r),
-      // ),
       child: TabBar(
         controller: _tabController,
         labelColor: Colors.white,
@@ -523,25 +506,15 @@ class _MyListingsPageState extends State<MyListingsPage>
         ],
       ),
     );
-
-    // --- Main Build ---
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       body: Column(
         children: [
-          // ✅ [MODIFIED] 调用平台感知的 Header
-          // ✅ [MODIFIED] 移除 backButton 和 titleText 参数，因为 _buildHeader (iOS)
-          // 现在会自行构建它们以确保 32x32 尺寸
           _buildHeader(
             statusBar,
             _isIOS,
-            // backButton,  <-- 移除
-            // titleText,   <-- 移除
             tabBarWidget,
           ),
-
-          // 内容区域 (Unchanged)
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -556,29 +529,22 @@ class _MyListingsPageState extends State<MyListingsPage>
     );
   }
 
-  // ✅ 3. 替换 _buildHeader 整段方法
   Widget _buildHeader(
       double statusBar,
       bool isIOS,
-      // Widget backButton, // (移除)
-      // Widget titleText,  // (移除)
       Widget tabBarWidget,
       ) {
     if (isIOS) {
       // ===== iOS：与认证页一致的几何规范 (44pt Row + Tabs) =====
-
-      // 1. 定义标准 (来自 verification_page.dart)
       const double kNavBarHeight = 44.0; // 标准导航条高度
       const double kButtonSize = 32.0; // 标准按钮尺寸 (替换 36.0)
       const double kSidePadding = 16.0; // 标准左右内边距
       const double kButtonSpacing = 12.0; // 标准间距 (替换 16.0)
 
-      // 2. Tab bar 尺寸 (来自你原来的 iOS implementation)
       const double kTabsH = 32.0;
       const double kTabsTop = 8.0;
       const double kTabsBottom = 12.0;
 
-      // 3. 构建新的 32x32 backButton (本地构建，确保尺寸正确)
       final Widget iosBackButton = SizedBox(
         width: kButtonSize,
         height: kButtonSize,
@@ -587,24 +553,22 @@ class _MyListingsPageState extends State<MyListingsPage>
           child: Container(
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(10), // 保持你的圆角
+              borderRadius: BorderRadius.circular(10),
             ),
             alignment: Alignment.center,
             child: const Icon(Icons.arrow_back_ios_new,
-                size: 18, color: Colors.white), // 保持你的图标
+                size: 18, color: Colors.white),
           ),
         ),
       );
 
-      // 4. 构建新的 Expanded title (本地构建，确保布局正确)
       final Widget iosTitle = Expanded(
         child: Text(
           'My Listings',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          textAlign: TextAlign.center, // 保证居中
+          textAlign: TextAlign.center,
           style: TextStyle(
-            // 保持你的字体样式
             color: Colors.white,
             fontSize: 16.sp,
             fontWeight: FontWeight.w600,
@@ -612,13 +576,10 @@ class _MyListingsPageState extends State<MyListingsPage>
         ),
       );
 
-      // 5. 构建新的 32x32 right placeholder (用于居中)
       final Widget iosRightPlaceholder =
       const SizedBox(width: kButtonSize, height: kButtonSize);
 
-      // 6. 组装 (Column[NavBar, TabBar])
       return Container(
-        // 保持原有的蓝色渐变
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -630,12 +591,10 @@ class _MyListingsPageState extends State<MyListingsPage>
             ],
           ),
         ),
-        padding: EdgeInsets.only(top: statusBar), // 让出状态栏
+        padding: EdgeInsets.only(top: statusBar),
         child: Column(
-          // 垂直堆叠 Nav Bar 和 Tab Bar
           mainAxisSize: MainAxisSize.min,
           children: [
-            // --- Part 1: The 44pt Nav Bar (Row layout) ---
             SizedBox(
               height: kNavBarHeight,
               child: Padding(
@@ -647,13 +606,11 @@ class _MyListingsPageState extends State<MyListingsPage>
                     const SizedBox(width: kButtonSpacing),
                     iosTitle,
                     const SizedBox(width: kButtonSpacing),
-                    iosRightPlaceholder, // 占位符确保标题居中
+                    iosRightPlaceholder,
                   ],
                 ),
               ),
             ),
-
-            // --- Part 2: The Tab Bar (Your original layout) ---
             Container(
               margin: const EdgeInsets.fromLTRB(
                   kSidePadding, kTabsTop, kSidePadding, kTabsBottom),
@@ -662,15 +619,12 @@ class _MyListingsPageState extends State<MyListingsPage>
                 color: Colors.white.withOpacity(0.20),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: tabBarWidget, // 使用传入的 TabBar
+              child: tabBarWidget,
             ),
           ],
         ),
       );
-    }
-
-    // ===== Android/Web：保持你原来的实现（安全区域 + Column） =====
-    // (需要重新定义 36x36 backButton 和 titleText，因为它们不再被传入)
+    } // ===== Android/Web：保持你原来的实现（安全区域 + Column） =====
     final Widget backButton = GestureDetector(
       onTap: () => Navigator.pop(context),
       child: Container(
@@ -688,18 +642,16 @@ class _MyListingsPageState extends State<MyListingsPage>
         ),
       ),
     );
-
     final Widget titleText = Text(
       'My Listings',
       style: TextStyle(
         color: Colors.white,
-        fontSize: 16.sp, // ✅ 统一：标题 16.sp
+        fontSize: 16.sp,
         fontWeight: FontWeight.w600,
       ),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
     );
-
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -718,9 +670,9 @@ class _MyListingsPageState extends State<MyListingsPage>
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  backButton, // Android/Web 使用 36x36 按钮
+                  backButton,
                   const SizedBox(width: 12),
-                  Expanded(child: titleText), // Android/Web 左对齐标题
+                  Expanded(child: titleText),
                 ],
               ),
             ),
@@ -747,11 +699,9 @@ class _MyListingsPageState extends State<MyListingsPage>
     if (_errorMessage != null) {
       return _buildErrorState();
     }
-
     if (_listings.isEmpty) {
       return _buildEmptyListingsState();
     }
-
     return RefreshIndicator(
       onRefresh: _refreshData,
       color: const Color(0xFF2563EB),
@@ -776,7 +726,6 @@ class _MyListingsPageState extends State<MyListingsPage>
     if (_receivedOffers.isEmpty) {
       return _buildEmptyOffersState();
     }
-
     return RefreshIndicator(
       onRefresh: _refreshData,
       color: const Color(0xFF2563EB),
@@ -796,12 +745,9 @@ class _MyListingsPageState extends State<MyListingsPage>
   Widget _buildListingCard(Map<String, dynamic> listing, int index) {
     final title = listing['title']?.toString() ?? 'No Title';
     final price = listing['price']?.toString() ?? 'No Price';
-
-    // Safe get image list
     final images = ListingService.readImages(listing) ?? <String>[];
     final firstImage =
     images.isNotEmpty ? images.first : 'assets/images/placeholder.jpg';
-
     final city = listing['city']?.toString() ?? '';
     final createdAt = listing['created_at']?.toString() ?? '';
     final listingId = listing['id']?.toString() ?? '';
@@ -827,7 +773,6 @@ class _MyListingsPageState extends State<MyListingsPage>
         timeAgo = 'Recently';
       }
     }
-
     return TweenAnimationBuilder<double>(
       duration: Duration(milliseconds: 200 + (index * 50)),
       tween: Tween(begin: 0.0, end: 1.0),
@@ -870,7 +815,8 @@ class _MyListingsPageState extends State<MyListingsPage>
                                 ? Image.network(
                               firstImage,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
+                              errorBuilder:
+                                  (context, error, stackTrace) {
                                 return Icon(Icons.image_rounded,
                                     color: Colors.grey.shade400,
                                     size: 20.w);
@@ -879,7 +825,8 @@ class _MyListingsPageState extends State<MyListingsPage>
                                 : Image.asset(
                               firstImage,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
+                              errorBuilder:
+                                  (context, error, stackTrace) {
                                 return Icon(Icons.image_rounded,
                                     color: Colors.grey.shade400,
                                     size: 20.w);
@@ -1281,8 +1228,8 @@ class _MyListingsPageState extends State<MyListingsPage>
                 SizedBox(height: 12.h),
                 _buildStatRow(Icons.phone, 'Phone Calls', calls, Colors.green),
                 SizedBox(height: 8.h),
-                _buildStatRow(
-                    Icons.chat, 'WhatsApp', whatsapp, const Color(0xFF25D366)),
+                _buildStatRow(Icons.chat, 'WhatsApp', whatsapp,
+                    const Color(0xFF25D366)),
                 SizedBox(height: 8.h),
                 _buildStatRow(Icons.local_offer, 'Offers', offers,
                     const Color(0xFF2563EB)),
@@ -1397,7 +1344,6 @@ class _MyListingsPageState extends State<MyListingsPage>
   }
 
   Widget _buildOfferCard(OfferModel offer, int index) {
-    // Safe get image list
     final images = offer.listingImages ?? <String>[];
     final firstImage =
     images.isNotEmpty ? images.first : 'assets/images/placeholder.jpg';
@@ -1448,7 +1394,8 @@ class _MyListingsPageState extends State<MyListingsPage>
                                 ? Image.network(
                               firstImage,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
+                              errorBuilder:
+                                  (context, error, stackTrace) {
                                 return Icon(Icons.image_rounded,
                                     color: Colors.grey.shade400,
                                     size: 18.w);
@@ -1457,7 +1404,8 @@ class _MyListingsPageState extends State<MyListingsPage>
                                 : Image.asset(
                               firstImage,
                               fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
+                              errorBuilder:
+                                  (context, error, stackTrace) {
                                 return Icon(Icons.image_rounded,
                                     color: Colors.grey.shade400,
                                     size: 18.w);
@@ -1551,7 +1499,8 @@ class _MyListingsPageState extends State<MyListingsPage>
                                   elevation: 0,
                                   shadowColor: Colors.transparent,
                                   shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8.r)),
+                                      borderRadius:
+                                      BorderRadius.circular(8.r)),
                                 ),
                                 child: Text('Decline',
                                     style: TextStyle(
@@ -1582,7 +1531,8 @@ class _MyListingsPageState extends State<MyListingsPage>
                                   elevation: 0,
                                   shadowColor: Colors.transparent,
                                   shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8.r)),
+                                      borderRadius:
+                                      BorderRadius.circular(8.r)),
                                 ),
                                 child: Text('Accept',
                                     style: TextStyle(
