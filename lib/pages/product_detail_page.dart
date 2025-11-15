@@ -2,6 +2,7 @@
 // 最终版：右上角按钮加大 + 分享弹窗改为“底部操作菜单”样式（非全屏）+ 未安装 App 时回落复制链接
 // + 关键操作守卫（拨号/WhatsApp/报价）VerificationGuard
 // + 举报 / 屏蔽（Report / Block）入口与前端拦截
+// + 自己商品（Self-listing）前置拦截 + 友好弹窗
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:postgrest/postgrest.dart' show PostgrestException; // ✅ 新增：用于识别 P0001
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -419,7 +421,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       bool isBlank(dynamic v) =>
           v == null ||
               (v is String && v.trim().isEmpty) ||
-              (v is num && v.isNaN);
+              (v is num && (v.isNaN));
 
       bool needLoadSeller = false;
 
@@ -522,17 +524,55 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     );
   }
 
-  // ========= 👇 新增：关键动作统一守卫（验证 + 屏蔽） =========
+  // ========= 👇 自己商品计算 & 友好弹窗 =========
+  // ✅ 计算是否自己的商品
+  bool get _isOwnListing {
+    final me = Supabase.instance.client.auth.currentUser?.id;
+    final seller =
+    (_sellerId ?? (product['user_id'] ?? product['seller_id'])?.toString());
+    return me != null && seller != null && me == seller;
+  }
+
+  // ✅ 统一的友好弹窗：给自己商品时提示
+  Future<void> _showSelfListingInfo({required String actionName}) async {
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('This is your own listing'),
+        content: Text("You can't $actionName on your own listing."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+  // ==========================================
+
+  // ========= 👇 新增：关键动作统一守卫（验证 + 屏蔽 + 自己商品） =========
   Future<bool> _ensureAllowedForContact({String actionName = 'contact'}) async {
     // ① 账号验证
     final verified = await VerificationGuard.ensureVerifiedOrPrompt(context);
     if (!verified) return false;
 
-    // ② 屏蔽关系
+    // ② sellerId
     if (_sellerId == null) {
       _toast('Seller information not available');
       return false;
     }
+
+    // ②.5 自己商品前置拦截（友好弹窗）
+    final me = Supabase.instance.client.auth.currentUser?.id;
+    final sellerIdNow =
+        _sellerId ?? (product['user_id'] ?? product['seller_id'])?.toString();
+    if (me != null && sellerIdNow != null && me == sellerIdNow) {
+      await _showSelfListingInfo(actionName: actionName);
+      return false;
+    }
+
+    // ③ 屏蔽关系
     if (_blockStatus.otherBlockedMe) {
       _toast("You can't $actionName because the seller has blocked you.");
       return false;
@@ -884,8 +924,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     final percentage =
                     price > 0 ? ((offer / price) * 100).round() : 0;
                     return InkWell(
-                      onTap: () =>
-                      offerController.text = offer.toStringAsFixed(0),
+                      onTap: () => offerController.text = offer.toStringAsFixed(0),
                       borderRadius: BorderRadius.circular(8.r),
                       child: Container(
                         padding: EdgeInsets.symmetric(
@@ -1082,7 +1121,15 @@ class _ProductDetailPageState extends State<ProductDetailPage>
 
       _toast(success ? 'Offer sent successfully!' : 'Failed to send offer');
     } catch (e) {
-      _toast('Failed to send offer: ${e.toString()}');
+      // ✅ 更友好的错误分支
+      if (e is PostgrestException && e.code == 'P0001') {
+        // 数据库守卫：不能给自己商品出价
+        await _showSelfListingInfo(actionName: 'make an offer');
+      } else if (e.toString().toLowerCase().contains('pending offer')) {
+        _toast('You already have a pending offer for this item');
+      } else {
+        _toast('Failed to send offer');
+      }
     } finally {
       setState(() => _isOfferLoading = false);
     }
@@ -1435,6 +1482,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   // ======================================================
 
   Widget _buildBottomBar() {
+    final bool own = _isOwnListing; // ✅ 自己商品时按钮直接弹提示
+
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
       decoration: BoxDecoration(
@@ -1468,7 +1517,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                   ],
                 ),
                 child: ElevatedButton.icon(
-                  onPressed: _makePhoneCall, // ✅ 已加守卫（含屏蔽）
+                  onPressed: own
+                      ? () => _showSelfListingInfo(actionName: 'make a call')
+                      : _makePhoneCall, // ✅ 自己商品拦截
                   icon: Icon(Icons.phone, size: 16.sp, color: Colors.white),
                   label: Text('Call',
                       style: TextStyle(
@@ -1502,7 +1553,10 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                   ],
                 ),
                 child: ElevatedButton.icon(
-                  onPressed: _openWhatsApp, // ✅ 已加守卫（含屏蔽）
+                  onPressed: own
+                      ? () => _showSelfListingInfo(
+                      actionName: 'contact via WhatsApp')
+                      : _openWhatsApp, // ✅ 自己商品拦截
                   icon: Icon(Icons.chat, size: 16.sp, color: Colors.white),
                   label: Text('WhatsApp',
                       style: TextStyle(
@@ -1536,7 +1590,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                   ],
                 ),
                 child: ElevatedButton.icon(
-                  onPressed: _showMakeOfferDialog, // ✅ 进入弹窗前守卫（含屏蔽）
+                  onPressed: own
+                      ? () => _showSelfListingInfo(actionName: 'make an offer')
+                      : _showMakeOfferDialog, // ✅ 自己商品拦截
                   icon:
                   Icon(Icons.local_offer, size: 16.sp, color: Colors.white),
                   label: Text('Offer',

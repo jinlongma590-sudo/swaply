@@ -1,0 +1,9 @@
+=== C) Realtime ¶©ÔÄ ===
+C:\Apps\swaply\lib\pages\task_management_page.dart:3:// 1) Realtime ¶©ÔÄÊ¹ÓÃ PostgresChangeFilterType Ã¶¾Ù£»
+C:\Apps\swaply\lib\pages\task_management_page.dart:182:      Supabase.instance.client.removeChannel(ch);
+C:\Apps\swaply\lib\pages\task_management_page.dart:200:        type: PostgresChangeFilterType.eq,
+C:\Apps\swaply\lib\pages\task_management_page.dart:219:        type: PostgresChangeFilterType.eq,
+C:\Apps\swaply\lib\pages\task_management_page.dart:238:        type: PostgresChangeFilterType.eq,
+C:\Apps\swaply\lib\pages\task_management_page.dart:257:        type: PostgresChangeFilterType.eq,
+C:\Apps\swaply\lib\services\message_service.dart:244:            type: PostgresChangeFilterType.eq,
+C:\Apps\swaply\lib\services\notification_service.dart:63:        type: PostgresChangeFilterType.eq,

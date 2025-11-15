@@ -1,0 +1,19 @@
+=== B) offer ´´½¨Á´Â· ===
+C:\Apps\swaply\lib\pages\my_listings_page.dart:158:      final offers = await OfferService.getReceivedOffers(
+C:\Apps\swaply\lib\pages\my_listings_page.dart:346:      final success = await OfferService.updateOfferStatus(
+C:\Apps\swaply\lib\pages\offer_detail_page.dart:67:      final details = await OfferService.getOfferDetails(widget.offerId);
+C:\Apps\swaply\lib\pages\offer_detail_page.dart:171:      final status = await OfferService.getBlockStatusBetween(a: me, b: peer);
+C:\Apps\swaply\lib\pages\offer_detail_page.dart:556:                    final ok = await OfferService.submitReport(
+C:\Apps\swaply\lib\pages\offer_detail_page.dart:595:      ok = await OfferService.unblockUser(blockedId: peerId);
+C:\Apps\swaply\lib\pages\offer_detail_page.dart:598:      ok = await OfferService.blockUser(blockedId: peerId);
+C:\Apps\swaply\lib\pages\product_detail_page.dart:279:    final s = await OfferService.getBlockStatusBetween(a: me, b: _sellerId!);
+C:\Apps\swaply\lib\pages\product_detail_page.dart:548:      final ok = await OfferService.unblockUser(blockedId: _sellerId!);
+C:\Apps\swaply\lib\pages\product_detail_page.dart:1074:      final result = await OfferService.createOffer(
+C:\Apps\swaply\lib\pages\product_detail_page.dart:2054:        final ok = await OfferService.submitReport(
+C:\Apps\swaply\lib\pages\product_detail_page.dart:2064:          final ok = await OfferService.blockUser(blockedId: _sellerId!);
+C:\Apps\swaply\lib\pages\product_detail_page.dart:2071:          final ok = await OfferService.unblockUser(blockedId: _sellerId!);
+C:\Apps\swaply\lib\services\offer_service.dart:17:class OfferService {
+C:\Apps\swaply\lib\services\offer_service.dart:32:      print('[OfferService] $message');
+C:\Apps\swaply\lib\services\offer_service.dart:189:  static Future<Map<String, dynamic>?> createOffer({
+C:\Apps\swaply\backend\functions\node_modules\typescript\lib\lib.dom.d.ts:13440: * The **`HTMLCollection`** interface represents a generic collection (array-like object similar to Functions/arguments) of elements (in document order) and offers methods and properties for selecting from the list.
+C:\Apps\swaply\backend\functions\node_modules\typescript\lib\typescript.js:169361:  function shouldOfferImportCompletions() {

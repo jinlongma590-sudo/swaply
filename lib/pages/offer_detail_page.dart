@@ -1,13 +1,17 @@
 // lib/pages/offer_detail_page.dart
+//
+// Unified to “Facebook Blue” top bar with SOLID backgroundColor.
+// Fixes: AppBar background/title not visible under Material 3 overlays
+// by setting backgroundColor directly + disabling surfaceTint & scrolledUnderElevation.
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/message_service.dart';
 import 'package:swaply/services/offer_service.dart';
 import 'package:swaply/models/offer.dart';
-// ✅ 关键操作守卫：未验证则引导验证
 import 'package:swaply/services/verification_guard.dart';
 
 class OfferDetailPage extends StatefulWidget {
@@ -25,6 +29,8 @@ class OfferDetailPage extends StatefulWidget {
 }
 
 class _OfferDetailPageState extends State<OfferDetailPage> {
+  static const Color _FB_BLUE = Color(0xFF1877F2);
+
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   Map<String, dynamic>? _offerDetails;
@@ -34,7 +40,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
   String? _currentUserId;
   RealtimeChannel? _messageChannel;
 
-  // ====== 新增：屏蔽状态 ======
   bool _iBlockedOther = false; // 我屏蔽了对方
   bool _otherBlockedMe = false; // 对方屏蔽了我
   bool get _blockedEitherWay => _iBlockedOther || _otherBlockedMe;
@@ -56,96 +61,61 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
     super.dispose();
   }
 
-  /// 加载报价详情
   Future<void> _loadOfferDetails() async {
     try {
-      // 如果有预设数据就先用，同时异步加载完整数据
       if (widget.offerData != null) {
         setState(() => _offerDetails = widget.offerData);
-        _refreshBlockStatus(); // 预置数据足够判断对方ID时，先查一次屏蔽状态
+        _refreshBlockStatus();
       }
       final details = await OfferService.getOfferDetails(widget.offerId);
       if (details != null && mounted) {
         setState(() => _offerDetails = details);
-        _refreshBlockStatus(); // 详情返回后再查一次，确保准确
+        _refreshBlockStatus();
       }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error loading offer details: $e');
-      }
-    }
+    } catch (_) {}
   }
 
-  /// 加载消息历史
   Future<void> _loadMessages() async {
     try {
       setState(() => _isLoadingMessages = true);
       final messages = await MessageService.getOfferMessages(
         offerId: widget.offerId,
       );
-
-      if (mounted) {
-        setState(() {
-          _messages = messages;
-          _isLoadingMessages = false;
-        });
-
-        // 标记消息为已读
-        if (_currentUserId != null) {
-          await MessageService.markMessagesAsRead(
-            offerId: widget.offerId,
-            receiverId: _currentUserId!,
-          );
-        }
-
-        // 滚动到底部
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _scrollToBottom();
-        });
+      if (!mounted) return;
+      setState(() {
+        _messages = messages;
+        _isLoadingMessages = false;
+      });
+      if (_currentUserId != null) {
+        await MessageService.markMessagesAsRead(
+          offerId: widget.offerId,
+          receiverId: _currentUserId!,
+        );
       }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error loading messages: $e');
-      }
-      if (mounted) {
-        setState(() => _isLoadingMessages = false);
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingMessages = false);
     }
   }
 
-  /// 订阅实时消息
   void _subscribeToMessages() {
     if (_messageChannel != null) return;
     _messageChannel = MessageService.subscribeToOfferMessages(
       offerId: widget.offerId,
       onMessageReceived: (message) {
-        if (kDebugMode) {
-          print('Received realtime message: ${message['message']}');
+        if (!mounted) return;
+        setState(() => _messages.add(message));
+        if (message['receiver_id'] == _currentUserId) {
+          MessageService.markMessagesAsRead(
+            offerId: widget.offerId,
+            receiverId: _currentUserId!,
+          );
         }
-
-        if (mounted) {
-          setState(() {
-            _messages.add(message);
-          });
-
-          // 如果是接收到的消息，标记为已读
-          if (message['receiver_id'] == _currentUserId) {
-            MessageService.markMessagesAsRead(
-              offerId: widget.offerId,
-              receiverId: _currentUserId!,
-            );
-          }
-
-          // 滚动到底部
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _scrollToBottom();
-          });
-        }
+        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
       },
     );
   }
 
-  /// 取消订阅消息
   void _unsubscribeFromMessages() {
     if (_messageChannel != null) {
       MessageService.unsubscribeFromMessages(_messageChannel!);
@@ -153,7 +123,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
     }
   }
 
-  /// 新增：根据报价详情里的 buyer/seller 计算对方ID
   String? _getPeerId() {
     if (_offerDetails == null || _currentUserId == null) return null;
     final buyerId = _offerDetails!['buyer_id'] as String?;
@@ -162,7 +131,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
     return _currentUserId == buyerId ? sellerId : buyerId;
   }
 
-  /// 新增：刷新屏蔽状态
   Future<void> _refreshBlockStatus() async {
     try {
       final me = _currentUserId;
@@ -174,23 +142,15 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
         _iBlockedOther = status.iBlockedOther;
         _otherBlockedMe = status.otherBlockedMe;
       });
-    } catch (e) {
-      if (kDebugMode) {
-        print('[OfferDetailPage] Error refreshing block status: $e');
-      }
-    }
+    } catch (_) {}
   }
 
-  /// 发送消息（关键操作：未验证会被引导去验证；屏蔽会拦截）
   Future<void> _sendMessage() async {
-    // ✅ 守卫：未登录/未验证则弹出引导并中断
     final allowed = await VerificationGuard.ensureVerifiedOrPrompt(
       context,
       feature: AppFeature.makeOffer,
     );
     if (!allowed) return;
-
-    // ✅ 屏蔽拦截（双方任一方屏蔽即可拦截）
     if (_blockedEitherWay) {
       _showSnackBar(
         _otherBlockedMe
@@ -200,44 +160,27 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
       );
       return;
     }
-
     final message = _messageController.text.trim();
     if (message.isEmpty || _isSendingMessage) return;
     if (_currentUserId == null || _offerDetails == null) return;
-
     setState(() => _isSendingMessage = true);
-
     try {
-      // 确定接收者ID
       final buyerId = _offerDetails!['buyer_id'];
       final sellerId = _offerDetails!['seller_id'];
       final receiverId = _currentUserId == buyerId ? sellerId : buyerId;
-
       final result = await MessageService.sendMessage(
         offerId: widget.offerId,
         receiverId: receiverId,
         message: message,
       );
-
-      if (result != null) {
-        _messageController.clear();
-        // 实时订阅会自动添加消息，这里不需要手动添加
-      } else {
-        _showSnackBar('发送消息失败，请重试', isError: true);
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('Error sending message: $e');
-      }
+      if (result != null) _messageController.clear();
+    } catch (_) {
       _showSnackBar('发送消息时出现错误', isError: true);
     } finally {
-      if (mounted) {
-        setState(() => _isSendingMessage = false);
-      }
+      if (mounted) setState(() => _isSendingMessage = false);
     }
   }
 
-  /// 滚动到底部
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
@@ -248,36 +191,25 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
     }
   }
 
-  /// 显示提示信息
   void _showSnackBar(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            Icon(
-              isError ? Icons.error_outline : Icons.check_circle_rounded,
-              color: Colors.white,
-              size: 16.sp,
-            ),
+            Icon(isError ? Icons.error_outline : Icons.check_circle_rounded,
+                color: Colors.white, size: 16.sp),
             SizedBox(width: 8.w),
-            Expanded(
-              child: Text(
-                message,
-                style: TextStyle(fontSize: 13.sp),
-              ),
-            ),
+            Expanded(child: Text(message, style: TextStyle(fontSize: 13.sp))),
           ],
         ),
         backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
         behavior: SnackBarBehavior.floating,
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
         margin: EdgeInsets.all(12.w),
       ),
     );
   }
 
-  /// 构建报价信息卡片
   Widget _buildOfferInfo() {
     if (_offerDetails == null) {
       return Card(
@@ -286,7 +218,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
           height: 120.h,
           child: Center(
             child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF667EEA)),
+              valueColor: AlwaysStoppedAnimation<Color>(_FB_BLUE),
               strokeWidth: 2.5.w,
             ),
           ),
@@ -301,7 +233,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
     final status = _offerDetails!['status']?.toString() ?? 'pending';
     final offerStatus = OfferStatus.fromString(status);
 
-    // 计算百分比
     final offer = double.tryParse(offerAmount) ?? 0;
     final original = double.tryParse(originalPrice.replaceAll('\$', '')) ?? 0;
     final percentage = original > 0 ? ((offer / original) * 100).round() : 0;
@@ -315,7 +246,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 商品标题和状态 + 菜单
             Row(
               children: [
                 Expanded(
@@ -330,10 +260,8 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                // 状态标签
                 Container(
-                  padding:
-                  EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                   decoration: BoxDecoration(
                     color: Color(offerStatus.color).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12.r),
@@ -352,13 +280,10 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                   ),
                 ),
                 SizedBox(width: 6.w),
-                // ⋯ 菜单（举报/屏蔽）
                 _buildMoreMenu(),
               ],
             ),
             SizedBox(height: 12.h),
-
-            // 报价信息
             Container(
               padding: EdgeInsets.all(12.w),
               decoration: BoxDecoration(
@@ -371,44 +296,31 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Offer Amount',
-                        style: TextStyle(
-                          fontSize: 11.sp,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                      Text(
-                        '\$$offerAmount',
-                        style: TextStyle(
-                          fontSize: 20.sp,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF667EEA),
-                        ),
-                      ),
+                      Text('Offer Amount',
+                          style: TextStyle(
+                              fontSize: 11.sp, color: Colors.grey.shade600)),
+                      Text('\$$offerAmount',
+                          style: TextStyle(
+                              fontSize: 20.sp,
+                              fontWeight: FontWeight.bold,
+                              color: _FB_BLUE)),
                     ],
                   ),
-                  if (original > 0) ...[
+                  if (original > 0)
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        Text(
-                          'Original Price',
-                          style: TextStyle(
-                            fontSize: 11.sp,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
+                        Text('Original Price',
+                            style: TextStyle(
+                                fontSize: 11.sp, color: Colors.grey.shade600)),
                         Row(
                           children: [
-                            Text(
-                              '\$$original',
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                color: Colors.grey.shade600,
-                                decoration: TextDecoration.lineThrough,
-                              ),
-                            ),
+                            Text('\$$original',
+                                style: TextStyle(
+                                  fontSize: 14.sp,
+                                  color: Colors.grey.shade600,
+                                  decoration: TextDecoration.lineThrough,
+                                )),
                             SizedBox(width: 8.w),
                             Container(
                               padding: EdgeInsets.symmetric(
@@ -417,20 +329,16 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                                 color: Colors.orange.shade100,
                                 borderRadius: BorderRadius.circular(10.r),
                               ),
-                              child: Text(
-                                '$percentage%',
-                                style: TextStyle(
-                                  fontSize: 10.sp,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.orange.shade700,
-                                ),
-                              ),
+                              child: Text('$percentage%',
+                                  style: TextStyle(
+                                      fontSize: 10.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.orange.shade700)),
                             ),
                           ],
                         ),
                       ],
                     ),
-                  ],
                 ],
               ),
             ),
@@ -440,7 +348,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
     );
   }
 
-  /// 新增：右上角 ⋯ 菜单
   Widget _buildMoreMenu() {
     final canToggleBlock = _getPeerId() != null && _currentUserId != null;
     return PopupMenuButton<int>(
@@ -473,7 +380,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
     );
   }
 
-  /// 新增：菜单动作
   Future<void> _onMenuAction(int value) async {
     switch (value) {
       case 1:
@@ -485,7 +391,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
     }
   }
 
-  /// 新增：举报底部单
   void _showReportSheet() {
     final peerId = _getPeerId();
     if (peerId == null) {
@@ -571,7 +476,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF667EEA),
+                    backgroundColor: _FB_BLUE,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12.r)),
@@ -586,7 +491,6 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
     );
   }
 
-  /// 新增：切换屏蔽/取消屏蔽
   Future<void> _toggleBlock() async {
     final peerId = _getPeerId();
     if (peerId == null) return;
@@ -600,13 +504,12 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
     }
     if (ok) {
       await _refreshBlockStatus();
-      setState(() {}); // 刷新菜单文字/输入区域
+      setState(() {});
     } else {
       _showSnackBar('Operation failed, please try again', isError: true);
     }
   }
 
-  /// 构建系统消息
   Widget _buildSystemMessage(Map<String, dynamic> message) {
     final messageText = message['message']?.toString() ?? '';
     return Center(
@@ -631,31 +534,21 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
     );
   }
 
-  /// 构建聊天消息气泡
   Widget _buildChatMessage(Map<String, dynamic> message, bool isMyMessage) {
     final messageText = message['message']?.toString() ?? '';
     final createdAt = message['created_at']?.toString() ?? '';
 
-    // 格式化时间
     String timeText = 'Now';
     if (createdAt.isNotEmpty) {
       try {
         final date = DateTime.parse(createdAt);
         final now = DateTime.now();
         final difference = now.difference(date);
-
-        if (difference.inMinutes < 1) {
-          timeText = 'Now';
-        } else if (difference.inMinutes < 60) {
-          timeText = '${difference.inMinutes}m';
-        } else if (difference.inHours < 24) {
-          timeText = '${difference.inHours}h';
-        } else {
-          timeText = '${date.day}/${date.month}';
-        }
-      } catch (e) {
-        timeText = 'Now';
-      }
+        if (difference.inMinutes < 1) timeText = 'Now';
+        else if (difference.inMinutes < 60) timeText = '${difference.inMinutes}m';
+        else if (difference.inHours < 24) timeText = '${difference.inHours}h';
+        else timeText = '${date.day}/${date.month}';
+      } catch (_) {}
     }
     return Align(
       alignment: isMyMessage ? Alignment.centerRight : Alignment.centerLeft,
@@ -670,9 +563,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                   maxWidth: MediaQuery.of(context).size.width * 0.75),
               padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
               decoration: BoxDecoration(
-                color: isMyMessage
-                    ? const Color(0xFF667EEA)
-                    : Colors.grey.shade100,
+                color: isMyMessage ? _FB_BLUE : Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(18.r).copyWith(
                   bottomRight: isMyMessage
                       ? Radius.circular(4.r)
@@ -712,13 +603,12 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
     );
   }
 
-  /// 构建消息列表
   Widget _buildMessageList() {
     if (_isLoadingMessages) {
       return Expanded(
         child: Center(
           child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF667EEA)),
+            valueColor: AlwaysStoppedAnimation<Color>(_FB_BLUE),
             strokeWidth: 2.5.w,
           ),
         ),
@@ -731,38 +621,24 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.chat_bubble_outline,
-                size: 64.w,
-                color: Colors.grey.shade400,
-              ),
+              Icon(Icons.chat_bubble_outline, size: 64.w, color: Colors.grey.shade400),
               SizedBox(height: 16.h),
-              Text(
-                'No messages yet',
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+              Text('No messages yet',
+                  style: TextStyle(
+                      fontSize: 16.sp,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500)),
               SizedBox(height: 8.h),
-              Text(
-                'Start the conversation!',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  color: Colors.grey.shade500,
-                ),
-              ),
+              Text('Start the conversation!',
+                  style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade500)),
             ],
           ),
         ),
       );
     }
-    // 屏蔽提示条（出现在消息列表顶部）
+
     final List<Widget> children = [];
-    if (_blockedEitherWay) {
-      children.add(_buildBlockBanner());
-    }
+    if (_blockedEitherWay) children.add(_buildBlockBanner());
 
     children.add(
       Expanded(
@@ -774,24 +650,16 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
             final message = _messages[index];
             final isMyMessage = message['sender_id'] == _currentUserId;
             final messageType = message['message_type'] ?? 'text';
-
-            if (messageType == 'system') {
-              return _buildSystemMessage(message);
-            }
-
+            if (messageType == 'system') return _buildSystemMessage(message);
             return _buildChatMessage(message, isMyMessage);
           },
         ),
       ),
     );
-    return Expanded(
-      child: Column(
-        children: children,
-      ),
-    );
+
+    return Expanded(child: Column(children: children));
   }
 
-  /// 新增：屏蔽提示条
   Widget _buildBlockBanner() {
     final text = _otherBlockedMe
         ? 'You can’t send messages because this user has blocked you.'
@@ -810,17 +678,14 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
           Icon(Icons.block, size: 16.w, color: Colors.red.shade700),
           SizedBox(width: 8.w),
           Expanded(
-            child: Text(
-              text,
-              style: TextStyle(color: Colors.red.shade700, fontSize: 12.sp),
-            ),
+            child: Text(text,
+                style: TextStyle(color: Colors.red.shade700, fontSize: 12.sp)),
           ),
         ],
       ),
     );
   }
 
-  /// 构建输入区域
   Widget _buildInputArea() {
     final disabled = _blockedEitherWay;
     return Container(
@@ -843,8 +708,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color:
-                  disabled ? Colors.grey.shade200 : Colors.grey.shade100,
+                  color: disabled ? Colors.grey.shade200 : Colors.grey.shade100,
                   borderRadius: BorderRadius.circular(25.r),
                 ),
                 child: TextField(
@@ -877,10 +741,8 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
               child: IgnorePointer(
                 ignoring: disabled,
                 child: Container(
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-                    ),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF1877F2),
                     shape: BoxShape.circle,
                   ),
                   child: Material(
@@ -896,16 +758,10 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                           padding: EdgeInsets.all(12.w),
                           child: CircularProgressIndicator(
                             strokeWidth: 2.w,
-                            valueColor:
-                            const AlwaysStoppedAnimation<Color>(
-                                Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
-                            : Icon(
-                          Icons.send_rounded,
-                          color: Colors.white,
-                          size: 24.w,
-                        ),
+                            : Icon(Icons.send_rounded, color: Colors.white, size: 24.w),
                       ),
                     ),
                   ),
@@ -920,29 +776,21 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ 仅 iOS 调整 AppBar 高度，与 sell/通知/saved 对齐
     final double statusBar = MediaQuery.of(context).padding.top;
     final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    final double _toolbarHeight =
-    _isIOS ? (statusBar + 38.0) : kToolbarHeight;
+    final double _toolbarHeight = _isIOS ? (statusBar + 38.0) : kToolbarHeight;
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         centerTitle: true,
-        // ✅ 与基准页一致（iOS：statusBar+38；Android：系统默认）
         toolbarHeight: _toolbarHeight,
+        backgroundColor: _FB_BLUE,                 // ✅ 直接上实色背景
+        surfaceTintColor: Colors.transparent,      // ✅ 关闭 M3 蒙层
+        scrolledUnderElevation: 0,
         elevation: 0,
-        backgroundColor: Colors.transparent,
-        flexibleSpace: const DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        iconTheme: IconThemeData(color: Colors.white, size: 20.w),
+        systemOverlayStyle: SystemUiOverlayStyle.light,
+        iconTheme: const IconThemeData(color: Colors.white, size: 20),
         title: Text(
           'Offer Details',
           style: TextStyle(

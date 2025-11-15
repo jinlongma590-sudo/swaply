@@ -71,7 +71,7 @@ class AppLocalizations {
 
   static const LocalizationsDelegate<AppLocalizations> delegate =
   _AppLocalizationsDelegate();
-// ---------- Generic / Auth ----------
+  // ---------- Generic / Auth ----------
   String get appTitle => 'Swaply';
   String get loginRequired => 'Login required';
   String loginRequiredMessage(String feature) =>
@@ -90,7 +90,7 @@ class AppLocalizations {
   String get about => 'About';
   String get settings => 'Settings';
   String get helpSupport => 'Help & Support';
-// ---------- Tabs / Common ----------
+  // ---------- Tabs / Common ----------
   String get home => 'Home';
   String get saved => 'Saved';
   String get sell => 'Sell';
@@ -98,11 +98,11 @@ class AppLocalizations {
   String get profile => 'Profile';
   String get favorites => 'Favorites';
   String get rating => 'Rating';
-// ---------- Home ----------
+  // ---------- Home ----------
   String get whatLookingFor => 'What are you looking for?';
   String get allZimbabwe => 'All Zimbabwe';
   String get searchPlaceholder => 'Search...';
-// Categories
+  // Categories
   String get trending => 'Trending';
   String get vehicles => 'Vehicles';
   String get property => 'Property';
@@ -119,7 +119,7 @@ class AppLocalizations {
   String get seekingWork => 'Seeking Work & CVs';
   String get fashion => 'Fashion';
   String get foodDrinks => 'Food, Agriculture & Drinks';
-// ---------- Saved ----------
+  // ---------- Saved ----------
   String get myFavorites => 'My Favorites';
   String get loginToSaveFavorites =>
       'Login to save your favorite items and searches.';
@@ -136,7 +136,7 @@ class AppLocalizations {
   String get savedOn => 'saved on';
   String get wishlist => 'Wishlist';
   String get noSavedSearches => 'No saved searches';
-// ---------- Sell ----------
+  // ---------- Sell ----------
   String get sellItem => 'Sell Item';
   String get loginToPost => 'Login to post your listings.';
   String get sellYourItems => 'Sell your items';
@@ -161,7 +161,7 @@ class AppLocalizations {
   String get navigateToSavedTab => 'Navigate to Saved tab';
   String get myPurchases => 'My Purchases';
   String get postListings => 'post listings';
-// ---------- Notifications ----------
+  // ---------- Notifications ----------
   String get notificationDeleted => 'Notification deleted';
   String get loginToReceiveNotifications => 'Login to receive notifications.';
   String get markAllAsRead => 'Mark all as read';
@@ -170,12 +170,12 @@ class AppLocalizations {
   String get notificationsWillAppearHere =>
       'Your notifications will appear here.';
   String get receiveNotifications => 'Login to receive notifications.';
-// ---------- Profile ----------
+  // ---------- Profile ----------
   String get guestUser => 'Guest user';
   String get browseWithoutAccount => 'Browsing without an account';
   String memberSince(String m) => 'Member since $m';
   String get editProfile => 'Edit Profile';
-// ---------- Cities ----------
+  // ---------- Cities ----------
   String get harare => 'Harare';
   String get bulawayo => 'Bulawayo';
   String get chitungwiza => 'Chitungwiza';
@@ -189,7 +189,7 @@ class AppLocalizations {
   String get bindura => 'Bindura';
   String get marondera => 'Marondera';
   String get redcliff => 'Redcliff';
-// ---------- Variants / Typos you might have ----------
+  // ---------- Variants / Typos you might have ----------
   String get saveItems => 'Save items';
   String get saveltems => 'Save items'; // l/I 鎷煎啓閿欒
   @override
@@ -295,8 +295,8 @@ void wireAuthHook() {
   });
 }
 
-// 鈥斺€?浠呬緵鏈枃浠朵娇鐢ㄧ殑 UTF-8 涔辩爜淇锛妸鈥溍芭糕€?/ 脙 / 芒 鈥︹€濈被杩樺師锛夛紝涓嶄緷璧?dart:convert 鈥斺€?
-// 锛堥伩鍏嶄綘鍦?main.dart 椤堕儴蹇樿 import 瀵艰嚧鐨勬姤閿欙級
+// 鈥斺€?浠呬緵鏈枃浠朵娇鐢ㄧ殑 UTF-8 涔辩爜淇锛妸鈥溍芭糕€?/ 脙 / 芒 鈥︹€濠
+//（原样保留你现有注释与逻辑）
 String _fixUtf8Mojibake(String? raw) {
   if (raw == null || raw.isEmpty) return raw ?? '';
   var s = raw;
@@ -395,7 +395,7 @@ Future<void> _handleSupabaseUri(Uri? uri) async {
     if (uri.fragment.isNotEmpty) {
       try {
         params.addAll(Uri.splitQueryString(uri.fragment));
-      } catch (e) { // ✅ 修复：catch () 改为 catch (e)
+      } catch (e) {
         // 某些厂商邮箱可能把 # 之后的内容做了编码，尽量兜底
         final frag = uri.fragment.replaceAll('#', '').replaceAll('?', '&');
         params.addAll(Uri.splitQueryString(frag));
@@ -458,14 +458,14 @@ void _listenDeepLinksForSupabase() {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-// ✅ 全局：内容延伸到屏幕边缘 + 状态栏透明并使用白色图标
+  // ✅ 全局：内容延伸到屏幕边缘 + 状态栏透明并使用白色图标
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
     statusBarBrightness: Brightness.dark,
   ));
-// === 屏蔽 Supabase 刷新 session 的日志（开发期） ===
+  // === 屏蔽 Supabase 刷新 session 的日志（开发期） ===
       {
     final _orig = debugPrint;
     debugPrint = (String? message, {int? wrapWidth}) {
@@ -476,7 +476,7 @@ Future<void> main() async {
       _orig(message, wrapWidth: wrapWidth);
     };
   }
-// ========= 全局错误兜底 =========
+  // ========= 全局错误兜底 =========
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
   };
@@ -514,7 +514,7 @@ Future<void> main() async {
       ),
     );
   };
-// ✅ Supabase 初始化（关键：authCallbackUrlHostname 与你的回调 host 一致）
+  // ✅ Supabase 初始化（关键：authCallbackUrlHostname 与你的回调 host 一致）
   await Supabase.initialize(
     url: 'https://rhckybselarzglkmlyqs.supabase.co',
     anonKey:
@@ -524,12 +524,18 @@ Future<void> main() async {
     ),
     // debug: true,
   );
-// ❌ 不需要：SupabaseAuth.instance.initialize();
-// ✅ 处理“首次通过邮件深链打开 App”的场景
+  // ❌ 不需要：SupabaseAuth.instance.initialize();
+  // ✅ 处理“首次通过邮件深链打开 App”的场景
   await _recoverInitialSupabaseSession();
-// ✅ 全局 Auth 事件监听
+  // ✅ 冷/热启动：如当前已登录，先立即建立通知订阅（避免监听器挂载前的时间窗丢事件）
+  final _supaClient = Supabase.instance.client;
+  final _bootUser = _supaClient.auth.currentUser;
+  if (_bootUser != null) {
+    await NotificationService.subscribeUser(_bootUser.id);
+  }
+  // ✅ 全局 Auth 事件监听
   wireAuthHook();
-// ✅ 方案 B：启动时补档 + 注册/登录时监听
+  // ✅ 方案 B：启动时补档 + 注册/登录时监听
   // 假设 _ensureProfileForCurrentUserOnce 和 _setupAuthListener 在别处定义
   // await _ensureProfileForCurrentUserOnce();
   // _setupAuthListener();
@@ -539,7 +545,7 @@ Future<void> main() async {
       child: const MyApp(),
     ),
   );
-// ✅ 前台监听后续深链
+  // ✅ 前台监听后续深链
   _listenDeepLinksForSupabase();
 }
 
@@ -553,14 +559,14 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    RecoveryProbe.attach();   // 仅打印日志，不做导航
+    RecoveryProbe.attach(); // 仅打印日志，不做导航
     WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    RecoveryProbe.dispose();// ✅ 释放深链订阅
+    RecoveryProbe.dispose(); // ✅ 释放深链订阅
     super.dispose();
   }
 
@@ -623,7 +629,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   primary: const Color(0xFF2196F3),
                 ),
                 appBarTheme: const AppBarTheme(
-                  backgroundColor: const Color(0xFF2196F3),
+                  backgroundColor: Color(0xFF2196F3),
                   foregroundColor: Colors.white,
                   elevation: 0,
                 ),
@@ -642,11 +648,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
               routes: {
                 '/welcome': (_) => const WelcomeScreen(),
                 '/login': (_) => const LoginScreen(),
-                '/home': (_) => MainNavigationPage( // 假设 MainNavigationPage 在 main_navigation.dart
-                  isGuest:
-                  Supabase.instance.client.auth.currentSession == null,
+                '/home': (_) => MainNavigationPage(
+                  // 假设 MainNavigationPage 在 main_navigation.dart
+                  isGuest: Supabase
+                      .instance.client.auth.currentSession ==
+                      null,
                 ),
-                '/coupons': (_) => CouponManagementPage(),
+                '/coupons': (_) => const CouponManagementPage(),
                 // ✅ 注册重置密码路由，供统一跳转
                 '/reset-password': (_) => const ResetPasswordPage(),
               },
@@ -657,6 +665,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     );
   }
 }
+
 // 莽禄搂莽禄颅忙路禄氓艩  MainNavigationPage 氓鈥櫯捗モ€β睹ぢ烩€撁甭?..
 // [盲赂潞盲潞鈥犆ㄅ犫€毭撀伱┞好┾€斅疵寂捗库劉茅鈥∨捗ぢ柯澝ε捖伱モ€β睹ぢ解劉盲禄拢莽 聛盲赂聧氓聫藴]
 // 莽禄搂莽禄颅忙路禄氓艩  MainNavigationPage 氓鈥櫯捗モ€β睹ぢ烩€撁甭?..
@@ -675,7 +684,18 @@ const double _CUSTOM_HEADER_HEIGHT = 110.0;
 class _MainNavigationPageState extends State<MainNavigationPage>
     with TickerProviderStateMixin {
   int _selectedIndex = 0;
+
+  // 🔔 未读角标 & 订阅句柄
   int _notificationCount = 0;
+  StreamSubscription<Map<String, dynamic>>? _notifSub;
+
+  // 冷启动或需要时同步未读数
+  Future<void> _syncUnread() async {
+    final n = await NotificationService.getUnreadNotificationsCount();
+    if (!mounted) return;
+    setState(() => _notificationCount = n);
+  }
+
   late AnimationController _sellButtonController;
   late Animation<double> _sellButtonAnimation;
 // 芒鈥樎?氓藛 忙沤鈥懊ぢ号捗ヂモ€斆р€衡€樏ヂ惵モ劉篓莽鈥郝该モ€β趁ヂ徦溍┾€÷徝妓喢ヂ仿裁ニ?茅鈩⒙?_authSubscription茂录鈥?
@@ -700,11 +720,45 @@ class _MainNavigationPageState extends State<MainNavigationPage>
   @override
   void initState() {
     super.initState();
+
+    // 先同步一次未读数
+    if (!widget.isGuest) {
+      _syncUnread();
+    }
+
+    // 监听 NotificationService 的全局广播：INSERT/UPDATE 实时刷新角标
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null) {
+      _notifSub = NotificationService.stream.listen((evt) {
+        if (!mounted) return;
+
+        // 可选：服务端广播重置信号
+        if (evt['_type'] == '__reset__') {
+          setState(() => _notificationCount = 0);
+          return;
+        }
+
+        // 只处理属于当前用户的事件
+        final recipient = (evt['recipient_id'] ?? '').toString();
+        if (recipient != user.id) return;
+
+        final isRead = evt['is_read'] == true;
+        final isDeleted = evt['is_deleted'] == true;
+
+        // UPDATE（已读/删除）→ 全量刷新；INSERT（未读）→ +1
+        if (isRead || isDeleted) {
+          _syncUnread();
+        } else {
+          setState(() {
+            _notificationCount = (_notificationCount + 1).clamp(0, 999);
+          });
+        }
+      });
+    }
+
     _loadNotificationCount();
 
-// 芒鈥樎?氓藛 忙沤鈥?MainNavigationPage 茅鈥∨捗♀€灻ぢ号捗ヂモ€斆р€衡€樏ヂ惵モ劉篓茂录藛忙鈥⒙疵β得ニ?茅鈩⒙っ尖€?
-
-// Sell忙艗鈥懊┾€櫬ヅ犅р€澛?
+    // Sell忙艗鈥懊┾€櫬ヅ犅р€澛?
     _sellButtonController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
@@ -713,7 +767,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
       CurvedAnimation(parent: _sellButtonController, curve: Curves.easeInOut),
     );
 
-// 芒艙鈥?忙鈥撀懊ヂ⑴久寂∶ヂ宦睹颗该βｂ偓忙鸥楼忙卢垄猫驴沤氓藛赂茂录藛氓鈥ε撁ヂ衡€⒚ε撀好ニ喡睹尖€?
+    // 芒艙鈥?忙鈥撀懊ヂ⑴久寂∶ヂ宦睹颗该βｂ偓忙鸥楼忙卢垄猫驴沤氓藛赂茂录藛氓鈥⒙疵β得ニ?茅鈩⒙っ尖€?
     if (!widget.isGuest) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Future.delayed(const Duration(milliseconds: 1500), () {
@@ -728,7 +782,8 @@ class _MainNavigationPageState extends State<MainNavigationPage>
   @override
   void dispose() {
     _sellButtonController.dispose();
-// 芒鈥樎?氓藛 忙沤鈥懊ヂ忊€撁β端喢⒚┧溾€γぢ宦Ｃ?聛茂录藛氓路虏氓藛 茅鈩⒙っ尖€?
+    _notifSub?.cancel(); // ✅ 释放广播订阅
+    _notifSub = null;
     super.dispose();
   }
 
@@ -928,8 +983,8 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     );
   }
 
-  Widget _buildTabNavigator(GlobalKey<NavigatorState> key, Widget root,
-      LanguageProvider languageProvider) {
+  Widget _buildTabNavigator(
+      GlobalKey<NavigatorState> key, Widget root, LanguageProvider languageProvider) {
     return Navigator(
       key: key,
       onGenerateRoute: (_) => MaterialPageRoute(
@@ -951,7 +1006,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     final l10n = AppLocalizations.of(context)!;
     final languageProvider = Provider.of<LanguageProvider>(context);
 
-// 鉁?棣栭〉鏍瑰寘涓€灞?IosInsetsGuard
+    // 鉁?棣栭〉鏍瑰寘涓€灞?IosInsetsGuard
     final List<Widget> _pages = [
       _buildTabNavigator(
           _homeKey, IosInsetsGuard(child: const _HomeRoot()), languageProvider),
@@ -989,64 +1044,60 @@ class _MainNavigationPageState extends State<MainNavigationPage>
           index: _selectedIndex,
           children: _pages,
         ),
-        bottomNavigationBar: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 10.h,
-                offset: Offset(0, -2.h),
-              ),
-            ],
-          ),
-          // 去掉 SafeArea，改用自定义底部内边距，让 iOS 真机更贴底
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              8.w,
-              8.h,
-              8.w,
-              (Theme.of(context).platform == TargetPlatform.iOS &&
-                  MediaQuery.of(context).padding.bottom > 0)
-                  ? 10.0.h
-                  : 8.0.h,
+        bottomNavigationBar: SafeArea(
+          top: false,
+          bottom: true, // 只处理底部安全区（iOS 会自动避开 Home 指示条）
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 10.h,
+                  offset: Offset(0, -2.h),
+                ),
+              ],
             ),
-            child: SizedBox(
-              height: 56.h, // 原 65.h -> 收窄 56.h，更贴底
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildCompactNavItem(
-                    icon: Icons.home_outlined,
-                    activeIcon: Icons.home_rounded,
-                    label: l10n.home,
-                    index: 0,
-                    context: context,
-                  ),
-                  _buildCompactNavItem(
-                    icon: Icons.bookmark_outline_rounded,
-                    activeIcon: Icons.bookmark_rounded,
-                    label: l10n.saved,
-                    index: 1,
-                    context: context,
-                  ),
-                  _buildCentralSellButton(context),
-                  _buildCompactNavItemWithBadge(
-                    icon: Icons.notifications_outlined,
-                    activeIcon: Icons.notifications_rounded,
-                    label: l10n.notifications,
-                    index: 3,
-                    badgeCount: _notificationCount,
-                    context: context,
-                  ),
-                  _buildCompactNavItem(
-                    icon: Icons.person_outline_rounded,
-                    activeIcon: Icons.person_rounded,
-                    label: l10n.profile,
-                    index: 4,
-                    context: context,
-                  ),
-                ],
+            child: Padding(
+              // 固定内边距；底部抬高交给 SafeArea 处理，避免你自己再叠加
+              padding: EdgeInsets.fromLTRB(8.w, 6.h, 8.w, 8.h),
+              child: SizedBox(
+                height: 52.h, // 稍薄一点，更接近系统 TabBar 的手感
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildCompactNavItem(
+                      icon: Icons.home_outlined,
+                      activeIcon: Icons.home_rounded,
+                      label: l10n.home,
+                      index: 0,
+                      context: context,
+                    ),
+                    _buildCompactNavItem(
+                      icon: Icons.bookmark_outline_rounded,
+                      activeIcon: Icons.bookmark_rounded,
+                      label: l10n.saved,
+                      index: 1,
+                      context: context,
+                    ),
+                    _buildCentralSellButton(context),
+                    _buildCompactNavItemWithBadge(
+                      icon: Icons.notifications_outlined,
+                      activeIcon: Icons.notifications_rounded,
+                      label: l10n.notifications,
+                      index: 3,
+                      badgeCount: _notificationCount,
+                      context: context,
+                    ),
+                    _buildCompactNavItem(
+                      icon: Icons.person_outline_rounded,
+                      activeIcon: Icons.person_rounded,
+                      label: l10n.profile,
+                      index: 4,
+                      context: context,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1073,7 +1124,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
         }
         setState(() => _selectedIndex = index);
       },
-      child: Container(
+      child: SizedBox(
         width: 60.w,
         height: 52.h,
         child: AnimatedContainer(
@@ -1142,10 +1193,13 @@ class _MainNavigationPageState extends State<MainNavigationPage>
         }
         setState(() {
           _selectedIndex = index;
-          if (index == 3) _loadNotificationCount();
+          if (index == 3) {
+            // ✅ 进入通知页时先清零角标（通知页操作也会通过回调同步，双保险）
+            _notificationCount = 0;
+          }
         });
       },
-      child: Container(
+      child: SizedBox(
         width: 60.w,
         height: 52.h,
         child: AnimatedContainer(
@@ -1346,8 +1400,6 @@ class _MainNavigationPageState extends State<MainNavigationPage>
   }
 }
 
-
-
 /* ------------------------------------------------ */
 /* =========== TOP-LEVEL WIDGETS START HERE =========== */
 /* ------------------------------------------------ */
@@ -1405,6 +1457,7 @@ class _ProfileRoot extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ProfilePage(isGuest: isGuest);
 }
+
 /* ---------------- Saved Page (收藏页) START ---------------- */
 class SavedPage extends StatefulWidget {
   final bool isGuest;
@@ -4639,6 +4692,9 @@ class _NotificationPageState extends State<NotificationPage> {
   // ✅ 统一使用首页的 Facebook 蓝
   static const Color _PRIMARY_BLUE = Color(0xFF1877F2);
 
+  // ✅ 新增：仅监听“全局通知流”，不在页面里直连 Supabase
+  StreamSubscription<Map<String, dynamic>>? _notifSub;
+
   // ✅ A) 精简版蓝色头部（与 Sell 页一致：更短、更上移；标题与右上角按钮同一基线）
   Widget _blueHeader({
     required BuildContext context,
@@ -4765,8 +4821,23 @@ class _NotificationPageState extends State<NotificationPage> {
   void initState() {
     super.initState();
     if (!widget.isGuest) {
-      _loadNotifications();
-      _subscribeToNotifications();
+      _loadNotifications(); // 首屏拉历史
+      // ✅ 监听全局广播：任何新事件/更新都能及时进来（即使用户在别的页面）
+      _notifSub = NotificationService.stream.listen((row) {
+        if (!mounted) return;
+        final id = (row['id'] ?? '').toString();
+        final idx = _notifications.indexWhere(
+              (n) => (n['id'] ?? '').toString() == id,
+        );
+        setState(() {
+          if (idx >= 0) {
+            _notifications[idx] = row; // 覆盖更新
+          } else {
+            _notifications.insert(0, row); // 新增顶插
+          }
+        });
+        _updateUnreadCount();
+      });
     } else {
       setState(() => _isLoading = false);
     }
@@ -4778,7 +4849,7 @@ class _NotificationPageState extends State<NotificationPage> {
 
   @override
   void dispose() {
-    _unsubscribeFromNotifications();
+    _notifSub?.cancel(); // ✅ 只取消对“流”的监听，不动全局订阅
     super.dispose();
   }
 
@@ -4804,24 +4875,9 @@ class _NotificationPageState extends State<NotificationPage> {
     }
   }
 
-  Future<void> _subscribeToNotifications() async {
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) return;
-    await NotificationService.subscribeUser(
-      user.id,
-      onEvent: (Map<String, dynamic> notification) {
-        if (!mounted) return;
-        setState(() {
-          _notifications.insert(0, notification);
-        });
-        _updateUnreadCount();
-      },
-    );
-  }
-
-  Future<void> _unsubscribeFromNotifications() async {
-    await NotificationService.unsubscribe();
-  }
+  // ⛔️ 页面级订阅/退订已删除，统一改为监听 NotificationService.stream
+  // Future<void> _subscribeToNotifications() async { ... }
+  // Future<void> _unsubscribeFromNotifications() async { ... }
 
   void _updateUnreadCount() {
     final unreadCount =
@@ -5485,6 +5541,7 @@ class NoGlowScrollBehavior extends ScrollBehavior {
 
 const _kPrivacyUrl = 'https://www.swaply.cc/privacy';
 const _kDeleteUrl = 'https://www.swaply.cc/delete-account';
+
 
 
 //---------------- Profile Page 个人资料页 ----------------

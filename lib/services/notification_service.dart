@@ -1,10 +1,14 @@
-// lib/services/notification_service.dart - 单例化订阅版本（支持 onEvent 回调）
-import 'package:flutter/foundation.dart';
+// lib/services/notification_service.dart
+// 单例化 + 全局广播流版本（前台实时推送到任意页面）
+// 兼容你现有的 CRUD 接口；只需在 main.dart 启一次订阅即可。
+
+import 'dart:async';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 typedef NotificationEventCallback = void Function(
-  Map<String, dynamic> notification,
-);
+    Map<String, dynamic> notification,
+    );
 
 enum NotificationType {
   offer('offer'),
@@ -22,43 +26,51 @@ class NotificationService {
   static final SupabaseClient _client = Supabase.instance.client;
   static const String _tableName = 'notifications';
 
-  // ===== 核心订阅管理 =====
+  // ===== Realtime 通道状态 =====
   static String? _currentUserId;
   static RealtimeChannel? _channel;
 
   static bool get isSubscribed => _channel != null && _currentUserId != null;
 
+  // ===== 全局广播流（任意页面都能监听）=====
+  static final StreamController<Map<String, dynamic>> _controller =
+  StreamController<Map<String, dynamic>>.broadcast();
+  static Stream<Map<String, dynamic>> get stream => _controller.stream;
+
+  // 简单去重，避免同一通知重复推送
+  static final Set<String> _seenIds = <String>{};
+
   static void _debugPrint(String message) {
     if (kDebugMode) {
+      // ignore: avoid_print
       print('[NotificationService] $message');
     }
   }
 
-  /// 订阅用户通知（幂等）：
-  /// - 若已订阅相同 userId，会直接返回
-  /// - 命名参数 [onEvent]：当有新的通知（INSERT）写入时回调
+  /// 订阅用户通知（幂等，全局唯一通道）：
+  /// - 在 main.dart 启一次即可；页面不要再直接连 Supabase
+  /// - 兼容 onEvent，同时**永远**向 NotificationService.stream 广播
   static Future<void> subscribeUser(
-    String userId, {
-    NotificationEventCallback? onEvent,
-  }) async {
-    // 如果已经订阅同一用户，直接返回
+      String userId, {
+        NotificationEventCallback? onEvent,
+      }) async {
+    // 已订阅相同用户则直接返回
     if (_currentUserId == userId && _channel != null) {
       _debugPrint('Already subscribed for user: $userId');
       return;
     }
 
-    // 先清理旧订阅
+    // 清理旧订阅
     await unsubscribe();
 
-    // 创建新订阅
     _currentUserId = userId;
     final ch = _client.channel('notifications:user:$userId');
 
+    // INSERT：新通知
     ch.onPostgresChanges(
       event: PostgresChangeEvent.insert,
       schema: 'public',
       table: _tableName,
-      // 仅监听该用户的通知
       filter: PostgresChangeFilter(
         type: PostgresChangeFilterType.eq,
         column: 'recipient_id',
@@ -68,8 +80,35 @@ class NotificationService {
         final rec = payload.newRecord;
         if (rec == null) return;
         final data = Map<String, dynamic>.from(rec);
+
+        final id = (data['id'] ?? '').toString();
+        if (id.isNotEmpty) {
+          if (_seenIds.contains(id)) return;
+          _seenIds.add(id);
+        }
+
         _debugPrint('New notification received: $data');
+
         if (onEvent != null) onEvent(data);
+        _controller.add(data); // 全局广播
+      },
+    );
+
+    // UPDATE：例如 is_read 等状态外部被修改时，同步 UI
+    ch.onPostgresChanges(
+      event: PostgresChangeEvent.update,
+      schema: 'public',
+      table: _tableName,
+      filter: PostgresChangeFilter(
+        type: PostgresChangeFilterType.eq,
+        column: 'recipient_id',
+        value: userId,
+      ),
+      callback: (payload) {
+        final rec = payload.newRecord;
+        if (rec == null) return;
+        final data = Map<String, dynamic>.from(rec);
+        _controller.add(data); // 交给前端按 id 覆盖
       },
     );
 
@@ -82,12 +121,21 @@ class NotificationService {
   static Future<void> unsubscribe() async {
     if (_channel != null) {
       try {
+        // 某些 SDK 版本提供 unsubscribe()
+        try {
+          await _channel!.unsubscribe();
+        } catch (_) {
+          // 忽略：有的版本无此方法
+        }
         await _client.removeChannel(_channel!);
-      } catch (_) {}
+      } catch (_) {
+        // 忽略移除异常，尽量保证后续状态清理
+      }
       _debugPrint('Unsubscribed from notifications');
     }
     _channel = null;
     _currentUserId = null;
+    _seenIds.clear(); // ✅ 清空去重集
   }
 
   // ========== 通知创建方法 ==========
@@ -121,9 +169,9 @@ class NotificationService {
       };
 
       final result =
-          await _client.from(_tableName).insert(data).select().single();
-      _debugPrint('Notification created successfully: ${result['id']}');
+      await _client.from(_tableName).insert(data).select().single();
 
+      _debugPrint('Notification created successfully: ${result['id']}');
       return Map<String, dynamic>.from(result);
     } catch (e) {
       _debugPrint('Error creating notification: $e');
@@ -184,7 +232,7 @@ class NotificationService {
         type: NotificationType.offer,
         title: 'New Offer Received',
         message:
-            '$displayName made an offer of \$${offerAmount.toStringAsFixed(0)} for your $listingTitle',
+        '$displayName made an offer of \$${offerAmount.toStringAsFixed(0)} for your $listingTitle',
         listingId: listingId,
         metadata: {
           'offer_amount': offerAmount,
@@ -321,9 +369,9 @@ class NotificationService {
       await _client
           .from(_tableName)
           .update({
-            'is_read': true,
-            'read_at': DateTime.now().toIso8601String(),
-          })
+        'is_read': true,
+        'read_at': DateTime.now().toIso8601String(),
+      })
           .eq('id', notificationId)
           .eq('recipient_id', currentUserId);
 
@@ -344,9 +392,9 @@ class NotificationService {
       await _client
           .from(_tableName)
           .update({
-            'is_read': true,
-            'read_at': DateTime.now().toIso8601String(),
-          })
+        'is_read': true,
+        'read_at': DateTime.now().toIso8601String(),
+      })
           .eq('recipient_id', targetUserId)
           .eq('is_read', false);
 
