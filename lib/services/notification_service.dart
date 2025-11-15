@@ -77,9 +77,7 @@ class NotificationService {
         value: userId,
       ),
       callback: (payload) {
-        final rec = payload.newRecord;
-        if (rec == null) return;
-        final data = Map<String, dynamic>.from(rec);
+        final data = Map<String, dynamic>.from(payload.newRecord);
 
         final id = (data['id'] ?? '').toString();
         if (id.isNotEmpty) {
@@ -105,37 +103,42 @@ class NotificationService {
         value: userId,
       ),
       callback: (payload) {
-        final rec = payload.newRecord;
-        if (rec == null) return;
-        final data = Map<String, dynamic>.from(rec);
+        final data = Map<String, dynamic>.from(payload.newRecord);
         _controller.add(data); // 交给前端按 id 覆盖
       },
     );
 
-    await ch.subscribe();
+    // 不要 await：subscribe() 在某些 SDK 版本里不是 Future
+    ch.subscribe();
     _channel = ch;
     _debugPrint('Subscribed to notifications for user: $userId');
   }
 
   /// 取消订阅（幂等）
   static Future<void> unsubscribe() async {
-    if (_channel != null) {
-      try {
-        // 某些 SDK 版本提供 unsubscribe()
-        try {
-          await _channel!.unsubscribe();
-        } catch (_) {
-          // 忽略：有的版本无此方法
-        }
-        await _client.removeChannel(_channel!);
-      } catch (_) {
-        // 忽略移除异常，尽量保证后续状态清理
-      }
-      _debugPrint('Unsubscribed from notifications');
-    }
+    final ch = _channel;
     _channel = null;
     _currentUserId = null;
     _seenIds.clear(); // ✅ 清空去重集
+
+    if (ch != null) {
+      try {
+        // 某些 SDK 版本提供 unsubscribe()
+        try {
+          ch.unsubscribe();
+        } catch (_) {
+          // 忽略：有的版本无此方法或为同步方法
+        }
+        try {
+          _client.removeChannel(ch);
+        } catch (_) {
+          // 忽略移除异常
+        }
+        _debugPrint('Unsubscribed from notifications');
+      } catch (_) {
+        // 忽略
+      }
+    }
   }
 
   // ========== 通知创建方法 ==========
