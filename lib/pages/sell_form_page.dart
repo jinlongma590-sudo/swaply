@@ -1,6 +1,5 @@
 // lib/pages/sell_form_page.dart
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart'; // ✅ kIsWeb & defaultTargetPlatform
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -411,7 +410,13 @@ class _SellFormPageState extends State<SellFormPage>
           labelStyle: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
           hintStyle: TextStyle(fontSize: 11.sp, color: Colors.grey.shade400),
         ),
-        validator: isRequired ? (v) => v!.isEmpty ? 'Required' : null : null,
+        // ✅ [MODIFIED] 遵照指示：修改校验逻辑以处理空白字符串
+        validator: isRequired
+            ? (v) {
+          if (v == null || v.trim().isEmpty) return 'Required';
+          return null;
+        }
+            : null,
       ),
     );
   }
@@ -443,7 +448,7 @@ class _SellFormPageState extends State<SellFormPage>
           fillColor: Colors.white,
           labelStyle: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
         ),
-        value: _dynamicValues[key],
+        initialValue: _dynamicValues[key],
         items: items
             .map((c) => DropdownMenuItem(
             value: c, child: Text(c, style: TextStyle(fontSize: 13.sp))))
@@ -463,7 +468,9 @@ class _SellFormPageState extends State<SellFormPage>
   Future<void> _publishLocalOnly() async {
     // 守卫：未登录/未验证则引导
     if (!await VerificationGuard.ensureVerifiedOrPrompt(context,
-        feature: AppFeature.postListing)) return;
+        feature: AppFeature.postListing)) {
+      return;
+    }
 
     if (!_formKey.currentState!.validate()) return;
     if (_images.isEmpty) {
@@ -511,7 +518,9 @@ class _SellFormPageState extends State<SellFormPage>
   Future<void> _submitListing() async {
     // 守卫：未登录/未验证则引导
     if (!await VerificationGuard.ensureVerifiedOrPrompt(context,
-        feature: AppFeature.postListing)) return;
+        feature: AppFeature.postListing)) {
+      return;
+    }
 
     if (_submitting) return;
     if (!_formKey.currentState!.validate()) return;
@@ -615,7 +624,7 @@ class _SellFormPageState extends State<SellFormPage>
 
       // ✅ [MODIFIED] 按照清单要求修改：
       // 假设你拿到了新商品ID（如果拿不到，可以传 null，不影响刷新）
-      final String? newId = (row?['id'] as String?);
+      final String? newId = (row['id'] as String?);
 
       // ✅ 1) 广播发布成功
       ListingEventsBus.instance.emitPublished(newId);
@@ -1029,8 +1038,8 @@ class _SellFormPageState extends State<SellFormPage>
     );
 
     // 3. 构建 32x32 右侧占位
-    final Widget iosRightPlaceholder =
-    const SizedBox(width: kButtonSize, height: kButtonSize);
+    const Widget iosRightPlaceholder =
+    SizedBox(width: kButtonSize, height: kButtonSize);
 
     // 4. 组装
     return PreferredSize(
@@ -1084,6 +1093,8 @@ class _SellFormPageState extends State<SellFormPage>
                   padding: EdgeInsets.all(12.w),
                   child: Form(
                     key: _formKey,
+                    // ✅ [MODIFIED] 遵照指示：开启交互时自动校验
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1258,10 +1269,10 @@ class _SellFormPageState extends State<SellFormPage>
                     right: 0,
                     child: Container(
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
+                        gradient: const LinearGradient(
                           colors: [
-                            const Color(0xFF2196F3),
-                            const Color(0xFF1976D2)
+                            Color(0xFF2196F3),
+                            Color(0xFF1976D2)
                           ],
                         ),
                         borderRadius: BorderRadius.only(
@@ -1747,7 +1758,11 @@ class _SellFormPageState extends State<SellFormPage>
               ),
               labelStyle: TextStyle(fontSize: 12.sp),
             ),
-            validator: (v) => v!.isEmpty ? 'Required' : null,
+            // ✅ [MODIFIED] 遵照指示：修改校验逻辑以处理空白字符串
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return 'Required';
+              return null;
+            },
           ),
           SizedBox(height: 12.h),
 
@@ -1767,7 +1782,11 @@ class _SellFormPageState extends State<SellFormPage>
               ),
               labelStyle: TextStyle(fontSize: 12.sp),
             ),
-            validator: (v) => v!.isEmpty ? 'Required' : null,
+            // ✅ [MODIFIED] 遵照指示：修改校验逻辑以处理空白字符串
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return 'Required';
+              return null;
+            },
           ),
           SizedBox(height: 12.h),
 
@@ -1783,7 +1802,7 @@ class _SellFormPageState extends State<SellFormPage>
               ),
               labelStyle: TextStyle(fontSize: 12.sp),
             ),
-            value: _city,
+            initialValue: _city,
             items: _cities
                 .map((c) => DropdownMenuItem(
                 value: c,
@@ -1867,7 +1886,11 @@ class _SellFormPageState extends State<SellFormPage>
               ),
               labelStyle: TextStyle(fontSize: 12.sp),
             ),
-            validator: (v) => v!.isEmpty ? 'Required' : null,
+            // ✅ [MODIFIED] 遵照指示：修改校验逻辑以处理空白字符串
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return 'Required';
+              return null;
+            },
           ),
           SizedBox(height: 12.h),
 
@@ -1889,7 +1912,11 @@ class _SellFormPageState extends State<SellFormPage>
               hintStyle:
               TextStyle(fontSize: 11.sp, color: Colors.grey.shade400),
             ),
-            validator: (v) => v!.isEmpty ? 'Required' : null,
+            // ✅ [MODIFIED] 遵照指示：修改校验逻辑以处理空白字符串
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return 'Required';
+              return null;
+            },
           ),
         ],
       ),
@@ -1999,7 +2026,7 @@ class _SellFormPageState extends State<SellFormPage>
                     coupon.title,
                     '${_getCouponTypeDescription(coupon.type)} • ${coupon.expiryStatusText}',
                   ))
-                      .toList(),
+                  ,
                 ],
               ),
             ],

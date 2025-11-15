@@ -25,7 +25,7 @@ import 'package:flutter/services.dart';
 class TaskManagementPage extends StatefulWidget {
   final int initialTab;
 
-  const TaskManagementPage({Key? key, this.initialTab = 0}) : super(key: key);
+  const TaskManagementPage({super.key, this.initialTab = 0});
 
   @override
   State<TaskManagementPage> createState() => _TaskManagementPageState();
@@ -488,7 +488,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
   Widget build(BuildContext context) {
     super.build(context);
 
-    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
     return FutureBuilder<void>(
       future: _dataFuture,
@@ -497,7 +497,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
             snapshot.connectionState == ConnectionState.waiting &&
                 _lastFetchAt == null;
 
-        if (_isIOS) {
+        if (isIOS) {
           // ===== iOS：自定义头部（绿色渐变仅用于导航条） + 白色卡片 =====
           return Scaffold(
             backgroundColor: const Color(0xFFF8F9FA),
@@ -800,7 +800,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
         indicatorSize: TabBarIndicatorSize.tab,
         indicatorPadding: EdgeInsets.zero,
         dividerColor: Colors.transparent,
-        overlayColor: MaterialStateProperty.all(Colors.transparent),
+        overlayColor: WidgetStateProperty.all(Colors.transparent),
         tabs: [
           Tab(
             height: 44.h,

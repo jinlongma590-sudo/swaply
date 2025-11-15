@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AccountSettingsPage extends StatefulWidget {
-  const AccountSettingsPage({Key? key}) : super(key: key);
+  const AccountSettingsPage({super.key});
 
   @override
   State<AccountSettingsPage> createState() => _AccountSettingsPageState();
@@ -67,8 +67,8 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     messenger.hideCurrentMaterialBanner();
     messenger.showSnackBar(
       SnackBar(
-        content: Row(
-          children: const [
+        content: const Row(
+          children: [
             Icon(Icons.check_circle_rounded, color: Colors.white),
             SizedBox(width: 8),
             Expanded(child: Text('Account deleted.')),
@@ -192,10 +192,10 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     // ============== Android & 其他：保持原 AppBar 不变 ==============
     if (!isIOS) {
       return AppBar(
-        title: Text(
+        title: const Text(
           title,
           // (使用原 Style，但确保颜色为白色)
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w600,
             color: Colors.white,
@@ -239,13 +239,13 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     );
 
     // 3. 构建居中标题
-    final Widget iosTitle = Expanded(
+    const Widget iosTitle = Expanded(
       child: Text(
         title,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         textAlign: TextAlign.center, // 保证居中
-        style: const TextStyle(
+        style: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w700,
           fontSize: 18, // 保持原字体大小
@@ -254,8 +254,8 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     );
 
     // 4. 构建 32x32 右侧占位
-    final Widget iosRightPlaceholder =
-    const SizedBox(width: kButtonSize, height: kButtonSize);
+    const Widget iosRightPlaceholder =
+    SizedBox(width: kButtonSize, height: kButtonSize);
 
     // 5. 组装
     return PreferredSize(

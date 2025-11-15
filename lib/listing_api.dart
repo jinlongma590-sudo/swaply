@@ -174,37 +174,37 @@ class ListingApi {
 
   }) async {
 // ---------- 兼容映射 ----------
-    int? _catId = categoryId;
-    String? _catString;
-    if (_catId == null && category != null) {
+    int? catId = categoryId;
+    String? catString;
+    if (catId == null && category != null) {
       if (category is int) {
-        _catId = category;
+        catId = category;
       } else if (category is String && category.isNotEmpty) {
-        _catString = category;
+        catString = category;
       }
     }
 // 如果传来字符串其实是数字，自动转成 id
-    if (_catId == null && _catString != null) {
-      final p = _tryInt(_catString);
+    if (catId == null && catString != null) {
+      final p = _tryInt(catString);
       if (p != null) {
-        _catId = p;
-        _catString = null;
+        catId = p;
+        catString = null;
       }
     }
 
 // 兼容 sort 语义
-    String _orderBy = orderBy;
-    bool _asc = ascending;
+    String orderBy0 = orderBy;
+    bool asc = ascending;
     if (sort != null) {
       if (sort == 'price_low') {
-        _orderBy = 'price';
-        _asc = true;
+        orderBy0 = 'price';
+        asc = true;
       } else if (sort == 'price_high') {
-        _orderBy = 'price';
-        _asc = false;
+        orderBy0 = 'price';
+        asc = false;
       } else {
-        _orderBy = 'created_at';
-        _asc = false;
+        orderBy0 = 'created_at';
+        asc = false;
       }
     }
 
@@ -219,12 +219,12 @@ class ListingApi {
     if (city != null && city.isNotEmpty) query = query.eq('city', city);
 
 // ✅ 避免 eq<T> 的 int/string 泛型推断问题：统一用 filter('col','eq',value)
-    final dynamic _cat = (_catId != null) ? _catId : _catString;
-    if (_cat != null) {
-      if (_cat is num) {
-        query = query.filter('category_id', 'eq', _cat);
+    final dynamic cat = (catId != null) ? catId : catString;
+    if (cat != null) {
+      if (cat is num) {
+        query = query.filter('category_id', 'eq', cat);
       } else {
-        query = query.filter('category', 'eq', _cat.toString());
+        query = query.filter('category', 'eq', cat.toString());
       }
     }
 
@@ -232,7 +232,7 @@ class ListingApi {
       query = query.eq('user_id', userId);
     }
 
-    query = query.order(_orderBy, ascending: _asc).range(
+    query = query.order(orderBy0, ascending: asc).range(
       offset,
       offset + limit - 1,
     );

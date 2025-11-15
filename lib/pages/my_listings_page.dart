@@ -14,7 +14,7 @@ import 'package:swaply/pages/sell_form_page.dart';
 import 'package:flutter/foundation.dart';
 
 class MyListingsPage extends StatefulWidget {
-  const MyListingsPage({Key? key}) : super(key: key);
+  const MyListingsPage({super.key});
   @override
   State<MyListingsPage> createState() => _MyListingsPageState();
 }
@@ -163,12 +163,8 @@ class _MyListingsPageState extends State<MyListingsPage>
       List<Map<String, dynamic>> offersMutable = [];
 
       for (var offer in offers) {
-        if (offer is Map<String, dynamic>) {
-          offersMutable.add(offer);
-        } else if (offer is Map) {
-          offersMutable.add(Map<String, dynamic>.from(offer));
-        }
-      }
+        offersMutable.add(offer);
+            }
 
       if (offersMutable.isEmpty) {
         try {
@@ -179,14 +175,10 @@ class _MyListingsPageState extends State<MyListingsPage>
               .eq('seller_id', user.id)
               .order('created_at', ascending: false);
 
-          if (raw is List && raw.isNotEmpty) {
+          if (raw.isNotEmpty) {
             for (var item in raw) {
-              if (item is Map<String, dynamic>) {
-                offersMutable.add(item);
-              } else if (item is Map) {
-                offersMutable.add(Map<String, dynamic>.from(item));
-              }
-            }
+              offersMutable.add(item);
+                        }
           }
         } catch (_) {}
       }
@@ -476,10 +468,10 @@ class _MyListingsPageState extends State<MyListingsPage>
   Widget build(BuildContext context) {
     // ✅ [MODIFIED] 提取平台变量和通用 Widgets
     final double statusBar = MediaQuery.of(context).padding.top;
-    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
     // ✅ (可选) 确保 iOS 状态栏是浅色图标
-    if (_isIOS) {
+    if (isIOS) {
       SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
@@ -512,7 +504,7 @@ class _MyListingsPageState extends State<MyListingsPage>
         children: [
           _buildHeader(
             statusBar,
-            _isIOS,
+            isIOS,
             tabBarWidget,
           ),
           Expanded(
@@ -576,8 +568,8 @@ class _MyListingsPageState extends State<MyListingsPage>
         ),
       );
 
-      final Widget iosRightPlaceholder =
-      const SizedBox(width: kButtonSize, height: kButtonSize);
+      const Widget iosRightPlaceholder =
+      SizedBox(width: kButtonSize, height: kButtonSize);
 
       return Container(
         decoration: const BoxDecoration(
@@ -1062,7 +1054,7 @@ class _MyListingsPageState extends State<MyListingsPage>
                                           child: SizedBox(
                                             width: 14.r,
                                             height: 14.r,
-                                            child: CircularProgressIndicator(
+                                            child: const CircularProgressIndicator(
                                               strokeWidth: 2,
                                               valueColor:
                                               AlwaysStoppedAnimation<Color>(
@@ -1575,10 +1567,10 @@ class _MyListingsPageState extends State<MyListingsPage>
             SizedBox(
               width: 32.w,
               height: 32.h,
-              child: CircularProgressIndicator(
+              child: const CircularProgressIndicator(
                 strokeWidth: 3,
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  const Color(0xFF2563EB),
+                  Color(0xFF2563EB),
                 ),
               ),
             ),

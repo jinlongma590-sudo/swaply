@@ -224,7 +224,7 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
               children: [
                 Expanded(
                   child: DropdownButtonFormField<int>(
-                    value: _selectedDuration,
+                    initialValue: _selectedDuration,
                     decoration: const InputDecoration(
                       labelText: 'Duration (days)',
                       border: OutlineInputBorder(),
@@ -321,7 +321,7 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<CouponType>(
-              value: _selectedType,
+              initialValue: _selectedType,
               decoration: const InputDecoration(
                 labelText: 'Type',
                 border: OutlineInputBorder(),
@@ -623,7 +623,9 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
     if (!await _showConfirmDialog(
       'Send to All Users',
       'This will send coupons to ALL users. Continue?',
-    )) return;
+    )) {
+      return;
+    }
 
     setState(() => _processing = true);
     try {
@@ -807,7 +809,9 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
     if (!await _showConfirmDialog(
       'Revoke Coupon',
       'Are you sure you want to revoke this coupon?\n\nCode: ${coupon.code}',
-    )) return;
+    )) {
+      return;
+    }
 
     try {
       final success = await CouponService.revokeCoupon(coupon.id);
@@ -827,7 +831,9 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
     if (!await _showConfirmDialog(
       'Cleanup Expired Data',
       'This will mark all expired data as expired. Continue?',
-    )) return;
+    )) {
+      return;
+    }
 
     try {
       // 直接清理过期的优惠券
@@ -841,9 +847,7 @@ class _AdminCouponManagementState extends State<AdminCouponManagement>
           .eq('status', 'active')
           .select('id');
 
-      final expiredCount = expiredCoupons is List
-          ? expiredCoupons.length
-          : (expiredCoupons != null ? 1 : 0);
+      final expiredCount = expiredCoupons.length;
 
       _showSuccess('Cleaned up $expiredCount expired coupons');
       await _loadSystemStats();

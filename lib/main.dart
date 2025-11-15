@@ -4,10 +4,8 @@ import 'dart:io';
 
 import 'package:app_links/app_links.dart'; // ✅ 深链支持（替代 uni_links）
 import 'package:flutter/foundation.dart';
-import 'package:flutter/foundation.dart' show SynchronousFuture;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // ✅ 新增：全局状态栏/系统UI控制
-import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
@@ -17,11 +15,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // ====== 链」鐩唴鐨勪緷璧?======
-import 'package:swaply/main_navigation.dart'; // ✅ 新增：确保 MainNavigationPage 被引用
 import 'package:swaply/auth/login_screen.dart';
 import 'package:swaply/auth/reset_password_page.dart'; // ✅ 新增：密码找回完成后设置新密码页面
 import 'package:swaply/auth/welcome_screen.dart';
-import 'package:swaply/models/coupon.dart';
 import 'package:swaply/models/listing_store.dart';
 import 'package:swaply/models/verification_types.dart' as vt;
 import 'package:swaply/pages/account_settings_page.dart';
@@ -34,7 +30,6 @@ import 'package:swaply/pages/product_detail_page.dart';
 import 'package:swaply/pages/sell_form_page.dart';
 import 'package:swaply/pages/task_management_page.dart';
 import 'package:swaply/pages/verification_page.dart';
-import 'package:swaply/services/auth_service.dart';
 import 'package:swaply/services/coupon_service.dart';
 import 'package:swaply/services/dual_favorites_service.dart';
 import 'package:swaply/services/email_verification_service.dart';
@@ -45,12 +40,8 @@ import 'package:swaply/services/profile_service.dart';
 import 'package:swaply/services/reward_service.dart';
 import 'package:swaply/utils/verification_utils.dart' as vutils;
 import 'package:swaply/widgets/ios_insets_guard.dart'; // 鉁?鏂板锛VictoriaOS 瀹夊叏鍖哄畧鎶?
-import 'package:swaply/widgets/my_rewards_tile.dart';
-import 'package:swaply/widgets/verification_badge.dart' as vb;
-import 'package:swaply/widgets/verification_badge_mini.dart';
 import 'package:swaply/widgets/verified_avatar.dart';
 import 'debug/recovery_probe.dart';
-import 'startup_screen.dart';
 
 // ========= 鍏ㄥ眬 Auth 浜嬩欢璁㈤槄锛堝彧娉ㄥ唽涓€娆★級=========
 bool _authHookWired = false;
@@ -300,7 +291,7 @@ void wireAuthHook() {
 String _fixUtf8Mojibake(String? raw) {
   if (raw == null || raw.isEmpty) return raw ?? '';
   var s = raw;
-// 鑻ヤ笉瀛樺湪鍏稿瀷涔辩爜鐥抗锛岀洿鎺ヨ繑鍥?
+  // 鑻ヤ笉瀛樺湪鍏稿瀷涔辩爜鐥抗锛岀洿鎺ヨ繑鍥?
   if (!s.contains('冒') && !s.contains('脙') && !s.contains('芒')) return s;
   const map = <String, String>{};
   map.forEach((k, v) => s = s.replaceAll(k, v));
@@ -331,14 +322,14 @@ void _showWelcomeGiftDialog() {
                 size: 30.w, color: const Color(0xFF2196F3)),
           ),
           SizedBox(height: 12.h),
-          Text(_fixUtf8Mojibake('Welcome gift 馃巵'),
-              style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w700)),
+          Text(
+            'Welcome gift 🎁',
+            style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w700),
+          ),
           SizedBox(height: 6.h),
           Text(
-            _fixUtf8Mojibake(
-              'A Welcome Coupon has been added to your account.\n'
-                  'You can find it in My Coupons or My Rewards 鈫?Coupons tab.',
-            ),
+            'A Welcome Coupon has been added to your account.\n'
+                'You can find it in My Coupons or My Rewards (Coupons tab).',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13.sp, color: Colors.black87),
           ),
@@ -350,7 +341,6 @@ void _showWelcomeGiftDialog() {
                   icon: const Icon(Icons.emoji_events_outlined),
                   onPressed: () {
                     Navigator.of(dCtx).pop();
-                    // ✅ 修复：使用 (context) => ...
                     appNavKey.currentState?.push(MaterialPageRoute(
                       builder: (context) => const TaskManagementPage(),
                     ));
@@ -364,7 +354,6 @@ void _showWelcomeGiftDialog() {
                   icon: const Icon(Icons.card_giftcard),
                   onPressed: () {
                     Navigator.of(dCtx).pop();
-                    // ✅ 修复：使用 (context) => ...
                     appNavKey.currentState?.push(MaterialPageRoute(
                       builder: (context) => const CouponManagementPage(),
                     ));
@@ -443,8 +432,8 @@ Future<void> _recoverInitialSupabaseSession() async {
 // ⚠️ 使用 app_links 的 uriLinkStream（非 uni_links）
 void _listenDeepLinksForSupabase() {
   _deeplinkSub?.cancel();
-  final _links = AppLinks();
-  _deeplinkSub = _links.uriLinkStream.listen((Uri uri) async {
+  final links = AppLinks();
+  _deeplinkSub = links.uriLinkStream.listen((Uri uri) async {
     try {
       await _handleSupabaseUri(uri);
       debugPrint('[DeepLink] stream uri handled: $uri');
@@ -467,13 +456,13 @@ Future<void> main() async {
   ));
   // === 屏蔽 Supabase 刷新 session 的日志（开发期） ===
       {
-    final _orig = debugPrint;
+    final orig = debugPrint;
     debugPrint = (String? message, {int? wrapWidth}) {
       if (message != null &&
           message.contains('supabase.auth: INFO: Refresh session')) {
         return;
       }
-      _orig(message, wrapWidth: wrapWidth);
+      orig(message, wrapWidth: wrapWidth);
     };
   }
   // ========= 全局错误兜底 =========
@@ -528,10 +517,10 @@ Future<void> main() async {
   // ✅ 处理“首次通过邮件深链打开 App”的场景
   await _recoverInitialSupabaseSession();
   // ✅ 冷/热启动：如当前已登录，先立即建立通知订阅（避免监听器挂载前的时间窗丢事件）
-  final _supaClient = Supabase.instance.client;
-  final _bootUser = _supaClient.auth.currentUser;
-  if (_bootUser != null) {
-    await NotificationService.subscribeUser(_bootUser.id);
+  final supaClient = Supabase.instance.client;
+  final bootUser = supaClient.auth.currentUser;
+  if (bootUser != null) {
+    await NotificationService.subscribeUser(bootUser.id);
   }
   // ✅ 全局 Auth 事件监听
   wireAuthHook();
@@ -539,18 +528,20 @@ Future<void> main() async {
   // 假设 _ensureProfileForCurrentUserOnce 和 _setupAuthListener 在别处定义
   // await _ensureProfileForCurrentUserOnce();
   // _setupAuthListener();
+
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => LanguageProvider(),
+    ChangeNotifierProvider<LanguageProvider>( // ✅ 指明泛型 + 正确 create
+      create: (context) => LanguageProvider(),
       child: const MyApp(),
     ),
   );
+
   // ✅ 前台监听后续深链
   _listenDeepLinksForSupabase();
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
   @override
   State<MyApp> createState() => _MyAppState();
 }
@@ -643,20 +634,23 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   ),
                 ),
               ),
+
               // ✅ 用 initialRoute，避免 home 冲突
               initialRoute: hasSession ? '/home' : '/welcome',
-              routes: {
-                '/welcome': (_) => const WelcomeScreen(),
-                '/login': (_) => const LoginScreen(),
-                '/home': (_) => MainNavigationPage(
-                  // 假设 MainNavigationPage 在 main_navigation.dart
-                  isGuest: Supabase
-                      .instance.client.auth.currentSession ==
-                      null,
+
+              // ✅ 显式标注 Map<String, WidgetBuilder>，彻底消除 WidgetBuilder 推断误报
+              routes: <String, WidgetBuilder>{
+                '/welcome': (BuildContext context) => const WelcomeScreen(),
+                '/login': (BuildContext context) => const LoginScreen(),
+                '/home': (BuildContext context) => MainNavigationPage(
+                  isGuest:
+                  Supabase.instance.client.auth.currentSession == null,
                 ),
-                '/coupons': (_) => const CouponManagementPage(),
+                '/coupons':
+                    (BuildContext context) => const CouponManagementPage(),
                 // ✅ 注册重置密码路由，供统一跳转
-                '/reset-password': (_) => const ResetPasswordPage(),
+                '/reset-password':
+                    (BuildContext context) => const ResetPasswordPage(),
               },
             );
           },
@@ -668,10 +662,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
 // 莽禄搂莽禄颅忙路禄氓艩  MainNavigationPage 氓鈥櫯捗モ€β睹ぢ烩€撁甭?..
 // [盲赂潞盲潞鈥犆ㄅ犫€毭撀伱┞好┾€斅疵寂捗库劉茅鈥∨捗ぢ柯澝ε捖伱モ€β睹ぢ解劉盲禄拢莽 聛盲赂聧氓聫藴]
-// 莽禄搂莽禄颅忙路禄氓艩  MainNavigationPage 氓鈥櫯捗モ€β睹ぢ烩€撁甭?..
+// 莽禄搂莽禄颅忙路禄氓艩  MainNavigationPage 氓鈥櫯捗モ€β睹ぢ烩€撁甭..
 class MainNavigationPage extends StatefulWidget {
   final bool isGuest;
-  const MainNavigationPage({Key? key, this.isGuest = false}) : super(key: key);
+  const MainNavigationPage({super.key, this.isGuest = false});
   @override
   State<MainNavigationPage> createState() => _MainNavigationPageState();
 }
@@ -787,7 +781,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     super.dispose();
   }
 
-// 芒艙鈥?忙鈥撀懊ヂ⑴久寂∶βｂ偓忙鸥楼氓鹿露忙藴戮莽陇潞忙卢垄猫驴沤氓藛赂莽拧鈥灻︹€撀姑β斥€?
+// 芒艙鈥?忙鈥撀懊ヂ⑴久寂∶ニ嗏€∶β嵚⒚ニ喡懊┞︹€撁┞÷得♀€灻︹€撀姑β斥€?
   Future<void> _checkAndShowWelcomeGift() async {
 // 閬垮厤閲嶅妫€鏌?
     if (_welcomeGiftChecked) return;
@@ -818,8 +812,8 @@ class _MainNavigationPageState extends State<MainNavigationPage>
             .eq('status', 'active')
             .order('created_at', ascending: false)
             .limit(1);
-        if (rows is List && rows.isNotEmpty) {
-          row = rows.first as Map<String, dynamic>;
+        if (rows.isNotEmpty) {
+          row = rows.first;
         }
       } catch (_) {}
 
@@ -862,7 +856,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
             ),
             SizedBox(height: 12.h),
             Text(
-              _fixUtf8Mojibake('Welcome gift 馃巵'),
+              'Welcome gift 🎁',
               style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w700),
             ),
             SizedBox(height: 6.h),
@@ -884,7 +878,8 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                       Navigator.of(dCtx).pop();
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => TaskManagementPage()),
+                        MaterialPageRoute(
+                            builder: (context) => const TaskManagementPage()),
                       );
                     },
                     label: Text(_fixUtf8Mojibake('My Rewards')),
@@ -899,7 +894,8 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) => CouponManagementPage()),
+                            builder: (context) =>
+                            const CouponManagementPage()),
                       );
                     },
                     label: Text(_fixUtf8Mojibake('My Coupons')),
@@ -920,7 +916,8 @@ class _MainNavigationPageState extends State<MainNavigationPage>
   Future<void> _loadNotificationCount() async {
     if (!widget.isGuest) {
       try {
-        final count = await NotificationService.getUnreadNotificationsCount();
+        final count =
+        await NotificationService.getUnreadNotificationsCount();
         if (mounted) {
           setState(() => _notificationCount = count);
         }
@@ -949,15 +946,16 @@ class _MainNavigationPageState extends State<MainNavigationPage>
           shape:
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
           title: Text(l10n.loginRequired,
-              style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600)),
+              style:
+              TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600)),
           content: Text(l10n.loginRequiredMessage(feature),
               style: TextStyle(fontSize: 13.sp, height: 1.4)),
           actions: [
             TextButton(
                 onPressed: () => Navigator.of(context).pop(),
                 child: Text(l10n.cancel,
-                    style:
-                    TextStyle(fontSize: 13.sp, color: Colors.grey[600]))),
+                    style: TextStyle(
+                        fontSize: 13.sp, color: Colors.grey[600]))),
             Container(
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
@@ -983,8 +981,8 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     );
   }
 
-  Widget _buildTabNavigator(
-      GlobalKey<NavigatorState> key, Widget root, LanguageProvider languageProvider) {
+  Widget _buildTabNavigator(GlobalKey<NavigatorState> key, Widget root,
+      LanguageProvider languageProvider) {
     return Navigator(
       key: key,
       onGenerateRoute: (_) => MaterialPageRoute(
@@ -1007,9 +1005,9 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     final languageProvider = Provider.of<LanguageProvider>(context);
 
     // 鉁?棣栭〉鏍瑰寘涓€灞?IosInsetsGuard
-    final List<Widget> _pages = [
+    final List<Widget> pages = [
       _buildTabNavigator(
-          _homeKey, IosInsetsGuard(child: const _HomeRoot()), languageProvider),
+          _homeKey, const IosInsetsGuard(child: _HomeRoot()), languageProvider),
       _buildTabNavigator(
           _savedKey,
           _SavedRoot(
@@ -1042,7 +1040,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
         backgroundColor: Colors.white,
         body: IndexedStack(
           index: _selectedIndex,
-          children: _pages,
+          children: pages,
         ),
         bottomNavigationBar: SafeArea(
           top: false,
@@ -1143,10 +1141,9 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                 duration: const Duration(milliseconds: 150),
                 child: Icon(
                   isSelected ? activeIcon : icon,
-                  key: ValueKey('${index}_${isSelected}'),
-                  color: isSelected
-                      ? _PRIMARY_BLUE // 统一颜色
-                      : Colors.grey[600],
+                  key: ValueKey('${index}_$isSelected'),
+                  color:
+                  isSelected ? _PRIMARY_BLUE : Colors.grey[600],
                   size: 22.w,
                 ),
               ),
@@ -1154,11 +1151,11 @@ class _MainNavigationPageState extends State<MainNavigationPage>
               AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 150),
                 style: TextStyle(
-                  color: isSelected
-                      ? _PRIMARY_BLUE // 统一颜色
-                      : Colors.grey[600],
+                  color:
+                  isSelected ? _PRIMARY_BLUE : Colors.grey[600],
                   fontSize: 8.5.sp,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight:
+                  isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
                 child: Text(
                   label,
@@ -1207,7 +1204,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
           padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 4.h),
           decoration: BoxDecoration(
             color: isSelected
-                ? _PRIMARY_BLUE.withOpacity(0.1) // 统一颜色
+                ? _PRIMARY_BLUE.withOpacity(0.1)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(14.w),
           ),
@@ -1221,10 +1218,9 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                     duration: const Duration(milliseconds: 150),
                     child: Icon(
                       isSelected ? activeIcon : icon,
-                      key: ValueKey('${index}_${isSelected}'),
-                      color: isSelected
-                          ? _PRIMARY_BLUE // 统一颜色
-                          : Colors.grey[600],
+                      key: ValueKey('${index}_$isSelected'),
+                      color:
+                      isSelected ? _PRIMARY_BLUE : Colors.grey[600],
                       size: 22.w,
                     ),
                   ),
@@ -1277,11 +1273,11 @@ class _MainNavigationPageState extends State<MainNavigationPage>
               AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 150),
                 style: TextStyle(
-                  color: isSelected
-                      ? _PRIMARY_BLUE // 统一颜色
-                      : Colors.grey[600],
+                  color:
+                  isSelected ? _PRIMARY_BLUE : Colors.grey[600],
                   fontSize: 8.5.sp,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight:
+                  isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
                 child: Text(
                   label,
@@ -1327,11 +1323,11 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                   colors: isSelected
                       ? [
                     const Color(0xFF1565C0),
-                    _PRIMARY_BLUE, // 统一颜色
+                    _PRIMARY_BLUE,
                     const Color(0xFF42A5F5),
                   ]
                       : [
-                    _PRIMARY_BLUE, // 统一颜色
+                    _PRIMARY_BLUE,
                     const Color(0xFF1E88E5),
                     const Color(0xFF1976D2),
                   ],
@@ -1339,13 +1335,13 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                 borderRadius: BorderRadius.circular(28.w),
                 boxShadow: [
                   BoxShadow(
-                    color: _PRIMARY_BLUE.withOpacity(0.4), // 统一颜色
+                    color: _PRIMARY_BLUE.withOpacity(0.4),
                     blurRadius: isSelected ? 12.h : 10.h,
                     offset: Offset(0, isSelected ? 4.h : 3.h),
                     spreadRadius: isSelected ? 2.w : 1.w,
                   ),
                   BoxShadow(
-                    color: _PRIMARY_BLUE.withOpacity(0.2), // 统一颜色
+                    color: _PRIMARY_BLUE.withOpacity(0.2),
                     blurRadius: 6.h,
                     offset: Offset(0, 2.h),
                   ),
@@ -1463,8 +1459,7 @@ class SavedPage extends StatefulWidget {
   final bool isGuest;
   final VoidCallback? onNavigateToHome;
 
-  const SavedPage({Key? key, this.isGuest = false, this.onNavigateToHome})
-      : super(key: key);
+  const SavedPage({super.key, this.isGuest = false, this.onNavigateToHome});
   @override
   State<SavedPage> createState() => _SavedPageState();
 }
@@ -1540,7 +1535,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
 
   // ✅ B) 右上角菜单按钮（更小 28×28，与标题对齐）
   Widget _buildMenuButton() {
-    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
     return PopupMenuButton<String>(
       padding: EdgeInsets.zero,
       offset: const Offset(0, 10),
@@ -1573,7 +1568,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           clipBehavior: Clip.antiAlias,
           child: Center(
             child: Icon(
-              _isIOS ? Icons.more_horiz_rounded : Icons.more_vert_rounded,
+              isIOS ? Icons.more_horiz_rounded : Icons.more_vert_rounded,
               color: Colors.white,
               size: 18.w,
             ),
@@ -2082,7 +2077,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           ),
         ),
       );
-    } catch (e, stackTrace) {
+    } catch (e) {
       if (kDebugMode) {}
       return Container(
         margin: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
@@ -2420,8 +2415,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                     SizedBox(height: 20.h),
                     Container(
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [_PRIMARY_BLUE, const Color(0xFF1E88E5)],
+                        gradient: const LinearGradient(
+                          colors: [_PRIMARY_BLUE, Color(0xFF1E88E5)],
                         ),
                         borderRadius: BorderRadius.circular(8.w),
                         boxShadow: [
@@ -2662,7 +2657,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
 /* ---------------- Wishlist Page 收藏夹页面 - 统一服务 ---------------- */
 
 class WishlistPage extends StatefulWidget {
-  const WishlistPage({Key? key}) : super(key: key);
+  const WishlistPage({super.key});
 
   @override
   State<WishlistPage> createState() => _WishlistPageState();
@@ -3603,7 +3598,7 @@ class _WishlistPageState extends State<WishlistPage> {
 
 class SellPage extends StatefulWidget {
   final bool isGuest;
-  const SellPage({Key? key, this.isGuest = false}) : super(key: key);
+  const SellPage({super.key, this.isGuest = false});
 
   @override
   State<SellPage> createState() => _SellPageState();
@@ -3623,11 +3618,11 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     double trailingTopAdjust = 0.0, // (参数保留；Android 新布局不再需要额外上移)
   }) {
     final double statusBar = MediaQuery.of(context).padding.top;
-    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
     const Color kUserPrimaryBlue = Color(0xFF1877F2);
 
     // ============== Android (NEW: 同构行布局，蓝区更短) ==============
-    if (!_isIOS) {
+    if (!isIOS) {
       const double kHeaderVisual = 44.0;   // ✅ 缩短蓝色区域
       const double kSideTop = 2.0;         // ✅ 顶部行距
       const double kSide = 16.0;           // ✅ 左右边距
@@ -4167,10 +4162,10 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
       margin: EdgeInsets.all(16.w),
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Colors.white, const Color(0xFFF8F9FA)],
+          colors: [Colors.white, Color(0xFFF8F9FA)],
         ),
         borderRadius: BorderRadius.circular(20.r),
         boxShadow: [
@@ -4191,7 +4186,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${l10n.myListings}',
+                    l10n.myListings,
                     style: TextStyle(
                       fontSize: 20.sp,
                       fontWeight: FontWeight.w700,
@@ -4675,11 +4670,11 @@ class NotificationPage extends StatefulWidget {
   final Function(int)? onNotificationCountChanged;
 
   const NotificationPage({
-    Key? key,
+    super.key,
     this.onClearBadge,
     this.isGuest = false,
     this.onNotificationCountChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<NotificationPage> createState() => _NotificationPageState();
@@ -4758,7 +4753,7 @@ class _NotificationPageState extends State<NotificationPage> {
   // ✅ B) 右上角菜单按钮：更小(28×28)并与标题对齐；弹出层更贴合
   Widget _buildMenuButton() {
     final l10n = AppLocalizations.of(context)!;
-    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
     return PopupMenuButton<String>(
       padding: EdgeInsets.zero,
@@ -4806,7 +4801,7 @@ class _NotificationPageState extends State<NotificationPage> {
           clipBehavior: Clip.antiAlias,
           child: Center(
             child: Icon(
-              _isIOS ? Icons.more_horiz_rounded : Icons.more_vert_rounded,
+              isIOS ? Icons.more_horiz_rounded : Icons.more_vert_rounded,
               color: Colors.white,
               size: 18.w,
             ),
@@ -4932,7 +4927,7 @@ class _NotificationPageState extends State<NotificationPage> {
             shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.r)),
             margin: EdgeInsets.all(8.w),
-            duration: Duration(seconds: 2),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -4954,7 +4949,7 @@ class _NotificationPageState extends State<NotificationPage> {
           shape:
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.r)),
           margin: EdgeInsets.all(8.w),
-          duration: Duration(seconds: 2),
+          duration: const Duration(seconds: 2),
         ),
       );
     }
@@ -5204,8 +5199,8 @@ class _NotificationPageState extends State<NotificationPage> {
                     SizedBox(height: 20.h),
                     Container(
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [_PRIMARY_BLUE, const Color(0xFF1E88E5)],
+                        gradient: const LinearGradient(
+                          colors: [_PRIMARY_BLUE, Color(0xFF1E88E5)],
                         ),
                         borderRadius: BorderRadius.circular(10.r),
                         boxShadow: [
@@ -5302,9 +5297,9 @@ class _NotificationPageState extends State<NotificationPage> {
                         child: SizedBox(
                           width: 20.w,
                           height: 20.w,
-                          child: CircularProgressIndicator(
+                          child: const CircularProgressIndicator(
                             valueColor:
-                            const AlwaysStoppedAnimation<Color>(
+                            AlwaysStoppedAnimation<Color>(
                                 _PRIMARY_BLUE),
                             strokeWidth: 2.5,
                           ),
@@ -5533,8 +5528,8 @@ class _NotificationPageState extends State<NotificationPage> {
 
 class NoGlowScrollBehavior extends ScrollBehavior {
   @override
-  Widget buildViewportChrome(
-      BuildContext context, Widget child, AxisDirection axisDirection) {
+  Widget buildOverscrollIndicator(
+      BuildContext context, Widget child, ScrollableDetails details) {
     return child;
   }
 }
@@ -5547,7 +5542,7 @@ const _kDeleteUrl = 'https://www.swaply.cc/delete-account';
 //---------------- Profile Page 个人资料页 ----------------
 class ProfilePage extends StatefulWidget {
   final bool isGuest;
-  const ProfilePage({Key? key, this.isGuest = false}) : super(key: key);
+  const ProfilePage({super.key, this.isGuest = false});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -5580,6 +5575,52 @@ class _ProfilePageState extends State<ProfilePage>
   // ✅ 稳定性：保存订阅句柄 & 并发保护
   StreamSubscription<AuthState>? _authSub;
   bool _verifyBusy = false;
+
+  /// ✅ 显示用名字：
+  /// 1) profiles.full_name
+  /// 2) auth.users.user_metadata.full_name / name
+  /// 3) auth.users.email
+  /// 4) 兜底 "User"
+  String get _displayName {
+    final supa = Supabase.instance.client;
+    final user = supa.auth.currentUser;
+
+    final fromProfile = (_profile?['full_name'] ?? '').toString().trim();
+
+    final meta = user?.userMetadata ?? {};
+    final fromMeta =
+    (meta['full_name'] ?? meta['name'] ?? '').toString().trim();
+
+    final email = (user?.email ?? '').trim();
+
+    if (fromProfile.isNotEmpty) return fromProfile;
+    if (fromMeta.isNotEmpty) return fromMeta;
+    if (email.isNotEmpty) return email;
+    return 'User';
+  }
+
+  /// ✅ 显示用联系方式：
+  /// 1) profiles.phone
+  /// 2) auth.users.user_metadata.phone / phone_number
+  /// 3) auth.users.email
+  /// 4) 兜底空字符串
+  String get _displayContact {
+    final supa = Supabase.instance.client;
+    final user = supa.auth.currentUser;
+
+    final phoneProfile = (_profile?['phone'] ?? '').toString().trim();
+
+    final meta = user?.userMetadata ?? {};
+    final phoneMeta =
+    (meta['phone'] ?? meta['phone_number'] ?? '').toString().trim();
+
+    final email = (user?.email ?? '').trim();
+
+    if (phoneProfile.isNotEmpty) return phoneProfile;
+    if (phoneMeta.isNotEmpty) return phoneMeta;
+    if (email.isNotEmpty) return email;
+    return '';
+  }
 
   @override
   void initState() {
@@ -5620,6 +5661,7 @@ class _ProfilePageState extends State<ProfilePage>
       if (!mounted) return;
       setState(() {
         _profile = map;
+        _profileRow = map;
         _loading = false;
       });
       _animationController.forward();
@@ -5800,8 +5842,8 @@ class _ProfilePageState extends State<ProfilePage>
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
-              children: const [
+            content: const Row(
+              children: [
                 Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
                 SizedBox(width: 8),
                 Text('Profile updated successfully', style: TextStyle(fontSize: 14)),
@@ -5882,8 +5924,8 @@ class _ProfilePageState extends State<ProfilePage>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Row(
-            children: const [
+          content: const Row(
+            children: [
               Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
               SizedBox(width: 8),
               Text('Avatar updated successfully', style: TextStyle(fontSize: 14)),
@@ -6084,12 +6126,12 @@ class _ProfilePageState extends State<ProfilePage>
     if (_loading) {
       return MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
-        child: Scaffold(
-          backgroundColor: const Color(0xFFF8F9FA),
+        child: const Scaffold(
+          backgroundColor: Color(0xFFF8F9FA),
           body: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
+              children: [
                 SizedBox(width: 36, height: 36, child: CircularProgressIndicator(strokeWidth: 3)),
                 SizedBox(height: 16),
                 Text('Loading profile...', style: TextStyle(color: Color(0xFF666666), fontSize: 15)),
@@ -6100,9 +6142,8 @@ class _ProfilePageState extends State<ProfilePage>
       );
     }
 
-    final fullName = (_profile?['full_name'] ?? 'User').toString();
-    final phone = (_profile?['phone'] ?? '').toString();
-    final displayContact = phone.isNotEmpty ? phone : (_profile?['email'] ?? '').toString();
+    final fullName = _displayName;
+    final displayContact = _displayContact;
     final avatarUrl = (_profile?['avatar_url'] ?? '') as String?;
     final memberSince = _profile?['created_at']?.toString();
     String? memberSinceText;
@@ -6181,7 +6222,7 @@ class _ProfilePageState extends State<ProfilePage>
                               onTap: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (_) => TaskManagementPage()),
+                                  MaterialPageRoute(builder: (_) => const TaskManagementPage()),
                                 );
                               },
                             ),
@@ -6233,7 +6274,7 @@ class _ProfilePageState extends State<ProfilePage>
                               color: Colors.purple,
                               onTap: () => Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => CouponManagementPage()),
+                                MaterialPageRoute(builder: (_) => const CouponManagementPage()),
                               ),
                             ),
 
@@ -6279,7 +6320,7 @@ class _ProfilePageState extends State<ProfilePage>
                               title: l10n.helpSupport,
                               color: Colors.teal,
                               onTap: () => Navigator.push(
-                                  context, MaterialPageRoute(builder: (_) => HelpSupportPage())),
+                                  context, MaterialPageRoute(builder: (_) => const HelpSupportPage())),
                             ),
                             const SizedBox(height: 12),
 
@@ -6288,7 +6329,7 @@ class _ProfilePageState extends State<ProfilePage>
                               title: l10n.about,
                               color: Colors.blueGrey,
                               onTap: () =>
-                                  Navigator.push(context, MaterialPageRoute(builder: (_) => AboutPage())),
+                                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutPage())),
                             ),
                             const SizedBox(height: 18),
 
@@ -6625,7 +6666,7 @@ class _GuestSimpleOptions extends StatelessWidget {
           title: l10n.helpSupport,
           color: Colors.blue,
           onTap: () =>
-              Navigator.push(context, MaterialPageRoute(builder: (_) => HelpSupportPage())),
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportPage())),
         ),
         const SizedBox(height: 14),
         _ProfileOptionEnhanced(
@@ -6633,7 +6674,7 @@ class _GuestSimpleOptions extends StatelessWidget {
           title: l10n.about,
           color: Colors.indigo,
           onTap: () =>
-              Navigator.push(context, MaterialPageRoute(builder: (_) => AboutPage())),
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutPage())),
         ),
       ],
     );
@@ -6642,6 +6683,8 @@ class _GuestSimpleOptions extends StatelessWidget {
 
 /* ---------------- Help & Support Page ---------------- */
 class HelpSupportPage extends StatelessWidget {
+  const HelpSupportPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -6769,8 +6812,8 @@ class HelpSupportPage extends StatelessWidget {
     );
 
     // 4. 构建 32x32 右侧占位
-    final Widget iosRightPlaceholder =
-    const SizedBox(width: kButtonSize, height: kButtonSize);
+    const Widget iosRightPlaceholder =
+    SizedBox(width: kButtonSize, height: kButtonSize);
 
     // 5. 组装
     return PreferredSize(
@@ -6849,6 +6892,8 @@ class HelpSupportPage extends StatelessWidget {
 
 /* ---------------- About Page ---------------- */
 class AboutPage extends StatelessWidget {
+  const AboutPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -6868,8 +6913,8 @@ class AboutPage extends StatelessWidget {
                   BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.05), blurRadius: 12, offset: Offset(0, 4))
                 ],
               ),
-              child: Column(
-                children: const [
+              child: const Column(
+                children: [
                   Text('Trade What You Have\nFor What You Need',
                       textAlign: TextAlign.center,
                       style: TextStyle(
@@ -6971,8 +7016,8 @@ class AboutPage extends StatelessWidget {
     );
 
     // 4. 构建 32x32 右侧占位
-    final Widget iosRightPlaceholder =
-    const SizedBox(width: kButtonSize, height: kButtonSize);
+    const Widget iosRightPlaceholder =
+    SizedBox(width: kButtonSize, height: kButtonSize);
 
     // 5. 组装
     return PreferredSize(
@@ -7001,27 +7046,6 @@ class AboutPage extends StatelessWidget {
   }
 }
 /// 登录态变更监听：用户 signedIn 时，确保 profiles 里有一行
-void _setupAuthListener() {
-  final supabase = Supabase.instance.client;
-
-  supabase.auth.onAuthStateChange.listen((authState) async {
-    final event   = authState.event;
-    final session = authState.session;
-
-    if (event == AuthChangeEvent.signedIn && session?.user != null) {
-      await _ensureProfileExists(session!.user);
-    }
-  });
-}
-
-/// 启动时做一次性校验（用户可能已经处于登录态；此时不会触发 signedIn 事件）
-Future<void> _ensureProfileForCurrentUserOnce() async {
-  final user = Supabase.instance.client.auth.currentUser;
-  if (user != null) {
-    await _ensureProfileExists(user);
-  }
-}
-
 /// 只做一件事：如果 profiles 里没有该用户，就 upsert 一行
 Future<void> _ensureProfileExists(User user) async {
   final supabase = Supabase.instance.client;
@@ -7036,10 +7060,11 @@ Future<void> _ensureProfileExists(User user) async {
 
     if (existing != null) return; // 已有，无需处理
 
-    // 尽量从 OAuth metadata 里取到名字与头像
+    // 尽量从 OAuth / 注册 metadata 里取到名字、头像和电话
     final meta      = user.userMetadata ?? {};
     final fullName  = (meta['full_name'] ?? meta['name'] ?? user.email ?? 'New User').toString();
     final avatarUrl = (meta['avatar_url'] ?? meta['picture'])?.toString();
+    final phone     = (meta['phone'] ?? meta['phone_number'] ?? '').toString(); // ✅ 新增
 
     // 用 upsert 防止重复/并发 (等价于 INSERT ... ON CONFLICT(id) DO UPDATE)
     await supabase.from('profiles').upsert(
@@ -7047,16 +7072,14 @@ Future<void> _ensureProfileExists(User user) async {
         'id':        user.id,      // 与 auth.users.id 一致
         'email':     user.email,
         'full_name': fullName,
-        'avatar_url': avatarUrl,
-        // 如果你表里还有 NOT NULL 字段，这里给个默认值
-        // 'phone': '',
-        // 'verification_type': 'none',
+        if (avatarUrl != null && avatarUrl.isNotEmpty) 'avatar_url': avatarUrl,
+        if (phone.isNotEmpty) 'phone': phone, // ✅ 新增：把 phone 写进 profiles
       },
       onConflict: 'id',
-      ignoreDuplicates: true, // 有些 SDK 版本支持；若不支持也没关系
+      ignoreDuplicates: true,
     );
   } catch (e, st) {
     dev.log('ensureProfile error: $e', stackTrace: st);
-    // 这里不要抛出，让 UI 正常继续；失败一般是 RLS/表结构问题
+    // 不抛出错误，避免影响正常 UI
   }
 }

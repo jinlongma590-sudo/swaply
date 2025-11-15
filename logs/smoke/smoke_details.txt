@@ -1,0 +1,57 @@
+﻿==== 细节（匹配关键片段） ====
+--- product_detail_page.dart 片段 ---
+InputStream:14: // 鉁?鏂板锛氱敤浜庤瘑鍒?P0001
+InputStream:80: vt.VerificationBadgeType _sellerBadge = vt.VerificationBadgeType.none; // 浼犵粰澶村儚
+InputStream:220: _sellerBadge = vt.VerificationBadgeType.none;
+InputStream:240: /// 鉁?[MODIFIED] 浣跨敤鏂扮殑 VerificationBadgeUtil 瑙ｆ瀽寰界珷
+InputStream:249: await EmailVerificationService().fetchPublicVerification(sellerId);
+InputStream:255: // 鉁?[MODIFIED] 浣跨敤鏂扮殑 VerificationBadgeUtil.getVerificationTypeFromUser
+InputStream:256: final badge = vt.VerificationBadgeUtil.getVerificationTypeFromUser(row);
+InputStream:266: _sellerVerified = (badge != vt.VerificationBadgeType.none);
+InputStream:270: print('[ProductDetail] fetchPublicVerification error: $e');
+InputStream:529: bool get _isOwnListing {
+InputStream:537: Future<void> _showSelfListingInfo({required String actionName}) async {
+InputStream:557: final verified = await VerificationGuard.ensureVerifiedOrPrompt(context);
+InputStream:571: await _showSelfListingInfo(actionName: actionName);
+InputStream:576: if (_blockStatus.otherBlockedMe) {
+InputStream:580: if (_blockStatus.iBlockedOther) {
+InputStream:588: final ok = await OfferService.unblockUser(blockedId: _sellerId!);
+InputStream:594: if (_blockStatus.iBlockedOther) return false;
+InputStream:675: final newStatus = await DualFavoritesService.toggleFavorite(
+InputStream:683: FavoritesUpdateService().notifyFavoriteChanged(
+InputStream:722: await NotificationService.createWishlistNotification(
+InputStream:747: await _recordInquiry('call');
+InputStream:751: final uri = Uri(scheme: 'tel', path: cleanPhone);
+InputStream:850: showModalBottomSheet(
+InputStream:1113: final result = await OfferService.createOffer(
+InputStream:1125: if (e is PostgrestException && e.code == 'P0001') {
+InputStream:1127: await _showSelfListingInfo(actionName: 'make an offer');
+InputStream:1128: } else if (e.toString().toLowerCase().contains('pending offer')) {
+InputStream:1129: _toast('You already have a pending offer for this item');
+InputStream:1165: final url = 'https://www.swaply.cc/l/$id?ref=app';
+InputStream:1189: await showModalBottomSheet(
+InputStream:1215: text: 'Share via other apps',
+InputStream:1225: text: 'Copy link',
+InputStream:1237: text: 'Share to WhatsApp',
+InputStream:1248: text: 'Share to Telegram',
+InputStream:1258: text: 'Share to Facebook',
+InputStream:1398: if (_blockStatus.iBlockedOther) {
+InputStream:1427: _buildBlockBanner(),
+InputStream:1443: Widget _buildBlockBanner() {
+InputStream:1445: if (!_blockStatus.otherBlockedMe && !_blockStatus.iBlockedOther) {
+InputStream:1449: final isOtherBlockedMe = _blockStatus.otherBlockedMe;
+InputStream:1485: final bool own = _isOwnListing; // 鉁?鑷繁鍟嗗搧鏃舵寜閽洿鎺ュ脊鎻愮ず
+InputStream:1521: ? () => _showSelfListingInfo(actionName: 'make a call')
+InputStream:1557: ? () => _showSelfListingInfo(
+InputStream:1594: ? () => _showSelfListingInfo(actionName: 'make an offer')
+InputStream:1819: Hero(
+InputStream:1821: child: VerifiedAvatar(
+InputStream:1930: child: Hero(
+InputStream:2045: body: PhotoViewGallery.builder(
+InputStream:2120: final ok = await OfferService.blockUser(blockedId: _sellerId!);
+InputStream:2127: final ok = await OfferService.unblockUser(blockedId: _sellerId!);
+InputStream:2137: return showModalBottomSheet<String>(
+--- sell_form_page.dart 片段 ---
+InputStream:464: if (!await VerificationGuard.ensureVerifiedOrPrompt(context,
+InputStream:514: if (!await VerificationGuard.ensureVerifiedOrPrompt(context,
+--- saved/notification 片段 ---

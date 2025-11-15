@@ -7,7 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/profile_service.dart';
 
 class EditProfilePage extends StatefulWidget {
-  const EditProfilePage({Key? key}) : super(key: key);
+  const EditProfilePage({super.key});
 
   @override
   EditProfilePageState createState() => EditProfilePageState();
@@ -243,9 +243,6 @@ class EditProfilePageState extends State<EditProfilePage> {
       if (_selectedImage != null) {
         newAvatarUrl =
             await ProfileService.instance.uploadAvatar(_selectedImage!);
-        if (newAvatarUrl == null) {
-          throw Exception('Failed to upload avatar');
-        }
       }
 
       // 与 ProfileService 的签名对齐
@@ -300,12 +297,12 @@ class EditProfilePageState extends State<EditProfilePage> {
           Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(
+              gradient: const LinearGradient(
                 colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Color(0xFF667EEA).withOpacity(0.3),
+                  color: const Color(0xFF667EEA).withOpacity(0.3),
                   blurRadius: 20.r,
                   offset: Offset(0, 8.h),
                 ),
@@ -334,14 +331,14 @@ class EditProfilePageState extends State<EditProfilePage> {
               child: Container(
                 padding: EdgeInsets.all(12.w),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                     colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
                   ),
                   shape: BoxShape.circle,
                   border: Border.all(color: Colors.white, width: 3.w),
                   boxShadow: [
                     BoxShadow(
-                      color: Color(0xFF667EEA).withOpacity(0.3),
+                      color: const Color(0xFF667EEA).withOpacity(0.3),
                       blurRadius: 8.r,
                       offset: Offset(0, 2.h),
                     ),
@@ -394,7 +391,7 @@ class EditProfilePageState extends State<EditProfilePage> {
             hintText: hint,
             prefixIcon: Padding(
               padding: EdgeInsets.all(16.w),
-              child: Icon(icon, color: Color(0xFF667EEA), size: 20.w),
+              child: Icon(icon, color: const Color(0xFF667EEA), size: 20.w),
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16.r),
@@ -406,7 +403,7 @@ class EditProfilePageState extends State<EditProfilePage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16.r),
-              borderSide: BorderSide(color: Color(0xFF667EEA), width: 2.w),
+              borderSide: BorderSide(color: const Color(0xFF667EEA), width: 2.w),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16.r),
@@ -437,13 +434,13 @@ class EditProfilePageState extends State<EditProfilePage> {
         ),
         SizedBox(height: 8.h),
         DropdownButtonFormField<String>(
-          value: _selectedCity,
+          initialValue: _selectedCity,
           style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade800),
           decoration: InputDecoration(
             prefixIcon: Padding(
               padding: EdgeInsets.all(16.w),
               child: Icon(Icons.location_city_rounded,
-                  color: Color(0xFF667EEA), size: 20.w),
+                  color: const Color(0xFF667EEA), size: 20.w),
             ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16.r),
@@ -455,7 +452,7 @@ class EditProfilePageState extends State<EditProfilePage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16.r),
-              borderSide: BorderSide(color: Color(0xFF667EEA), width: 2.w),
+              borderSide: BorderSide(color: const Color(0xFF667EEA), width: 2.w),
             ),
             filled: true,
             fillColor: Colors.grey.shade50,
@@ -493,7 +490,7 @@ class EditProfilePageState extends State<EditProfilePage> {
         ),
         backgroundColor: Colors.transparent,
         flexibleSpace: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             gradient: LinearGradient(
               colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
               begin: Alignment.topLeft,
@@ -543,7 +540,7 @@ class EditProfilePageState extends State<EditProfilePage> {
       body: _loading
           ? Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF667EEA)),
+                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF667EEA)),
                 strokeWidth: 3.w,
               ),
             )
@@ -615,7 +612,7 @@ class EditProfilePageState extends State<EditProfilePage> {
                         ),
                         child: Ink(
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
+                            gradient: const LinearGradient(
                               colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
                             ),
                             borderRadius: BorderRadius.circular(16.r),

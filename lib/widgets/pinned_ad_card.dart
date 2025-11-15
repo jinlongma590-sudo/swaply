@@ -85,16 +85,16 @@ class PinnedAdCard extends StatelessWidget {
                             ),
                           ],
                         ),
-                        child: Row(
+                        child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.push_pin,
                               size: 12,
                               color: Colors.white,
                             ),
-                            const SizedBox(width: 2),
-                            const Text(
+                            SizedBox(width: 2),
+                            Text(
                               'PINNED',
                               style: TextStyle(
                                 color: Colors.white,

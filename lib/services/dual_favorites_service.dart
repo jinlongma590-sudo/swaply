@@ -340,9 +340,10 @@ class DualFavoritesService {
     required int offset,
   }) async {
     try {
-      if (kDebugMode)
+      if (kDebugMode) {
         debugPrint(
             '[DualFavoritesService] FETCH favorites $userId/$limit/$offset');
+      }
 
       _debugPrint('=== 获取用户收藏列表 ===');
       _debugPrint('用户ID: $userId, 限制: $limit, 偏移: $offset');
@@ -356,8 +357,7 @@ class DualFavoritesService {
 
       _debugPrint('收藏原始数据: $rawFavoritesData');
 
-      if (rawFavoritesData == null ||
-          (rawFavoritesData is List && rawFavoritesData.isEmpty)) {
+      if ((rawFavoritesData.isEmpty)) {
         _debugPrint('未找到收藏记录');
         return [];
       }
@@ -442,9 +442,10 @@ class DualFavoritesService {
     required int offset,
   }) async {
     try {
-      if (kDebugMode)
+      if (kDebugMode) {
         debugPrint(
             '[DualFavoritesService] FETCH wishlist $userId/$limit/$offset');
+      }
 
       _debugPrint('=== 获取用户心愿单列表 ===');
       _debugPrint('用户ID: $userId, 限制: $limit, 偏移: $offset');
@@ -458,8 +459,7 @@ class DualFavoritesService {
 
       _debugPrint('心愿单原始数据: $rawWishlistData');
 
-      if (rawWishlistData == null ||
-          (rawWishlistData is List && rawWishlistData.isEmpty)) {
+      if ((rawWishlistData.isEmpty)) {
         _debugPrint('未找到心愿单记录');
         return [];
       }

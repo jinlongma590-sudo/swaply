@@ -8,7 +8,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:swaply/services/reward_service.dart';
 
 class InviteFriendsPage extends StatefulWidget {
-  const InviteFriendsPage({Key? key}) : super(key: key);
+  const InviteFriendsPage({super.key});
 
   @override
   State<InviteFriendsPage> createState() => _InviteFriendsPageState();
@@ -82,7 +82,9 @@ class _InviteFriendsPageState extends State<InviteFriendsPage>
 
             if (inviterId == user.id && inviteeId == user.id) return false;
             if (inviterId == user.id &&
-                (inviteeId == null || inviteeId.isEmpty)) return false;
+                (inviteeId == null || inviteeId.isEmpty)) {
+              return false;
+            }
             return inviterId == user.id &&
                 inviteeId != null &&
                 inviteeId.isNotEmpty &&
@@ -253,14 +255,14 @@ Download: https://www.swaply.cc
     }
 
     // ✅ [MODIFIED] 提取平台变量
-    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
     // ✅ [MODIFIED] 提取刷新按钮逻辑，以便在 iOS 和 Android 之间共享
     final refreshBtnWidget = _isRefreshing
         ? SizedBox(
       width: 20.r,
       height: 20.r,
-      child: CircularProgressIndicator(
+      child: const CircularProgressIndicator(
         strokeWidth: 2,
         color: Colors.white,
       ),
@@ -270,7 +272,7 @@ Download: https://www.swaply.cc
     // ✅ [REMOVED] 移除旧的 36x36 刷新按钮定义
     // final iosRefreshBtn = ... (old 36x36 definition removed)
 
-    if (_isIOS) {
+    if (isIOS) {
       // ===== ✅ iOS: 使用自定义 Stack 头部 =====
       return Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
@@ -437,9 +439,9 @@ Download: https://www.swaply.cc
 
   /// ✅ [MODIFIED] 未登录视图也使用新标准
   Widget _buildNotLoggedInView() {
-    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
-    if (_isIOS) {
+    if (isIOS) {
       // ===== iOS Guest: 使用自定义 Stack 头部 (无刷新按钮) =====
       return Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
@@ -787,9 +789,9 @@ Download: https://www.swaply.cc
           if (_inviteCode == null)
             SizedBox(
               height: 100.h,
-              child: Center(
+              child: const Center(
                 child: CircularProgressIndicator(
-                  color: const Color(0xFF4CAF50),
+                  color: Color(0xFF4CAF50),
                 ),
               ),
             )

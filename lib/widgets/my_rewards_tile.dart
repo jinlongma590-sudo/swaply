@@ -5,7 +5,7 @@ import 'package:swaply/services/reward_service.dart';
 import 'package:swaply/pages/task_management_page.dart';
 
 class MyRewardsTile extends StatefulWidget {
-  const MyRewardsTile({Key? key}) : super(key: key);
+  const MyRewardsTile({super.key});
 
   @override
   State<MyRewardsTile> createState() => _MyRewardsTileState();

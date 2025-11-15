@@ -19,7 +19,7 @@ import '../models/verification_types.dart' as vt;
 import '../widgets/verification_badge.dart' as vb;
 
 class VerificationPage extends StatefulWidget {
-  const VerificationPage({Key? key}) : super(key: key);
+  const VerificationPage({super.key});
 
   @override
   State<VerificationPage> createState() => _VerificationPageState();
@@ -564,7 +564,7 @@ class _VerificationPageState extends State<VerificationPage>
               labelText: 'Email Address',
               hintText: 'Enter your email address',
               prefixIcon: Icon(Icons.email_outlined,
-                  color: Color(0xFF667EEA), size: 18.w),
+                  color: const Color(0xFF667EEA), size: 18.w),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14.r),
                 borderSide: BorderSide(color: Colors.grey.shade300),
@@ -575,7 +575,7 @@ class _VerificationPageState extends State<VerificationPage>
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14.r),
-                borderSide: BorderSide(color: Color(0xFF667EEA), width: 2.w),
+                borderSide: BorderSide(color: const Color(0xFF667EEA), width: 2.w),
               ),
               filled: true,
               fillColor: Colors.grey.shade50,
@@ -654,7 +654,7 @@ class _VerificationPageState extends State<VerificationPage>
               OutlineInputBorder(borderRadius: BorderRadius.circular(14.r)),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14.r),
-                borderSide: BorderSide(color: Color(0xFF667EEA), width: 2.w),
+                borderSide: BorderSide(color: const Color(0xFF667EEA), width: 2.w),
               ),
               filled: true,
               fillColor: Colors.grey.shade50,

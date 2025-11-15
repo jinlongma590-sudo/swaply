@@ -366,7 +366,7 @@ class CouponModel {
   /// Create CouponModel from Map
   factory CouponModel.fromMap(Map<String, dynamic> map) {
     try {
-      int _safeInt(dynamic value, int defaultValue) {
+      int safeInt(dynamic value, int defaultValue) {
         if (value == null) return defaultValue;
         if (value is int) return value;
         if (value is double) return value.toInt();
@@ -376,7 +376,7 @@ class CouponModel {
         return defaultValue;
       }
 
-      DateTime _safeDateTime(dynamic value, DateTime defaultValue) {
+      DateTime safeDateTime(dynamic value, DateTime defaultValue) {
         if (value == null) return defaultValue;
         if (value is DateTime) return value;
         if (value is String && value.isNotEmpty) {
@@ -385,7 +385,7 @@ class CouponModel {
         return defaultValue;
       }
 
-      DateTime? _safeNullableDateTime(dynamic value) {
+      DateTime? safeNullableDateTime(dynamic value) {
         if (value == null) return null;
         if (value is DateTime) return value;
         if (value is String && value.isNotEmpty) {
@@ -394,7 +394,7 @@ class CouponModel {
         return null;
       }
 
-      String? _safeString(dynamic value) {
+      String? safeString(dynamic value) {
         if (value == null) return null;
         return value.toString();
       }
@@ -409,22 +409,22 @@ class CouponModel {
         status: CouponStatus.fromString(map['status']?.toString()),
         title: map['title']?.toString() ?? '',
         description: map['description']?.toString() ?? '',
-        durationDays: _safeInt(map['duration_days'], 7),
-        maxUses: _safeInt(map['max_uses'], 1),
-        usedCount: _safeInt(map['used_count'], 0),
-        createdAt: _safeDateTime(map['created_at'], now),
+        durationDays: safeInt(map['duration_days'], 7),
+        maxUses: safeInt(map['max_uses'], 1),
+        usedCount: safeInt(map['used_count'], 0),
+        createdAt: safeDateTime(map['created_at'], now),
         expiresAt:
-            _safeDateTime(map['expires_at'], now.add(const Duration(days: 7))),
-        usedAt: _safeNullableDateTime(map['used_at']),
+            safeDateTime(map['expires_at'], now.add(const Duration(days: 7))),
+        usedAt: safeNullableDateTime(map['used_at']),
         listingId: map['listing_id']?.toString(),
         metadata: map['metadata'] as Map<String, dynamic>?,
         // new fields
-        category: _safeString(map['category']),
-        source: _safeString(map['source']),
-        pinDays: _safeInt(map['pin_days'], 0) == 0
+        category: safeString(map['category']),
+        source: safeString(map['source']),
+        pinDays: safeInt(map['pin_days'], 0) == 0
             ? null
-            : _safeInt(map['pin_days'], 0),
-        pinScope: _safeString(map['pin_scope']),
+            : safeInt(map['pin_days'], 0),
+        pinScope: safeString(map['pin_scope']),
       );
     } catch (e) {
       if (kDebugMode) {
@@ -579,8 +579,9 @@ class CouponModel {
     if (daysUntilExpiry == 1) return 'Expires tomorrow';
     if (daysUntilExpiry <= 3) return 'Expires in ${daysUntilExpiry}d';
     if (daysUntilExpiry <= 7) return 'Expires in 1w';
-    if (daysUntilExpiry <= 30)
+    if (daysUntilExpiry <= 30) {
       return 'Expires in ${(daysUntilExpiry / 7).ceil()}w';
+    }
     return 'Expires in ${(daysUntilExpiry / 30).ceil()}mo';
   }
 

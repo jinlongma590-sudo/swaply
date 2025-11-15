@@ -19,10 +19,10 @@ class OfferDetailPage extends StatefulWidget {
   final Map<String, dynamic>? offerData;
 
   const OfferDetailPage({
-    Key? key,
+    super.key,
     required this.offerId,
     this.offerData,
-  }) : super(key: key);
+  });
 
   @override
   State<OfferDetailPage> createState() => _OfferDetailPageState();
@@ -218,7 +218,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
           height: 120.h,
           child: Center(
             child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(_FB_BLUE),
+              valueColor: const AlwaysStoppedAnimation<Color>(_FB_BLUE),
               strokeWidth: 2.5.w,
             ),
           ),
@@ -432,7 +432,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                   TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w700)),
               SizedBox(height: 12.h),
               DropdownButtonFormField<String>(
-                value: type,
+                initialValue: type,
                 items: const [
                   DropdownMenuItem(value: 'Spam', child: Text('Spam')),
                   DropdownMenuItem(value: 'Scam', child: Text('Scam/Fraud')),
@@ -544,8 +544,9 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
         final date = DateTime.parse(createdAt);
         final now = DateTime.now();
         final difference = now.difference(date);
-        if (difference.inMinutes < 1) timeText = 'Now';
-        else if (difference.inMinutes < 60) timeText = '${difference.inMinutes}m';
+        if (difference.inMinutes < 1) {
+          timeText = 'Now';
+        } else if (difference.inMinutes < 60) timeText = '${difference.inMinutes}m';
         else if (difference.inHours < 24) timeText = '${difference.inHours}h';
         else timeText = '${date.day}/${date.month}';
       } catch (_) {}
@@ -608,7 +609,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
       return Expanded(
         child: Center(
           child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(_FB_BLUE),
+            valueColor: const AlwaysStoppedAnimation<Color>(_FB_BLUE),
             strokeWidth: 2.5.w,
           ),
         ),
@@ -758,7 +759,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                           padding: EdgeInsets.all(12.w),
                           child: CircularProgressIndicator(
                             strokeWidth: 2.w,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         )
                             : Icon(Icons.send_rounded, color: Colors.white, size: 24.w),
@@ -777,14 +778,14 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
   @override
   Widget build(BuildContext context) {
     final double statusBar = MediaQuery.of(context).padding.top;
-    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    final double _toolbarHeight = _isIOS ? (statusBar + 38.0) : kToolbarHeight;
+    final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final double toolbarHeight = isIOS ? (statusBar + 38.0) : kToolbarHeight;
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         centerTitle: true,
-        toolbarHeight: _toolbarHeight,
+        toolbarHeight: toolbarHeight,
         backgroundColor: _FB_BLUE,                 // ✅ 直接上实色背景
         surfaceTintColor: Colors.transparent,      // ✅ 关闭 M3 蒙层
         scrolledUnderElevation: 0,

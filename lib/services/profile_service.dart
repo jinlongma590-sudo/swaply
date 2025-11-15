@@ -16,6 +16,46 @@ class ProfileService {
 
   SupabaseClient get _sb => Supabase.instance.client;
   String? get uid => _sb.auth.currentUser?.id;
+  /// 从 auth.currentUser.userMetadata 同步基础资料到 public.profiles
+  /// - 只管 id / full_name / phone / email / updated_at
+  /// - 不写 verification_type / email_verified / is_verified（交给 DB 默认）
+  static Future<void> syncProfileFromAuthUser() async {
+    final supa = Supabase.instance.client;
+    final user = supa.auth.currentUser;
+    if (user == null) return;
+
+    final meta = user.userMetadata ?? {};
+    final email = (user.email ?? '').trim();
+    final fullNameMeta = (meta['full_name'] ?? '').toString().trim();
+    final phoneMeta = (meta['phone'] ?? '').toString().trim();
+
+    final displayName = fullNameMeta.isNotEmpty
+        ? fullNameMeta
+        : (email.isNotEmpty ? email : 'User');
+
+    final upsertData = <String, dynamic>{
+      'id': user.id,
+      'full_name': displayName,
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+
+    if (email.isNotEmpty) {
+      upsertData['email'] = email;
+    }
+    if (phoneMeta.isNotEmpty) {
+      upsertData['phone'] = phoneMeta;
+    }
+
+    await supa.from('profiles').upsert(
+      upsertData,
+      onConflict: 'id',
+    );
+
+    // ignore: avoid_print
+    print('[ProfileService] synced profile for ${user.id}'
+        ' full_name=$displayName phone=$phoneMeta');
+  }
+
 
   // ========== 核心方法：返回是否本次新发了欢迎券 ==========
   Future<bool> ensureProfileAndWelcome({

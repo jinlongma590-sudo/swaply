@@ -1,9 +1,8 @@
-﻿// lib/auth/login_screen.dart - 最终修复：Apple 登录改回 OAuth 流程
+// lib/auth/login_screen.dart - 最终修复：Apple 登录改回 OAuth 流程
 
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
@@ -15,7 +14,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 const String _kMobileRedirect = 'cc.swaply.app://login-callback';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();

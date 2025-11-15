@@ -11,7 +11,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:postgrest/postgrest.dart' show PostgrestException; // ✅ 新增：用于识别 P0001
+// ✅ 新增：用于识别 P0001
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -39,10 +39,10 @@ class ProductDetailPage extends StatefulWidget {
   final Map<String, dynamic>? productData;
 
   const ProductDetailPage({
-    Key? key,
+    super.key,
     this.productId,
     this.productData,
-  }) : super(key: key);
+  });
 
   @override
   State<ProductDetailPage> createState() => _ProductDetailPageState();
@@ -783,7 +783,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     // 仅保留数字（不保留+号，避免某些设备解析异常）
     final digits = raw.replaceAll(RegExp(r'[^\d]'), '');
 
-    Future<bool> _try(Uri u) async {
+    Future<bool> _tryLaunch(Uri u) async {
       if (await canLaunchUrl(u)) {
         await launchUrl(u, mode: LaunchMode.externalApplication);
         return true;
@@ -793,11 +793,11 @@ class _ProductDetailPageState extends State<ProductDetailPage>
 
     // ① 尝试直接深链（优先带号码）
     if (digits.length >= 7) {
-      if (await _try(Uri.parse('whatsapp://send?phone=$digits&text=$encMsg'))) {
+      if (await _tryLaunch(Uri.parse('whatsapp://send?phone=$digits&text=$encMsg'))) {
         return;
       }
     }
-    if (await _try(Uri.parse('whatsapp://send?text=$encMsg'))) {
+    if (await _tryLaunch(Uri.parse('whatsapp://send?text=$encMsg'))) {
       return;
     }
 
@@ -805,7 +805,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     final market = Uri.parse('market://details?id=com.whatsapp');
     final playWeb =
     Uri.parse('https://play.google.com/store/apps/details?id=com.whatsapp');
-    if (await _try(market) || await _try(playWeb)) return;
+    if (await _tryLaunch(market) || await _tryLaunch(playWeb)) return;
 
     // ③ 兜底：复制消息
     await Clipboard.setData(ClipboardData(text: message));
@@ -1320,9 +1320,9 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   double _imageAreaHeight(BuildContext context) {
     final screenH = MediaQuery.of(context).size.height;
     // 目标为屏幕 58% 的高度，最低 320，高于 540 则封顶（全用适配尺寸）
-    final minH = 320.h;
-    final maxH = 540.h;
-    final target = screenH * 0.58;
+    final double minH = 320.h;
+    final double maxH = 540.h;
+    final double target = screenH * 0.58;
     // clamp 需要 num → 返回 double
     final clamped = target.clamp(minH, maxH);
     return clamped.toDouble();
@@ -2073,7 +2073,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       final now = DateTime.now();
       final difference = now.difference(dateTime);
       if (difference.inDays > 30) {
-        return '${(difference.inDays / 30).floor()}mo ago';
+        return '${((difference.inDays) / 30).floor()}mo ago';
       } else if (difference.inDays > 0) {
         return '${difference.inDays}d ago';
       } else if (difference.inHours > 0) {

@@ -7,9 +7,9 @@ class WelcomeCouponDialog extends StatefulWidget {
   final Map<String, dynamic> couponData;
 
   const WelcomeCouponDialog({
-    Key? key,
+    super.key,
     required this.couponData,
-  }) : super(key: key);
+  });
 
   @override
   State<WelcomeCouponDialog> createState() => _WelcomeCouponDialogState();

@@ -1,4 +1,4 @@
-﻿// lib/services/oauth_service.dart
+// lib/services/oauth_service.dart
 //
 // 缁熶竴鐨?OAuth 鐧诲綍灏佽锛圙oogle / Facebook / Apple锛?
 // - 杩斿洖绫诲瀷缁熶竴 Future<void>锛堝吋瀹规棫鐗堣繑鍥?bool銆佹柊鐗堣繑鍥?AuthResponse锛?
@@ -8,7 +8,7 @@
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart' as sf;
-import 'package:swaply/config/auth_config.dart'; // kAuthRedirectUri = 'cc.swaply.app://login-callback'
+// kAuthRedirectUri = 'cc.swaply.app://login-callback'
 
 class OAuthService {
   OAuthService._();

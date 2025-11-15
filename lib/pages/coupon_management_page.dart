@@ -10,7 +10,7 @@ import 'package:swaply/models/coupon.dart';
 import 'package:swaply/pages/sell_form_page.dart';
 
 class CouponManagementPage extends StatefulWidget {
-  const CouponManagementPage({Key? key}) : super(key: key);
+  const CouponManagementPage({super.key});
   @override
   State<CouponManagementPage> createState() => _CouponManagementPageState();
 }
@@ -206,7 +206,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
         bool isCurrentlyExpired = false;
         try {
           isCurrentlyExpired =
-          coupon.expiresAt != null ? now.isAfter(coupon.expiresAt) : false;
+          now.isAfter(coupon.expiresAt);
         } catch (e) {
           isCurrentlyExpired = false;
         }
@@ -328,7 +328,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
   // ===== iOS/Android 统一的短导航条（顶部蓝色范围仅 StatusBar+44） =====
   Widget _buildCustomAppBar() {
     final double statusBar = MediaQuery.of(context).padding.top;
-    final bool _isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
 
     // 左侧返回
     final Widget backButton = GestureDetector(
@@ -384,13 +384,13 @@ class _CouponManagementPageState extends State<CouponManagementPage>
     );
 
     // 统一使用纯色 Facebook 蓝，缩小顶部蓝色面积
-    final BoxDecoration bg = const BoxDecoration(color: _PRIMARY_BLUE);
+    const BoxDecoration bg = BoxDecoration(color: _PRIMARY_BLUE);
 
     // ==================== MODIFICATION START ====================
     //
     // 切换到与“我的奖励”页面一致的布局 (Row-based)
     //
-    if (_isIOS) {
+    if (isIOS) {
       // ✅ 采用「奖励页面」的像素对齐布局
       const double kNavBarHeight = 44.0; // 标准导航条高度
       const double kSidePadding = 16.0; // 标准左右内边距
@@ -591,7 +591,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
         indicatorSize: TabBarIndicatorSize.tab,
         indicatorPadding: EdgeInsets.zero,
         dividerColor: Colors.transparent,
-        overlayColor: MaterialStateProperty.all(Colors.transparent),
+        overlayColor: WidgetStateProperty.all(Colors.transparent),
         tabs: [
           Tab(
             height: 56,
@@ -708,8 +708,8 @@ class _CouponManagementPageState extends State<CouponManagementPage>
                     offset: const Offset(0, 10))
               ],
             ),
-            child: Column(
-              children: const [
+            child: const Column(
+              children: [
                 SizedBox(
                   width: 40,
                   height: 40,

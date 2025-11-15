@@ -32,14 +32,14 @@ class ModernSliverHeader extends StatelessWidget {
           ),
           clipBehavior: Clip.antiAlias,
           child: Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  const Color(0xFF2563EB),
-                  const Color(0xFF3B82F6),
-                  const Color(0xFF60A5FA)
+                  Color(0xFF2563EB),
+                  Color(0xFF3B82F6),
+                  Color(0xFF60A5FA)
                 ],
                 stops: [0.0, 0.5, 1.0],
               ),
@@ -194,8 +194,8 @@ class EmailVerifiedChip extends StatelessWidget {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-            colors: [const Color(0xFF3B82F6), const Color(0xFF2563EB)]),
+        gradient: const LinearGradient(
+            colors: [Color(0xFF3B82F6), Color(0xFF2563EB)]),
         borderRadius: BorderRadius.circular(20.r),
         boxShadow: [
           BoxShadow(

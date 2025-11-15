@@ -1,0 +1,74 @@
+﻿[
+    {
+        "id":  "1-self-listing-guard",
+        "pass":  true,
+        "desc":  "存在 _isOwnListing / _showSelfListingInfo 且三按钮 own 分支已拦截",
+        "hint":  "确保底部三个按钮 onPressed 均为 own ? _showSelfListingInfo : 实际动作"
+    },
+    {
+        "id":  "2-block-relations",
+        "pass":  true,
+        "desc":  "存在屏蔽状态判断、提示条、拉取与 block/unblock 入口",
+        "hint":  "确认 _ensureAllowedForContact 内含 block 守卫逻辑"
+    },
+    {
+        "id":  "3-verification-guard",
+        "pass":  true,
+        "desc":  "关键入口存在 VerificationGuard 调用（详情见 pd/sell/message）",
+        "hint":  "若某页面没有守卫，请补齐调用"
+    },
+    {
+        "id":  "4-share-bottom-sheet",
+        "pass":  true,
+        "desc":  "分享底部菜单齐全且走 ShareUtils（平台/商店回退）",
+        "hint":  "如果缺少某项菜单，请补齐 _showCompactShareSheet"
+    },
+    {
+        "id":  "5-deeplink-url",
+        "pass":  true,
+        "desc":  "分享 URL 使用 https://www.swaply.cc/l/{id}?ref=app",
+        "hint":  "若域名变更，请同步修改 _buildSharePayload"
+    },
+    {
+        "id":  "6-favorite-and-notify",
+        "pass":  true,
+        "desc":  "加入收藏触发本地同步与卖家通知",
+        "hint":  "若缺失通知，请实现 NotificationService.createWishlistNotification"
+    },
+    {
+        "id":  "7-offer-flow",
+        "pass":  true,
+        "desc":  "存在 Offer 创建、守卫、以及自卖与重复出价的错误分支",
+        "hint":  "确保数据库触发器返回 P0001 时前端提示友好"
+    },
+    {
+        "id":  "8-call-and-log",
+        "pass":  true,
+        "desc":  "拨号使用 tel: 并记录 inquiries(\u0027call\u0027)",
+        "hint":  "如未记录，请在 _makePhoneCall 前后补 _recordInquiry(\u0027call\u0027)"
+    },
+    {
+        "id":  "9-image-viewer",
+        "pass":  true,
+        "desc":  "已使用 PhotoViewGallery + Hero",
+        "hint":  "检查 tag 一致：product_image_{index}"
+    },
+    {
+        "id":  "10-seller-badge",
+        "pass":  true,
+        "desc":  "卖家头像使用 VerifiedAvatar + 公共认证枚举",
+        "hint":  "若徽章不对，统一从枚举派生 _sellerBadge"
+    },
+    {
+        "id":  "11-sell-return-await",
+        "pass":  false,
+        "desc":  "存在 SellFormPage 导航且至少一处含 await 等待返回值",
+        "hint":  "确保返回值触发刷新（ok == true 时 reload）"
+    },
+    {
+        "id":  "12-ios-header-unified",
+        "pass":  false,
+        "desc":  "Saved/Notifications/Sell 三页存在统一头部（或统一蓝色常量）",
+        "hint":  "若某页缺 _blueHeader，请对齐写法/间距"
+    }
+]

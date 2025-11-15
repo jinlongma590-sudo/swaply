@@ -1,9 +1,8 @@
-﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart';
 // lib/auth/google_signin.dart
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart'; // for LaunchMode
+// for LaunchMode
 
 const String _kIOSRedirect = 'cc.swaply.app://login-callback';
 
@@ -25,7 +24,7 @@ class GoogleSignInButton extends StatelessWidget {
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Google 鐧诲綍澶辫触锛?e')),
+        const SnackBar(content: Text('Google 鐧诲綍澶辫触锛?e')),
       );
     } finally {
       onAfter?.call();

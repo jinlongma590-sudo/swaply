@@ -43,9 +43,9 @@ class ShareUtils {
   /// 未安装→商店（Android→Play / iOS→App Store）
   static Future<void> toTelegram({String? url, String? text}) async {
     final hasUrl = (url != null && url.isNotEmpty);
-    final u = hasUrl ? Uri.encodeComponent(url!) : null;
+    final u = hasUrl ? Uri.encodeComponent(url) : null;
     final t = (text != null && text.isNotEmpty)
-        ? Uri.encodeComponent(text!)
+        ? Uri.encodeComponent(text)
         : null;
 
     // 先用 share?url=...&text=...

@@ -2,6 +2,7 @@
 // ✅ 功能：基于代码二（保留 Pub/Sub 自动刷新）
 // ✅ UI：  应用代码一的“紧凑型”分类网格 UI（44.w 图标）
 // ✅ 修复：将 LayoutBuilder 方案正确注入到 44.w 紧凑布局中
+// ✅ 修改：Trending(Pinned) = 10, Popular(Latest) = 100, 移除 Total 限制
 
 import 'dart:io' show Platform; // ✅ 仅用于 iOS 判断
 
@@ -176,7 +177,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         if (priceData.contains('\$') || priceData.contains('USD')) {
           return priceData;
         } else {
-          return '\$${priceData}';
+          return '\$$priceData';
         }
       }
     }
@@ -184,12 +185,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     return priceData.toString();
   }
 
-  // ✅ 功能保留: bypassCache
+  // ✅ [MODIFIED] 遵照指示修改：pinned=10, latest=100, 移除 total 限制
   Future<List<Map<String, dynamic>>> _fetchTrendingMixed({
     String? city,
-    int pinnedLimit = 6,
-    int latestLimit = 36,
-    int total = 12,
+    int pinnedLimit = 10,  // ✅ 1. 改为 10
+    int latestLimit = 100, // ✅ 2. 改为 100
+    // int total = 12,      // ✅ 3. 移除 total 限制
     bool bypassCache = false,
   }) async {
     final pinnedAds = await CouponService.getTrendingPinnedAds(
@@ -240,9 +241,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         'created_at': r['created_at'],
         'pinned': false,
       });
-      if (list.length >= total) break;
+      // 移除了 list.length >= total 的 break 判断
     }
-    return list.take(total).toList();
+    // return list.take(total).toList(); // ✅ 4. 移除 .take(total)
+    return list.toList();
   }
 
   // ✅ 功能保留: bypassCache
@@ -253,9 +255,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       _selectedLocation == 'All Zimbabwe' ? null : _selectedLocation;
       final rows = await _fetchTrendingMixed(
         city: city,
-        pinnedLimit: 6,
-        latestLimit: 36,
-        total: 12,
+        pinnedLimit: 10,  // ✅ 保持与函数定义一致
+        latestLimit: 100, // ✅ 保持与函数定义一致
+        // total: 12, (移除)
         bypassCache: bypassCache, // ✅ 功能保留
       );
       if (mounted) {
@@ -318,6 +320,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     );
   }
 
+  // ✅【已修改】加入 await，并在 ok==true 时刷新（满足 smoke #11）
   Future<void> _onTapPost() async {
     final auth = Supabase.instance.client.auth;
     if (auth.currentUser == null) {
@@ -344,8 +347,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       if (Supabase.instance.client.auth.currentUser == null) return;
     }
     if (!mounted) return;
-    Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => const SellFormPage()));
+
+    // 🔽 关键改动：await + 处理 ok
+    final ok = await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const SellFormPage()),
+    );
+
+    if (ok == true && mounted) {
+      // 双保险：即使有事件总线，这里也主动刷新一次并滚回“Trending”
+      await _loadTrending(bypassCache: true);
+      _scrollToTrending();
+      setState(() {}); // 最保守触发重建
+    }
   }
 
   /* ===================== UI构建 ===================== */
@@ -684,7 +697,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             ),
                           ),
                         ),
-                        SizedBox(height: gap), // ✅ 紧凑 8.h
+                        const SizedBox(height: gap), // ✅ 紧凑 8.h
 
                         // ✅ label 高度用“动态上限”
                         ConstrainedBox(
@@ -1263,7 +1276,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
     return ClipRRect(
       borderRadius: BorderRadius.vertical(top: Radius.circular(10.r)),
-      child: Container(
+      child: SizedBox(
         width: double.infinity,
         height: double.infinity,
         child: imgWidget,

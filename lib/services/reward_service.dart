@@ -58,7 +58,7 @@ class RewardService {
     final res =
         await _client.rpc('ensure_welcome_coupon', params: {'p_user': uid});
     final map = (res is Map)
-        ? Map<String, dynamic>.from(res as Map)
+        ? Map<String, dynamic>.from(res)
         : <String, dynamic>{};
 
     return EnsureWelcomeResult(
@@ -79,7 +79,7 @@ class RewardService {
       final res = await _client
           .rpc('ensure_welcome_coupon', params: {'p_user': userId});
       final map = (res is Map)
-          ? Map<String, dynamic>.from(res as Map)
+          ? Map<String, dynamic>.from(res)
           : <String, dynamic>{};
       final couponId = map['coupon_id'] as String?;
 
@@ -103,7 +103,7 @@ class RewardService {
             .order('created_at', ascending: false)
             .limit(1);
 
-        if (existingList is List && existingList.isNotEmpty) {
+        if (existingList.isNotEmpty) {
           row = Map<String, dynamic>.from(existingList.first);
         }
       }
@@ -123,7 +123,7 @@ class RewardService {
             .order('created_at', ascending: false)
             .limit(1);
 
-        if (existingList is List && existingList.isNotEmpty) {
+        if (existingList.isNotEmpty) {
           _welcomeChecked = true;
           return Map<String, dynamic>.from(existingList.first);
         }
@@ -139,7 +139,7 @@ class RewardService {
       final res = await _client
           .rpc('ensure_welcome_coupon', params: {'p_user': userId});
       final map = (res is Map)
-          ? Map<String, dynamic>.from(res as Map)
+          ? Map<String, dynamic>.from(res)
           : <String, dynamic>{};
       final granted = map['welcome_reward_granted'] == true;
       _welcomeChecked = true; // 仅防抖
@@ -154,7 +154,7 @@ class RewardService {
             .eq('user_id', userId)
             .eq('type', 'welcome')
             .limit(1);
-        final existed = (has is List && has.isNotEmpty);
+        final existed = (has.isNotEmpty);
         return existed;
       } catch (_) {
         return false;
@@ -194,7 +194,7 @@ class RewardService {
           .eq('user_id', userId)
           .eq('status', 'active');
 
-      final activeTaskCount = (activeTasks is List ? activeTasks.length : 0);
+      final activeTaskCount = (activeTasks.length);
 
       final activeCoupons = await _client
           .from('coupons')
@@ -204,7 +204,7 @@ class RewardService {
           .or('source.eq.rewards,source.eq.reward,source.eq.task,source.eq.signup,type.eq.welcome');
 
       final activeCouponCount =
-          (activeCoupons is List ? activeCoupons.length : 0);
+          (activeCoupons.length);
 
       final summary = {
         'points': stats['total_rewards'] ?? 0,
@@ -342,9 +342,7 @@ class RewardService {
           .eq('user_id', userId)
           .limit(1);
 
-      final List<dynamic> tasksList = existingTasks is List
-          ? existingTasks
-          : (existingTasks != null ? [existingTasks] : []);
+      final List<dynamic> tasksList = existingTasks;
 
       if (tasksList.isNotEmpty) {
         _debugPrint('User already has tasks created');
@@ -404,7 +402,7 @@ class RewardService {
           .eq('status', 'active');
 
       final List<dynamic> tasks =
-          response is List ? response : (response != null ? [response] : []);
+          response;
 
       if (tasks.isEmpty) {
         _debugPrint('No matching active tasks found');
@@ -460,7 +458,7 @@ class RewardService {
           .select();
 
       final List<dynamic> taskList =
-          response is List ? response : (response != null ? [response] : []);
+          response;
       if (taskList.isNotEmpty) {
         final taskData = Map<String, dynamic>.from(taskList.first);
         _debugPrint('Task completed: ${taskData['task_name']}');
@@ -699,7 +697,7 @@ class RewardService {
           .eq('status', 'completed');
 
       final List<dynamic> completed =
-          response is List ? response : (response != null ? [response] : []);
+          response;
       final count = completed.length;
       _debugPrint('Completed referrals count: $count');
 
@@ -1012,15 +1010,9 @@ class RewardService {
       final tasksResponse = futures[1];
       final referralsResponse = futures[2];
 
-      final List<dynamic> rewards = rewardsResponse is List
-          ? rewardsResponse
-          : (rewardsResponse != null ? [rewardsResponse] : []);
-      final List<dynamic> tasks = tasksResponse is List
-          ? tasksResponse
-          : (tasksResponse != null ? [tasksResponse] : []);
-      final List<dynamic> referrals = referralsResponse is List
-          ? referralsResponse
-          : (referralsResponse != null ? [referralsResponse] : []);
+      final List<dynamic> rewards = rewardsResponse;
+      final List<dynamic> tasks = tasksResponse;
+      final List<dynamic> referrals = referralsResponse;
 
       int countRewardsByType(String type) {
         return rewards.where((r) {
@@ -1127,7 +1119,7 @@ class RewardService {
           .order('created_at', ascending: false);
 
       final List<dynamic> list =
-          response is List ? response : (response != null ? [response] : []);
+          response;
       return list
           .map<Map<String, dynamic>>((item) {
             try {
@@ -1179,7 +1171,7 @@ class RewardService {
           ''').eq('user_id', userId).order('created_at', ascending: false);
 
       final List<dynamic> rewards =
-          response is List ? response : (response != null ? [response] : []);
+          response;
 
       final result = rewards
           .map<Map<String, dynamic>>((item) {
@@ -1418,9 +1410,7 @@ class RewardService {
           .lt('created_at', thirtyDaysAgo)
           .select('id');
 
-      final expiredTasksCount = expiredTasksResponse is List
-          ? expiredTasksResponse.length
-          : (expiredTasksResponse != null ? 1 : 0);
+      final expiredTasksCount = expiredTasksResponse.length;
 
       final cancelledReferralsResponse = await _client
           .from('referrals')
@@ -1429,9 +1419,7 @@ class RewardService {
           .lt('created_at', thirtyDaysAgo)
           .select('id');
 
-      final cancelledReferralsCount = cancelledReferralsResponse is List
-          ? cancelledReferralsResponse.length
-          : (cancelledReferralsResponse != null ? 1 : 0);
+      final cancelledReferralsCount = cancelledReferralsResponse.length;
 
       final sevenDaysAgo = now
           .subtract(const Duration(days: 7))
@@ -1443,9 +1431,7 @@ class RewardService {
           .lt('date', sevenDaysAgo)
           .select('id');
 
-      final deletedQuotasCount = deletedQuotasResponse is List
-          ? deletedQuotasResponse.length
-          : (deletedQuotasResponse != null ? 1 : 0);
+      final deletedQuotasCount = deletedQuotasResponse.length;
 
       _debugPrint(
           'Cleanup: tasks=$expiredTasksCount, referrals_cancelled=$cancelledReferralsCount, quotas_deleted=$deletedQuotasCount');
@@ -1508,18 +1494,10 @@ class RewardService {
             .lte('created_at', end),
       ]);
 
-      final rewardsData = futures[0] is List
-          ? futures[0] as List
-          : (futures[0] != null ? [futures[0]] : []);
-      final tasksData = futures[1] is List
-          ? futures[1] as List
-          : (futures[1] != null ? [futures[1]] : []);
-      final referralsData = futures[2] is List
-          ? futures[2] as List
-          : (futures[2] != null ? [futures[2]] : []);
-      final couponsData = futures[3] is List
-          ? futures[3] as List
-          : (futures[3] != null ? [futures[3]] : []);
+      final rewardsData = futures[0] as List;
+      final tasksData = futures[1] as List;
+      final referralsData = futures[2] as List;
+      final couponsData = futures[3] as List;
 
       Map<String, int> countByField(List<dynamic> items, String field) {
         final counts = <String, int>{};
@@ -1598,8 +1576,7 @@ class RewardService {
             .eq('user_id', userId)
             .order('created_at', ascending: false)
             .limit(limit);
-        if (response == null) return [];
-        final List<dynamic> list = response is List ? response : [response];
+        final List<dynamic> list = response;
         return list.cast<Map<String, dynamic>>();
       } catch (e) {
         _debugPrint('getRewardHistory(limit) error: $e');
@@ -1629,9 +1606,7 @@ class RewardService {
           .eq('status', 'active')
           .order('created_at', ascending: false);
 
-      if (response == null) return [];
-
-      final List<dynamic> list = response is List ? response : [response];
+      final List<dynamic> list = response;
       final result = list.cast<Map<String, dynamic>>();
 
       _cache[key] = _CacheEntry(now, result);

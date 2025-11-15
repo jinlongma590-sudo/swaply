@@ -6,7 +6,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:swaply/config.dart';
 import 'package:swaply/pages/product_detail_page.dart';
 import 'package:swaply/listing_api.dart';
 import 'package:swaply/services/coupon_service.dart';
@@ -699,7 +698,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
             SizedBox(
               width: 12.w,
               height: 12.h,
-              child: CircularProgressIndicator(
+              child: const CircularProgressIndicator(
                   strokeWidth: 2, color: _primaryBlue),
             )
           else ...[
@@ -958,7 +957,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
                       borderRadius:
                       BorderRadius.vertical(top: Radius.circular(7.r)),
                     ),
-                    child: Center(
+                    child: const Center(
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: _primaryBlue)),
                   ),
@@ -1172,7 +1171,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
         color: Colors.white,
         borderRadius: BorderRadius.circular(8.r),
       ),
-      child: Center(
+      child: const Center(
           child:
           CircularProgressIndicator(strokeWidth: 2, color: _primaryBlue)),
     );
@@ -1202,7 +1201,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
                   borderRadius:
                   BorderRadius.vertical(top: Radius.circular(8.r)),
                 ),
-                child: Center(
+                child: const Center(
                     child: CircularProgressIndicator(
                         strokeWidth: 2, color: _primaryBlue)),
               ),

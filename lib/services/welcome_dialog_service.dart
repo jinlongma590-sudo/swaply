@@ -37,8 +37,9 @@ class WelcomeDialogService {
       const Duration(seconds: 3)
     ]) {
       if (delay > Duration.zero) {
-        if (kDebugMode)
+        if (kDebugMode) {
           print('[WelcomeDialog] Retrying after ${delay.inSeconds}s...');
+        }
         await Future.delayed(delay);
       }
 
@@ -54,9 +55,10 @@ class WelcomeDialogService {
             .order('created_at', ascending: false)
             .limit(1);
 
-        if (rows is List && rows.isNotEmpty) {
-          if (kDebugMode)
+        if (rows.isNotEmpty) {
+          if (kDebugMode) {
             print('[WelcomeDialog] Found welcome coupon, showing dialog');
+          }
 
           _welcomeShownThisSession = true;
 
@@ -76,8 +78,9 @@ class WelcomeDialogService {
           if (kDebugMode) print('[WelcomeDialog] No welcome coupon found yet');
         }
       } catch (e) {
-        if (kDebugMode)
+        if (kDebugMode) {
           print('[WelcomeDialog] Error checking welcome coupon: $e');
+        }
         // 继续重试
       }
     }
@@ -94,8 +97,9 @@ class WelcomeDialogService {
     final prefs = await SharedPreferences.getInstance();
     final shownKey = 'welcome_dialog_shown_$userId';
     await prefs.remove(shownKey);
-    if (kDebugMode)
+    if (kDebugMode) {
       print('[WelcomeDialog] Cleared shown flag for user $userId');
+    }
   }
 
   /// 清除所有已显示标记（用于测试）
@@ -108,7 +112,8 @@ class WelcomeDialogService {
     for (final key in keys) {
       await prefs.remove(key);
     }
-    if (kDebugMode)
+    if (kDebugMode) {
       print('[WelcomeDialog] Cleared all shown flags (${keys.length} users)');
+    }
   }
 }

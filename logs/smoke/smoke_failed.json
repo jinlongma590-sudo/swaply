@@ -1,0 +1,14 @@
+﻿[
+    {
+        "id":  "11-sell-return-await",
+        "pass":  false,
+        "desc":  "存在 SellFormPage 导航且至少一处含 await 等待返回值",
+        "hint":  "确保返回值触发刷新（ok == true 时 reload）"
+    },
+    {
+        "id":  "12-ios-header-unified",
+        "pass":  false,
+        "desc":  "Saved/Notifications/Sell 三页存在统一头部（或统一蓝色常量）",
+        "hint":  "若某页缺 _blueHeader，请对齐写法/间距"
+    }
+]

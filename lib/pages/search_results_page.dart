@@ -10,10 +10,10 @@ class SearchResultsPage extends StatefulWidget {
   final String? location; // 可选：城市筛选（'All Zimbabwe' 表示不过滤）
 
   const SearchResultsPage({
-    Key? key,
+    super.key,
     required this.keyword,
     this.location,
-  }) : super(key: key);
+  });
 
   @override
   State<SearchResultsPage> createState() => _SearchResultsPageState();

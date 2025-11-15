@@ -247,14 +247,12 @@ class MessageService {
           ),
           callback: (payload) async {
             final record = payload.newRecord;
-            if (record != null) {
-              final messageData = Map<String, dynamic>.from(record);
-              _debugPrint('通过实时连接收到新消息: ${messageData['message']}');
+            final messageData = Map<String, dynamic>.from(record);
+            _debugPrint('通过实时连接收到新消息: ${messageData['message']}');
 
-              // 仅在前端需要时触发“本地提示”；入库通知已由 DB 触发器完成
-              onMessageReceived(messageData);
-            }
-          },
+            // 仅在前端需要时触发“本地提示”；入库通知已由 DB 触发器完成
+            onMessageReceived(messageData);
+                    },
         )
         .subscribe();
 

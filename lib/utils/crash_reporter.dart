@@ -1,5 +1,5 @@
 // lib/utils/crash_reporter.dart - 崩溃报告系统
-import 'dart:ui' show PlatformDispatcher; // 提供 PlatformDispatcher
+// 提供 PlatformDispatcher
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/utils/logger.dart';

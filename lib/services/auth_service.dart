@@ -1,15 +1,13 @@
-﻿// lib/services/auth_service.dart
+// lib/services/auth_service.dart
 // 鐧诲綍/娉ㄥ唽/OAuth 鍚庤嚜鍔?upsert profile锛涗笉鍐嶈嚜鍔ㄥ悓姝ラ偖绠遍獙璇佺姸鎬佷笌寰界珷
 // 2.2锛歰nEmailCodeVerified 浠呭埛鏂颁細璇濓紝涓嶅啓 DB
 // 2.1锛氬墠绔换浣曞湴鏂归兘涓嶆洿鏂?profiles 鐨勮璇佸瓧娈碉紙email_verified / is_verified / verification_type锛?
 // 2.3锛歎I/妯″瀷闇€鎸?auth 浼樺厛銆乸rofiles 鍏滃簳鍒ゅ畾锛堣 verification_utils.dart锛?
 
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'package:swaply/services/profile_service.dart'; // 缁熶竴鍒涘缓profile/娆㈣繋鍒稿叆鍙?
 import 'package:swaply/config/auth_config.dart';
@@ -192,8 +190,9 @@ class AuthService {
         // 鈿狅笍 涓嶅啓 email_verified / is_verified / verification_type锛堜氦缁?DB 榛樿锛?
       };
 
-      if (email?.isNotEmpty == true)
+      if (email?.isNotEmpty == true) {
         data['email'] = email!.trim().toLowerCase();
+      }
       if (fullName?.isNotEmpty == true) data['full_name'] = fullName;
       if (phone?.isNotEmpty == true) data['phone'] = phone;
       if (avatarUrl?.isNotEmpty == true) data['avatar_url'] = avatarUrl;
@@ -231,8 +230,9 @@ class AuthService {
         // 鈿狅笍 涓嶅啓璁よ瘉瀛楁
       };
 
-      if (email?.isNotEmpty == true)
+      if (email?.isNotEmpty == true) {
         data['email'] = email!.trim().toLowerCase();
+      }
       if (fullName?.isNotEmpty == true) data['full_name'] = fullName;
       if (phone?.isNotEmpty == true) data['phone'] = phone;
       if (avatarUrl?.isNotEmpty == true) data['avatar_url'] = avatarUrl;

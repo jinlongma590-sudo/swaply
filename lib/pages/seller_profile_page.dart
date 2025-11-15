@@ -19,11 +19,11 @@ class SellerProfileViewPage extends StatefulWidget {
   final vt.VerificationBadgeType verificationType;
 
   const SellerProfileViewPage({
-    Key? key,
+    super.key,
     required this.sellerId,
     this.initialSellerData,
     this.verificationType = vt.VerificationBadgeType.none,
-  }) : super(key: key);
+  });
 
   @override
   State<SellerProfileViewPage> createState() => _SellerProfileViewPageState();
@@ -118,13 +118,11 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
           .order('created_at', ascending: false)
           .limit(50);
 
-      if (listingsResponse is List) {
-        _sellerListings = List<Map<String, dynamic>>.from(
-          listingsResponse.map((e) => Map<String, dynamic>.from(e)),
-        );
-        _totalListings = _sellerListings.length;
-      }
-
+      _sellerListings = List<Map<String, dynamic>>.from(
+        listingsResponse.map((e) => Map<String, dynamic>.from(e)),
+      );
+      _totalListings = _sellerListings.length;
+    
       if (mounted) setState(() => _loading = false);
     } catch (e) {
       if (kDebugMode) print('Error loading seller data: $e');
@@ -225,7 +223,7 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
     // ✅ [MODIFIED] 1. 徽章枚举是唯一数据源
     final badgeType = _sellerBadge;
     // ✅ [MODIFIED] 2. 布尔值由徽章枚举派生
-    final bool _isVerified = (badgeType != vt.VerificationBadgeType.none);
+    final bool isVerified = (badgeType != vt.VerificationBadgeType.none);
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -343,7 +341,7 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
                     value: _totalListings.toString(),
                   ),
                   // ✅ [CORRECT] 现在使用派生的 _isVerified
-                  if (_isVerified)
+                  if (isVerified)
                     _buildStatItem(
                       icon: _getVerificationIcon(badgeType), // ✅ [MODIFIED] 动态图标
                       label: 'Status',

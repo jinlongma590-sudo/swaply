@@ -107,7 +107,7 @@ class VerificationBadgeUtil {
     final m = Map<String, dynamic>.from(userOrProfile);
     final profileVal = m['profile'];
     final Map<String, dynamic> p =
-    (profileVal is Map) ? Map<String, dynamic>.from(profileVal as Map) : m;
+    (profileVal is Map) ? Map<String, dynamic>.from(profileVal) : m;
 
     // 1. 优先检查 'verification_type' 字段
     final raw = (p['verification_type'] ?? '').toString();
