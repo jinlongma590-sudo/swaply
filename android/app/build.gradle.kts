@@ -8,7 +8,8 @@ plugins {
 }
 
 android {
-    namespace = "com.example.swaply"
+    // ✅ 改为你的正式包名
+    namespace = "cc.swaply.app"
 
     // ✅ 提升到 36，满足各插件与 AndroidX 1.10/1.16 的要求（仅影响编译期，不改变旧机型行为）
     compileSdk = 36
@@ -24,8 +25,8 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.swaply"
+        // ✅ 改为你的正式 applicationId（决定 Play 商店唯一性）
+        applicationId = "cc.swaply.app"
 
         // 保持与工程一致
         minSdk = flutter.minSdkVersion
@@ -48,6 +49,7 @@ android {
 flutter {
     source = "../.."
 }
+
 dependencies {
     implementation("androidx.core:core-splashscreen:1.0.1")
 }
