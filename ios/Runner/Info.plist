@@ -63,6 +63,8 @@
     <false/>
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <true/>
+    <key>UIRequiresFullScreen</key>
+    <true/>
 
     <!-- 隐私权限 -->
     <key>NSCameraUsageDescription</key>
