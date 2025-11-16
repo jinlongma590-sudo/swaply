@@ -948,8 +948,8 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     );
   }
 
-  Widget _buildTabNavigator(GlobalKey<NavigatorState> key, Widget root,
-      LanguageProvider languageProvider) {
+  Widget _buildTabNavigator(
+      GlobalKey<NavigatorState> key, Widget root, LanguageProvider languageProvider) {
     return Navigator(
       key: key,
       onGenerateRoute: (_) => MaterialPageRoute(
@@ -982,18 +982,23 @@ class _MainNavigationPageState extends State<MainNavigationPage>
           languageProvider),
       _buildTabNavigator(
           _sellKey, _SellRoot(isGuest: widget.isGuest), languageProvider),
+
+      // ✅ 修复“通知页底部被遮挡”——给通知页也包一层 iOS 安全区保护
       _buildTabNavigator(
           _notifKey,
-          _NotifRoot(
-            onClearBadge: _clearNotifications,
-            isGuest: widget.isGuest,
-            onNotificationCountChanged: (count) {
-              if (mounted) {
-                setState(() => _notificationCount = count);
-              }
-            },
+          IosInsetsGuard(
+            child: _NotifRoot(
+              onClearBadge: _clearNotifications,
+              isGuest: widget.isGuest,
+              onNotificationCountChanged: (count) {
+                if (mounted) {
+                  setState(() => _notificationCount = count);
+                }
+              },
+            ),
           ),
           languageProvider),
+
       _buildTabNavigator(
           _profileKey, _ProfileRoot(isGuest: widget.isGuest), languageProvider),
     ];
@@ -1008,23 +1013,18 @@ class _MainNavigationPageState extends State<MainNavigationPage>
           children: pages,
         ),
 
-        // ✅ 底部导航：自适应 padding + 刷白底边，解决 iOS 偏高 & 颜色不一致细条
+        // ✅ 修复“iOS 底部小条颜色不一致”——使用 SafeArea 吃满底部安全区，并统一刷白
         bottomNavigationBar: Builder(
           builder: (context) {
-            final isIOS = defaultTargetPlatform == TargetPlatform.iOS;
-            final sysBottom = MediaQuery.of(context).padding.bottom;
-            const shave = 8.0; // 想再低一点可调到 10～12
-            final bottomPad = isIOS
-                ? (sysBottom - shave > 0 ? sysBottom - shave : 0.0)
-                : (sysBottom > 0 ? sysBottom : 0.0);
-
-            // 保持与子项 52.h 一致，避免高度溢出
             final barHeight = 52.h;
 
             return ColoredBox(
-              color: Colors.white, // ✅ 把底部最外层也刷白，消除“细条”
-              child: Padding(
-                padding: EdgeInsets.only(bottom: bottomPad),
+              color: Colors.white, // 最外层也刷白
+              child: SafeArea(
+                top: false,
+                left: false,
+                right: false,
+                bottom: true, // 吃满底部安全区（含 Home Indicator）
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -1036,46 +1036,43 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                       ),
                     ],
                   ),
-                  child: Padding(
-                    // 原来你的左右/顶部 padding 保持不变；底部统一为 6.h
-                    padding: EdgeInsets.fromLTRB(8.w, 6.h, 8.w, 6.h),
-                    child: SizedBox(
-                      height: barHeight,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildCompactNavItem(
-                            icon: Icons.home_outlined,
-                            activeIcon: Icons.home_rounded,
-                            label: l10n.home,
-                            index: 0,
-                            context: context,
-                          ),
-                          _buildCompactNavItem(
-                            icon: Icons.bookmark_outline_rounded,
-                            activeIcon: Icons.bookmark_rounded,
-                            label: l10n.saved,
-                            index: 1,
-                            context: context,
-                          ),
-                          _buildCentralSellButton(context),
-                          _buildCompactNavItemWithBadge(
-                            icon: Icons.notifications_outlined,
-                            activeIcon: Icons.notifications_rounded,
-                            label: l10n.notifications,
-                            index: 3,
-                            badgeCount: _notificationCount,
-                            context: context,
-                          ),
-                          _buildCompactNavItem(
-                            icon: Icons.person_outline_rounded,
-                            activeIcon: Icons.person_rounded,
-                            label: l10n.profile,
-                            index: 4,
-                            context: context,
-                          ),
-                        ],
-                      ),
+                  padding: EdgeInsets.fromLTRB(8.w, 6.h, 8.w, 6.h),
+                  child: SizedBox(
+                    height: barHeight,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildCompactNavItem(
+                          icon: Icons.home_outlined,
+                          activeIcon: Icons.home_rounded,
+                          label: l10n.home,
+                          index: 0,
+                          context: context,
+                        ),
+                        _buildCompactNavItem(
+                          icon: Icons.bookmark_outline_rounded,
+                          activeIcon: Icons.bookmark_rounded,
+                          label: l10n.saved,
+                          index: 1,
+                          context: context,
+                        ),
+                        _buildCentralSellButton(context),
+                        _buildCompactNavItemWithBadge(
+                          icon: Icons.notifications_outlined,
+                          activeIcon: Icons.notifications_rounded,
+                          label: l10n.notifications,
+                          index: 3,
+                          badgeCount: _notificationCount,
+                          context: context,
+                        ),
+                        _buildCompactNavItem(
+                          icon: Icons.person_outline_rounded,
+                          activeIcon: Icons.person_rounded,
+                          label: l10n.profile,
+                          index: 4,
+                          context: context,
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -1135,8 +1132,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                 style: TextStyle(
                   color: isSelected ? _PRIMARY_BLUE : Colors.grey[600],
                   fontSize: 8.5.sp,
-                  fontWeight:
-                  isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
                 child: Text(
                   label,
@@ -1254,8 +1250,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                 style: TextStyle(
                   color: isSelected ? _PRIMARY_BLUE : Colors.grey[600],
                   fontSize: 8.5.sp,
-                  fontWeight:
-                  isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
                 child: Text(
                   label,
@@ -1373,6 +1368,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     );
   }
 }
+
 
 /* ------------------------------------------------ */
 /* =========== TOP-LEVEL WIDGETS START HERE =========== */
