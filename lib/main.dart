@@ -6,7 +6,7 @@ import 'package:swaply/services/verification_guard.dart';
 import 'package:app_links/app_links.dart'; // ✅ 深链支持（替代 uni_links）
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // ✅ 新增：全局状态栏/系统UI控制
+import 'package:flutter/services.dart'; // ✅ 全局状态栏/系统UI控制
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
@@ -15,7 +15,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-// ====== 链」鐩唴鐨勪緷璧?======
+// ====== 应用内的依赖 ======
 import 'package:swaply/auth/login_screen.dart';
 import 'package:swaply/auth/reset_password_page.dart'; // ✅ 新增：密码找回完成后设置新密码页面
 import 'package:swaply/auth/welcome_screen.dart';
@@ -39,16 +39,16 @@ import 'package:swaply/services/listing_service.dart';
 import 'package:swaply/services/notification_service.dart';
 import 'package:swaply/services/profile_service.dart';
 import 'package:swaply/services/reward_service.dart';
-import 'package:swaply/services/welcome_dialog_service.dart'; // ✅ 新增：欢迎券弹窗统一入口
+import 'package:swaply/services/welcome_dialog_service.dart'; // ✅ 欢迎券弹窗统一入口
 import 'package:swaply/utils/verification_utils.dart' as vutils;
-import 'package:swaply/widgets/ios_insets_guard.dart'; // 鉁?鏂板锛VictoriaOS 瀹夊叏鍖哄畧鎶?
+import 'package:swaply/widgets/ios_insets_guard.dart';
 import 'package:swaply/widgets/verified_avatar.dart';
 import 'debug/recovery_probe.dart';
 
 // ✅ 新增：版本更新提示服务
 import 'package:swaply/services/app_update_service.dart';
 
-// ========= 鍏ㄥ眬 Auth 浜嬩欢璁㈤槄锛堝彧娉ㄥ唽涓€娆★級=========
+// ========= 全局 Auth 事件监听（只注册一次） =========
 bool _authHookWired = false;
 StreamSubscription<AuthState>? _globalAuthSub;
 final GlobalKey<NavigatorState> appNavKey = GlobalKey<NavigatorState>();
@@ -185,9 +185,9 @@ class AppLocalizations {
   String get bindura => 'Bindura';
   String get marondera => 'Marondera';
   String get redcliff => 'Redcliff';
-  // ---------- Variants / Typos you might have ----------
+  // ---------- Variants / Typos ----------
   String get saveItems => 'Save items';
-  String get saveltems => 'Save items'; // l/I 鎷煎啓閿欒
+  String get saveltems => 'Save items'; // l/I 误写
   @override
   dynamic noSuchMethod(Invocation invocation) => '';
 }
@@ -219,7 +219,7 @@ class LanguageProvider extends ChangeNotifier {
   }
 }
 
-// ========= 全局 Auth 处理（欢迎弹窗改为“新版统一控制”） =========
+// ========= 全局 Auth 处理（欢迎弹窗改为新版统一控制） =========
 
 // ===== 兼容旧版本：占位函数（不再使用，但保留以免编译报错） =====
 @pragma('vm:prefer-inline')
@@ -249,7 +249,8 @@ void wireAuthHook() {
     // ✅ 找回密码：只导航一次
     if (event == AuthChangeEvent.passwordRecovery && !_navigatedToReset) {
       _navigatedToReset = true;
-      debugPrint('[Auth] passwordRecovery detected -> navigate ResetPasswordPage');
+      debugPrint(
+          '[Auth] passwordRecovery detected -> navigate ResetPasswordPage');
       appNavKey.currentState?.pushNamed('/reset-password');
       return;
     }
@@ -260,7 +261,7 @@ void wireAuthHook() {
       return;
     }
 
-    debugPrint('[Auth] Event: $event');
+    debugPrint('[Auth] Event: $event]');
 
     if (event == AuthChangeEvent.signedIn ||
         event == AuthChangeEvent.initialSession) {
@@ -291,10 +292,11 @@ void wireAuthHook() {
           if (event == AuthChangeEvent.signedIn) {
             final current = ModalRoute.of(ctx)?.settings.name;
             if (current != '/home') {
-              Navigator.of(ctx).pushNamedAndRemoveUntil('/home', (route) => false);
+              Navigator.of(ctx)
+                  .pushNamedAndRemoveUntil('/home', (route) => false);
             }
           }
-          // ✅ 新增：不论是 initialSession 还是 signedIn，只要有 ctx 就安排检查
+          // ✅ 新增：不论 initialSession 还是 signedIn，只要有 ctx 就安排检查
           WelcomeDialogService.scheduleCheck(ctx);
         }
       }
@@ -308,7 +310,8 @@ void wireAuthHook() {
 
       final ctx = appNavKey.currentContext;
       if (ctx != null) {
-        Navigator.of(ctx).pushNamedAndRemoveUntil('/welcome', (route) => false);
+        Navigator.of(ctx)
+            .pushNamedAndRemoveUntil('/welcome', (route) => false);
       }
     }
   });
@@ -599,7 +602,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   primary: const Color(0xFF2196F3),
                 ),
                 appBarTheme: const AppBarTheme(
-                  backgroundColor: const Color(0xFF2196F3),
+                  backgroundColor: Color(0xFF2196F3),
                   foregroundColor: Colors.white,
                   elevation: 0,
                 ),
@@ -635,7 +638,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 }
 
 // ===================== MainNavigationPage (patched) =====================
-// ===================== MainNavigationPage (patched by Plan A) =====================
 
 class MainNavigationPage extends StatefulWidget {
   final bool isGuest;
@@ -1029,72 +1031,65 @@ class _MainNavigationPageState extends State<MainNavigationPage>
           children: pages,
         ),
 
-        // ✅ 方案A：用 viewPadding.bottom 吞掉 Home Indicator，并把最底层也刷成统一底色
+        // ✅ 修复：导航条本体占满到底，安全区仅作用在内部内容
         bottomNavigationBar: Builder(
           builder: (ctx) {
-            final double bottomPad = MediaQuery.viewPaddingOf(ctx).bottom;
+            final double bottomPad = MediaQuery.of(ctx).padding.bottom; // iOS 底部安全区高度
             final bool isiOS = defaultTargetPlatform == TargetPlatform.iOS;
             final Color barBg = isiOS ? const Color(0xFFF2F2F7) : Colors.white;
 
-            return ClipRect(
-              child: ColoredBox(
-                color: barBg, // 把“安全区层”也涂上同色
-                child: Padding(
-                  padding: EdgeInsets.only(bottom: bottomPad),
-                  child: Material(
-                    color: barBg,
-                    surfaceTintColor: Colors.transparent, // 关闭 M3 叠色
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: barBg,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 10.h,
-                            offset: Offset(0, -2.h),
-                          ),
-                        ],
-                      ),
-                      padding: EdgeInsets.fromLTRB(8.w, 6.h, 8.w, 6.h),
-                      child: SizedBox(
-                        height: 52.h,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _buildCompactNavItem(
-                              icon: Icons.home_outlined,
-                              activeIcon: Icons.home_rounded,
-                              label: l10n.home,
-                              index: 0,
-                              context: ctx,
-                            ),
-                            _buildCompactNavItem(
-                              icon: Icons.bookmark_outline_rounded,
-                              activeIcon: Icons.bookmark_rounded,
-                              label: l10n.saved,
-                              index: 1,
-                              context: ctx,
-                            ),
-                            _buildCentralSellButton(ctx),
-                            _buildCompactNavItemWithBadge(
-                              icon: Icons.notifications_outlined,
-                              activeIcon: Icons.notifications_rounded,
-                              label: l10n.notifications,
-                              index: 3,
-                              badgeCount: _notificationCount,
-                              context: ctx,
-                            ),
-                            _buildCompactNavItem(
-                              icon: Icons.person_outline_rounded,
-                              activeIcon: Icons.person_rounded,
-                              label: l10n.profile,
-                              index: 4,
-                              context: ctx,
-                            ),
-                          ],
-                        ),
-                      ),
+            return Material(
+              color: barBg,
+              surfaceTintColor: Colors.transparent, // 关闭 M3 表面叠色
+              child: Container(
+                decoration: BoxDecoration(
+                  color: barBg,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 10.h,
+                      offset: Offset(0, -2.h),
                     ),
+                  ],
+                ),
+                // ⬇️ 关键：把安全区高度加到“内部”padding 的 bottom
+                padding: EdgeInsets.fromLTRB(8.w, 6.h, 8.w, 6.h + bottomPad),
+                child: SizedBox(
+                  height: 52.h, // 只控制图标行高度
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildCompactNavItem(
+                        icon: Icons.home_outlined,
+                        activeIcon: Icons.home_rounded,
+                        label: l10n.home,
+                        index: 0,
+                        context: ctx,
+                      ),
+                      _buildCompactNavItem(
+                        icon: Icons.bookmark_outline_rounded,
+                        activeIcon: Icons.bookmark_rounded,
+                        label: l10n.saved,
+                        index: 1,
+                        context: ctx,
+                      ),
+                      _buildCentralSellButton(ctx),
+                      _buildCompactNavItemWithBadge(
+                        icon: Icons.notifications_outlined,
+                        activeIcon: Icons.notifications_rounded,
+                        label: l10n.notifications,
+                        index: 3,
+                        badgeCount: _notificationCount,
+                        context: ctx,
+                      ),
+                      _buildCompactNavItem(
+                        icon: Icons.person_outline_rounded,
+                        activeIcon: Icons.person_rounded,
+                        label: l10n.profile,
+                        index: 4,
+                        context: ctx,
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -1105,8 +1100,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     );
   }
 
-  // ================= PATCH 2 =================
-  // ✅ “Notifications” 文案在底部栏被截断：使用 FittedBox 自适应缩放，必要时轻微扩宽占位。
+  // ================= 底部导航项 =================
   Widget _buildCompactNavItem({
     required IconData icon,
     required IconData activeIcon,
@@ -1154,7 +1148,8 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                 style: TextStyle(
                   color: isSelected ? _PRIMARY_BLUE : Colors.grey[600],
                   fontSize: 8.5.sp,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight:
+                  isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
@@ -1274,7 +1269,8 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                 style: TextStyle(
                   color: isSelected ? _PRIMARY_BLUE : Colors.grey[600],
                   fontSize: 8.5.sp,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight:
+                  isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
@@ -1395,7 +1391,6 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     );
   }
 }
-
 
 // ===================== /MainNavigationPage (patched) =====================
 
