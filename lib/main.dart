@@ -635,6 +635,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 }
 
 // ===================== MainNavigationPage (patched) =====================
+// ===================== MainNavigationPage (patched by Plan A) =====================
 
 class MainNavigationPage extends StatefulWidget {
   final bool isGuest;
@@ -958,8 +959,8 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     );
   }
 
-  Widget _buildTabNavigator(GlobalKey<NavigatorState> key, Widget root,
-      LanguageProvider languageProvider) {
+  Widget _buildTabNavigator(
+      GlobalKey<NavigatorState> key, Widget root, LanguageProvider languageProvider) {
     return Navigator(
       key: key,
       onGenerateRoute: (_) => MaterialPageRoute(
@@ -1028,63 +1029,71 @@ class _MainNavigationPageState extends State<MainNavigationPage>
           children: pages,
         ),
 
-        // ✅ 终极修复：不用 SafeArea，自己把安全区高度加到 padding，并把安全区底层也刷白
+        // ✅ 方案A：用 viewPadding.bottom 吞掉 Home Indicator，并把最底层也刷成统一底色
         bottomNavigationBar: Builder(
           builder: (ctx) {
-            final double b = MediaQuery.of(ctx).padding.bottom; // iOS 底部安全区高度
-            return Container(
-              color: Colors.white,                // 把“安全区层”也涂成纯白
-              padding: EdgeInsets.only(bottom: b),// 把安全区当作额外 padding
+            final double bottomPad = MediaQuery.viewPaddingOf(ctx).bottom;
+            final bool isiOS = defaultTargetPlatform == TargetPlatform.iOS;
+            final Color barBg = isiOS ? const Color(0xFFF2F2F7) : Colors.white;
 
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Colors.white,            // 导航条本体同样纯白
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 10.h,
-                      offset: Offset(0, -2.h),
-                    ),
-                  ],
-                ),
+            return ClipRect(
+              child: ColoredBox(
+                color: barBg, // 把“安全区层”也涂上同色
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(8.w, 6.h, 8.w, 6.h),
-                  child: SizedBox(
-                    height: 52.h,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildCompactNavItem(
-                          icon: Icons.home_outlined,
-                          activeIcon: Icons.home_rounded,
-                          label: l10n.home,
-                          index: 0,
-                          context: ctx,
+                  padding: EdgeInsets.only(bottom: bottomPad),
+                  child: Material(
+                    color: barBg,
+                    surfaceTintColor: Colors.transparent, // 关闭 M3 叠色
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: barBg,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 10.h,
+                            offset: Offset(0, -2.h),
+                          ),
+                        ],
+                      ),
+                      padding: EdgeInsets.fromLTRB(8.w, 6.h, 8.w, 6.h),
+                      child: SizedBox(
+                        height: 52.h,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _buildCompactNavItem(
+                              icon: Icons.home_outlined,
+                              activeIcon: Icons.home_rounded,
+                              label: l10n.home,
+                              index: 0,
+                              context: ctx,
+                            ),
+                            _buildCompactNavItem(
+                              icon: Icons.bookmark_outline_rounded,
+                              activeIcon: Icons.bookmark_rounded,
+                              label: l10n.saved,
+                              index: 1,
+                              context: ctx,
+                            ),
+                            _buildCentralSellButton(ctx),
+                            _buildCompactNavItemWithBadge(
+                              icon: Icons.notifications_outlined,
+                              activeIcon: Icons.notifications_rounded,
+                              label: l10n.notifications,
+                              index: 3,
+                              badgeCount: _notificationCount,
+                              context: ctx,
+                            ),
+                            _buildCompactNavItem(
+                              icon: Icons.person_outline_rounded,
+                              activeIcon: Icons.person_rounded,
+                              label: l10n.profile,
+                              index: 4,
+                              context: ctx,
+                            ),
+                          ],
                         ),
-                        _buildCompactNavItem(
-                          icon: Icons.bookmark_outline_rounded,
-                          activeIcon: Icons.bookmark_rounded,
-                          label: l10n.saved,
-                          index: 1,
-                          context: ctx,
-                        ),
-                        _buildCentralSellButton(ctx),
-                        _buildCompactNavItemWithBadge(
-                          icon: Icons.notifications_outlined,
-                          activeIcon: Icons.notifications_rounded,
-                          label: l10n.notifications,
-                          index: 3,
-                          badgeCount: _notificationCount,
-                          context: ctx,
-                        ),
-                        _buildCompactNavItem(
-                          icon: Icons.person_outline_rounded,
-                          activeIcon: Icons.person_rounded,
-                          label: l10n.profile,
-                          index: 4,
-                          context: ctx,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -1145,8 +1154,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                 style: TextStyle(
                   color: isSelected ? _PRIMARY_BLUE : Colors.grey[600],
                   fontSize: 8.5.sp,
-                  fontWeight:
-                  isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
@@ -1266,8 +1274,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                 style: TextStyle(
                   color: isSelected ? _PRIMARY_BLUE : Colors.grey[600],
                   fontSize: 8.5.sp,
-                  fontWeight:
-                  isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
@@ -1388,6 +1395,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     );
   }
 }
+
 
 // ===================== /MainNavigationPage (patched) =====================
 
