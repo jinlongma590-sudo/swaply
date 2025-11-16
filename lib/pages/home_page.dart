@@ -4,9 +4,9 @@
 // ✅ 修复：将 LayoutBuilder 方案正确注入到 44.w 紧凑布局中
 // ✅ 修改：Trending(Pinned) = 10, Popular(Latest) = 100, 移除 Total 限制
 // ✅ [PATCH B] 登录后首帧调用欢迎弹窗（WelcomeDialogService.maybeShow）
+// ✅ [IMAGE BOOST] 放大商品图：降低 childAspectRatio 到 0.66（Featured/Regular 同步），Loading 改 0.70
 
 import 'dart:io' show Platform; // ✅ 仅用于 iOS 判断
-
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -17,14 +17,12 @@ import 'package:swaply/pages/search_results_page.dart';
 import 'package:swaply/pages/sell_form_page.dart';
 import 'package:swaply/services/coupon_service.dart';
 import 'package:swaply/listing_api.dart';
-
 import 'dart:async'; // ✅ 功能保留
 import 'package:swaply/services/listing_events_bus.dart'; // ✅ 功能保留
 import 'package:swaply/services/welcome_dialog_service.dart'; // ✅ [PATCH B] 顶部导入
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
-
   @override
   State<HomePage> createState() => _HomePageState();
 }
@@ -34,22 +32,16 @@ class _HomePageState extends State<HomePage>
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _trendingKey = GlobalKey();
   final TextEditingController _searchCtrl = TextEditingController();
-
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
-
   String _selectedLocation = 'All Zimbabwe';
-
   // 趋势数据
   List<Map<String, dynamic>> _trendingRemote = [];
   bool _loadingTrending = false;
-
   StreamSubscription? _listingPubSub; // ✅ 功能保留
-
   // Facebook亮蓝色配色方案
   static const Color _primaryBlue = Color(0xFF1877F2); // Facebook亮蓝色
   static const Color _successGreen = Color(0xFF4CAF50);
-
   // ===== [PATCH B] 仅触发一次欢迎弹窗 =====
   bool _welcomeChecked = false;
 
@@ -69,18 +61,15 @@ class _HomePageState extends State<HomePage>
     'Marondera',
     'Redcliff',
   ];
-
   // 仅调整了排序；文件名/ID/label 均保持不变
   static const List<Map<String, String>> _categories = [
     {"id": "trending", "icon": "trending", "label": "Trending"},
-
     // Hot & high-intent first
     {"id": "phones_tablets", "icon": "phones_tablets", "label": "Phones"},
     {"id": "vehicles", "icon": "vehicles", "label": "Vehicles"},
     {"id": "property", "icon": "property", "label": "Property"},
     {"id": "electronics", "icon": "electronics", "label": "Electronics"},
     {"id": "fashion", "icon": "fashion", "label": "Fashion"},
-
     // Services & Jobs
     {"id": "services", "icon": "services", "label": "Services"},
     {"id": "jobs", "icon": "jobs", "label": "Jobs"},
@@ -89,7 +78,6 @@ class _HomePageState extends State<HomePage>
       "icon": "seeking_work_cvs",
       "label": "Jobs Seeking"
     },
-
     // Home & daily life
     {
       "id": "home_furniture_appliances",
@@ -103,7 +91,6 @@ class _HomePageState extends State<HomePage>
     },
     {"id": "pets", "icon": "pets", "label": "Pets"},
     {"id": "babies_kids", "icon": "babies_kids", "label": "Baby & Kids"},
-
     // Long-tail / nice-to-have
     {
       "id": "repair_construction",
@@ -126,7 +113,6 @@ class _HomePageState extends State<HomePage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -136,14 +122,12 @@ class _HomePageState extends State<HomePage>
       curve: Curves.easeInOut,
     );
     _loadTrending();
-
     // ✅ 功能保留: 订阅事件
     _listingPubSub = ListingEventsBus.instance.stream.listen((e) {
       if (e is ListingPublishedEvent) {
         _loadTrending(bypassCache: true);
       }
     });
-
     // ===== [PATCH B] 登录后首帧真正触发一次欢迎弹窗 =====
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted || _welcomeChecked) return;
@@ -175,22 +159,17 @@ class _HomePageState extends State<HomePage>
   }
 
   /* ===================== 数据加载 ===================== */
-
   String _formatPrice(dynamic priceData) {
     if (priceData == null) return '';
-
     if (priceData is num) {
       if (priceData == 0) return 'Free';
       return '\$${priceData.toStringAsFixed(0)}';
     }
-
     if (priceData is String) {
       final lower = priceData.toLowerCase();
       if (lower.contains('free') || priceData == '0') return 'Free';
-
       final cleanPrice = priceData.replaceAll(RegExp(r'[^\d.]'), '');
       final parsedPrice = num.tryParse(cleanPrice);
-
       if (parsedPrice != null) {
         if (parsedPrice == 0) return 'Free';
         return '\$${parsedPrice.toStringAsFixed(0)}';
@@ -202,14 +181,13 @@ class _HomePageState extends State<HomePage>
         }
       }
     }
-
     return priceData.toString();
   }
 
   // ✅ [MODIFIED] 遵照指示修改：pinned=10, latest=100, 移除 total 限制
   Future<List<Map<String, dynamic>>> _fetchTrendingMixed({
     String? city,
-    int pinnedLimit = 10,  // ✅ 1. 改为 10
+    int pinnedLimit = 10, // ✅ 1. 改为 10
     int latestLimit = 100, // ✅ 2. 改为 100
     bool bypassCache = false,
   }) async {
@@ -217,7 +195,6 @@ class _HomePageState extends State<HomePage>
       city: city,
       limit: pinnedLimit,
     );
-
     final list = <Map<String, dynamic>>[];
     for (final e in pinnedAds) {
       final l = (e['listings'] as Map<String, dynamic>? ?? {});
@@ -234,7 +211,6 @@ class _HomePageState extends State<HomePage>
         'pinned': true,
       });
     }
-
     final latest = await ListingApi.fetchListings(
       city: city,
       limit: latestLimit,
@@ -244,7 +220,6 @@ class _HomePageState extends State<HomePage>
       status: 'active',
       forceNetwork: bypassCache, // ✅ 功能保留
     );
-
     final seen = <String>{...list.map((x) => x['id'].toString())};
     for (final r in latest) {
       final id = r['id']?.toString();
@@ -273,7 +248,7 @@ class _HomePageState extends State<HomePage>
       _selectedLocation == 'All Zimbabwe' ? null : _selectedLocation;
       final rows = await _fetchTrendingMixed(
         city: city,
-        pinnedLimit: 10,  // ✅ 保持与函数定义一致
+        pinnedLimit: 10, // ✅ 保持与函数定义一致
         latestLimit: 100, // ✅ 保持与函数定义一致
         bypassCache: bypassCache, // ✅ 功能保留
       );
@@ -291,7 +266,6 @@ class _HomePageState extends State<HomePage>
   }
 
   /* ===================== 导航 ===================== */
-
   void _navigateToCategory(String categoryId, String categoryName) {
     if (categoryId == "trending") {
       _scrollToTrending();
@@ -344,7 +318,7 @@ class _HomePageState extends State<HomePage>
         context: context,
         builder: (ctx) => AlertDialog(
           shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
           title: const Text('Login Required'),
           content: const Text('Please login to post listings.'),
           actions: [
@@ -363,11 +337,9 @@ class _HomePageState extends State<HomePage>
       if (Supabase.instance.client.auth.currentUser == null) return;
     }
     if (!mounted) return;
-
     final ok = await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const SellFormPage()),
     );
-
     if (ok == true && mounted) {
       await _loadTrending(bypassCache: true);
       _scrollToTrending();
@@ -376,7 +348,6 @@ class _HomePageState extends State<HomePage>
   }
 
   /* ===================== UI构建 ===================== */
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -389,14 +360,11 @@ class _HomePageState extends State<HomePage>
             children: [
               // 紧凑头部区域
               _buildCompactHeader(),
-
               // 趋势区域
               _buildTrendingSection(),
-
               SizedBox(height: 80.h), // 底部FAB的间距
             ],
           ),
-
           // 紧凑FAB
           Positioned(
             right: 16.w,
@@ -427,7 +395,6 @@ class _HomePageState extends State<HomePage>
 
   Widget _buildCompactHeader() {
     final bump = _iosBump(context); // 仅 iOS 有位移，Android 为 0
-
     return Stack(
       children: [
         // 简化的头部背景（加上 bump，避免白卡片顶到刘海区域）
@@ -439,7 +406,6 @@ class _HomePageState extends State<HomePage>
           children: [
             // 顶部整体下移，避免被灵动岛遮住
             SizedBox(height: bump),
-
             // 紧凑Logo区域
             Container(
               padding: EdgeInsets.only(top: 35.h, bottom: 16.h),
@@ -476,7 +442,6 @@ class _HomePageState extends State<HomePage>
                 ],
               ),
             ),
-
             // 紧凑白色卡片
             Container(
               margin: EdgeInsets.symmetric(horizontal: 12.w),
@@ -506,10 +471,8 @@ class _HomePageState extends State<HomePage>
                       ),
                     ),
                   ),
-
                   // 紧凑搜索区域
                   _buildCompactSearchSection(),
-
                   // 紧凑分类网格 (✅ UI: 已修正为 44.w + LayoutBuilder 方案)
                   _buildCompactCategoriesGrid(),
                 ],
@@ -610,9 +573,8 @@ class _HomePageState extends State<HomePage>
   Widget _buildCompactCategoriesGrid() {
     // ✅ 锁定这个网格区域内的文本缩放为 1.0（兼容老版本 Flutter，使用 textScaleFactor）
     final media = MediaQuery.of(context);
-
     return MediaQuery(
-      data: media.copyWith(textScaleFactor: 1.0),
+      data: media.copyWith(textScaler: const TextScaler.linear(1.0)),
       child: Padding(
         padding: EdgeInsets.fromLTRB(12.w, 12.h, 12.w, 16.h),
         child: GridView.builder(
@@ -628,25 +590,20 @@ class _HomePageState extends State<HomePage>
           itemBuilder: (context, index) {
             final cat = _categories[index];
             final isTrending = index == 0;
-
             // ✅ 紧凑的视觉尺寸
             const double iconBox = 50.0; // 容器
             const double iconSize = 34.0; // 图标
             const double iconFallbackSize = 26.0;
             const double gap = 8.0; // 图标与文字间距
-
             return GestureDetector(
               onTap: () => _navigateToCategory(cat['id']!, cat['label']!),
               child: Container(
                 decoration: BoxDecoration(
-                  color: isTrending
-                      ? Colors.orange.shade50
-                      : Colors.grey[50],
+                  color: isTrending ? Colors.orange.shade50 : Colors.grey[50],
                   borderRadius: BorderRadius.circular(10.r),
                   border: Border.all(
-                    color: isTrending
-                        ? Colors.orange.shade200
-                        : Colors.transparent,
+                    color:
+                    isTrending ? Colors.orange.shade200 : Colors.transparent,
                     width: 1,
                   ),
                   boxShadow: [
@@ -662,7 +619,6 @@ class _HomePageState extends State<HomePage>
                     final double H = c.maxHeight;
                     final double labelMax =
                     (H - iconBox - gap).clamp(0.0, 40.h);
-
                     return Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -766,7 +722,6 @@ class _HomePageState extends State<HomePage>
             ],
           ),
         ),
-
         // 趋势内容
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 12.w),
@@ -777,14 +732,14 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  // ✅ UI: 保留代码二的简化版 Loading
+  // ✅ UI: 保留代码二的简化版 Loading（放大占位图：0.70）
   Widget _buildTrendingLoading() {
     return GridView.builder(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        childAspectRatio: 0.85,
+        childAspectRatio: 0.70, // 🔶 原 0.85 → 放大图片的卡片比例
         crossAxisSpacing: 8.w,
         mainAxisSpacing: 8.h,
       ),
@@ -810,7 +765,7 @@ class _HomePageState extends State<HomePage>
                   borderRadius:
                   BorderRadius.vertical(top: Radius.circular(10.r)),
                 ),
-                child: Center(
+                child: const Center(
                   child: CircularProgressIndicator(
                       strokeWidth: 2, color: _primaryBlue),
                 ),
@@ -853,7 +808,6 @@ class _HomePageState extends State<HomePage>
         ),
       );
     }
-
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Column(
@@ -885,7 +839,6 @@ class _HomePageState extends State<HomePage>
   Widget _buildFeaturedTrendingSection() {
     final pinnedItems =
     _trendingRemote.where((r) => r['pinned'] == true).toList();
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -937,7 +890,7 @@ class _HomePageState extends State<HomePage>
             crossAxisCount: 2,
             mainAxisSpacing: 8.h,
             crossAxisSpacing: 8.w,
-            childAspectRatio: 0.75,
+            childAspectRatio: 0.66, // 🔶 原 0.75 → 放大图片
           ),
           itemCount: pinnedItems.length,
           itemBuilder: (context, i) {
@@ -965,7 +918,6 @@ class _HomePageState extends State<HomePage>
   Widget _buildRegularTrendingGrid() {
     final regularItems =
     _trendingRemote.where((r) => r['pinned'] != true).toList();
-
     return GridView.builder(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
@@ -973,7 +925,7 @@ class _HomePageState extends State<HomePage>
         crossAxisCount: 2,
         mainAxisSpacing: 8.h,
         crossAxisSpacing: 8.w,
-        childAspectRatio: 0.85,
+        childAspectRatio: 0.66, // 🔶 原 0.85 → 放大图片
       ),
       itemCount: regularItems.length,
       itemBuilder: (context, i) {
@@ -987,7 +939,6 @@ class _HomePageState extends State<HomePage>
     final images = (r['images'] as List?) ?? const [];
     final img = images.isNotEmpty ? images.first.toString() : null;
     final priceText = _formatPrice(r['price']);
-
     return GestureDetector(
       onTap: () => _navigateToProductDetail(r['id'].toString()),
       child: Container(
@@ -1108,7 +1059,6 @@ class _HomePageState extends State<HomePage>
     final images = (r['images'] as List?) ?? const [];
     final img = images.isNotEmpty ? images.first.toString() : null;
     final priceText = _formatPrice(r['price']);
-
     return GestureDetector(
       onTap: () => _navigateToProductDetail(r['id'].toString()),
       child: Container(
@@ -1196,7 +1146,6 @@ class _HomePageState extends State<HomePage>
         ),
       );
     }
-
     final imgWidget = src.startsWith('http')
         ? Image.network(
       src,
@@ -1282,7 +1231,6 @@ class _HomePageState extends State<HomePage>
         ),
       ),
     );
-
     return ClipRRect(
       borderRadius: BorderRadius.vertical(top: Radius.circular(10.r)),
       child: SizedBox(
