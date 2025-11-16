@@ -261,7 +261,7 @@ void wireAuthHook() {
       return;
     }
 
-    debugPrint('[Auth] Event: $event]');
+    debugPrint('[Auth] Event: $event');
 
     if (event == AuthChangeEvent.signedIn ||
         event == AuthChangeEvent.initialSession) {
@@ -983,6 +983,9 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     final l10n = AppLocalizations.of(context)!;
     final languageProvider = Provider.of<LanguageProvider>(context);
 
+    // ✅ 导航条实际占用：图标行 52 + 上下 padding 12 + iOS Home 指示器安全区
+    final double _navGap = 52.h + 12.h + MediaQuery.of(context).padding.bottom;
+
     final List<Widget> pages = [
       _buildTabNavigator(
         _homeKey,
@@ -1013,9 +1016,13 @@ class _MainNavigationPageState extends State<MainNavigationPage>
         ),
         languageProvider,
       ),
+      // ✅ 仅对 Profile 根页增加底部留白，避免 Logout 被遮挡
       _buildTabNavigator(
         _profileKey,
-        _ProfileRoot(isGuest: widget.isGuest),
+        Padding(
+          padding: EdgeInsets.only(bottom: _navGap),
+          child: _ProfileRoot(isGuest: widget.isGuest),
+        ),
         languageProvider,
       ),
     ];
