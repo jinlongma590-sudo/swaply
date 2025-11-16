@@ -546,9 +546,13 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
         final difference = now.difference(date);
         if (difference.inMinutes < 1) {
           timeText = 'Now';
-        } else if (difference.inMinutes < 60) timeText = '${difference.inMinutes}m';
-        else if (difference.inHours < 24) timeText = '${difference.inHours}h';
-        else timeText = '${date.day}/${date.month}';
+        } else if (difference.inMinutes < 60) {
+          timeText = '${difference.inMinutes}m';
+        } else if (difference.inHours < 24) {
+          timeText = '${difference.inHours}h';
+        } else {
+          timeText = '${date.day}/${date.month}';
+        }
       } catch (_) {}
     }
     return Align(
@@ -777,9 +781,8 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final double statusBar = MediaQuery.of(context).padding.top;
     final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    final double toolbarHeight = isIOS ? (statusBar + 38.0) : kToolbarHeight;
+    final double toolbarHeight = isIOS ? 44.0 : kToolbarHeight; // ✅ iOS 固定 44pt，不叠加 statusBar
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,

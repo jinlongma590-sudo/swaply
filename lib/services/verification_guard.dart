@@ -1,4 +1,5 @@
 // lib/services/verification_guard.dart
+import 'dart:async'; // ✅ [PATCH] 遵照要求新增
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -18,6 +19,21 @@ enum AppFeature {
 
 class VerificationGuard {
   VerificationGuard._();
+
+  // ===== 全局认证变化广播 =====
+  // ✅ [PATCH] 遵照要求新增
+  static final StreamController<bool> _verifiedCtrl =
+  StreamController<bool>.broadcast();
+  static Stream<bool> get stream => _verifiedCtrl.stream;
+
+  /// 外部可在确认认证状态改变后调用；true=已认证
+  // ✅ [PATCH] 遵照要求新增
+  static void notifyVerifiedChanged([bool ok = true]) {
+    try {
+      _verifiedCtrl.add(ok);
+    } catch (_) {}
+  }
+  // ==========================
 
   static final _sb = Supabase.instance.client;
   static final EmailVerificationService _verifySvc = EmailVerificationService();
@@ -120,9 +136,9 @@ class VerificationGuard {
 
   /// Main guard: block if not verified; push VerificationPage
   static Future<bool> ensureVerifiedOrPrompt(
-    BuildContext context, {
-    Object? feature, // AppFeature or String
-  }) async {
+      BuildContext context, {
+        Object? feature, // AppFeature or String
+      }) async {
     final loggedIn = _isLoggedIn();
     final verified = await isVerified();
 
@@ -140,15 +156,15 @@ class VerificationGuard {
 
       final content = loggedIn
           ? _t(
-              context,
-              'For account security, please complete email verification before you can $actionName.',
-              '为了账号安全，需要先完成邮箱验证后才能$actionName。',
-            )
+        context,
+        'For account security, please complete email verification before you can $actionName.',
+        '为了账号安全，需要先完成邮箱验证后才能$actionName。',
+      )
           : _t(
-              context,
-              'For account security, please sign in and complete email verification before you can $actionName.',
-              '为了账号安全，需要先登录并完成邮箱验证后才能$actionName。',
-            );
+        context,
+        'For account security, please sign in and complete email verification before you can $actionName.',
+        '为了账号安全，需要先登录并完成邮箱验证后才能$actionName。',
+      );
 
       final laterText = _t(context, 'Later', '稍后');
       final goText = loggedIn
@@ -180,6 +196,8 @@ class VerificationGuard {
                   // 返回后失效缓存，便于后续放行
                   invalidateCache();
                   if (changed == true) {
+                    // ✅ [PATCH] 遵照要求新增
+                    notifyVerifiedChanged(true);
                     // 可选：再预取一次，后续调用能命中缓存
                     await isVerified();
                   }

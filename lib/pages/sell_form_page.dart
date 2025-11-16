@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'dart:typed_data';
 // 选图依赖（只用 bytes，不走路径上传）
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -21,6 +21,10 @@ import 'package:swaply/models/coupon.dart';
 import 'package:swaply/services/verification_guard.dart';
 import 'package:flutter/services.dart'; // ✅ 用于 iOS 顶部状态栏文字颜色（仅 iOS 传入）
 import 'package:swaply/services/listing_events_bus.dart'; // ✅ 新增
+
+// ===== [PATCH] 新增 import =====
+import 'package:cross_file/cross_file.dart';
+import 'package:swaply/services/image_normalizer.dart';
 
 class SellFormPage extends StatefulWidget {
   const SellFormPage({super.key});
@@ -546,34 +550,60 @@ class _SellFormPageState extends State<SellFormPage>
       }
       final userId = auth.currentUser!.id;
 
-      // ===== 使用 bytes 上传到 Supabase Storage =====
-      final urls = <String>[];
+      // ===== [PATCH] 使用 bytes 上传, 统一转 JPG (HEIC 修复) =====
+      final jpgUrls = <String>[];
+      final origUrls = <String>[];
       final total = _images.length;
+
       for (var i = 0; i < _images.length; i++) {
-        final img = _images[i];
+        final img = _images[i]; // This is ({Uint8List bytes, ...})
         if (!mounted) return;
         setState(() => _progressMsg = 'Uploading photos ${i + 1} / $total');
 
-        final ext = (img.ext?.isNotEmpty == true) ? img.ext! : 'jpg';
-        final fileName = 'img_${DateTime.now().millisecondsSinceEpoch}_$i.$ext';
-        final objectPath =
-            '$userId/${DateTime.now().millisecondsSinceEpoch}_$fileName';
+        // 1) 统一转成 JPG
+        // (为了使用 normalizer，我们从 bytes 临时创建 XFile)
+        final tempXFile = XFile.fromData(
+          img.bytes,
+          mimeType: img.mime,
+          name: img.name ?? 'upload.dat',
+        );
+        final norm = await ImageNormalizer.normalizeXFile(tempXFile);
+        final jpgBytes = norm.bytes;
+        final ts = DateTime.now().millisecondsSinceEpoch;
+        final pathJpg = '$userId/${ts}_img_$i.jpg';
 
+        // 2) 上传 JPG
         await Supabase.instance.client.storage.from('listings').uploadBinary(
-          objectPath,
-          img.bytes, // 👈 直接 bytes
-          fileOptions: FileOptions(
-            contentType: img.mime ?? 'image/*',
-            upsert: false,
+          pathJpg,
+          jpgBytes, // 👈 上传转换后的 JPG 字节
+          fileOptions: const FileOptions(
+            contentType: 'image/jpeg', // 👈 统一为 JPG
+            upsert: true, // 遵照补丁要求
           ),
         );
 
-        final publicUrl = Supabase.instance.client.storage
+        final jpgUrl = Supabase.instance.client.storage
             .from('listings')
-            .getPublicUrl(objectPath);
+            .getPublicUrl(pathJpg);
+        jpgUrls.add(jpgUrl);
 
-        urls.add(publicUrl);
+        // 3) （可选）保留原图
+        final origExt = (img.ext?.isNotEmpty == true) ? '.${img.ext}' : '';
+        final origPath = '$userId/${ts}_raw_$i$origExt';
+        await Supabase.instance.client.storage.from('listings').uploadBinary(
+          origPath,
+          img.bytes, // 👈 上传原始字节
+          fileOptions: FileOptions(
+            contentType: img.mime ?? 'image/*',
+            upsert: true, // 遵照补丁要求
+          ),
+        );
+        final origUrl = Supabase.instance.client.storage
+            .from('listings')
+            .getPublicUrl(origPath);
+        origUrls.add(origUrl);
       }
+      // ===== [PATCH END] =====
 
       // 组合额外字段
       final extrasLines = <String>[];
@@ -601,7 +631,7 @@ class _SellFormPageState extends State<SellFormPage>
         category: _category,
         city: _city,
         description: desc,
-        imageUrls: urls, // ⬅️ 写入上传后的 urls
+        imageUrls: jpgUrls, // ✅ [PATCH] 一律 JPG, 用于展示
         userId: userId,
         sellerName:
         _nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text.trim(),
@@ -633,36 +663,6 @@ class _SellFormPageState extends State<SellFormPage>
       if (mounted) {
         Navigator.pop(context, true);
       }
-
-      /*
-      // [REMOVED] 原始代码是 pushReplacement 到详情页，按要求改为 pop(true)
-      // Navigate to detail page（直接带上我们刚上传的 urls 以保证可展示）
-      final productId = row['id'].toString();
-      final productData = {
-        'id': productId,
-        'category': row['category'] ?? '',
-        'images': urls, // ⬅️ 用我们本地掌握的 urls，避免后端返回字段缺失
-        'title': row['title'] ?? '',
-        'price': row['price'] == null
-            ? ''
-            : '\$${(row['price'] as num).toStringAsFixed(2)}',
-        'location': row['city'] ?? '',
-        'postedDate': row['created_at'] ?? DateTime.now().toIso8601String(),
-        'description': row['description'] ?? '',
-        'sellerName': row['seller_name'] ?? _nameCtrl.text.trim(),
-        'sellerPhone': row['contact_phone'] ?? _phoneCtrl.text.trim(),
-      };
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => pd.ProductDetailPage(
-            productId: productId,
-            productData: productData,
-          ),
-        ),
-      );
-      */
     } catch (e) {
       if (!mounted) return;
       _toast('Post failed: $e');

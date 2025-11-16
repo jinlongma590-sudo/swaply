@@ -1,6 +1,7 @@
 // lib/widgets/welcome_coupon_dialog.dart
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class WelcomeCouponDialog extends StatefulWidget {
@@ -17,51 +18,29 @@ class WelcomeCouponDialog extends StatefulWidget {
 
 class _WelcomeCouponDialogState extends State<WelcomeCouponDialog>
     with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
-  late Animation<double> _fadeAnimation;
+  late final AnimationController _ac =
+  AnimationController(vsync: this, duration: const Duration(milliseconds: 360))
+    ..forward();
+  late final Animation<double> _fade =
+  CurvedAnimation(parent: _ac, curve: Curves.easeIn);
+  late final Animation<double> _scale =
+  CurvedAnimation(parent: _ac, curve: Curves.decelerate);
 
-  // Windows-1252（CP1252） “反向映射”，用于把误解码后的符号还原成原始字节，再整体按 UTF-8 正确解码。
+  // CP1252 → 原字节反向映射（修乱码）
   static const Map<int, int> _cp1252Reverse = {
-    0x20AC: 0x80, // €
-    0x201A: 0x82, // ‚
-    0x0192: 0x83, // ƒ
-    0x201E: 0x84, // „
-    0x2026: 0x85, // …
-    0x2020: 0x86, // †
-    0x2021: 0x87, // ‡
-    0x02C6: 0x88, // ˆ
-    0x2030: 0x89, // ‰
-    0x0160: 0x8A, // Š
-    0x2039: 0x8B, // ‹
-    0x0152: 0x8C, // Œ
-    0x017D: 0x8E, // Ž
-    0x2018: 0x91, // ‘
-    0x2019: 0x92, // ’
-    0x201C: 0x93, // “
-    0x201D: 0x94, // ”
-    0x2022: 0x95, // •
-    0x2013: 0x96, // –
-    0x2014: 0x97, // —
-    0x02DC: 0x98, // ˜
-    0x2122: 0x99, // ™
-    0x0161: 0x9A, // š
-    0x203A: 0x9B, // ›
-    0x0153: 0x9C, // œ
-    0x017E: 0x9E, // ž
-    0x0178: 0x9F, // Ÿ
+    0x20AC: 0x80, 0x201A: 0x82, 0x0192: 0x83, 0x201E: 0x84, 0x2026: 0x85,
+    0x2020: 0x86, 0x2021: 0x87, 0x02C6: 0x88, 0x2030: 0x89, 0x0160: 0x8A,
+    0x2039: 0x8B, 0x0152: 0x8C, 0x017D: 0x8E, 0x2018: 0x91, 0x2019: 0x92,
+    0x201C: 0x93, 0x201D: 0x94, 0x2022: 0x95, 0x2013: 0x96, 0x2014: 0x97,
+    0x02DC: 0x98, 0x2122: 0x99, 0x0161: 0x9A, 0x203A: 0x9B, 0x0153: 0x9C,
+    0x017E: 0x9E, 0x0178: 0x9F,
   };
 
-  // 纠正 “ðŸ… / Ã… / â€¦ / �” 等 UTF-8 被 CP1252/Latin-1 误解码后的乱码
   String _fixUtf8Mojibake(dynamic v) {
     final s = v?.toString() ?? '';
     if (s.isEmpty) return s;
-
-    // 如果原字符串本身已经含有常见 emoji，就认为是正常 UTF-8，直接返回
     final hasEmoji = s.runes.any((r) => (r >= 0x1F300 && r <= 0x1FAFF));
     if (hasEmoji) return s;
-
-    // 粗略判定“看起来像坏掉”的文本再处理，避免误修
     final looksBroken = s.contains('ð') ||
         s.contains('Ã') ||
         s.contains('Â') ||
@@ -69,24 +48,20 @@ class _WelcomeCouponDialogState extends State<WelcomeCouponDialog>
         s.contains('�') ||
         s.contains(RegExp(r'[€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ]'));
     if (!looksBroken) return s;
-
     try {
-      // 视作 CP1252 -> 取回字节 -> 再按 UTF-8 解码
       final bytes = <int>[];
-      for (final rune in s.runes) {
-        final code = rune;
-        final mapped = _cp1252Reverse[code];
-        if (mapped != null) {
-          bytes.add(mapped);
-        } else if (code <= 0xFF) {
-          bytes.add(code & 0xFF);
+      for (final r in s.runes) {
+        final m = _cp1252Reverse[r];
+        if (m != null) {
+          bytes.add(m);
+        } else if (r <= 0xFF) {
+          bytes.add(r & 0xFF);
         } else {
-          bytes.add(0x3F); // 超出范围，用 '?' 占位，避免异常
+          bytes.add(0x3F);
         }
       }
       return utf8.decode(bytes, allowMalformed: true);
     } catch (_) {
-      // 兜底：Latin1.encode -> UTF8.decode
       try {
         return utf8.decode(latin1.encode(s), allowMalformed: true);
       } catch (_) {
@@ -96,280 +71,215 @@ class _WelcomeCouponDialogState extends State<WelcomeCouponDialog>
   }
 
   @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-    _scaleAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.elasticOut,
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeIn,
-    );
-    _animationController.forward();
-  }
-
-  @override
   void dispose() {
-    _animationController.dispose();
+    _ac.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final code = (widget.couponData['code']?.toString() ?? '').toUpperCase();
+    final sz = MediaQuery.of(context).size;
+    final shortest = sz.shortestSide;
+    final bool isTablet = shortest >= 600;
 
-    // 先修复可能的乱码
-    final fixedTitle = _fixUtf8Mojibake(
+    // —— 更紧凑的尺寸策略 —— //
+    final double maxWidth =
+    (isTablet ? 360.0 : 320.0).w.clamp(260.0, sz.width - 32.0);
+    final double maxHeight = sz.height * 0.52; // 总高 ≤ 52% 屏高（明显更小）
+
+    final String code = (widget.couponData['code']?.toString() ?? '').toUpperCase();
+    final String title = _fixUtf8Mojibake(
       widget.couponData['title'] ?? 'Welcome gift 🎉',
     );
-    final fixedDesc = _fixUtf8Mojibake(
+    final String desc = _fixUtf8Mojibake(
       widget.couponData['description'] ??
-          'Welcome to Swaply! Pin your item for free in any category.',
+          'Welcome to Swaply! Pin your item for 3 days.',
     );
 
-    // 计算过期时间
     String expiryText = '';
     final expiresRaw = widget.couponData['expires_at'];
     if (expiresRaw != null) {
       try {
-        final expiresAt = DateTime.parse(expiresRaw.toString());
-        final daysLeft = expiresAt.difference(DateTime.now()).inDays;
-        if (daysLeft > 0) {
-          expiryText = 'Valid for $daysLeft days';
-        } else {
-          expiryText = 'Expiring soon';
-        }
+        final d = DateTime.parse(expiresRaw.toString());
+        final days = d.difference(DateTime.now()).inDays;
+        expiryText = days > 0 ? 'Valid for $days days' : 'Expiring soon';
       } catch (_) {}
     }
 
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20.r),
-      ),
+      insetPadding: EdgeInsets.fromLTRB(14.w, 20.h, 14.w, 16.h),
       backgroundColor: Colors.transparent,
-      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14.r)),
       child: FadeTransition(
-        opacity: _fadeAnimation,
+        opacity: _fade,
         child: ScaleTransition(
-          scale: _scaleAnimation,
-          child: Container(
-            constraints: BoxConstraints(maxWidth: 340.w),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Colors.blue.shade50, Colors.purple.shade50],
-              ),
-              borderRadius: BorderRadius.circular(20.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 30.r,
-                  offset: Offset(0, 15.h),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 顶部装饰条
-                Container(
-                  height: 8.h,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Colors.blue, Colors.purple],
+          scale: _scale,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth, maxHeight: maxHeight),
+            child: Material(
+              color: Colors.white,
+              elevation: 0,
+              borderRadius: BorderRadius.circular(14.r),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14.r),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 顶部 4px 渐变条（极简）
+                    Container(
+                      height: 4.h,
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [Color(0xFF1877F2), Color(0xFF7B61FF)],
+                        ),
+                      ),
                     ),
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(20.r),
-                      topRight: Radius.circular(20.r),
-                    ),
-                  ),
-                ),
 
-                Padding(
-                  padding: EdgeInsets.all(20.w),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // 动画图标
-                      TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0, end: 1),
-                        duration: const Duration(milliseconds: 800),
-                        builder: (context, value, child) {
-                          return Transform.rotate(
-                            angle: value * 0.1,
-                            child: Container(
-                              width: 80.w,
-                              height: 80.w,
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Colors.blue.shade400,
-                                    Colors.purple.shade400,
-                                  ],
-                                ),
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.blue.withOpacity(0.3),
-                                    blurRadius: 20.r,
-                                    offset: Offset(0, 10.h),
-                                  ),
-                                ],
-                              ),
-                              child: Icon(
-                                Icons.card_giftcard,
-                                size: 40.sp,
-                                color: Colors.white,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-
-                      SizedBox(height: 18.h),
-
-                      // 主标题：优先显示券标题（已修复），否则退回默认
-                      Text(
-                        (fixedTitle.isNotEmpty
-                            ? fixedTitle
-                            : 'Welcome gift 🎉'),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 22.sp,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey[800],
-                          height: 1.2,
-                        ),
-                      ),
-
-                      SizedBox(height: 10.h),
-
-                      // 副标题
-                      Text(
-                        'Coupon Code: $code',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          color: Colors.grey[700],
-                        ),
-                      ),
-
-                      SizedBox(height: 18.h),
-
-                      // 优惠券卡片
-                      Container(
-                        padding: EdgeInsets.all(16.w),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12.r),
-                          border: Border.all(
-                            color: Colors.blue.withOpacity(0.2),
-                            width: 2,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.blue.withOpacity(0.08),
-                              blurRadius: 15.r,
-                              offset: Offset(0, 5.h),
-                            ),
-                          ],
-                        ),
+                    // 内容：不使用 Expanded，避免被拉高；仅在溢出时滚动
+                    Flexible(
+                      fit: FlexFit.loose,
+                      child: SingleChildScrollView(
+                        padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 0),
                         child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            // 券码块（可选择复制）
+                            // 图标（更小）
                             Container(
-                              width: double.infinity,
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 20.w,
-                                vertical: 10.h,
-                              ),
-                              decoration: BoxDecoration(
+                              width: 52.w,
+                              height: 52.w,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
                                 gradient: LinearGradient(
-                                  colors: [
-                                    Colors.blue.shade50,
-                                    Colors.purple.shade50,
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(8.r),
-                                border: Border.all(
-                                  color: Colors.blue.withOpacity(0.1),
+                                  colors: [Color(0xFF5D9CFF), Color(0xFFB46BFF)],
                                 ),
                               ),
-                              child: Column(
-                                children: [
-                                  SelectableText(
-                                    code,
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize: 20.sp,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blue.shade700,
-                                      letterSpacing: 2,
-                                    ),
-                                  ),
-                                  if (expiryText.isNotEmpty) ...[
-                                    SizedBox(height: 4.h),
-                                    Text(
-                                      expiryText,
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 11.sp,
-                                        color: Colors.orange.shade600,
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
+                              child: Icon(Icons.card_giftcard,
+                                  color: Colors.white, size: 26.sp),
                             ),
+                            SizedBox(height: 10.h),
 
-                            SizedBox(height: 12.h),
-
-                            // 描述
+                            // 标题（18sp）
                             Text(
-                              fixedDesc,
+                              title.isEmpty ? 'Welcome gift 🎉' : title,
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontSize: 13.sp,
-                                color: Colors.grey[600],
-                                height: 1.4,
+                                fontSize: 18.sp,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF222222),
+                                height: 1.15,
+                              ),
+                            ),
+                            SizedBox(height: 6.h),
+
+                            // “Coupon Code”
+                            Text(
+                              'Coupon Code:',
+                              style: TextStyle(
+                                fontSize: 12.sp,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                            SizedBox(height: 6.h),
+
+                            // 券码条（紧凑、含复制按钮）
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 10.w, vertical: 8.h),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(10.r),
+                                gradient: LinearGradient(
+                                  colors: [Colors.blue.shade50, Colors.purple.shade50],
+                                ),
+                                border: Border.all(color: const Color(0x141877F2)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: SelectableText(
+                                      code,
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 16.sp,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 1.3,
+                                        color: const Color(0xFF1877F2),
+                                      ),
+                                    ),
+                                  ),
+                                  InkWell(
+                                    onTap: () async {
+                                      await Clipboard.setData(ClipboardData(text: code));
+                                      if (!mounted) return;
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: const Text('Copied coupon code'),
+                                          duration: const Duration(milliseconds: 1000),
+                                          behavior: SnackBarBehavior.floating,
+                                          margin: EdgeInsets.all(10.w),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(10.r),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: Padding(
+                                      padding: EdgeInsets.all(4.w),
+                                      child: const Icon(Icons.copy_rounded,
+                                          color: Color(0xFF1877F2)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            if (expiryText.isNotEmpty) ...[
+                              SizedBox(height: 6.h),
+                              Text(
+                                expiryText,
+                                style: TextStyle(
+                                  fontSize: 11.sp,
+                                  color: Colors.orange.shade700,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+
+                            SizedBox(height: 8.h),
+
+                            // 描述（更短行高）
+                            Text(
+                              desc,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 12.5.sp,
+                                height: 1.28,
+                                color: Colors.grey[700],
                               ),
                             ),
 
                             SizedBox(height: 8.h),
 
-                            // 特性条
+                            // “Free Category Pinning” 小芯片（紧凑）
                             Container(
                               padding: EdgeInsets.symmetric(
-                                horizontal: 12.w,
-                                vertical: 8.h,
-                              ),
+                                  horizontal: 10.w, vertical: 6.h),
                               decoration: BoxDecoration(
                                 color: Colors.green.shade50,
-                                borderRadius: BorderRadius.circular(6.r),
+                                borderRadius: BorderRadius.circular(8.r),
+                                border: Border.all(color: Colors.green.shade100),
                               ),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
-                                    Icons.check_circle,
-                                    size: 14.sp,
-                                    color: Colors.green,
-                                  ),
-                                  SizedBox(width: 4.w),
+                                  const Icon(Icons.check_circle,
+                                      size: 14, color: Colors.green),
+                                  SizedBox(width: 6.w),
                                   Text(
                                     'Free Category Pinning',
                                     style: TextStyle(
-                                      fontSize: 11.sp,
-                                      color: Colors.green.shade700,
-                                      fontWeight: FontWeight.w500,
+                                      fontSize: 11.5.sp,
+                                      color: Colors.green.shade800,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ],
@@ -378,59 +288,41 @@ class _WelcomeCouponDialogState extends State<WelcomeCouponDialog>
                           ],
                         ),
                       ),
+                    ),
 
-                      SizedBox(height: 24.h),
-
-                      // 按钮组
-                      Row(
+                    // 紧凑按钮区（紧贴内容，无多余大白边）
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(14.w, 10.h, 14.w, 12.h),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Expanded(
-                            child: TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.symmetric(vertical: 12.h),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8.r),
-                                ),
-                              ),
-                              child: Text(
-                                'Later',
-                                style: TextStyle(
-                                  fontSize: 14.sp,
-                                  color: Colors.grey[600],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: 12.w),
-                          Expanded(
-                            child: Container(
+                          SizedBox(
+                            width: double.infinity,
+                            height: 42.h,
+                            child: DecoratedBox(
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
-                                  colors: [Colors.blue, Colors.purple],
+                                  colors: [Color(0xFF1877F2), Color(0xFF7B61FF)],
                                 ),
-                                borderRadius: BorderRadius.circular(8.r),
+                                borderRadius: BorderRadius.circular(10.r),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.blue.withOpacity(0.3),
+                                    color: const Color(0xFF1877F2).withOpacity(0.22),
                                     blurRadius: 8.r,
-                                    offset: Offset(0, 4.h),
+                                    offset: Offset(0, 3.h),
                                   ),
                                 ],
                               ),
                               child: ElevatedButton(
                                 onPressed: () {
                                   Navigator.pop(context);
-                                  // 优惠券列表
                                   Navigator.pushNamed(context, '/coupons');
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.transparent,
                                   shadowColor: Colors.transparent,
-                                  padding: EdgeInsets.symmetric(vertical: 12.h),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8.r),
+                                    borderRadius: BorderRadius.circular(10.r),
                                   ),
                                 ),
                                 child: Text(
@@ -438,18 +330,35 @@ class _WelcomeCouponDialogState extends State<WelcomeCouponDialog>
                                   style: TextStyle(
                                     fontSize: 14.sp,
                                     color: Colors.white,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ),
                             ),
                           ),
+                          SizedBox(height: 6.h),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: TextButton.styleFrom(
+                              minimumSize: Size.fromHeight(34.h),
+                              padding: EdgeInsets.symmetric(vertical: 6.h),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
+                              'Later',
+                              style: TextStyle(
+                                fontSize: 12.5.sp,
+                                color: Colors.grey[700],
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),

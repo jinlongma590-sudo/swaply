@@ -1,9 +1,9 @@
 // lib/pages/verification_page.dart
 // ✅ 不刷新会话；不对 profiles 做任何写操作
 // ✅ 最小可用流程：输入验证码 → 调服务 → 读表 → 刷新本页 UI → Navigator.pop(true)
-// ✅ 你已有复杂 UI：已把“提交逻辑”按最小版搬入（_verifyCode）
 // ✅ 判定是否已认证 / 徽章类型：统一走 utils（基于 user_verifications 行）
 // ✅ 本次改动：[DONE] iOS 顶部改为 statusBar + 44pt Row 布局，移除魔法数。
+// ✅ 成功后：先 VerificationGuard.invalidateCache()，再 Navigator.pop(true)
 
 import 'dart:async';
 
@@ -17,6 +17,7 @@ import 'package:swaply/services/email_verification_service.dart';
 import 'package:swaply/utils/verification_utils.dart' as vutils;
 import '../models/verification_types.dart' as vt;
 import '../widgets/verification_badge.dart' as vb;
+import 'package:swaply/services/verification_guard.dart';
 
 class VerificationPage extends StatefulWidget {
   const VerificationPage({super.key});
@@ -30,7 +31,7 @@ class _VerificationPageState extends State<VerificationPage>
   final _emailController = TextEditingController();
   final _codeController = TextEditingController();
 
-  // —— 新的状态持有 —— //
+  // —— 状态 —— //
   late final EmailVerificationService _svc;
   bool _verified = false;
   vt.VerificationBadgeType _badge = vt.VerificationBadgeType.none;
@@ -51,8 +52,8 @@ class _VerificationPageState extends State<VerificationPage>
 
     _svc = EmailVerificationService();
 
-    _animationController = AnimationController(
-        duration: const Duration(milliseconds: 600), vsync: this);
+    _animationController =
+        AnimationController(duration: const Duration(milliseconds: 600), vsync: this);
     _fadeAnimation =
         CurvedAnimation(parent: _animationController, curve: Curves.easeInOut);
 
@@ -93,7 +94,7 @@ class _VerificationPageState extends State<VerificationPage>
     }
   }
 
-  // === 发送验证码（保留原入口，便于从本页触发发送） ===
+  // === 发送验证码 ===
   Future<void> _sendVerificationCode() async {
     try {
       setState(() {
@@ -122,7 +123,7 @@ class _VerificationPageState extends State<VerificationPage>
     }
   }
 
-  /// ✅ 提交验证码（最小版逻辑）
+  /// ✅ 提交验证码
   Future<void> _verifyCode() async {
     try {
       setState(() {
@@ -150,12 +151,13 @@ class _VerificationPageState extends State<VerificationPage>
         _badge = badge;
       });
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Email verification successful')),
-        );
-        Navigator.of(context).pop(true);
-      }
+      // ✅ 成功后：失效守卫缓存 -> 提示 -> 返回 true
+      VerificationGuard.invalidateCache();
+      VerificationGuard.notifyVerifiedChanged(true); // ✅ [PATCH] 遵照要求新增
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email verification successful')),
+      );
+      Navigator.of(context).pop(true);
     } catch (e) {
       _showMessage('Verification failed', isError: true);
     } finally {
@@ -165,6 +167,7 @@ class _VerificationPageState extends State<VerificationPage>
 
   void _startResendCountdown() {
     Future.doWhile(() async {
+      // ✅ 修正：不能 `await const Future.delayed(...)`，应把 const 放到 Duration 上
       await Future.delayed(const Duration(seconds: 1));
       if (!mounted) return false;
       if (_resendCountdown > 0) {
@@ -194,31 +197,27 @@ class _VerificationPageState extends State<VerificationPage>
           children: [
             Icon(Icons.refresh_rounded, color: Colors.white, size: 16.sp),
             SizedBox(width: 8.w),
-            Text('Verification status refreshed',
-                style: TextStyle(fontSize: 13.sp)),
+            Text('Verification status refreshed', style: TextStyle(fontSize: 13.sp)),
           ],
         ),
         backgroundColor: Colors.green.shade600,
         behavior: SnackBarBehavior.floating,
-        shape:
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
         margin: EdgeInsets.all(12.w),
       ),
     );
   }
 
-  // —— 以下为 UI —— //
+  // —— UI —— //
   Color _getVerificationColor(vt.VerificationBadgeType type) {
     switch (type) {
       case vt.VerificationBadgeType.none:
         return Colors.grey;
       case vt.VerificationBadgeType.verified:
       case vt.VerificationBadgeType.blue:
-      // 邮箱验证成功：保持绿色（与你现有视觉一致）
         return const Color(0xFF4CAF50);
       case vt.VerificationBadgeType.official:
       case vt.VerificationBadgeType.government:
-      // 官方/政府：Facebook 蓝
         return const Color(0xFF1877F2);
       case vt.VerificationBadgeType.premium:
       case vt.VerificationBadgeType.gold:
@@ -278,22 +277,11 @@ class _VerificationPageState extends State<VerificationPage>
     );
   }
 
-  // ================= [MODIFIED] iOS 头部（标准 44pt Row 布局） =================
+  // ================= iOS 头部（44pt Row 布局） =================
   Widget _buildHeaderIOS() {
     final double statusBar = MediaQuery.of(context).padding.top;
 
-    // 1. 移除所有旧的魔法数常量
-    // const double kHeaderVisual = 38.0;
-    // const double kTitleTop = -6.0;
-    // const double kSideTop = 2.0;
-    // const double kSide = 16.0;
-    // const double kBtnSize = 36.0;
-    // const double kSpacing = 16.0;
-    // 移除旧的 backBtn 变量定义
-
-    // 2. 采用新的标准布局
     return Container(
-      // 仍用你现在的渐变/颜色，不改
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
@@ -301,15 +289,14 @@ class _VerificationPageState extends State<VerificationPage>
           end: Alignment.bottomRight,
         ),
       ),
-      padding: EdgeInsets.only(top: statusBar), // 让出状态栏
+      padding: EdgeInsets.only(top: statusBar),
       child: SizedBox(
-        height: 44, // 标准导航条高度
+        height: 44,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16), // 左右边距 16
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center, // 保证垂直居中
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // 左侧 32×32 返回
               SizedBox(
                 width: 32,
                 height: 32,
@@ -318,32 +305,27 @@ class _VerificationPageState extends State<VerificationPage>
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(10), // 匹配旧版圆角
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     alignment: Alignment.center,
-                    child: const Icon(Icons.arrow_back_ios_new,
-                        size: 18, color: Colors.white), // 匹配旧版图标
+                    child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
                   ),
                 ),
               ),
               const SizedBox(width: 12),
-
-              // 标题：与左右按钮同一基线（Row 天然垂直居中）
               Expanded(
                 child: Text(
                   'Account Verification',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center, // 保持居中（按你要求）
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
-                    fontSize: 18.sp, // 保持你原字号
+                    fontSize: 18.sp,
                   ),
                 ),
               ),
-
-              // 右侧占位：保留一个 32 占位以保持标题绝对居中
               const SizedBox(width: 12),
               const SizedBox(width: 32, height: 32),
             ],
@@ -353,7 +335,7 @@ class _VerificationPageState extends State<VerificationPage>
     );
   }
 
-  // ================= 页面主体（复用给 iOS/Android） =================
+  // ================= 页面主体 =================
   Widget _buildPageBody() {
     final badge = _badge;
 
@@ -381,46 +363,41 @@ class _VerificationPageState extends State<VerificationPage>
     );
   }
 
-  // ✅ [MODIFIED] 修复了绿色卡片的布局，使其与蓝色卡片一致
+  // ✅ 绿色/橙色状态卡片
   Widget _buildVerificationStatusCard(vt.VerificationBadgeType badge) {
     final verified = _verified;
 
-    // 1. 判定颜色
     Color kStatusColor;
     Color kTextColor;
     if (verified) {
-      kStatusColor = Colors.green; // 绿色
+      kStatusColor = Colors.green;
       kTextColor = Colors.green.shade800;
     } else {
-      kStatusColor = Colors.orange; // 未验证是橙色
+      kStatusColor = Colors.orange;
       kTextColor = Colors.orange.shade800;
     }
 
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            kStatusColor.withOpacity(0.05),
-            kStatusColor.withOpacity(0.1)
-          ],
+          colors: [kStatusColor.withOpacity(0.05), kStatusColor.withOpacity(0.1)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(18.r), // 匹配蓝色卡片
-        border: Border.all(color: kStatusColor.withOpacity(0.2)), // 匹配蓝色卡片
+        borderRadius: BorderRadius.circular(18.r),
+        border: Border.all(color: kStatusColor.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
-            color: kStatusColor.withOpacity(0.05), // 匹配蓝色卡片
+            color: kStatusColor.withOpacity(0.05),
             blurRadius: 16.r,
             offset: Offset(0, 6.h),
           ),
         ],
       ),
-      padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 16.h), // 匹配蓝色卡片
+      padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 16.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 头部：图标 + 标题 + 简述 (与 Official Card 结构一致)
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -433,11 +410,10 @@ class _VerificationPageState extends State<VerificationPage>
                   borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Icon(
-                    verified
-                        ? Icons.verified_user_rounded
-                        : Icons.warning_amber_rounded,
-                    color: Colors.white,
-                    size: 22.w),
+                  verified ? Icons.verified_user_rounded : Icons.warning_amber_rounded,
+                  color: Colors.white,
+                  size: 22.w,
+                ),
               ),
               SizedBox(width: 12.w),
               Expanded(
@@ -446,37 +422,26 @@ class _VerificationPageState extends State<VerificationPage>
                   children: [
                     Text(
                       verified ? 'Verified Account' : 'Account Not Verified',
-                      style: TextStyle(
-                          fontSize: 16.5.sp, // 匹配
-                          fontWeight: FontWeight.w700,
-                          color: kTextColor),
+                      style: TextStyle(fontSize: 16.5.sp, fontWeight: FontWeight.w700, color: kTextColor),
                     ),
                     SizedBox(height: 4.h),
                     Text(
                       verified
                           ? 'Your email address has been successfully verified.'
                           : 'Please verify your email to access all features.',
-                      style: TextStyle(
-                          fontSize: 12.5.sp, // 匹配
-                          color: Colors.grey.shade700,
-                          height: 1.35 // 匹配
-                      ),
+                      style: TextStyle(fontSize: 12.5.sp, color: Colors.grey.shade700, height: 1.35),
                     ),
                   ],
                 ),
               ),
             ],
           ),
-
-          SizedBox(height: 14.h), // 匹配
-
-          // 底部：徽章（如果有） + 刷新按钮
+          SizedBox(height: 14.h),
           Row(
             children: [
               if (badge != vt.VerificationBadgeType.none)
                 Container(
-                  padding:
-                  EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
+                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16.r),
@@ -489,16 +454,11 @@ class _VerificationPageState extends State<VerificationPage>
                       ),
                     ],
                   ),
-                  child: vb.VerificationStatusChip(
-                    type: badge,
-                    showIcon: true,
-                  ),
+                  child: vb.VerificationStatusChip(type: badge, showIcon: true),
                 )
               else
-                const Spacer(), // 如果没有徽章，添加 Spacer 占位
-
-              const Spacer(), // 确保刷新按钮在最右侧
-
+                const Spacer(),
+              const Spacer(),
               TextButton.icon(
                 onPressed: _refreshStatus,
                 icon: Icon(Icons.refresh_rounded, size: 16.w),
@@ -506,11 +466,8 @@ class _VerificationPageState extends State<VerificationPage>
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFF667EEA),
                   backgroundColor: Colors.white,
-                  padding:
-                  EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10.r),
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
                 ),
               ),
             ],
@@ -542,18 +499,13 @@ class _VerificationPageState extends State<VerificationPage>
               Container(
                 padding: EdgeInsets.all(10.w),
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-                  ),
+                  gradient: LinearGradient(colors: [Color(0xFF667EEA), Color(0xFF764BA2)]),
                   borderRadius: BorderRadius.all(Radius.circular(14)),
                 ),
-                child:
-                Icon(Icons.email_rounded, color: Colors.white, size: 20.w),
+                child: Icon(Icons.email_rounded, color: Colors.white, size: 20.w),
               ),
               SizedBox(width: 14.w),
-              Text('Email Verification',
-                  style:
-                  TextStyle(fontSize: 17.sp, fontWeight: FontWeight.bold)),
+              Text('Email Verification', style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.bold)),
             ],
           ),
           SizedBox(height: 20.h),
@@ -563,8 +515,7 @@ class _VerificationPageState extends State<VerificationPage>
             decoration: InputDecoration(
               labelText: 'Email Address',
               hintText: 'Enter your email address',
-              prefixIcon: Icon(Icons.email_outlined,
-                  color: const Color(0xFF667EEA), size: 18.w),
+              prefixIcon: Icon(Icons.email_outlined, color: Color(0xFF667EEA), size: 18.w),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14.r),
                 borderSide: BorderSide(color: Colors.grey.shade300),
@@ -575,12 +526,11 @@ class _VerificationPageState extends State<VerificationPage>
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14.r),
-                borderSide: BorderSide(color: const Color(0xFF667EEA), width: 2.w),
+                borderSide: BorderSide(color: Color(0xFF667EEA), width: 2.w),
               ),
               filled: true,
               fillColor: Colors.grey.shade50,
-              contentPadding:
-              EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+              contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
             ),
             style: TextStyle(fontSize: 14.sp),
           ),
@@ -589,21 +539,15 @@ class _VerificationPageState extends State<VerificationPage>
             width: double.infinity,
             height: 48.h,
             child: ElevatedButton(
-              onPressed: _isLoading || _resendCountdown > 0
-                  ? null
-                  : _sendVerificationCode,
+              onPressed: _isLoading || _resendCountdown > 0 ? null : _sendVerificationCode,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14.r),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14.r)),
               ),
               child: Ink(
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-                  ),
+                  gradient: LinearGradient(colors: [Color(0xFF667EEA), Color(0xFF764BA2)]),
                   borderRadius: BorderRadius.all(Radius.circular(14)),
                 ),
                 child: Container(
@@ -612,11 +556,7 @@ class _VerificationPageState extends State<VerificationPage>
                       ? SizedBox(
                     height: 20.h,
                     width: 20.w,
-                    child: const CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor:
-                      AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
+                    child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
                   )
                       : Text(
                     _resendCountdown > 0
@@ -624,11 +564,7 @@ class _VerificationPageState extends State<VerificationPage>
                         : _sentToEmail != null
                         ? 'Resend Verification Code'
                         : 'Send Verification Code',
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
+                    style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600, color: Colors.white),
                   ),
                 ),
               ),
@@ -640,26 +576,20 @@ class _VerificationPageState extends State<VerificationPage>
             keyboardType: TextInputType.number,
             maxLength: 6,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 28.sp,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 6.w,
-            ),
+            style: TextStyle(fontSize: 28.sp, fontWeight: FontWeight.bold, letterSpacing: 6.w),
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             decoration: InputDecoration(
               labelText: 'Verification Code',
               hintText: '000000',
               counterText: '',
-              border:
-              OutlineInputBorder(borderRadius: BorderRadius.circular(14.r)),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14.r)),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14.r),
-                borderSide: BorderSide(color: const Color(0xFF667EEA), width: 2.w),
+                borderSide: BorderSide(color: Color(0xFF667EEA), width: 2.w),
               ),
               filled: true,
               fillColor: Colors.grey.shade50,
-              contentPadding:
-              EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+              contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
             ),
           ),
           SizedBox(height: 16.h),
@@ -671,15 +601,11 @@ class _VerificationPageState extends State<VerificationPage>
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14.r),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14.r)),
               ),
               child: Ink(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.green.shade400, Colors.green.shade600],
-                  ),
+                  gradient: LinearGradient(colors: [Colors.green.shade400, Colors.green.shade600]),
                   borderRadius: BorderRadius.circular(14.r),
                 ),
                 child: Container(
@@ -688,20 +614,9 @@ class _VerificationPageState extends State<VerificationPage>
                       ? SizedBox(
                     height: 20.h,
                     width: 20.w,
-                    child: const CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor:
-                      AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
+                    child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
                   )
-                      : Text(
-                    'Verify Code',
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
+                      : Text('Verify Code', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600, color: Colors.white)),
                 ),
               ),
             ),
@@ -711,9 +626,8 @@ class _VerificationPageState extends State<VerificationPage>
     );
   }
 
-  // ✅ [MODIFIED] 这是你提供的最新版蓝色卡片
+  // ✅ 官方蓝卡片
   Widget _buildOfficialVerificationCard() {
-    // 统一使用官方蓝
     const Color kOfficialBlue = Color(0xFF1877F2);
 
     return Container(
@@ -722,18 +636,13 @@ class _VerificationPageState extends State<VerificationPage>
         borderRadius: BorderRadius.circular(18.r),
         border: Border.all(color: Colors.grey.shade100),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 16.r,
-            offset: Offset(0, 6.h),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 16.r, offset: Offset(0, 6.h)),
         ],
       ),
       padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 16.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 头部：图标 + 标题 + 简述（更紧凑的行高与间距）
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -741,40 +650,26 @@ class _VerificationPageState extends State<VerificationPage>
                 width: 42.w,
                 height: 42.w,
                 alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: kOfficialBlue,
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Icon(Icons.verified_rounded,
-                    color: Colors.white, size: 22.w),
+                decoration: BoxDecoration(color: kOfficialBlue, borderRadius: BorderRadius.circular(12.r)),
+                child: Icon(Icons.verified_rounded, color: Colors.white, size: 22.w),
               ),
               SizedBox(width: 12.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Official Verification',
-                      style: TextStyle(
-                          fontSize: 16.5.sp, fontWeight: FontWeight.w700),
-                    ),
+                    Text('Official Verification', style: TextStyle(fontSize: 16.5.sp, fontWeight: FontWeight.w700)),
                     SizedBox(height: 4.h),
                     Text(
                       'Apply if you represent a business, organization, or public figure.',
-                      style: TextStyle(
-                          fontSize: 12.5.sp,
-                          color: Colors.grey.shade700,
-                          height: 1.35),
+                      style: TextStyle(fontSize: 12.5.sp, color: Colors.grey.shade700, height: 1.35),
                     ),
                   ],
                 ),
               ),
             ],
           ),
-
           SizedBox(height: 14.h),
-
-          // 优势列表：更紧凑的“信息面板”样式
           Container(
             padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
             decoration: BoxDecoration(
@@ -792,10 +687,7 @@ class _VerificationPageState extends State<VerificationPage>
               ],
             ),
           ),
-
           SizedBox(height: 14.h),
-
-          // 申请按钮：改为实心主按钮，视觉更聚焦
           SizedBox(
             width: double.infinity,
             height: 46.h,
@@ -804,41 +696,24 @@ class _VerificationPageState extends State<VerificationPage>
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16.r)),
-                    title: Text('Coming Soon',
-                        style: TextStyle(
-                            fontSize: 16.sp, fontWeight: FontWeight.bold)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+                    title: Text('Coming Soon', style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold)),
                     content: Text(
                       'Official verification applications are coming soon. We\'ll notify you when this feature becomes available.',
-                      style: TextStyle(
-                          fontSize: 13.sp,
-                          color: Colors.grey.shade700,
-                          height: 1.35),
+                      style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade700, height: 1.35),
                     ),
                     actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: Text('OK', style: TextStyle(fontSize: 13.sp)),
-                      ),
+                      TextButton(onPressed: () => Navigator.of(context).pop(), child: Text('OK', style: TextStyle(fontSize: 13.sp))),
                     ],
                   ),
                 );
               },
-              icon: Icon(Icons.arrow_forward_rounded,
-                  size: 18.w, color: Colors.white),
-              label: Text(
-                'Apply for Official Status',
-                style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white),
-              ),
+              icon: Icon(Icons.arrow_forward_rounded, size: 18.w, color: Colors.white),
+              label: Text('Apply for Official Status', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600, color: Colors.white)),
               style: ElevatedButton.styleFrom(
                 elevation: 0,
                 backgroundColor: kOfficialBlue,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.r)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
               ),
             ),
           ),
@@ -852,12 +727,9 @@ class _VerificationPageState extends State<VerificationPage>
       padding: EdgeInsets.only(bottom: 6.h),
       child: Row(
         children: [
-          Icon(Icons.check_circle_rounded,
-              color: const Color(0xFF1877F2), size: 16.w),
+          Icon(Icons.check_circle_rounded, color: Color(0xFF1877F2), size: 16.w),
           SizedBox(width: 10.w),
-          Expanded(
-            child: Text(text, style: TextStyle(fontSize: 12.sp, height: 1.3)),
-          ),
+          Expanded(child: Text(text, style: TextStyle(fontSize: 12.sp, height: 1.3))),
         ],
       ),
     );
@@ -869,11 +741,7 @@ class _VerificationPageState extends State<VerificationPage>
         color: Colors.white,
         borderRadius: BorderRadius.circular(20.r),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 16.r,
-            offset: Offset(0, 6.h),
-          ),
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 16.r, offset: Offset(0, 6.h)),
         ],
       ),
       padding: EdgeInsets.all(20.w),
@@ -884,17 +752,11 @@ class _VerificationPageState extends State<VerificationPage>
             children: [
               Container(
                 padding: EdgeInsets.all(10.w),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(14.r),
-                ),
-                child: Icon(Icons.help_outline_rounded,
-                    color: Colors.grey.shade600, size: 20.w),
+                decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(14.r)),
+                child: Icon(Icons.help_outline_rounded, color: Colors.grey.shade600, size: 20.w),
               ),
               SizedBox(width: 14.w),
-              Text('Need Help?',
-                  style:
-                  TextStyle(fontSize: 17.sp, fontWeight: FontWeight.bold)),
+              Text('Need Help?', style: TextStyle(fontSize: 17.sp, fontWeight: FontWeight.bold)),
             ],
           ),
           SizedBox(height: 16.h),
@@ -921,10 +783,7 @@ class _VerificationPageState extends State<VerificationPage>
             margin: EdgeInsets.only(top: 3.h),
             width: 5.w,
             height: 5.h,
-            decoration: BoxDecoration(
-              color: Colors.grey.shade400,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: Colors.grey.shade400, shape: BoxShape.circle),
           ),
           SizedBox(width: 10.w),
           Expanded(
@@ -943,23 +802,15 @@ class _VerificationPageState extends State<VerificationPage>
       width: double.infinity,
       padding: EdgeInsets.all(14.w),
       decoration: BoxDecoration(
-        color: _isError
-            ? Colors.red.withOpacity(0.1)
-            : Colors.green.withOpacity(0.1),
+        color: _isError ? Colors.red.withOpacity(0.1) : Colors.green.withOpacity(0.1),
         borderRadius: BorderRadius.circular(14.r),
-        border: Border.all(
-          color: _isError
-              ? Colors.red.withOpacity(0.3)
-              : Colors.green.withOpacity(0.3),
-        ),
+        border: Border.all(color: _isError ? Colors.red.withOpacity(0.3) : Colors.green.withOpacity(0.3)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            _isError
-                ? Icons.error_outline_rounded
-                : Icons.check_circle_outline_rounded,
+            _isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
             color: _isError ? Colors.red : Colors.green,
             size: 20.w,
           ),

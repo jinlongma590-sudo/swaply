@@ -3,6 +3,7 @@
 // ✅ UI：  应用代码一的“紧凑型”分类网格 UI（44.w 图标）
 // ✅ 修复：将 LayoutBuilder 方案正确注入到 44.w 紧凑布局中
 // ✅ 修改：Trending(Pinned) = 10, Popular(Latest) = 100, 移除 Total 限制
+// ✅ [PATCH B] 登录后首帧调用欢迎弹窗（WelcomeDialogService.maybeShow）
 
 import 'dart:io' show Platform; // ✅ 仅用于 iOS 判断
 
@@ -19,6 +20,7 @@ import 'package:swaply/listing_api.dart';
 
 import 'dart:async'; // ✅ 功能保留
 import 'package:swaply/services/listing_events_bus.dart'; // ✅ 功能保留
+import 'package:swaply/services/welcome_dialog_service.dart'; // ✅ [PATCH B] 顶部导入
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -27,7 +29,8 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
+class _HomePageState extends State<HomePage>
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _trendingKey = GlobalKey();
   final TextEditingController _searchCtrl = TextEditingController();
@@ -46,6 +49,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   // Facebook亮蓝色配色方案
   static const Color _primaryBlue = Color(0xFF1877F2); // Facebook亮蓝色
   static const Color _successGreen = Color(0xFF4CAF50);
+
+  // ===== [PATCH B] 仅触发一次欢迎弹窗 =====
+  bool _welcomeChecked = false;
 
   static const List<String> _locations = [
     'All Zimbabwe',
@@ -119,6 +125,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
@@ -135,10 +143,23 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         _loadTrending(bypassCache: true);
       }
     });
+
+    // ===== [PATCH B] 登录后首帧真正触发一次欢迎弹窗 =====
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted || _welcomeChecked) return;
+      _welcomeChecked = true;
+      await WelcomeDialogService.maybeShow(context);
+    });
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // 保留占位：后续如需前台恢复逻辑可在此追加
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
     _searchCtrl.dispose();
     _fadeController.dispose();
@@ -190,7 +211,6 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     String? city,
     int pinnedLimit = 10,  // ✅ 1. 改为 10
     int latestLimit = 100, // ✅ 2. 改为 100
-    // int total = 12,      // ✅ 3. 移除 total 限制
     bool bypassCache = false,
   }) async {
     final pinnedAds = await CouponService.getTrendingPinnedAds(
@@ -241,9 +261,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         'created_at': r['created_at'],
         'pinned': false,
       });
-      // 移除了 list.length >= total 的 break 判断
     }
-    // return list.take(total).toList(); // ✅ 4. 移除 .take(total)
     return list.toList();
   }
 
@@ -257,12 +275,10 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         city: city,
         pinnedLimit: 10,  // ✅ 保持与函数定义一致
         latestLimit: 100, // ✅ 保持与函数定义一致
-        // total: 12, (移除)
         bypassCache: bypassCache, // ✅ 功能保留
       );
       if (mounted) {
         setState(() => _trendingRemote = rows);
-        // ✅ 功能保留: 智能动画
         if (!bypassCache || _trendingRemote.isEmpty) {
           _fadeController.forward();
         }
@@ -328,7 +344,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         context: context,
         builder: (ctx) => AlertDialog(
           shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
           title: const Text('Login Required'),
           content: const Text('Please login to post listings.'),
           actions: [
@@ -348,16 +364,14 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
     }
     if (!mounted) return;
 
-    // 🔽 关键改动：await + 处理 ok
     final ok = await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const SellFormPage()),
     );
 
     if (ok == true && mounted) {
-      // 双保险：即使有事件总线，这里也主动刷新一次并滚回“Trending”
       await _loadTrending(bypassCache: true);
       _scrollToTrending();
-      setState(() {}); // 最保守触发重建
+      setState(() {});
     }
   }
 
@@ -594,11 +608,11 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   // ✅ UI: 这是“代码一”的紧凑 UI (44.w) + 你的 LayoutBuilder 溢出修复
   Widget _buildCompactCategoriesGrid() {
-    // ✅ 锁定这个网格区域内的文本缩放为 1.0
+    // ✅ 锁定这个网格区域内的文本缩放为 1.0（兼容老版本 Flutter，使用 textScaleFactor）
     final media = MediaQuery.of(context);
 
     return MediaQuery(
-      data: media.copyWith(textScaler: const TextScaler.linear(1.0)),
+      data: media.copyWith(textScaleFactor: 1.0),
       child: Padding(
         padding: EdgeInsets.fromLTRB(12.w, 12.h, 12.w, 16.h),
         child: GridView.builder(
@@ -616,19 +630,18 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
             final isTrending = index == 0;
 
             // ✅ 紧凑的视觉尺寸
-            const double iconBox = 50.0; // 紧凑图标容器 (44.w)
-            const double iconSize = 34.0; // 紧凑图标 (28.w)
-            const double iconFallbackSize = 26.0; // 紧凑图标 (26.sp)
-            const double gap = 8.0; // 图标与文字间距 (8.h)
+            const double iconBox = 50.0; // 容器
+            const double iconSize = 34.0; // 图标
+            const double iconFallbackSize = 26.0;
+            const double gap = 8.0; // 图标与文字间距
 
             return GestureDetector(
               onTap: () => _navigateToCategory(cat['id']!, cat['label']!),
               child: Container(
-                // ⚠️ 注意：这里没有 padding，Column 会自动居中
                 decoration: BoxDecoration(
                   color: isTrending
                       ? Colors.orange.shade50
-                      : Colors.grey[50], // 代码一的背景色
+                      : Colors.grey[50],
                   borderRadius: BorderRadius.circular(10.r),
                   border: Border.all(
                     color: isTrending
@@ -645,10 +658,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   ],
                 ),
                 child: LayoutBuilder(
-                  // ✅ 使用 LayoutBuilder 动态计算文本高度
                   builder: (ctx, c) {
                     final double H = c.maxHeight;
-                    // ✅ 用实际可用高度反推“label 最大高度”
                     final double labelMax =
                     (H - iconBox - gap).clamp(0.0, 40.h);
 
@@ -656,12 +667,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Container(
-                          width: iconBox, // ✅ 紧凑 44.w
-                          height: iconBox, // ✅ 紧凑 44.h
+                          width: iconBox,
+                          height: iconBox,
                           decoration: BoxDecoration(
                             color: isTrending
                                 ? Colors.orange.shade100
-                                : Colors.white, // 代码一的图标背景
+                                : Colors.white,
                             borderRadius: BorderRadius.circular(10.r),
                             boxShadow: [
                               BoxShadow(
@@ -673,8 +684,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           ),
                           child: Center(
                             child: SizedBox(
-                              width: iconSize, // ✅ 紧凑 28.w
-                              height: iconSize, // ✅ 紧凑 28.h
+                              width: iconSize,
+                              height: iconSize,
                               child: Image.asset(
                                 'assets/icons/${cat['icon']}.png',
                                 fit: BoxFit.contain,
@@ -686,7 +697,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                                       isTrending
                                           ? Icons.local_fire_department
                                           : Icons.category,
-                                      size: iconFallbackSize, // ✅ 紧凑 26.sp
+                                      size: iconFallbackSize,
                                       color: isTrending
                                           ? Colors.orange
                                           : Colors.grey,
@@ -697,9 +708,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                             ),
                           ),
                         ),
-                        const SizedBox(height: gap), // ✅ 紧凑 8.h
-
-                        // ✅ label 高度用“动态上限”
+                        const SizedBox(height: gap),
                         ConstrainedBox(
                           constraints: BoxConstraints(maxHeight: labelMax),
                           child: Padding(
@@ -710,7 +719,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
-                                fontSize: 11.sp, // ✅ 紧凑 11.sp
+                                fontSize: 11.sp,
                                 fontWeight: FontWeight.w500,
                                 color: Colors.grey[700],
                                 height: 1.1,
@@ -801,7 +810,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   borderRadius:
                   BorderRadius.vertical(top: Radius.circular(10.r)),
                 ),
-                child: const Center(
+                child: Center(
                   child: CircularProgressIndicator(
                       strokeWidth: 2, color: _primaryBlue),
                 ),
