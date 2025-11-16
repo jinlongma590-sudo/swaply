@@ -1016,41 +1016,30 @@ class _MainNavigationPageState extends State<MainNavigationPage>
         ),
         languageProvider,
       ),
-      // ✅ 仅对 Profile 根页做「增量 MediaQuery」：把系统 bottom 安全区 + 底栏真实高度
+
+      // ✅ Profile：不再做 MediaQuery 注入，直接普通构建
       _buildTabNavigator(
         _profileKey,
-        Builder(
-          builder: (ctx) {
-            final mq = MediaQuery.of(ctx);
-            final EdgeInsets newPadding =
-            mq.padding.copyWith(bottom: mq.padding.bottom + _navGap + 6.h);
-            final EdgeInsets newViewPadding = mq.viewPadding
-                .copyWith(bottom: mq.viewPadding.bottom + _navGap + 6.h);
-            return MediaQuery(
-              data: mq.copyWith(
-                padding: newPadding,
-                viewPadding: newViewPadding,
-              ),
-              child: _ProfileRoot(isGuest: widget.isGuest),
-            );
-          },
-        ),
+        _ProfileRoot(isGuest: widget.isGuest),
         languageProvider,
       ),
     ];
+
+    final bool _isProfileTab = _selectedIndex == 4;
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: _onPopInvokedWithResult,
       child: Scaffold(
-        extendBody: true, // ✅ 让 body 延伸到导航条下
+        // ✅ 关键：仅在非 Profile 时使用 edge-to-edge；Profile 关闭以防内容被底栏覆盖
+        extendBody: !_isProfileTab,
         backgroundColor: Colors.white,
         body: IndexedStack(
           index: _selectedIndex,
           children: pages,
         ),
 
-        // ✅ 修复：导航条本体占满到底，安全区仅作用在内部内容
+        // ✅ 导航条本体：保持原有“细条修复”写法
         bottomNavigationBar: Builder(
           builder: (ctx) {
             final double bottomPad = MediaQuery.of(ctx).padding.bottom; // iOS 底部安全区高度
@@ -1071,7 +1060,6 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                     ),
                   ],
                 ),
-                // ⬇️ 关键：把安全区高度加到“内部”padding 的 bottom
                 padding: EdgeInsets.fromLTRB(8.w, 6.h, 8.w, 6.h + bottomPad),
                 child: SizedBox(
                   height: 52.h, // 只控制图标行高度
