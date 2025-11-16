@@ -1,4 +1,4 @@
-﻿<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="cc.swaply.app">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="cc.swaply.app">
 
     <!-- 网络 / 相机 / 存储权限 -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -13,8 +13,9 @@
 
     <application
         android:label="Swaply"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/adaptive"
         android:roundIcon="@mipmap/ic_launcher_round"
+        android:logo="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true"
         android:requestLegacyExternalStorage="true"
         android:enableOnBackInvokedCallback="true">
@@ -39,7 +40,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- ✅ Supabase 默认 OAuth 回调：io.supabase.flutter://callback -->
+            <!-- Supabase 默认 OAuth 回调：io.supabase.flutter://callback -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -47,7 +48,7 @@
                 <data android:scheme="io.supabase.flutter" android:host="callback" />
             </intent-filter>
 
-            <!-- ✅ 自定义深链 -->
+            <!-- 自定义深链 -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

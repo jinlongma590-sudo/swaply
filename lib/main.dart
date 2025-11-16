@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:developer' as dev; // ✅ 新增的 import
 import 'dart:io';
-import 'dart:async';
+// import 'dart:async'; // ❌ 重复：已删除
 import 'package:swaply/services/verification_guard.dart';
 import 'package:app_links/app_links.dart'; // ✅ 深链支持（替代 uni_links）
 import 'package:flutter/foundation.dart';
@@ -372,7 +372,8 @@ Future<void> _ensureProfileForCurrentUserOnce() async {
   if (u == null) return;
 
   try {
-    final rows = await client.from('profiles').select('id').eq('id', u.id).limit(1);
+    final rows =
+    await client.from('profiles').select('id').eq('id', u.id).limit(1);
 
     final meta = u.userMetadata ?? const {};
     final fullName = (meta['full_name'] ?? meta['name'] ?? '').toString();
@@ -465,7 +466,8 @@ Future<void> main() async {
                 Icon(Icons.error_outline, color: Colors.red, size: 28.w),
                 SizedBox(height: 6.h),
                 Text('Something went wrong',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
+                    style:
+                    TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
                 SizedBox(height: 4.h),
                 Text(
                   details.exceptionAsString(),
@@ -597,7 +599,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   primary: const Color(0xFF2196F3),
                 ),
                 appBarTheme: const AppBarTheme(
-                  backgroundColor: Color(0xFF2196F3),
+                  backgroundColor: const Color(0xFF2196F3),
                   foregroundColor: Colors.white,
                   elevation: 0,
                 ),
@@ -632,9 +634,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 }
 
-// 莽禄搂莽禄颅忙路禄氓艩  MainNavigationPage 氓鈥櫯捗モ€β睹ぢ烩€撁甭?..
-// [盲赂潞盲潞鈥犆ㄅ犫€毭撀伱┞好┾€斅疵寂捗库劉茅鈥∨捗ぢ柯澝ε捖伱モ€β睹ぢ解劉盲禄拢莽 聛盲赂聧氓聫藴]
-// 莽禄搂莽禄颅忙路禄氓艩  MainNavigationPage 氓鈥櫯捗モ€β睹ぢ烩€撁甭..
 // ===================== MainNavigationPage (patched) =====================
 
 class MainNavigationPage extends StatefulWidget {
@@ -959,8 +958,8 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     );
   }
 
-  Widget _buildTabNavigator(
-      GlobalKey<NavigatorState> key, Widget root, LanguageProvider languageProvider) {
+  Widget _buildTabNavigator(GlobalKey<NavigatorState> key, Widget root,
+      LanguageProvider languageProvider) {
     return Navigator(
       key: key,
       onGenerateRoute: (_) => MaterialPageRoute(
@@ -1022,25 +1021,24 @@ class _MainNavigationPageState extends State<MainNavigationPage>
       canPop: false,
       onPopInvokedWithResult: _onPopInvokedWithResult,
       child: Scaffold(
-        extendBody: true, // ✅ 关键：让底部背景延伸到安全区
+        extendBody: true, // ✅ 让 body 延伸到导航条下
         backgroundColor: Colors.white,
         body: IndexedStack(
           index: _selectedIndex,
           children: pages,
         ),
 
-        // ✅ 修复 iOS 底部“细条”色差：外层先把安全区也刷白 → SafeArea → Material(去除表面叠色)
-        bottomNavigationBar: Container(
-          color: Colors.white, // 把安全区本身也涂成纯白
-          child: SafeArea(
-            top: false,
-            bottom: true,
-            child: Material(
-              color: Colors.white,
-              surfaceTintColor: Colors.transparent, // 关闭 M3 表面叠色造成的微灰
-              child: Container(
+        // ✅ 终极修复：不用 SafeArea，自己把安全区高度加到 padding，并把安全区底层也刷白
+        bottomNavigationBar: Builder(
+          builder: (ctx) {
+            final double b = MediaQuery.of(ctx).padding.bottom; // iOS 底部安全区高度
+            return Container(
+              color: Colors.white,                // 把“安全区层”也涂成纯白
+              padding: EdgeInsets.only(bottom: b),// 把安全区当作额外 padding
+
+              child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Colors.white,            // 导航条本体同样纯白
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withOpacity(0.08),
@@ -1049,48 +1047,50 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                     ),
                   ],
                 ),
-                padding: EdgeInsets.fromLTRB(8.w, 6.h, 8.w, 6.h),
-                child: SizedBox(
-                  height: 52.h,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildCompactNavItem(
-                        icon: Icons.home_outlined,
-                        activeIcon: Icons.home_rounded,
-                        label: l10n.home,
-                        index: 0,
-                        context: context,
-                      ),
-                      _buildCompactNavItem(
-                        icon: Icons.bookmark_outline_rounded,
-                        activeIcon: Icons.bookmark_rounded,
-                        label: l10n.saved,
-                        index: 1,
-                        context: context,
-                      ),
-                      _buildCentralSellButton(context),
-                      _buildCompactNavItemWithBadge(
-                        icon: Icons.notifications_outlined,
-                        activeIcon: Icons.notifications_rounded,
-                        label: l10n.notifications,
-                        index: 3,
-                        badgeCount: _notificationCount,
-                        context: context,
-                      ),
-                      _buildCompactNavItem(
-                        icon: Icons.person_outline_rounded,
-                        activeIcon: Icons.person_rounded,
-                        label: l10n.profile,
-                        index: 4,
-                        context: context,
-                      ),
-                    ],
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(8.w, 6.h, 8.w, 6.h),
+                  child: SizedBox(
+                    height: 52.h,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildCompactNavItem(
+                          icon: Icons.home_outlined,
+                          activeIcon: Icons.home_rounded,
+                          label: l10n.home,
+                          index: 0,
+                          context: ctx,
+                        ),
+                        _buildCompactNavItem(
+                          icon: Icons.bookmark_outline_rounded,
+                          activeIcon: Icons.bookmark_rounded,
+                          label: l10n.saved,
+                          index: 1,
+                          context: ctx,
+                        ),
+                        _buildCentralSellButton(ctx),
+                        _buildCompactNavItemWithBadge(
+                          icon: Icons.notifications_outlined,
+                          activeIcon: Icons.notifications_rounded,
+                          label: l10n.notifications,
+                          index: 3,
+                          badgeCount: _notificationCount,
+                          context: ctx,
+                        ),
+                        _buildCompactNavItem(
+                          icon: Icons.person_outline_rounded,
+                          activeIcon: Icons.person_rounded,
+                          label: l10n.profile,
+                          index: 4,
+                          context: ctx,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );
