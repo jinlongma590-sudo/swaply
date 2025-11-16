@@ -1016,12 +1016,24 @@ class _MainNavigationPageState extends State<MainNavigationPage>
         ),
         languageProvider,
       ),
-      // ✅ 仅对 Profile 根页增加底部留白，避免 Logout 被遮挡
+      // ✅ 仅对 Profile 根页做「增量 MediaQuery」：把系统 bottom 安全区 + 底栏真实高度
       _buildTabNavigator(
         _profileKey,
-        Padding(
-          padding: EdgeInsets.only(bottom: _navGap),
-          child: _ProfileRoot(isGuest: widget.isGuest),
+        Builder(
+          builder: (ctx) {
+            final mq = MediaQuery.of(ctx);
+            final EdgeInsets newPadding =
+            mq.padding.copyWith(bottom: mq.padding.bottom + _navGap + 6.h);
+            final EdgeInsets newViewPadding = mq.viewPadding
+                .copyWith(bottom: mq.viewPadding.bottom + _navGap + 6.h);
+            return MediaQuery(
+              data: mq.copyWith(
+                padding: newPadding,
+                viewPadding: newViewPadding,
+              ),
+              child: _ProfileRoot(isGuest: widget.isGuest),
+            );
+          },
         ),
         languageProvider,
       ),
