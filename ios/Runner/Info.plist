@@ -35,12 +35,17 @@
     <key>LSRequiresIPhoneOS</key>
     <true/>
 
+    <!-- 仅支持 iPhone（避免被识别为 iPad 目标） -->
+    <key>UIDeviceFamily</key>
+    <array>
+      <integer>1</integer>
+    </array>
+
+    <!-- 启动页 Storyboard -->
     <key>UILaunchStoryboardName</key>
     <string>LaunchScreen</string>
 
-    <key>UIMainStoryboardFile</key>
-    <string>Main</string>
-
+    <!-- 方向支持（如只想竖屏可只保留 Portrait） -->
     <key>UISupportedInterfaceOrientations</key>
     <array>
       <string>UIInterfaceOrientationPortrait</string>
@@ -48,29 +53,21 @@
       <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
 
-    <key>UISupportedInterfaceOrientations~ipad</key>
-    <array>
-      <string>UIInterfaceOrientationPortrait</string>
-      <string>UIInterfaceOrientationPortraitUpsideDown</string>
-      <string>UIInterfaceOrientationLandscapeLeft</string>
-      <string>UIInterfaceOrientationLandscapeRight</string>
-    </array>
+    <!-- 不提供 iPad 专用的方向，删除 ~ipad 段以避免被判定为支持 iPad -->
+    <!-- UISupportedInterfaceOrientations~ipad 已移除 -->
 
     <key>CADisableMinimumFrameDurationOnPhone</key>
     <true/>
-
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
 
-    <!-- 淇敼澶?锛氬厑璁告樉绀虹姸鎬佹爮 -->
+    <!-- 状态栏交由页面控制 -->
     <key>UIStatusBarHidden</key>
     <false/>
-
-    <!-- 淇敼澶?锛氱敱鎺у埗鍣ㄥ喅瀹氱姸鎬佹爮鏍峰紡 -->
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <true/>
 
-    <!-- 闅愮鏉冮檺 -->
+    <!-- 隐私权限文案 -->
     <key>NSCameraUsageDescription</key>
     <string>This app needs camera access to take photos for your listing.</string>
     <key>NSPhotoLibraryUsageDescription</key>
@@ -78,36 +75,36 @@
     <key>NSPhotoLibraryAddUsageDescription</key>
     <string>This app needs permission to save photos to your library when you save or export images.</string>
 
-    <!-- Flutter 娣遍摼杞彂 -->
+    <!-- 若使用的仅是标准 HTTPS 加密，可声明为非受限加密 -->
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
+
+    <!-- 启用 Flutter 深链 -->
     <key>FlutterDeepLinkingEnabled</key>
     <true/>
 
-    <!-- URL Schemes锛氬厛鍔?Supabase 榛樿锛屽啀淇濈暀浣犵殑 swaply -->
+    <!-- URL Schemes：Supabase 默认回调 + 你的自定义深链 -->
     <key>CFBundleURLTypes</key>
     <array>
-      <!-- Supabase Flutter 榛樿 iOS 鍥炶皟 Scheme锛堝繀椤绘湁锛?-->
       <dict>
         <key>CFBundleURLName</key>
         <string>supabase.auth</string>
         <key>CFBundleURLSchemes</key>
         <array>
-        <string>cc.swaply.app</string>
           <string>io.supabase.flutter</string>
         </array>
       </dict>
-      <!-- 浣犵殑鑷畾涔?scheme锛堝彲閫変繚鐣欙級 -->
       <dict>
         <key>CFBundleURLName</key>
-        <string>swaply.login</string>
+        <string>swaply.custom</string>
         <key>CFBundleURLSchemes</key>
         <array>
-        <string>cc.swaply.app</string>
-          <string>swaply</string>
+          <string>cc.swaply.app</string>
         </array>
       </dict>
     </array>
 
-    <!-- 鍏佽 canOpenURL 鐨勫閮?App 鐧藉悕鍗?-->
+    <!-- 允许 canOpenURL 的外部 App -->
     <key>LSApplicationQueriesSchemes</key>
     <array>
       <string>whatsapp</string>
@@ -125,4 +122,3 @@
     </array>
   </dict>
 </plist>
-
