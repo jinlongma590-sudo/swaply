@@ -569,131 +569,167 @@ class _HomePageState extends State<HomePage>
     );
   }
 
-  // ✅ UI: 这是“代码一”的紧凑 UI (44.w) + 你的 LayoutBuilder 溢出修复
+// ✅ 修复版：精确计算网格高度，杜绝底部多余空白
   Widget _buildCompactCategoriesGrid() {
-    // ✅ 锁定这个网格区域内的文本缩放为 1.0（兼容老版本 Flutter，使用 textScaleFactor）
+    // 锁定文字缩放，避免不同设备文字放大影响测量
     final media = MediaQuery.of(context);
+
     return MediaQuery(
       data: media.copyWith(textScaler: const TextScaler.linear(1.0)),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(12.w, 12.h, 12.w, 16.h),
-        child: GridView.builder(
-          physics: const NeverScrollableScrollPhysics(),
-          shrinkWrap: true,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4,
-            childAspectRatio: 1.0,
-            crossAxisSpacing: 6.w, // ✅ 紧凑间距
-            mainAxisSpacing: 6.h, // ✅ 紧凑间距
-          ),
-          itemCount: _categories.length,
-          itemBuilder: (context, index) {
-            final cat = _categories[index];
-            final isTrending = index == 0;
-            // ✅ 紧凑的视觉尺寸
-            const double iconBox = 50.0; // 容器
-            const double iconSize = 34.0; // 图标
-            const double iconFallbackSize = 26.0;
-            const double gap = 8.0; // 图标与文字间距
-            return GestureDetector(
-              onTap: () => _navigateToCategory(cat['id']!, cat['label']!),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: isTrending ? Colors.orange.shade50 : Colors.grey[50],
-                  borderRadius: BorderRadius.circular(10.r),
-                  border: Border.all(
-                    color:
-                    isTrending ? Colors.orange.shade200 : Colors.transparent,
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
-                      blurRadius: 2,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
-                ),
-                child: LayoutBuilder(
-                  builder: (ctx, c) {
-                    final double H = c.maxHeight;
-                    final double labelMax =
-                    (H - iconBox - gap).clamp(0.0, 40.h);
-                    return Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          width: iconBox,
-                          height: iconBox,
-                          decoration: BoxDecoration(
-                            color: isTrending
-                                ? Colors.orange.shade100
-                                : Colors.white,
-                            borderRadius: BorderRadius.circular(10.r),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.03),
-                                blurRadius: 3,
-                                offset: const Offset(0, 1),
-                              ),
-                            ],
-                          ),
-                          child: Center(
-                            child: SizedBox(
-                              width: iconSize,
-                              height: iconSize,
-                              child: Image.asset(
-                                'assets/icons/${cat['icon']}.png',
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, __, ___) {
-                                  return Image.asset(
-                                    'assets/icons/${cat['icon']}.jpg',
-                                    fit: BoxFit.contain,
-                                    errorBuilder: (_, __, ___) => Icon(
-                                      isTrending
-                                          ? Icons.local_fire_department
-                                          : Icons.category,
-                                      size: iconFallbackSize,
-                                      color: isTrending
-                                          ? Colors.orange
-                                          : Colors.grey,
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: gap),
-                        ConstrainedBox(
-                          constraints: BoxConstraints(maxHeight: labelMax),
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 2.w),
-                            child: Text(
-                              cat['label']!,
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 11.sp,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.grey[700],
-                                height: 1.1,
-                              ),
-                            ),
-                          ),
+      child: LayoutBuilder(
+        builder: (ctx, constraints) {
+          // ---- 布局参数（保持与你现在的视觉一致） ----
+          const int crossAxisCount = 4;
+          final double crossAxisSpacing = 6.w;
+          final double mainAxisSpacing  = 6.h;
+          const double childAspectRatio = 1.0; // 正方形卡片
+          final double padHLeft  = 12.w;
+          final double padHRight = 12.w;
+          final double padVTop   = 12.h;
+          final double padVBottom= 16.h;
+
+          // ---- 计算网格可用宽度/单元格宽高/总高度 ----
+          final double usableWidth =
+              constraints.maxWidth - padHLeft - padHRight;
+          final double tileW = (usableWidth -
+              crossAxisSpacing * (crossAxisCount - 1)) /
+              crossAxisCount;
+          final double tileH = tileW / childAspectRatio;
+
+          final int rows =
+          (_categories.length / crossAxisCount).ceil(); // 16 -> 4 行
+          final double gridCoreHeight =
+              rows * tileH + (rows - 1) * mainAxisSpacing;
+          final double gridTotalHeight =
+              padVTop + gridCoreHeight + padVBottom;
+
+          return SizedBox(
+            height: gridTotalHeight, // ✅ 关键：固定测得高度
+            child: GridView.builder(
+              padding: EdgeInsets.fromLTRB(padHLeft, padVTop, padHRight, padVBottom),
+              // ✅ 关键：关闭 primary，避免额外安全区/滚动补偿
+              primary: false,
+              shrinkWrap: false,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                childAspectRatio: childAspectRatio,
+                crossAxisSpacing: crossAxisSpacing,
+                mainAxisSpacing: mainAxisSpacing,
+              ),
+              itemCount: _categories.length,
+              itemBuilder: (context, index) {
+                final cat = _categories[index];
+                final isTrending = index == 0;
+
+                // 下面保持你原来的卡片内容不变
+                const double iconBox = 50.0;
+                const double iconSize = 34.0;
+                const double iconFallbackSize = 26.0;
+                const double gap = 8.0;
+
+                return GestureDetector(
+                  onTap: () => _navigateToCategory(cat['id']!, cat['label']!),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isTrending ? Colors.orange.shade50 : Colors.grey[50],
+                      borderRadius: BorderRadius.circular(10.r),
+                      border: Border.all(
+                        color: isTrending
+                            ? Colors.orange.shade200
+                            : Colors.transparent,
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.02),
+                          blurRadius: 2,
+                          offset: const Offset(0, 1),
                         ),
                       ],
-                    );
-                  },
-                ),
-              ),
-            );
-          },
-        ),
+                    ),
+                    child: LayoutBuilder(
+                      builder: (ctx, c) {
+                        final double H = c.maxHeight;
+                        final double labelMax = (H - iconBox - gap).clamp(0.0, 40.h);
+                        return Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: iconBox,
+                              height: iconBox,
+                              decoration: BoxDecoration(
+                                color: isTrending
+                                    ? Colors.orange.shade100
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(10.r),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.03),
+                                    blurRadius: 3,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
+                              ),
+                              child: Center(
+                                child: SizedBox(
+                                  width: iconSize,
+                                  height: iconSize,
+                                  child: Image.asset(
+                                    'assets/icons/${cat['icon']}.png',
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (_, __, ___) {
+                                      return Image.asset(
+                                        'assets/icons/${cat['icon']}.jpg',
+                                        fit: BoxFit.contain,
+                                        errorBuilder: (_, __, ___) => Icon(
+                                          isTrending
+                                              ? Icons.local_fire_department
+                                              : Icons.category,
+                                          size: iconFallbackSize,
+                                          color: isTrending
+                                              ? Colors.orange
+                                              : Colors.grey,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: gap),
+                            ConstrainedBox(
+                              constraints: BoxConstraints(maxHeight: labelMax),
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 2.w),
+                                child: Text(
+                                  cat['label']!,
+                                  textAlign: TextAlign.center,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey[700],
+                                    height: 1.1,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+          );
+        },
       ),
     );
   }
+
 
   Widget _buildTrendingSection() {
     return Column(

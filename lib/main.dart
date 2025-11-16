@@ -45,6 +45,9 @@ import 'package:swaply/widgets/ios_insets_guard.dart'; // 鉁?鏂板锛Victor
 import 'package:swaply/widgets/verified_avatar.dart';
 import 'debug/recovery_probe.dart';
 
+// ✅ 新增：版本更新提示服务
+import 'package:swaply/services/app_update_service.dart';
+
 // ========= 鍏ㄥ眬 Auth 浜嬩欢璁㈤槄锛堝彧娉ㄥ唽涓€娆★級=========
 bool _authHookWired = false;
 StreamSubscription<AuthState>? _globalAuthSub;
@@ -729,6 +732,12 @@ class _MainNavigationPageState extends State<MainNavigationPage>
       CurvedAnimation(parent: _sellButtonController, curve: Curves.easeInOut),
     );
 
+    // ✅ 新增：首帧后进行“版本更新检查”（只提示、不强制由服务端控制）
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      AppUpdateService.checkForUpdates(context);
+    });
+
     if (!widget.isGuest) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Future.delayed(const Duration(milliseconds: 1500), () {
@@ -974,99 +983,110 @@ class _MainNavigationPageState extends State<MainNavigationPage>
 
     final List<Widget> pages = [
       _buildTabNavigator(
-          _homeKey, const IosInsetsGuard(child: _HomeRoot()), languageProvider),
+        _homeKey,
+        const IosInsetsGuard(child: _HomeRoot()),
+        languageProvider,
+      ),
       _buildTabNavigator(
-          _savedKey,
-          _SavedRoot(
-            isGuest: widget.isGuest,
-            onNavigateToHome: _navigateToHome,
-          ),
-          languageProvider),
+        _savedKey,
+        _SavedRoot(
+          isGuest: widget.isGuest,
+          onNavigateToHome: _navigateToHome,
+        ),
+        languageProvider,
+      ),
       _buildTabNavigator(
-          _sellKey, _SellRoot(isGuest: widget.isGuest), languageProvider),
+        _sellKey,
+        _SellRoot(isGuest: widget.isGuest),
+        languageProvider,
+      ),
       _buildTabNavigator(
-          _notifKey,
-          _NotifRoot(
-            onClearBadge: _clearNotifications,
-            isGuest: widget.isGuest,
-            onNotificationCountChanged: (count) {
-              if (mounted) {
-                setState(() => _notificationCount = count);
-              }
-            },
-          ),
-          languageProvider),
+        _notifKey,
+        _NotifRoot(
+          onClearBadge: _clearNotifications,
+          isGuest: widget.isGuest,
+          onNotificationCountChanged: (count) {
+            if (mounted) setState(() => _notificationCount = count);
+          },
+        ),
+        languageProvider,
+      ),
       _buildTabNavigator(
-          _profileKey, _ProfileRoot(isGuest: widget.isGuest), languageProvider),
+        _profileKey,
+        _ProfileRoot(isGuest: widget.isGuest),
+        languageProvider,
+      ),
     ];
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: _onPopInvokedWithResult,
       child: Scaffold(
+        extendBody: true, // ✅ 关键：让底部背景延伸到安全区
         backgroundColor: Colors.white,
         body: IndexedStack(
           index: _selectedIndex,
           children: pages,
         ),
 
-        // ================= PATCH 1 =================
-        // ✅ iOS底部“细条”颜色不一致：使用 SafeArea 精准填充安全区，并统一白色。
-        bottomNavigationBar: SafeArea(
-          top: false,
-          left: false,
-          right: false,
-          bottom: true,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
+        // ✅ 修复 iOS 底部“细条”色差：外层先把安全区也刷白 → SafeArea → Material(去除表面叠色)
+        bottomNavigationBar: Container(
+          color: Colors.white, // 把安全区本身也涂成纯白
+          child: SafeArea(
+            top: false,
+            bottom: true,
+            child: Material(
               color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 10.h,
-                  offset: Offset(0, -2.h),
-                ),
-              ],
-            ),
-            child: Padding(
-              // 原来你的左右/顶部 padding 保持不变；底部由 SafeArea 处理
-              padding: EdgeInsets.fromLTRB(8.w, 6.h, 8.w, 6.h),
-              child: SizedBox(
-                height: 52.h,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildCompactNavItem(
-                      icon: Icons.home_outlined,
-                      activeIcon: Icons.home_rounded,
-                      label: l10n.home,
-                      index: 0,
-                      context: context,
-                    ),
-                    _buildCompactNavItem(
-                      icon: Icons.bookmark_outline_rounded,
-                      activeIcon: Icons.bookmark_rounded,
-                      label: l10n.saved,
-                      index: 1,
-                      context: context,
-                    ),
-                    _buildCentralSellButton(context),
-                    _buildCompactNavItemWithBadge(
-                      icon: Icons.notifications_outlined,
-                      activeIcon: Icons.notifications_rounded,
-                      label: l10n.notifications,
-                      index: 3,
-                      badgeCount: _notificationCount,
-                      context: context,
-                    ),
-                    _buildCompactNavItem(
-                      icon: Icons.person_outline_rounded,
-                      activeIcon: Icons.person_rounded,
-                      label: l10n.profile,
-                      index: 4,
-                      context: context,
+              surfaceTintColor: Colors.transparent, // 关闭 M3 表面叠色造成的微灰
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 10.h,
+                      offset: Offset(0, -2.h),
                     ),
                   ],
+                ),
+                padding: EdgeInsets.fromLTRB(8.w, 6.h, 8.w, 6.h),
+                child: SizedBox(
+                  height: 52.h,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildCompactNavItem(
+                        icon: Icons.home_outlined,
+                        activeIcon: Icons.home_rounded,
+                        label: l10n.home,
+                        index: 0,
+                        context: context,
+                      ),
+                      _buildCompactNavItem(
+                        icon: Icons.bookmark_outline_rounded,
+                        activeIcon: Icons.bookmark_rounded,
+                        label: l10n.saved,
+                        index: 1,
+                        context: context,
+                      ),
+                      _buildCentralSellButton(context),
+                      _buildCompactNavItemWithBadge(
+                        icon: Icons.notifications_outlined,
+                        activeIcon: Icons.notifications_rounded,
+                        label: l10n.notifications,
+                        index: 3,
+                        badgeCount: _notificationCount,
+                        context: context,
+                      ),
+                      _buildCompactNavItem(
+                        icon: Icons.person_outline_rounded,
+                        activeIcon: Icons.person_rounded,
+                        label: l10n.profile,
+                        index: 4,
+                        context: context,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1252,7 +1272,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Text(
-                    label,               // “Notifications” 将自动收缩不再显示“...”
+                    label, // “Notifications” 将自动收缩不再显示“...”
                     maxLines: 1,
                     overflow: TextOverflow.visible,
                     textAlign: TextAlign.center,
@@ -1368,6 +1388,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     );
   }
 }
+
 // ===================== /MainNavigationPage (patched) =====================
 
 /* ------------------------------------------------ */
