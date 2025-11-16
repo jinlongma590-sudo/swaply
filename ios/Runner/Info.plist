@@ -35,17 +35,17 @@
     <key>LSRequiresIPhoneOS</key>
     <true/>
 
-    <!-- 仅支持 iPhone（避免被识别为 iPad 目标） -->
+    <!-- 仅支持 iPhone -->
     <key>UIDeviceFamily</key>
     <array>
       <integer>1</integer>
     </array>
 
-    <!-- 启动页 Storyboard -->
+    <!-- 启动页（Flutter 模板） -->
     <key>UILaunchStoryboardName</key>
     <string>LaunchScreen</string>
 
-    <!-- 方向支持（如只想竖屏可只保留 Portrait） -->
+    <!-- iPhone 方向（保留 3 向） -->
     <key>UISupportedInterfaceOrientations</key>
     <array>
       <string>UIInterfaceOrientationPortrait</string>
@@ -53,21 +53,18 @@
       <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
 
-    <!-- 不提供 iPad 专用的方向，删除 ~ipad 段以避免被判定为支持 iPad -->
-    <!-- UISupportedInterfaceOrientations~ipad 已移除 -->
-
     <key>CADisableMinimumFrameDurationOnPhone</key>
     <true/>
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
 
-    <!-- 状态栏交由页面控制 -->
+    <!-- 状态栏由页面控制 -->
     <key>UIStatusBarHidden</key>
     <false/>
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <true/>
 
-    <!-- 隐私权限文案 -->
+    <!-- 隐私权限 -->
     <key>NSCameraUsageDescription</key>
     <string>This app needs camera access to take photos for your listing.</string>
     <key>NSPhotoLibraryUsageDescription</key>
@@ -75,15 +72,15 @@
     <key>NSPhotoLibraryAddUsageDescription</key>
     <string>This app needs permission to save photos to your library when you save or export images.</string>
 
-    <!-- 若使用的仅是标准 HTTPS 加密，可声明为非受限加密 -->
+    <!-- 若只用标准 HTTPS，可设为 false -->
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
 
-    <!-- 启用 Flutter 深链 -->
+    <!-- Flutter 深链 -->
     <key>FlutterDeepLinkingEnabled</key>
     <true/>
 
-    <!-- URL Schemes：Supabase 默认回调 + 你的自定义深链 -->
+    <!-- URL Schemes（Supabase 回调 + 自定义） -->
     <key>CFBundleURLTypes</key>
     <array>
       <dict>
@@ -104,7 +101,7 @@
       </dict>
     </array>
 
-    <!-- 允许 canOpenURL 的外部 App -->
+    <!-- 可打开的外部 App scheme -->
     <key>LSApplicationQueriesSchemes</key>
     <array>
       <string>whatsapp</string>
