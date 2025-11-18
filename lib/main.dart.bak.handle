@@ -241,44 +241,57 @@ Future<void> _migrateWelcomeKeys(String userId) async {
 Future<void> _handleSupabaseUri(Uri? uri) async {
   if (uri == null) return;
 
-  // 双保险：登录回调交给 supabase_flutter 处理，这里跳过
+  // ✅ EARLY-RETURN：避免重复消费登录回调（交给 Supabase 内置处理）
   try {
     final isSwaplyAuthCallback =
         ((uri.scheme == 'cc.swaply.app') || (uri.host == 'cc.swaply.app')) &&
-        (uri.path == '/login-callback');
+            (uri.path == '/login-callback');
     if (isSwaplyAuthCallback) {
       debugPrint('[DeepLink] skip /login-callback (handled by Supabase)');
       return;
     }
-  } catch (_) {}
+  } catch (_) {
+    // 忽略判断异常，继续走下方通用逻辑
+  }
 
-  // 统一解析 query + fragment
-  final params = <String, String>{};
+  // ✅ 重复 auth code 去重阀（20 秒窗口）
+  if (!AuthDeepLinkGuard.shouldProcess(uri)) {
+    debugPrint('[DeepLink] guard: duplicate auth code ignored.');
+    return;
+  }
+
   try {
+    final params = <String, String>{};
     params.addAll(uri.queryParameters);
     if (uri.fragment.isNotEmpty) {
       try {
         params.addAll(Uri.splitQueryString(uri.fragment));
-      } catch (_) {
+      } catch (e) {
         final frag = uri.fragment.replaceAll('#', '').replaceAll('?', '&');
-        try { params.addAll(Uri.splitQueryString(frag)); } catch (_) {}
+        params.addAll(Uri.splitQueryString(frag));
       }
     }
-  } catch (_) {}
 
-  final type = (params['type'] ?? params['event'] ?? '').toLowerCase();
+    final type = (params['type'] ?? params['event'] ?? '').toLowerCase();
+    final code = params['code'];
+    final refreshToken = params['refresh_token'];
 
-  // 仅处理恢复；其他链接不在这里做任何认证相关动作，避免重复消费
-  if (type != 'recovery') {
-    debugPrint('[DeepLink] non-recovery link, skip manual handling: $uri');
-    return;
-  }
+    if (code != null && code.isNotEmpty) {
+      await Supabase.instance.client.auth.exchangeCodeForSession(code);
+      debugPrint('[DeepLink] exchangeCodeForSession ok');
+    } else if (refreshToken != null && refreshToken.isNotEmpty) {
+      await Supabase.instance.client.auth.setSession(refreshToken);
+      debugPrint('[DeepLink] setSession(refresh_token) ok');
+    } else {
+      debugPrint('[DeepLink] no code/refresh_token in uri: $uri');
+    }
 
-  // 恢复流程：只做导航，不手动 exchange/setSession
-  if (!_navigatedToReset) {
-    _navigatedToReset = true;
-    appNavKey.currentState?.pushNamed('/reset-password');
-    debugPrint('[DeepLink] navigate -> /reset-password');
+    if (type == 'recovery' && !_navigatedToReset) {
+      _navigatedToReset = true;
+      appNavKey.currentState?.pushNamed('/reset-password');
+    }
+  } catch (e) {
+    debugPrint('[DeepLink] handle uri error: $e');
   }
 }
 
@@ -7223,5 +7236,4 @@ Future<void> _ensureProfileExists(User user) async {
     // 不抛错，避免影响 UI
   }
 }
-
 

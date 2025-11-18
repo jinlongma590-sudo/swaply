@@ -1,5 +1,5 @@
-// lib/pages/account_settings_page.dart
-import 'package:flutter/foundation.dart'; // ✅ [ADDED] For platform check
+﻿// lib/pages/account_settings_page.dart
+import 'package:flutter/foundation.dart'; // 鉁?For platform check
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -16,6 +16,9 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
   bool _ack = false;
   bool _deleting = false;
 
+  // 鉁?闃叉姈锛氬垹闄ゆ垚鍔熷悗鐨?signOut 鍙厑璁歌Е鍙戜竴娆★紝闃叉鐑噸杞?閲嶅缓瀵艰嚧閲嶅鐧诲嚭
+  bool _logoutAfterDeletionOnce = false;
+
   @override
   void dispose() {
     _pwdCtrl.dispose();
@@ -24,13 +27,13 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
 
   bool get _canSubmit => _ack && _pwdCtrl.text.trim().isNotEmpty && !_deleting;
 
-  // 顶部显眼错误横幅
+  // 椤堕儴鏄剧溂閿欒妯箙
   void _showErrorBanner(String message) {
     final messenger = ScaffoldMessenger.of(context);
     messenger.clearSnackBars();
     messenger.hideCurrentMaterialBanner();
 
-    HapticFeedback.heavyImpact(); // 震动提示
+    HapticFeedback.heavyImpact(); // 闇囧姩鎻愮ず
 
     messenger.showMaterialBanner(
       MaterialBanner(
@@ -54,14 +57,14 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
       ),
     );
 
-    // 4 秒后自动隐藏
+    // 4 绉掑悗鑷姩闅愯棌
     Future.delayed(const Duration(seconds: 4), () {
       if (!mounted) return;
       messenger.hideCurrentMaterialBanner();
     });
   }
 
-  // 成功提示（保留底部 Snackbar，但样式更显眼）
+  // 鎴愬姛鎻愮ず锛堝簳閮?Snackbar锛?
   void _showSuccessSnack(String message) {
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentMaterialBanner();
@@ -83,7 +86,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     );
   }
 
-  // ✅ 确认弹窗：输入 DELETE 才能继续
+  // 鉁?纭寮圭獥锛氳緭鍏?DELETE 鎵嶈兘缁х画
   Future<bool> _finalConfirm() async {
     final ctrl = TextEditingController();
     bool canConfirm = false;
@@ -132,7 +135,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
       },
     );
 
-    // 不手动 dispose，避免过渡期断言崩溃
+    // 涓嶆墜鍔?dispose锛岄伩鍏嶈繃娓℃湡鏂█宕╂簝
     return ok ?? false;
   }
 
@@ -153,15 +156,28 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
         },
       );
 
-      final data = (res.data is Map) ? (res.data as Map) : {};
-      if (data['ok'] == true) {
-        // 仅登出，不在本页做任何导航；交给 main.dart 的 onAuthStateChange -> signedOut 统一路由到 /welcome
-        await client.auth.signOut();
+      final data = (res.data is Map) ? (res.data as Map) : const {};
+      final ok = data['ok'] == true;
+
+      if (ok) {
+        // 鉁?鍏堟彁绀猴紝鍐嶁€滃彧瑙﹀彂涓€娆♀€濈櫥鍑猴紝闅忓悗閫€鍑哄埌鏍癸紙闃绘柇褰撳墠椤甸噸寤哄鑷寸殑閲嶅閫昏緫锛?
+        if (mounted) {
+          _showSuccessSnack('Account deleted.');
+        }
+
+        if (!_logoutAfterDeletionOnce) {
+          _logoutAfterDeletionOnce = true;
+          try {
+            await client.auth.signOut(scope: SignOutScope.global); // 浠呭湪鍒犻櫎鎴愬姛鍚庤皟鐢?
+          } catch (_) {/* 闈欓粯 */}
+        }
 
         if (!mounted) return;
-        _showSuccessSnack('Account deleted.');
+        // 鍥炲埌鏍硅矾鐢憋紙鎴栨寜浣犻」鐩敼涓?pushNamedAndRemoveUntil('/welcome', (_) => false)锛?
+        Navigator.of(context).popUntil((r) => r.isFirst);
+        return;
       } else {
-        final msg = data['error']?.toString() ?? 'Delete failed';
+        final msg = (data['error'] ?? 'Delete failed').toString();
         throw Exception(msg);
       }
     } catch (e) {
@@ -181,45 +197,39 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     }
   }
 
-  // ✅ [NEW] 统一的 AppBar 构建器 (已按 verification_page.dart 标准重写)
+  // 鉁?缁熶竴鐨?AppBar 鏋勫缓鍣?(涓庡叾浠栭〉闈㈤鏍间竴鑷?
   PreferredSizeWidget _buildStandardAppBar(BuildContext context) {
     const String title = 'Account';
     final double statusBar = MediaQuery.of(context).padding.top;
     final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    // (使用与 Help/About 一致的颜色)
     const Color kBgColor = Color(0xFF2563EB);
 
-    // ============== Android & 其他：保持原 AppBar 不变 ==============
+    // Android & 鍏朵粬骞冲彴锛氭爣鍑?AppBar
     if (!isIOS) {
       return AppBar(
         title: const Text(
           title,
-          // (使用原 Style，但确保颜色为白色)
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w600,
             color: Colors.white,
           ),
         ),
-        backgroundColor: kBgColor, // (应用一致的背景色)
+        backgroundColor: kBgColor,
         elevation: 0,
         leading: IconButton(
-          // (确保 Android 也有返回按钮)
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
       );
     }
 
-    // ===== ✅ [MODIFIED] iOS：使用“基准页” (verification_page.dart) 的 44pt Row 布局 =====
+    // iOS锛?4pt 鑷畾涔夊鑸爮
+    const double kNavBarHeight = 44.0;
+    const double kButtonSize = 32.0;
+    const double kSidePadding = 16.0;
+    const double kButtonSpacing = 12.0;
 
-    // 1. 标准布局数值
-    const double kNavBarHeight = 44.0; // 标准导航条高度
-    const double kButtonSize = 32.0; // 标准按钮尺寸
-    const double kSidePadding = 16.0; // 标准左右内边距
-    const double kButtonSpacing = 12.0; // 标准间距
-
-    // 2. 构建 32x32 返回按钮
     final Widget iosBackButton = SizedBox(
       width: kButtonSize,
       height: kButtonSize,
@@ -228,53 +238,48 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(10), // 保持原圆角
+            borderRadius: BorderRadius.circular(10),
           ),
           alignment: Alignment.center,
-          child: const Icon(Icons.arrow_back_ios_new, // 保持原图标
-              size: 18,
-              color: Colors.white),
+          child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
         ),
       ),
     );
 
-    // 3. 构建居中标题
     const Widget iosTitle = Expanded(
       child: Text(
         title,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.center, // 保证居中
+        textAlign: TextAlign.center,
         style: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w700,
-          fontSize: 18, // 保持原字体大小
+          fontSize: 18,
         ),
       ),
     );
 
-    // 4. 构建 32x32 右侧占位
     const Widget iosRightPlaceholder =
     SizedBox(width: kButtonSize, height: kButtonSize);
 
-    // 5. 组装
     return PreferredSize(
-      preferredSize: Size.fromHeight(statusBar + kNavBarHeight), // ✅ 44pt + statusBar
+      preferredSize: Size.fromHeight(statusBar + kNavBarHeight),
       child: Container(
         color: kBgColor,
-        padding: EdgeInsets.only(top: statusBar), // 让出状态栏
+        padding: EdgeInsets.only(top: statusBar),
         child: SizedBox(
-          height: kNavBarHeight, // 44pt
+          height: kNavBarHeight,
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: kSidePadding), // 16
+            padding: const EdgeInsets.symmetric(horizontal: kSidePadding),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center, // 垂直居中
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                iosBackButton, // 32x32
-                const SizedBox(width: kButtonSpacing), // 12
-                iosTitle, // Expanded
-                const SizedBox(width: kButtonSpacing), // 12
-                iosRightPlaceholder, // 32x32 占位
+                iosBackButton,
+                const SizedBox(width: kButtonSpacing),
+                iosTitle,
+                const SizedBox(width: kButtonSpacing),
+                iosRightPlaceholder,
               ],
             ),
           ),
@@ -287,7 +292,6 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
   Widget build(BuildContext context) {
     final danger = Theme.of(context).colorScheme.error;
     return Scaffold(
-      // ✅ [MODIFIED] 替换 AppBar
       appBar: _buildStandardAppBar(context),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -351,7 +355,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                 ),
                 CheckboxListTile(
                   value: _ack,
-                  onChanged: (v) => setState(() => _ack = v ?? false),
+                  onChanged: (v) => setState(() => _ack = (v ?? false)),
                   contentPadding: EdgeInsets.zero,
                   title: const Text(
                     'I understand this will permanently delete my account and data.',
@@ -365,8 +369,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                   child: ElevatedButton(
                     onPressed: _canSubmit ? _deleteAccount : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                      _canSubmit ? danger : danger.withOpacity(.5),
+                      backgroundColor: _canSubmit ? danger : danger.withOpacity(.5),
                       textStyle: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -390,3 +393,4 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     );
   }
 }
+

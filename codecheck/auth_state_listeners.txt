@@ -1,0 +1,9 @@
+﻿C:\Apps\swaply\lib\auth\login_screen.dart:62: // 说明：返回由 onAuthStateChange/回调路由处理，这里不做额外导航
+C:\Apps\swaply\lib\auth\register_screen.dart:108: // ignore, 等待 signedIn 后再重试
+C:\Apps\swaply\lib\auth\reset_password_page.dart:33: _sub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+C:\Apps\swaply\lib\auth\reset_password_page.dart:37: if (data.event == AuthChangeEvent.passwordRecovery && mounted) {
+C:\Apps\swaply\lib\debug\recovery_probe.dart:45: // supabase_flutter 自己会处理深链并触发 onAuthStateChange
+C:\Apps\swaply\lib\debug\recovery_probe.dart:53: debugPrint('[RECOVERY.PROBE] >>> 识别为恢复流程 (type=recovery)，交给 onAuthStateChange 跳转重置页');
+C:\Apps\swaply\lib\services\auth_service.dart:22: bool get isSignedIn => currentUser != null;
+C:\Apps\swaply\lib\services\auth_service.dart:382: Stream<AuthState> get authStateChanges => supabase.auth.onAuthStateChange;
+C:\Apps\swaply\lib\utils\google_sign_in_helper.dart:112: static bool get isSignedIn => _googleSignIn.currentUser != null;

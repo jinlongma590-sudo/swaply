@@ -1,30 +1,49 @@
 // lib/pages/sell_form_page.dart
 import 'dart:io';
-import 'package:flutter/foundation.dart'; // ✅ kIsWeb & defaultTargetPlatform
+import 'dart:typed_data';
+
+import 'package:cross_file/cross_file.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart'; // kIsWeb & defaultTargetPlatform
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // iOS 状态栏样式
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'dart:typed_data';
-// 选图依赖（只用 bytes，不走路径上传）
-import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:swaply/pages/product_detail_page.dart' as pd;
 import 'package:swaply/config.dart';
-import 'package:swaply/models/listing_store.dart';
 import 'package:swaply/listing_api.dart';
-import 'package:swaply/services/reward_service.dart';
-import 'package:swaply/services/coupon_service.dart';
 import 'package:swaply/models/coupon.dart';
-// ✅ 关键操作守卫（未验证则引导验证）
-import 'package:swaply/services/verification_guard.dart';
-import 'package:flutter/services.dart'; // ✅ 用于 iOS 顶部状态栏文字颜色（仅 iOS 传入）
-import 'package:swaply/services/listing_events_bus.dart'; // ✅ 新增
-
-// ===== [PATCH] 新增 import =====
-import 'package:cross_file/cross_file.dart';
+import 'package:swaply/models/listing_store.dart';
+import 'package:swaply/pages/product_detail_page.dart' as pd;
+import 'package:swaply/services/coupon_service.dart';
 import 'package:swaply/services/image_normalizer.dart';
+import 'package:swaply/services/listing_events_bus.dart';
+import 'package:swaply/services/reward_service.dart';
+import 'package:swaply/services/verification_guard.dart';
+
+// 统一主色
+const Color _PRIMARY_BLUE = Color(0xFF2196F3);
+
+// === 底栏留白：略大于真实底栏高度，确保内容不会被遮挡 ===
+// [✅ 补丁 3] 采用你建议的更保守的 gap 算法
+double _navGap(BuildContext context) {
+  final safe = MediaQuery.of(context).padding.bottom;
+  final kb = MediaQuery.of(context).viewInsets.bottom; // 键盘弹出
+  const bar = 96.0; // 稍微保守
+  return bar + safe + (kb > 0 ? 8.0 : 0.0);
+}
+
+// [✅ 补丁 5] 兼容旧版 Dart 2.x, 替代 Dart 3.0 的 switch expression
+String _guessMime(String? ext) {
+  final e = (ext ?? '').toLowerCase();
+  if (e == 'png') return 'image/png';
+  if (e == 'webp') return 'image/webp';
+  if (e == 'heic') return 'image/heic';
+  if (e == 'jpeg' || e == 'jpg') return 'image/jpeg';
+  return 'image/*';
+}
 
 class SellFormPage extends StatefulWidget {
   const SellFormPage({super.key});
@@ -53,16 +72,11 @@ pickImageBytes() async {
   }
   if (bytes == null) return null;
 
-  // 猜扩展名/类型（能用就行）
+  // 猜扩展名/类型
   final ext = f.extension?.toLowerCase();
   final name = f.name;
-  final mime = switch (ext) {
-    'png' => 'image/png',
-    'webp' => 'image/webp',
-    'heic' => 'image/heic',
-    'jpeg' || 'jpg' => 'image/jpeg',
-    _ => 'image/*',
-  };
+  // [✅ 补丁 5] 使用 Dart 2.x 兼容的辅助函数
+  final mime = _guessMime(ext);
 
   return (bytes: bytes, name: name, ext: ext, mime: mime);
 }
@@ -154,11 +168,17 @@ class _SellFormPageState extends State<SellFormPage>
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
-    _loadAvailableCoupons();
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
+    );
+
+    // [✅ 最终补丁] 延迟加载优惠券，确保转场动画流畅
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _loadAvailableCoupons();
+      }
+    });
+
     _animationController.forward();
   }
 
@@ -193,15 +213,12 @@ class _SellFormPageState extends State<SellFormPage>
     try {
       final user = Supabase.instance.client.auth.currentUser;
       if (user != null) {
-        // 使用服务端统一过滤的“可用于置顶”的优惠券
         final coupons = await CouponService.getPinningEligibleCoupons(user.id);
 
         if (mounted) {
-          // 仅保留可用，并按优先级排序
           final usable = coupons.where((c) => c.isUsable).toList()
             ..sort((a, b) => b.priority.compareTo(a.priority));
 
-          // 若有路由携带 couponId，则自动选中
           CouponModel? preselect;
           if (_initialCouponIdFromRoute != null) {
             try {
@@ -235,20 +252,16 @@ class _SellFormPageState extends State<SellFormPage>
     switch (_category) {
       case 'Vehicles':
         return [
-          _buildCompactDropdown(
-              'Vehicle Type *',
-              'vehicleType',
-              [
-                'Car',
-                'Motorcycle',
-                'Truck',
-                'Bus',
-                'Van',
-                'Tractor',
-                'Boat',
-                'Other'
-              ],
-              isRequired: true),
+          _buildCompactDropdown('Vehicle Type *', 'vehicleType', [
+            'Car',
+            'Motorcycle',
+            'Truck',
+            'Bus',
+            'Van',
+            'Tractor',
+            'Boat',
+            'Other'
+          ], isRequired: true),
           SizedBox(height: 12.h),
           _buildCompactTextField('make', 'Make/Brand *', 'e.g. Toyota, Honda',
               isRequired: true),
@@ -271,19 +284,15 @@ class _SellFormPageState extends State<SellFormPage>
 
       case 'Property':
         return [
-          _buildCompactDropdown(
-              'Property Type *',
-              'propertyType',
-              [
-                'House',
-                'Apartment',
-                'Land',
-                'Commercial',
-                'Office Space',
-                'Warehouse',
-                'Farm'
-              ],
-              isRequired: true),
+          _buildCompactDropdown('Property Type *', 'propertyType', [
+            'House',
+            'Apartment',
+            'Land',
+            'Commercial',
+            'Office Space',
+            'Warehouse',
+            'Farm'
+          ], isRequired: true),
           SizedBox(height: 12.h),
           _buildCompactDropdown('Listing Type *', 'listingType',
               ['For Sale', 'For Rent', 'Lease'],
@@ -301,18 +310,14 @@ class _SellFormPageState extends State<SellFormPage>
 
       case 'Beauty and Personal Care':
         return [
-          _buildCompactDropdown(
-              'Product Type *',
-              'beautyType',
-              [
-                'Skincare',
-                'Makeup',
-                'Hair Care',
-                'Perfume',
-                'Tools & Accessories',
-                'Other'
-              ],
-              isRequired: true),
+          _buildCompactDropdown('Product Type *', 'beautyType', [
+            'Skincare',
+            'Makeup',
+            'Hair Care',
+            'Perfume',
+            'Tools & Accessories',
+            'Other'
+          ], isRequired: true),
           SizedBox(height: 12.h),
           _buildCompactTextField('brand', 'Brand', ''),
           SizedBox(height: 12.h),
@@ -322,18 +327,14 @@ class _SellFormPageState extends State<SellFormPage>
 
       case 'Electronics':
         return [
-          _buildCompactDropdown(
-              'Product Type *',
-              'electronicsType',
-              [
-                'TV & Audio',
-                'Computer & Laptop',
-                'Camera & Photo',
-                'Gaming',
-                'Home Appliances',
-                'Other'
-              ],
-              isRequired: true),
+          _buildCompactDropdown('Product Type *', 'electronicsType', [
+            'TV & Audio',
+            'Computer & Laptop',
+            'Camera & Photo',
+            'Gaming',
+            'Home Appliances',
+            'Other'
+          ], isRequired: true),
           SizedBox(height: 12.h),
           _buildCompactTextField('brand', 'Brand', 'e.g. Samsung, Apple, Sony'),
           SizedBox(height: 12.h),
@@ -345,19 +346,15 @@ class _SellFormPageState extends State<SellFormPage>
 
       case 'Fashion':
         return [
-          _buildCompactDropdown(
-              'Category *',
-              'fashionCategory',
-              [
-                'Men\'s Clothing',
-                'Women\'s Clothing',
-                'Shoes',
-                'Accessories',
-                'Bags',
-                'Watches',
-                'Jewelry'
-              ],
-              isRequired: true),
+          _buildCompactDropdown('Category *', 'fashionCategory', [
+            'Men\'s Clothing',
+            'Women\'s Clothing',
+            'Shoes',
+            'Accessories',
+            'Bags',
+            'Watches',
+            'Jewelry'
+          ], isRequired: true),
           SizedBox(height: 12.h),
           _buildCompactTextField('brand', 'Brand', ''),
           SizedBox(height: 12.h),
@@ -414,7 +411,6 @@ class _SellFormPageState extends State<SellFormPage>
           labelStyle: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
           hintStyle: TextStyle(fontSize: 11.sp, color: Colors.grey.shade400),
         ),
-        // ✅ [MODIFIED] 遵照指示：修改校验逻辑以处理空白字符串
         validator: isRequired
             ? (v) {
           if (v == null || v.trim().isEmpty) return 'Required';
@@ -452,14 +448,19 @@ class _SellFormPageState extends State<SellFormPage>
           fillColor: Colors.white,
           labelStyle: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
         ),
-        initialValue: _dynamicValues[key],
+        // [✅ 补丁 1.b] 使用 value: 并正确处理 null
+        value: ((_dynamicValues[key]?.trim().isEmpty ?? true)
+            ? null
+            : _dynamicValues[key]),
         items: items
             .map((c) => DropdownMenuItem(
             value: c, child: Text(c, style: TextStyle(fontSize: 13.sp))))
             .toList(),
         onChanged: (v) => setState(() => _dynamicValues[key] = v ?? ''),
+        // [✅ 补丁 1.b] 修复 validator 逻辑
         validator: isRequired
-            ? (v) => v == null ? 'Please select $label' : null
+            ? (v) =>
+        (v == null || v.trim().isEmpty) ? 'Please select $label' : null
             : null,
         style: TextStyle(fontSize: 13.sp, color: Colors.black87),
         dropdownColor: Colors.white,
@@ -468,9 +469,14 @@ class _SellFormPageState extends State<SellFormPage>
   }
 
   /* ---------- Submit Functions ---------- */
-  // ✅ 本地发布（mock）：需要把 bytes 写到临时文件才能预览
+  // 本地发布（mock）：需要把 bytes 写到临时文件才能预览
   Future<void> _publishLocalOnly() async {
-    // 守卫：未登录/未验证则引导
+    // [✅ 补丁 2] 增加分类硬校验
+    if (_category.isEmpty) {
+      _toast('Please select a category.');
+      return;
+    }
+
     if (!await VerificationGuard.ensureVerifiedOrPrompt(context,
         feature: AppFeature.postListing)) {
       return;
@@ -482,7 +488,6 @@ class _SellFormPageState extends State<SellFormPage>
       return;
     }
 
-    // 将内存图片写入临时目录，便于本地预览
     final tempDir = await getTemporaryDirectory();
     final paths = <String>[];
     for (final img in _images) {
@@ -519,8 +524,14 @@ class _SellFormPageState extends State<SellFormPage>
     );
   }
 
+  // [✅ 功能保留自 代码二] (ImageNormalizer, EventBus, etc.)
   Future<void> _submitListing() async {
-    // 守卫：未登录/未验证则引导
+    // [✅ 补丁 2] 增加分类硬校验
+    if (_category.isEmpty) {
+      _toast('Please select a category.');
+      return;
+    }
+
     if (!await VerificationGuard.ensureVerifiedOrPrompt(context,
         feature: AppFeature.postListing)) {
       return;
@@ -550,18 +561,17 @@ class _SellFormPageState extends State<SellFormPage>
       }
       final userId = auth.currentUser!.id;
 
-      // ===== [PATCH] 使用 bytes 上传, 统一转 JPG (HEIC 修复) =====
+      // ===== [✅ 功能保留自 代码二] 使用 bytes 上传, 统一转 JPG (HEIC 修复) =====
       final jpgUrls = <String>[];
       final origUrls = <String>[];
       final total = _images.length;
 
       for (var i = 0; i < _images.length; i++) {
-        final img = _images[i]; // This is ({Uint8List bytes, ...})
+        final img = _images[i];
         if (!mounted) return;
         setState(() => _progressMsg = 'Uploading photos ${i + 1} / $total');
 
         // 1) 统一转成 JPG
-        // (为了使用 normalizer，我们从 bytes 临时创建 XFile)
         final tempXFile = XFile.fromData(
           img.bytes,
           mimeType: img.mime,
@@ -575,35 +585,37 @@ class _SellFormPageState extends State<SellFormPage>
         // 2) 上传 JPG
         await Supabase.instance.client.storage.from('listings').uploadBinary(
           pathJpg,
-          jpgBytes, // 👈 上传转换后的 JPG 字节
+          jpgBytes,
           fileOptions: const FileOptions(
-            contentType: 'image/jpeg', // 👈 统一为 JPG
-            upsert: true, // 遵照补丁要求
+            contentType: 'image/jpeg',
+            upsert: true,
           ),
         );
 
-        final jpgUrl = Supabase.instance.client.storage
-            .from('listings')
-            .getPublicUrl(pathJpg);
+        final jpgUrl =
+        Supabase.instance.client.storage.from('listings').getPublicUrl(
+          pathJpg,
+        );
         jpgUrls.add(jpgUrl);
 
-        // 3) （可选）保留原图
+        // 3) （可选）保留原图 —— ✅ 用 $ts（而不是 {ts}）
         final origExt = (img.ext?.isNotEmpty == true) ? '.${img.ext}' : '';
         final origPath = '$userId/${ts}_raw_$i$origExt';
         await Supabase.instance.client.storage.from('listings').uploadBinary(
           origPath,
-          img.bytes, // 👈 上传原始字节
+          img.bytes,
           fileOptions: FileOptions(
             contentType: img.mime ?? 'image/*',
-            upsert: true, // 遵照补丁要求
+            upsert: true,
           ),
         );
-        final origUrl = Supabase.instance.client.storage
-            .from('listings')
-            .getPublicUrl(origPath);
+        final origUrl =
+        Supabase.instance.client.storage.from('listings').getPublicUrl(
+          origPath,
+        );
         origUrls.add(origUrl);
       }
-      // ===== [PATCH END] =====
+      // ===== 结束 =====
 
       // 组合额外字段
       final extrasLines = <String>[];
@@ -631,7 +643,7 @@ class _SellFormPageState extends State<SellFormPage>
         category: _category,
         city: _city,
         description: desc,
-        imageUrls: jpgUrls, // ✅ [PATCH] 一律 JPG, 用于展示
+        imageUrls: jpgUrls, // 一律 JPG, 用于展示
         userId: userId,
         sellerName:
         _nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text.trim(),
@@ -652,14 +664,9 @@ class _SellFormPageState extends State<SellFormPage>
 
       _toast('Posted successfully!');
 
-      // ✅ [MODIFIED] 按照清单要求修改：
-      // 假设你拿到了新商品ID（如果拿不到，可以传 null，不影响刷新）
+      // [✅ 功能保留自 代码二] 广播 + 返回 true
       final String? newId = (row['id'] as String?);
-
-      // ✅ 1) 广播发布成功
       ListingEventsBus.instance.emitPublished(newId);
-
-      // ✅ 2) 带 true 返回给上级（保持“当前返回路径”不变）
       if (mounted) {
         Navigator.pop(context, true);
       }
@@ -752,7 +759,6 @@ class _SellFormPageState extends State<SellFormPage>
     }
   }
 
-  // 安全查找活跃的发布任务（替代 firstOrNull，避免编译问题）
   Map<String, dynamic>? _findActivePublishTask(
       List<Map<String, dynamic>> tasks) {
     for (final t in tasks) {
@@ -823,6 +829,8 @@ class _SellFormPageState extends State<SellFormPage>
   }
 
   /* ---------- Image Picker UI ---------- */
+
+  // [✅ UI 还原自 代码一] (这是你喜欢的版本)
   Future<void> _pickImage() async {
     if (_images.length >= _maxPhotos) {
       _toast('You can upload up to $_maxPhotos photos.');
@@ -831,106 +839,115 @@ class _SellFormPageState extends State<SellFormPage>
 
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true, // [✅ 补丁 4] 解决弹窗被导航栏遮挡
+      useSafeArea: true, // [✅ 补丁 4] 增加安全区
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
       ),
-      builder: (BuildContext context) {
-        return Container(
-          padding: EdgeInsets.all(20.w),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Container(
-                width: 40.w,
-                height: 4.h,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(2.r),
+      builder: (BuildContext ctx) {
+        // [✅ 补丁 4] 改为 ctx
+        final bottom = MediaQuery.of(ctx).padding.bottom;
+        return Padding(
+          // [✅ 补丁 4] 增加底部 Padding 兜底
+          padding: EdgeInsets.only(bottom: bottom > 0 ? bottom : 12.h),
+          child: Container(
+            padding: EdgeInsets.all(20.w),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Container(
+                  width: 40.w,
+                  height: 4.h,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
                 ),
-              ),
-              SizedBox(height: 20.h),
-              Text(
-                'Add Photo',
-                style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600),
-              ),
-              SizedBox(height: 20.h),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildImageOption(
-                      Icons.photo_camera_rounded,
-                      'Camera',
-                          () async {
-                        Navigator.pop(context);
-                        final file = await _cameraPicker.pickImage(
-                          source: ImageSource.camera,
-                          imageQuality: 80,
-                        );
-                        if (file != null && mounted) {
+                SizedBox(height: 20.h),
+                Text(
+                  'Add Photo',
+                  style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w600),
+                ),
+                SizedBox(height: 20.h),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildImageOption(
+                        Icons.photo_camera_rounded,
+                        'Camera',
+                            () async {
+                          Navigator.pop(ctx); // [✅ 补丁 4] 用 ctx
+                          final file = await _cameraPicker.pickImage(
+                            source: ImageSource.camera,
+                            imageQuality: 80,
+                          );
+                          if (file != null && mounted) {
+                            if (_images.length >= _maxPhotos) {
+                              _toast('You can upload up to $_maxPhotos photos.');
+                              return;
+                            }
+                            final bytes = await file.readAsBytes();
+                            setState(() => _images.add((
+                            bytes: bytes,
+                            name:
+                            'camera_${DateTime.now().millisecondsSinceEpoch}.jpg',
+                            ext: 'jpg',
+                            mime: 'image/jpeg',
+                            )));
+                          }
+                        },
+                      ),
+                    ),
+                    SizedBox(width: 16.w),
+                    Expanded(
+                      child: _buildImageOption(
+                        Icons.photo_library_rounded,
+                        'Gallery',
+                            () async {
+                          Navigator.pop(ctx); // [✅ 补丁 4] 用 ctx
+                          // ✅ 只在一个地方调用 bytes 版选图
+                          final picked = await pickImageBytes();
+                          if (picked == null) {
+                            debugPrint('[Picker] cancelled or failed');
+                            return;
+                          }
+                          if (!mounted) return;
                           if (_images.length >= _maxPhotos) {
                             _toast('You can upload up to $_maxPhotos photos.');
                             return;
                           }
-                          final bytes = await file.readAsBytes();
-                          setState(() => _images.add((
-                          bytes: bytes,
-                          name:
-                          'camera_${DateTime.now().millisecondsSinceEpoch}.jpg',
-                          ext: 'jpg',
-                          mime: 'image/jpeg',
-                          )));
-                        }
-                      },
+                          setState(() => _images.add(picked));
+                        },
+                      ),
                     ),
-                  ),
-                  SizedBox(width: 16.w),
-                  Expanded(
-                    child: _buildImageOption(
-                      Icons.photo_library_rounded,
-                      'Gallery',
-                          () async {
-                        Navigator.pop(context);
-                        // ✅ 只在一个地方调用 bytes 版选图
-                        final picked = await pickImageBytes();
-                        if (picked == null) {
-                          debugPrint('[Picker] cancelled or failed');
-                          return;
-                        }
-                        if (!mounted) return;
-                        if (_images.length >= _maxPhotos) {
-                          _toast('You can upload up to $_maxPhotos photos.');
-                          return;
-                        }
-                        setState(() => _images.add(picked));
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
+  // [✅ UI 还原自 代码一] (这是你喜欢的版本)
   Widget _buildImageOption(IconData icon, String label, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 16.h),
         decoration: BoxDecoration(
-          color: const Color(0xFF2196F3).withOpacity(0.1),
+          color: _PRIMARY_BLUE.withOpacity(0.1),
           borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: const Color(0xFF2196F3).withOpacity(0.2)),
+          border: Border.all(color: _PRIMARY_BLUE.withOpacity(0.2)),
         ),
         child: Column(
           children: [
             Container(
               padding: EdgeInsets.all(12.r),
               decoration: BoxDecoration(
-                color: const Color(0xFF2196F3),
+                color: _PRIMARY_BLUE,
                 borderRadius: BorderRadius.circular(12.r),
               ),
               child: Icon(icon, color: Colors.white, size: 24.r),
@@ -941,7 +958,7 @@ class _SellFormPageState extends State<SellFormPage>
               style: TextStyle(
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w600,
-                color: const Color(0xFF2196F3),
+                color: _PRIMARY_BLUE,
               ),
             ),
           ],
@@ -961,30 +978,33 @@ class _SellFormPageState extends State<SellFormPage>
     );
   }
 
-  /* ------------------ UI ------------------ */
+  // [✅ 最终补丁] 帮你加入 cacheWidth 辅助函数
+  int _px(BuildContext ctx, double logical) {
+    final dpr = MediaQuery.of(ctx).devicePixelRatio;
+    return (logical * dpr).round().clamp(64, 512);
+  }
 
-  // ✅ [MODIFIED] 统一而更紧凑的 AppBar（与 verification_page.dart 对齐）
+  // 更紧凑的 AppBar (来自代码二)
   PreferredSizeWidget _buildStandardAppBar(BuildContext context) {
     const String title = 'New Advert';
     final double statusBar = MediaQuery.of(context).padding.top;
     final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    const Color kBgColor = Color(0xFF2196F3); // 维持你这页的蓝色
+    const Color kBgColor = _PRIMARY_BLUE;
 
-    // ===== ANDROID / 其它平台：更紧凑的 48dp，居中标题，白色状态栏字色 =====
     if (!isIOS) {
       return AppBar(
         backgroundColor: kBgColor,
         systemOverlayStyle: SystemUiOverlayStyle.light,
         centerTitle: true,
         elevation: 0,
-        toolbarHeight: 48, // ⬅️ 缩短高度
+        toolbarHeight: 48,
         leadingWidth: 56,
         leading: Padding(
-          padding: const EdgeInsets.only(left: 8.0, top: 2.0), // ⬅️ 轻微下移
+          padding: const EdgeInsets.only(left: 8.0, top: 2.0),
           child: IconButton(
             onPressed: () => Navigator.pop(context),
-            icon:
-            const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+            icon: const Icon(Icons.arrow_back_ios_new,
+                color: Colors.white, size: 20),
           ),
         ),
         title: const Text(
@@ -996,14 +1016,11 @@ class _SellFormPageState extends State<SellFormPage>
       );
     }
 
-    // ===== ✅ [MODIFIED] iOS：与“基准页”一致的 44pt Row 布局 =====
-    // 数值规范
-    const double kNavBarHeight = 44.0; // 标准导航条高度
-    const double kButtonSize = 32.0; // 标准按钮尺寸
-    const double kSidePadding = 16.0; // 标准左右内边距
-    const double kButtonSpacing = 12.0; // 标准间距
+    const double kNavBarHeight = 44.0;
+    const double kButtonSize = 32.0;
+    const double kSidePadding = 16.0;
+    const double kButtonSpacing = 12.0;
 
-    // 1. 构建 32x32 返回按钮
     final Widget iosBackButton = SizedBox(
       width: kButtonSize,
       height: kButtonSize,
@@ -1012,24 +1029,22 @@ class _SellFormPageState extends State<SellFormPage>
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(10), // 保持你的圆角
+            borderRadius: BorderRadius.circular(10),
           ),
           alignment: Alignment.center,
-          child: const Icon(Icons.arrow_back_ios_new,
-              size: 18, color: Colors.white), // 保持你的图标
+          child:
+          const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
         ),
       ),
     );
 
-    // 2. 构建居中标题
     final Widget iosTitle = Expanded(
       child: Text(
         title,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.center, // 保证居中
+        textAlign: TextAlign.center,
         style: TextStyle(
-          // 保持你的字体
           color: Colors.white,
           fontWeight: FontWeight.w600,
           fontSize: 18.sp,
@@ -1037,32 +1052,29 @@ class _SellFormPageState extends State<SellFormPage>
       ),
     );
 
-    // 3. 构建 32x32 右侧占位
     const Widget iosRightPlaceholder =
     SizedBox(width: kButtonSize, height: kButtonSize);
 
-    // 4. 组装
     return PreferredSize(
-      preferredSize: Size.fromHeight(statusBar + kNavBarHeight), // ✅ 44pt + statusBar
+      preferredSize: Size.fromHeight(statusBar + kNavBarHeight),
       child: Container(
         color: kBgColor,
         child: AnnotatedRegion<SystemUiOverlayStyle>(
-          value: SystemUiOverlayStyle.light, // 白色状态栏文字/图标
+          value: SystemUiOverlayStyle.light,
           child: Padding(
-            padding: EdgeInsets.only(top: statusBar), // 让出状态栏
+            padding: EdgeInsets.only(top: statusBar),
             child: SizedBox(
-              height: kNavBarHeight, // 44pt
+              height: kNavBarHeight,
               child: Padding(
-                padding:
-                const EdgeInsets.symmetric(horizontal: kSidePadding), // 16
+                padding: const EdgeInsets.symmetric(horizontal: kSidePadding),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center, // 垂直居中
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    iosBackButton, // 32x32
-                    const SizedBox(width: kButtonSpacing), // 12
-                    iosTitle, // Expanded
-                    const SizedBox(width: kButtonSpacing), // 12
-                    iosRightPlaceholder, // 32x32 占位
+                    iosBackButton,
+                    const SizedBox(width: kButtonSpacing),
+                    iosTitle,
+                    const SizedBox(width: kButtonSpacing),
+                    iosRightPlaceholder,
                   ],
                 ),
               ),
@@ -1079,7 +1091,6 @@ class _SellFormPageState extends State<SellFormPage>
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      // ✅ [MODIFIED] 替换 AppBar
       appBar: _buildStandardAppBar(context),
       body: Stack(
         children: [
@@ -1089,11 +1100,12 @@ class _SellFormPageState extends State<SellFormPage>
               position: _slideAnimation,
               child: FadeTransition(
                 opacity: _fadeAnimation,
+                // [✅ 修复] 移除外部 Padding (问题 1)
                 child: SingleChildScrollView(
                   padding: EdgeInsets.all(12.w),
                   child: Form(
                     key: _formKey,
-                    // ✅ [MODIFIED] 遵照指示：开启交互时自动校验
+                    // [✅ 功能保留自 代码二] (自动验证)
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1128,7 +1140,8 @@ class _SellFormPageState extends State<SellFormPage>
 
                         // Submit Button
                         _buildSubmitButton(),
-                        SizedBox(height: 12.h),
+                        // [✅ 修复] 将 _navGap 作为内部 padding 添加到滚动列表末尾 (问题 1)
+                        SizedBox(height: _navGap(context)),
                       ],
                     ),
                   ),
@@ -1152,7 +1165,7 @@ class _SellFormPageState extends State<SellFormPage>
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const CircularProgressIndicator(
-                        color: Color(0xFF2196F3),
+                        color: _PRIMARY_BLUE,
                         strokeWidth: 3,
                       ),
                       SizedBox(height: 16.h),
@@ -1194,11 +1207,11 @@ class _SellFormPageState extends State<SellFormPage>
               Container(
                 padding: EdgeInsets.all(6.r),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2196F3).withOpacity(0.1),
+                  color: _PRIMARY_BLUE.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8.r),
                 ),
                 child: Icon(Icons.camera_alt_rounded,
-                    color: const Color(0xFF2196F3), size: 16.r),
+                    color: _PRIMARY_BLUE, size: 16.r),
               ),
               SizedBox(width: 8.w),
               Expanded(
@@ -1250,7 +1263,7 @@ class _SellFormPageState extends State<SellFormPage>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10.r),
             border: index == 0
-                ? Border.all(color: const Color(0xFF2196F3), width: 2)
+                ? Border.all(color: _PRIMARY_BLUE, width: 2)
                 : null,
           ),
           child: ClipRRect(
@@ -1261,6 +1274,10 @@ class _SellFormPageState extends State<SellFormPage>
                 Image.memory(
                   bytes,
                   fit: BoxFit.cover,
+                  // [✅ 最终补丁] 增加 cacheWidth 优化解码
+                  gaplessPlayback: true,
+                  filterQuality: FilterQuality.low,
+                  cacheWidth: _px(context, 60.w),
                 ),
                 if (index == 0)
                   Positioned(
@@ -1270,10 +1287,7 @@ class _SellFormPageState extends State<SellFormPage>
                     child: Container(
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: [
-                            Color(0xFF2196F3),
-                            Color(0xFF1976D2)
-                          ],
+                          colors: [_PRIMARY_BLUE, Color(0xFF1976D2)],
                         ),
                         borderRadius: BorderRadius.only(
                           bottomLeft: Radius.circular(10.r),
@@ -1323,27 +1337,27 @@ class _SellFormPageState extends State<SellFormPage>
 
   Widget _buildAddPhotoButton() {
     return GestureDetector(
-      onTap: _pickImage,
+      onTap: _pickImage, // [✅ 已还原] 指向代码一的 _pickImage
       child: Container(
         width: 60.w,
         height: 60.w,
         decoration: BoxDecoration(
-          color: const Color(0xFF2196F3).withOpacity(0.1),
+          color: _PRIMARY_BLUE.withOpacity(0.1),
           borderRadius: BorderRadius.circular(10.r),
-          border: Border.all(
-              color: const Color(0xFF2196F3).withOpacity(0.3), width: 2),
+          border:
+          Border.all(color: _PRIMARY_BLUE.withOpacity(0.3), width: 2),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.add_a_photo_rounded,
-                color: const Color(0xFF2196F3), size: 20.r),
+                color: _PRIMARY_BLUE, size: 20.r),
             SizedBox(height: 2.h),
             Text(
               'Add Photo',
               style: TextStyle(
                   fontSize: 8.sp,
-                  color: const Color(0xFF2196F3),
+                  color: _PRIMARY_BLUE,
                   fontWeight: FontWeight.w600),
             ),
           ],
@@ -1374,16 +1388,17 @@ class _SellFormPageState extends State<SellFormPage>
               Container(
                 padding: EdgeInsets.all(6.r),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2196F3).withOpacity(0.1),
+                  color: _PRIMARY_BLUE.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8.r),
                 ),
                 child: Icon(Icons.category_rounded,
-                    color: const Color(0xFF2196F3), size: 16.r),
+                    color: _PRIMARY_BLUE, size: 16.r),
               ),
               SizedBox(width: 8.w),
               Text(
                 'Select Category *',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14.sp),
+                style:
+                TextStyle(fontWeight: FontWeight.w600, fontSize: 14.sp),
               ),
             ],
           ),
@@ -1391,7 +1406,7 @@ class _SellFormPageState extends State<SellFormPage>
 
           // 自定义设计的分类选择器
           GestureDetector(
-            onTap: _showCategoryPicker,
+            onTap: _showCategoryPicker, // [✅ 已还原] 指向代码一的 _showCategoryPicker
             child: Container(
               width: double.infinity,
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
@@ -1449,7 +1464,7 @@ class _SellFormPageState extends State<SellFormPage>
             ),
           ),
 
-          // 表单验证
+          // 表单验证提示 (来自代码二, 依赖 Form 的 autovalidateMode)
           if (_category.isEmpty && _formKey.currentState?.validate() == false)
             Padding(
               padding: EdgeInsets.only(top: 4.h, left: 12.w),
@@ -1539,108 +1554,118 @@ class _SellFormPageState extends State<SellFormPage>
     );
   }
 
+  // [✅ UI 还原自 代码一] (修复你提到的 bug)
   void _showCategoryPicker() {
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true, // [✅ 补丁 4] 解决弹窗被导航栏遮挡
+      useSafeArea: true, // [✅ 补丁 4] 增加安全区
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (BuildContext context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.45,
-          padding: EdgeInsets.all(12.w),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                width: 32.w,
-                height: 3.h,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(1.5.r),
+      builder: (BuildContext ctx) {
+        // [✅ 补丁 4] 改为 ctx
+        final bottom = MediaQuery.of(ctx).padding.bottom;
+        return Padding(
+          // [✅ 补丁 4] 增加底部 Padding 兜底
+          padding: EdgeInsets.only(bottom: bottom > 0 ? bottom : 12.h),
+          child: Container(
+            // [✅ 修复] 调高弹窗 (问题 3)
+            height: MediaQuery.of(ctx).size.height * 0.6,
+            padding: EdgeInsets.all(12.w),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  width: 32.w,
+                  height: 3.h,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(1.5.r),
+                  ),
                 ),
-              ),
-              SizedBox(height: 12.h),
-              Text(
-                'Select Category',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
+                SizedBox(height: 12.h),
+                Text(
+                  'Select Category',
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
                 ),
-              ),
-              SizedBox(height: 12.h),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: _categories.length,
-                  itemBuilder: (context, index) {
-                    final category = _categories[index];
-                    return Container(
-                      margin: EdgeInsets.only(bottom: 4.h),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(8.r),
-                          onTap: () {
-                            setState(() {
-                              _category = category;
-                              _dynamicValues.clear();
-                              for (final c in _dynamicControllers.values) {
-                                c.clear();
-                              }
-                            });
-                            Navigator.pop(context);
-                          },
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 12.w, vertical: 10.h),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade50,
-                              borderRadius: BorderRadius.circular(8.r),
-                              border: Border.all(
-                                color: Colors.grey.shade200,
-                                width: 0.5,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 28.w,
-                                  height: 28.w,
-                                  decoration: BoxDecoration(
-                                    color: _getCategoryColor(category)
-                                        .withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(6.r),
-                                  ),
-                                  child: Icon(
-                                    _getCategoryIcon(category),
-                                    color: _getCategoryColor(category),
-                                    size: 14.r,
-                                  ),
+                SizedBox(height: 12.h),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: _categories.length,
+                    itemBuilder: (context, index) {
+                      final category = _categories[index];
+                      return Container(
+                        margin: EdgeInsets.only(bottom: 4.h),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(8.r),
+                            onTap: () {
+                              setState(() {
+                                _category = category;
+                                _dynamicValues.clear();
+                                for (final c in _dynamicControllers.values) {
+                                  c.clear();
+                                }
+                              });
+                              Navigator.pop(ctx); // [✅ 补丁 4] 用 ctx
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 12.w, vertical: 10.h),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(8.r),
+                                border: Border.all(
+                                  color: Colors.grey.shade200,
+                                  width: 0.5,
                                 ),
-                                SizedBox(width: 10.w),
-                                Expanded(
-                                  child: Text(
-                                    category,
-                                    style: TextStyle(
-                                      fontSize: 13.sp,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.black87,
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 28.w,
+                                    height: 28.w,
+                                    decoration: BoxDecoration(
+                                      color: _getCategoryColor(category)
+                                          .withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(6.r),
+                                    ),
+                                    child: Icon(
+                                      _getCategoryIcon(category),
+                                      color: _getCategoryColor(category),
+                                      size: 14.r,
                                     ),
                                   ),
-                                ),
-                              ],
+                                  SizedBox(width: 10.w),
+                                  Expanded(
+                                    child: Text(
+                                      category,
+                                      style: TextStyle(
+                                        fontSize: 13.sp,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -1717,7 +1742,7 @@ class _SellFormPageState extends State<SellFormPage>
       case 'Food Agriculture and Drinks':
         return Colors.lime.shade700;
       default:
-        return const Color(0xFF2196F3);
+        return _PRIMARY_BLUE;
     }
   }
 
@@ -1758,7 +1783,6 @@ class _SellFormPageState extends State<SellFormPage>
               ),
               labelStyle: TextStyle(fontSize: 12.sp),
             ),
-            // ✅ [MODIFIED] 遵照指示：修改校验逻辑以处理空白字符串
             validator: (v) {
               if (v == null || v.trim().isEmpty) return 'Required';
               return null;
@@ -1782,7 +1806,6 @@ class _SellFormPageState extends State<SellFormPage>
               ),
               labelStyle: TextStyle(fontSize: 12.sp),
             ),
-            // ✅ [MODIFIED] 遵照指示：修改校验逻辑以处理空白字符串
             validator: (v) {
               if (v == null || v.trim().isEmpty) return 'Required';
               return null;
@@ -1802,11 +1825,11 @@ class _SellFormPageState extends State<SellFormPage>
               ),
               labelStyle: TextStyle(fontSize: 12.sp),
             ),
-            initialValue: _city,
+            // [✅ 补丁 1.a] 使用 value:
+            value: _city,
             items: _cities
                 .map((c) => DropdownMenuItem(
-                value: c,
-                child: Text(c, style: TextStyle(fontSize: 13.sp))))
+                value: c, child: Text(c, style: TextStyle(fontSize: 13.sp))))
                 .toList(),
             onChanged: (v) => setState(() => _city = v!),
             style: TextStyle(fontSize: 13.sp, color: Colors.black87),
@@ -1857,16 +1880,17 @@ class _SellFormPageState extends State<SellFormPage>
               Container(
                 padding: EdgeInsets.all(6.r),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF2196F3).withOpacity(0.1),
+                  color: _PRIMARY_BLUE.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8.r),
                 ),
                 child: Icon(Icons.person_rounded,
-                    color: const Color(0xFF2196F3), size: 16.r),
+                    color: _PRIMARY_BLUE, size: 16.r),
               ),
               SizedBox(width: 8.w),
               Text(
                 'Seller Information',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14.sp),
+                style:
+                TextStyle(fontWeight: FontWeight.w600, fontSize: 14.sp),
               ),
             ],
           ),
@@ -1886,7 +1910,6 @@ class _SellFormPageState extends State<SellFormPage>
               ),
               labelStyle: TextStyle(fontSize: 12.sp),
             ),
-            // ✅ [MODIFIED] 遵照指示：修改校验逻辑以处理空白字符串
             validator: (v) {
               if (v == null || v.trim().isEmpty) return 'Required';
               return null;
@@ -1912,7 +1935,6 @@ class _SellFormPageState extends State<SellFormPage>
               hintStyle:
               TextStyle(fontSize: 11.sp, color: Colors.grey.shade400),
             ),
-            // ✅ [MODIFIED] 遵照指示：修改校验逻辑以处理空白字符串
             validator: (v) {
               if (v == null || v.trim().isEmpty) return 'Required';
               return null;
@@ -2020,13 +2042,13 @@ class _SellFormPageState extends State<SellFormPage>
                 runSpacing: 6.h,
                 children: [
                   _buildCouponOption(null, 'No Coupon', 'Post without pinning'),
-                  ..._availableCoupons
-                      .map((coupon) => _buildCouponOption(
-                    coupon,
-                    coupon.title,
-                    '${_getCouponTypeDescription(coupon.type)} • ${coupon.expiryStatusText}',
-                  ))
-                  ,
+                  ..._availableCoupons.map(
+                        (coupon) => _buildCouponOption(
+                      coupon,
+                      coupon.title,
+                      '${_getCouponTypeDescription(coupon.type)} • ${coupon.expiryStatusText}',
+                    ),
+                  ),
                 ],
               ),
             ],
@@ -2066,7 +2088,8 @@ class _SellFormPageState extends State<SellFormPage>
                     shape: BoxShape.circle,
                     color: isSelected ? Colors.orange : Colors.transparent,
                     border: Border.all(
-                      color: isSelected ? Colors.orange : Colors.grey.shade400,
+                      color:
+                      isSelected ? Colors.orange : Colors.grey.shade400,
                       width: 2,
                     ),
                   ),
@@ -2136,12 +2159,12 @@ class _SellFormPageState extends State<SellFormPage>
       height: 42.h,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF2196F3), Color(0xFF1976D2)],
+          colors: [_PRIMARY_BLUE, Color(0xFF1976D2)],
         ),
         borderRadius: BorderRadius.circular(12.r),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF2196F3).withOpacity(0.3),
+            color: _PRIMARY_BLUE.withOpacity(0.3),
             blurRadius: 8.r,
             offset: Offset(0, 4.h),
           ),

@@ -1,0 +1,135 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>com.apple.developer.associated-domains</key>
+    <array>
+      <string>applinks:swaply.cc</string>
+      <string>applinks:www.swaply.cc</string>
+    </array>
+  </dict>
+</plist>
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>$(DEVELOPMENT_LANGUAGE)</string>
+
+    <key>CFBundleDisplayName</key>
+    <string>Swaply</string>
+
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+
+    <key>CFBundleName</key>
+    <string>Swaply</string>
+
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+
+    <key>CFBundleShortVersionString</key>
+    <string>$(FLUTTER_BUILD_NAME)</string>
+
+    <key>CFBundleSignature</key>
+    <string>????</string>
+
+    <key>CFBundleVersion</key>
+    <string>$(FLUTTER_BUILD_NUMBER)</string>
+
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+
+    <!-- 仅支持 iPhone -->
+    <key>UIDeviceFamily</key>
+    <array>
+      <integer>1</integer>
+    </array>
+
+    <!-- 启动页（Flutter 模板） -->
+    <key>UILaunchStoryboardName</key>
+    <string>LaunchScreen</string>
+
+    <!-- iPhone 方向（保留 3 向） -->
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+      <string>UIInterfaceOrientationPortrait</string>
+      <string>UIInterfaceOrientationLandscapeLeft</string>
+      <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+
+    <key>CADisableMinimumFrameDurationOnPhone</key>
+    <true/>
+    <key>UIApplicationSupportsIndirectInputEvents</key>
+    <true/>
+
+    <!-- 状态栏由页面控制 -->
+    <key>UIStatusBarHidden</key>
+    <false/>
+    <key>UIViewControllerBasedStatusBarAppearance</key>
+    <true/>
+    <key>UIRequiresFullScreen</key>
+    <true/>
+
+    <!-- 隐私权限 -->
+    <key>NSCameraUsageDescription</key>
+    <string>This app needs camera access to take photos for your listing.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>This app needs access to your photo library to upload listing images.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>This app needs permission to save photos to your library when you save or export images.</string>
+
+    <!-- 若只用标准 HTTPS，可设为 false -->
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
+
+    <!-- Flutter 深链 -->
+    <key>FlutterDeepLinkingEnabled</key>
+    <true/>
+
+    <!-- URL Schemes（Supabase 回调 + 自定义） -->
+    <key>CFBundleURLTypes</key>
+    <array>
+      <dict>
+        <key>CFBundleURLName</key>
+        <string>supabase.auth</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>io.supabase.flutter</string>
+        </array>
+      </dict>
+      <dict>
+        <key>CFBundleURLName</key>
+        <string>swaply.custom</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+          <string>cc.swaply.app</string>
+        </array>
+      </dict>
+    </array>
+
+    <!-- 可打开的外部 App scheme -->
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+      <string>whatsapp</string>
+      <string>whatsapp-business</string>
+      <string>tg</string>
+      <string>telegram</string>
+      <string>fb</string>
+      <string>fbapi</string>
+      <string>fbauth2</string>
+      <string>fb-messenger</string>
+      <string>fb-messenger-share-api</string>
+      <string>facebook</string>
+      <string>tel</string>
+      <string>mailto</string>
+    </array>
+  </dict>
+</plist>
+

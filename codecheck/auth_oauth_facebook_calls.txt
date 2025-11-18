@@ -1,0 +1,165 @@
+﻿C:\Apps\swaply\lib\admin\admin_coupon_management.dart:338: child: Text(type.displayNameEn),
+C:\Apps\swaply\lib\admin\admin_coupon_management.dart:461: Text('Type: ${coupon.type.displayNameEn}'),
+C:\Apps\swaply\lib\auth\forgot_password_screen.dart:36: // ✅ 关键修改：使用 redirectTo 并指向 https 的 Universal Link
+C:\Apps\swaply\lib\auth\forgot_password_screen.dart:39: redirectTo: kAuthRedirectUri, // ← 现在指向 'https://www.swaply.cc/auth/callback'
+C:\Apps\swaply\lib\auth\google_signin.dart:18: await Supabase.instance.client.auth.signInWithOAuth(
+C:\Apps\swaply\lib\auth\google_signin.dart:21: redirectTo: (kIsWeb ? 'https://swaply.cc/auth/callback' : 'cc.swaply.app://login-callback'),
+C:\Apps\swaply\lib\auth\login_screen.dart:13: // ✅ 统一定义 iOS 和 Android 的回调 URL（用于 Google/Facebook/Apple）
+C:\Apps\swaply\lib\auth\login_screen.dart:42: // ✅ 统一 OAuth 入口（Google / Facebook / Apple 共用）
+C:\Apps\swaply\lib\auth\login_screen.dart:45: String? scopes,
+C:\Apps\swaply\lib\auth\login_screen.dart:46: Map<String, String>? queryParams,
+C:\Apps\swaply\lib\auth\login_screen.dart:53: await Supabase.instance.client.auth.signInWithOAuth(
+C:\Apps\swaply\lib\auth\login_screen.dart:55: redirectTo: kIsWeb
+C:\Apps\swaply\lib\auth\login_screen.dart:59: scopes: scopes,
+C:\Apps\swaply\lib\auth\login_screen.dart:60: queryParams: queryParams,
+C:\Apps\swaply\lib\auth\login_screen.dart:97: // 建议带上 prompt，便于切换账号
+C:\Apps\swaply\lib\auth\login_screen.dart:98: queryParams: const {'prompt': 'select_account'},
+C:\Apps\swaply\lib\auth\login_screen.dart:102: Future<void> _handleFacebookLogin() async {
+C:\Apps\swaply\lib\auth\login_screen.dart:106: OAuthProvider.facebook,
+C:\Apps\swaply\lib\auth\login_screen.dart:107: scopes: 'public_profile,email',
+C:\Apps\swaply\lib\auth\login_screen.dart:108: queryParams: const {'display': 'popup'},
+C:\Apps\swaply\lib\auth\login_screen.dart:114: // ✅ Apple 走 OAuth + scopes（name email）
+C:\Apps\swaply\lib\auth\login_screen.dart:117: scopes: 'name email',
+C:\Apps\swaply\lib\auth\login_screen.dart:346: 'Facebook',
+C:\Apps\swaply\lib\auth\login_screen.dart:348: Icons.facebook,
+C:\Apps\swaply\lib\auth\login_screen.dart:349: _handleFacebookLogin,
+C:\Apps\swaply\lib\auth\register_screen.dart:3: // - Facebook 精简权限 + display=popup，减少二次确认
+C:\Apps\swaply\lib\auth\register_screen.dart:4: // - Apple 使用 OAuth + scopes: name email
+C:\Apps\swaply\lib\auth\register_screen.dart:71: String? scopes,
+C:\Apps\swaply\lib\auth\register_screen.dart:72: Map<String, String>? queryParams,
+C:\Apps\swaply\lib\auth\register_screen.dart:79: await Supabase.instance.client.auth.signInWithOAuth(
+C:\Apps\swaply\lib\auth\register_screen.dart:81: redirectTo: kIsWeb ? 'https://swaply.cc/auth/callback' : _kMobileRedirect,
+C:\Apps\swaply\lib\auth\register_screen.dart:83: scopes: scopes,
+C:\Apps\swaply\lib\auth\register_screen.dart:84: queryParams: queryParams,
+C:\Apps\swaply\lib\auth\register_screen.dart:147: emailRedirectTo: kAuthRedirectUri, // 从 config/auth_config.dart
+C:\Apps\swaply\lib\auth\register_screen.dart:186: queryParams: const {'prompt': 'select_account'},
+C:\Apps\swaply\lib\auth\register_screen.dart:211: Future<void> _facebookRegister() async {
+C:\Apps\swaply\lib\auth\register_screen.dart:218: // ✅ 与登录页一致：精简 scopes + 显式 popup，减少二次确认
+C:\Apps\swaply\lib\auth\register_screen.dart:220: OAuthProvider.facebook,
+C:\Apps\swaply\lib\auth\register_screen.dart:221: scopes: 'public_profile,email',
+C:\Apps\swaply\lib\auth\register_screen.dart:222: queryParams: const {'display': 'popup'},
+C:\Apps\swaply\lib\auth\register_screen.dart:229: _showError('Facebook 登录启动失败，请稍后重试');
+C:\Apps\swaply\lib\auth\register_screen.dart:244: scopes: 'name email',
+C:\Apps\swaply\lib\auth\register_screen.dart:551: 'Facebook',
+C:\Apps\swaply\lib\auth\register_screen.dart:553: Icons.facebook,
+C:\Apps\swaply\lib\auth\register_screen.dart:554: _facebookRegister,
+C:\Apps\swaply\lib\config\google_config.dart:9: scopes: const ['email', 'profile', 'openid'],
+C:\Apps\swaply\lib\models\coupon.dart:10: 'Category Pin'), // Category page pinned display
+C:\Apps\swaply\lib\models\coupon.dart:34: const CouponType(this.value, this.displayNameEn, this.displayNameZh);
+C:\Apps\swaply\lib\models\coupon.dart:37: final String displayNameEn;
+C:\Apps\swaply\lib\models\coupon.dart:38: final String displayNameZh;
+C:\Apps\swaply\lib\models\coupon.dart:263: /// Get display location description
+C:\Apps\swaply\lib\models\coupon.dart:264: String get displayLocation {
+C:\Apps\swaply\lib\models\coupon.dart:292: const CouponStatus(this.value, this.displayNameEn, this.displayNameZh);
+C:\Apps\swaply\lib\models\coupon.dart:295: final String displayNameEn;
+C:\Apps\swaply\lib\models\coupon.dart:296: final String displayNameZh;
+C:\Apps\swaply\lib\models\notification.dart:135: String get typeDisplayText {
+C:\Apps\swaply\lib\models\notification.dart:417: final displayName = buyerName ?? 'Someone';
+C:\Apps\swaply\lib\models\notification.dart:425: '$displayName made an offer of \$$offerAmount for your $listingTitle')
+C:\Apps\swaply\lib\models\notification.dart:427: .addMetadata('buyer_name', displayName)
+C:\Apps\swaply\lib\models\notification.dart:441: final displayName = likerName ?? 'Someone';
+C:\Apps\swaply\lib\models\notification.dart:448: .setMessage('$displayName added your $listingTitle to their wishlist')
+C:\Apps\swaply\lib\models\notification.dart:449: .addMetadata('liker_name', displayName)
+C:\Apps\swaply\lib\models\offer.dart:12: const OfferStatus(this.value, this.displayText, this.color);
+C:\Apps\swaply\lib\models\offer.dart:15: final String displayText;
+C:\Apps\swaply\lib\models\offer.dart:199: String get buyerDisplayName =>
+C:\Apps\swaply\lib\pages\category_products_page.dart:2: // 使用Facebook亮蓝色和Jiji风格的自动图片调整功能 - 更紧凑设计
+C:\Apps\swaply\lib\pages\category_products_page.dart:38: // Facebook亮蓝色配色方案
+C:\Apps\swaply\lib\pages\category_products_page.dart:39: static const Color _primaryBlue = Color(0xFF1877F2); // Facebook亮蓝色
+C:\Apps\swaply\lib\pages\category_products_page.dart:594: color: const Color(0xFF1877F2), // ✅ 保持原 Facebook 蓝色
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:1: // lib/pages/coupon_management_page.dart - iOS 头部对齐 + 顶部蓝色范围缩小 + Facebook 蓝统一 + WidgetBuilder 修正 + 防循环（30s TTL）
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:20: // ======== 基础色：Facebook 蓝（与首页一致） ========
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:386: // 统一使用纯色 Facebook 蓝，缩小顶部蓝色面积
+C:\Apps\swaply\lib\pages\edit_profile_page.dart:66: _nameController.text = profile['display_name'] ??
+C:\Apps\swaply\lib\pages\edit_profile_page.dart:559: label: 'Display Name',
+C:\Apps\swaply\lib\pages\edit_profile_page.dart:560: hint: 'Enter your display name',
+C:\Apps\swaply\lib\pages\edit_profile_page.dart:565: return 'Please enter your display name';
+C:\Apps\swaply\lib\pages\home_page.dart:42: // Facebook亮蓝色配色方案
+C:\Apps\swaply\lib\pages\home_page.dart:43: static const Color _primaryBlue = Color(0xFF1877F2); // Facebook亮蓝色
+C:\Apps\swaply\lib\pages\my_listings_page.dart:413: 'Offer ${newStatus.displayText.toLowerCase()} successfully'),
+C:\Apps\swaply\lib\pages\my_listings_page.dart:440: 'Failed to ${newStatus.displayText.toLowerCase()} offer')),
+C:\Apps\swaply\lib\pages\my_listings_page.dart:1463: offer.status.displayText,
+C:\Apps\swaply\lib\pages\offer_detail_page.dart:3: // Unified to “Facebook Blue” top bar with SOLID backgroundColor.
+C:\Apps\swaply\lib\pages\offer_detail_page.dart:149: final allowed = await VerificationGuard.ensureVerifiedOrPrompt(
+C:\Apps\swaply\lib\pages\offer_detail_page.dart:274: offerStatus.displayText,
+C:\Apps\swaply\lib\pages\product_detail_page.dart:557: final verified = await VerificationGuard.ensureVerifiedOrPrompt(context);
+C:\Apps\swaply\lib\pages\product_detail_page.dart:1271: text: 'Share to Facebook',
+C:\Apps\swaply\lib\pages\product_detail_page.dart:1274: await ShareUtils.toFacebook(url: url);
+C:\Apps\swaply\lib\pages\product_detail_page.dart:1325: Future<void> _openFacebookShare(String url) async {
+C:\Apps\swaply\lib\pages\product_detail_page.dart:1326: await ShareUtils.toFacebook(url: url);
+C:\Apps\swaply\lib\pages\sell_form_page.dart:480: if (!await VerificationGuard.ensureVerifiedOrPrompt(context,
+C:\Apps\swaply\lib\pages\sell_form_page.dart:535: if (!await VerificationGuard.ensureVerifiedOrPrompt(context,
+C:\Apps\swaply\lib\pages\task_management_page.dart:1020: _getTaskDisplayName(task['task_type']),
+C:\Apps\swaply\lib\pages\task_management_page.dart:1365: String _getTaskDisplayName(String? taskType) {
+C:\Apps\swaply\lib\services\apple_auth_service.dart:55: scopes: const [
+C:\Apps\swaply\lib\services\apple_auth_service.dart:56: AppleIDAuthorizationScopes.fullName,
+C:\Apps\swaply\lib\services\apple_auth_service.dart:57: AppleIDAuthorizationScopes.email,
+C:\Apps\swaply\lib\services\auth_service.dart:84: emailRedirectTo: kAuthRedirectUri, // 统一回调
+C:\Apps\swaply\lib\services\auth_service.dart:110: await supabase.auth.signInWithOAuth(
+C:\Apps\swaply\lib\services\auth_service.dart:112: redirectTo: kIsWeb ? 'https://swaply.cc/auth/callback' : _kMobileRedirect,
+C:\Apps\swaply\lib\services\auth_service.dart:115: queryParams: const {'prompt': 'select_account'},
+C:\Apps\swaply\lib\services\auth_service.dart:141: Future<bool> signInWithFacebook() async {
+C:\Apps\swaply\lib\services\auth_service.dart:143: await supabase.auth.signInWithOAuth(
+C:\Apps\swaply\lib\services\auth_service.dart:144: OAuthProvider.facebook,
+C:\Apps\swaply\lib\services\auth_service.dart:145: redirectTo: kIsWeb ? 'https://swaply.cc/auth/callback' : _kMobileRedirect,
+C:\Apps\swaply\lib\services\auth_service.dart:147: // 精简到最常用权限，搭配 display=popup，减少“两次确认”
+C:\Apps\swaply\lib\services\auth_service.dart:148: scopes: 'public_profile,email',
+C:\Apps\swaply\lib\services\auth_service.dart:149: queryParams: const {'display': 'popup'},
+C:\Apps\swaply\lib\services\auth_service.dart:171: throw Exception('Facebook login failed: ${e.message}');
+C:\Apps\swaply\lib\services\auth_service.dart:173: throw Exception('Facebook login failed: $e');
+C:\Apps\swaply\lib\services\auth_service.dart:286: redirectTo: kIsWeb ? 'https://swaply.cc/auth/callback' : _kMobileRedirect,
+C:\Apps\swaply\lib\services\auth_service.dart:320: emailRedirectTo: kAuthRedirectUri, // 统一回调
+C:\Apps\swaply\lib\services\coupon_service.dart:595: final pinScopeStr = _safeString(couponData['pin_scope']).toLowerCase();
+C:\Apps\swaply\lib\services\coupon_service.dart:596: final isSearchPopular = typeStr == 'featured' && pinScopeStr == 'search';
+C:\Apps\swaply\lib\services\coupon_service.dart:657: final pinScopeStr = _safeString(couponData['pin_scope']).toLowerCase();
+C:\Apps\swaply\lib\services\coupon_service.dart:658: final isSearchPopular = typeStr == 'featured' && pinScopeStr == 'search';
+C:\Apps\swaply\lib\services\notification_service.dart:231: final displayName = buyerName ?? 'Someone';
+C:\Apps\swaply\lib\services\notification_service.dart:238: '$displayName made an offer of \$${offerAmount.toStringAsFixed(0)} for your $listingTitle',
+C:\Apps\swaply\lib\services\notification_service.dart:242: 'buyer_name': displayName,
+C:\Apps\swaply\lib\services\notification_service.dart:265: final displayName = likerName ?? 'Someone';
+C:\Apps\swaply\lib\services\notification_service.dart:271: message: '$displayName added your $listingTitle to their wishlist',
+C:\Apps\swaply\lib\services\notification_service.dart:274: 'liker_name': displayName,
+C:\Apps\swaply\lib\services\oauth_service.dart:3: // 缁熶竴鐨?OAuth 鐧诲綍灏佽锛圙oogle / Facebook / Apple锛?
+C:\Apps\swaply\lib\services\oauth_service.dart:5: // - redirectTo锛歐eb 浼?null锛涚Щ鍔ㄧ浼?swaply://login-callback锛堣 auth_config.dart锛?
+C:\Apps\swaply\lib\services\oauth_service.dart:20: await _sb.auth.signInWithOAuth(
+C:\Apps\swaply\lib\services\oauth_service.dart:22: redirectTo: (kIsWeb ? 'https://swaply.cc/auth/callback' : 'cc.swaply.app://login-callback'),
+C:\Apps\swaply\lib\services\oauth_service.dart:23: queryParams: const {'prompt': 'select_account'},
+C:\Apps\swaply\lib\services\oauth_service.dart:27: /// Facebook 鐧诲綍
+C:\Apps\swaply\lib\services\oauth_service.dart:28: static Future<void> signInWithFacebook() async {
+C:\Apps\swaply\lib\services\oauth_service.dart:29: await _sb.auth.signInWithOAuth(
+C:\Apps\swaply\lib\services\oauth_service.dart:30: sf.OAuthProvider.facebook,
+C:\Apps\swaply\lib\services\oauth_service.dart:31: redirectTo: (kIsWeb ? 'https://swaply.cc/auth/callback' : 'cc.swaply.app://login-callback'),
+C:\Apps\swaply\lib\services\oauth_service.dart:37: await _sb.auth.signInWithOAuth(
+C:\Apps\swaply\lib\services\oauth_service.dart:39: redirectTo: (kIsWeb ? 'https://swaply.cc/auth/callback' : 'cc.swaply.app://login-callback'),
+C:\Apps\swaply\lib\services\offer_service.dart:805: static String getStatusDisplayText(String status) =>
+C:\Apps\swaply\lib\services\offer_service.dart:806: OfferStatus.fromString(status).displayText;
+C:\Apps\swaply\lib\services\profile_service.dart:51: final displayName =
+C:\Apps\swaply\lib\services\profile_service.dart:57: 'full_name': displayName,
+C:\Apps\swaply\lib\services\profile_service.dart:109: final displayName =
+C:\Apps\swaply\lib\services\profile_service.dart:115: 'full_name': displayName,
+C:\Apps\swaply\lib\services\profile_service.dart:124: print('[ProfileService] synced (insert) for ${user.id} full_name=$displayName');
+C:\Apps\swaply\lib\services\reward_service.dart:1293: 'Coupon used successfully for ${coupon.type.displayLocation}',
+C:\Apps\swaply\lib\services\reward_service.dart:1295: 'display_location': coupon.type.displayLocation,
+C:\Apps\swaply\lib\services\reward_service.dart:1350: title: title ?? 'Admin Reward ${actualType.displayNameEn}',
+C:\Apps\swaply\lib\services\verification_guard.dart:42: static bool _isPrompting = false;
+C:\Apps\swaply\lib\services\verification_guard.dart:138: static Future<bool> ensureVerifiedOrPrompt(
+C:\Apps\swaply\lib\services\verification_guard.dart:147: if (_isPrompting) return false;
+C:\Apps\swaply\lib\services\verification_guard.dart:148: _isPrompting = true;
+C:\Apps\swaply\lib\services\verification_guard.dart:214: _isPrompting = false;
+C:\Apps\swaply\lib\utils\google_sign_in_helper.dart:8: scopes: <String>['email', 'profile', 'openid'],
+C:\Apps\swaply\lib\utils\google_sign_in_helper.dart:101: displayName: account.displayName,
+C:\Apps\swaply\lib\utils\google_sign_in_helper.dart:192: final String? displayName;
+C:\Apps\swaply\lib\utils\google_sign_in_helper.dart:200: this.displayName,
+C:\Apps\swaply\lib\utils\google_sign_in_helper.dart:209: 'displayName': displayName,
+C:\Apps\swaply\lib\utils\google_sign_in_helper.dart:218: displayName: m['displayName'],
+C:\Apps\swaply\lib\utils\google_sign_in_helper.dart:224: String get displayNameOrEmail =>
+C:\Apps\swaply\lib\utils\google_sign_in_helper.dart:225: (displayName != null && displayName!.isNotEmpty)
+C:\Apps\swaply\lib\utils\google_sign_in_helper.dart:226: ? displayName!
+C:\Apps\swaply\lib\utils\google_sign_in_helper.dart:236: 'GoogleUserInfo(id: $id, email: $email, displayName: $displayName)';
+C:\Apps\swaply\lib\utils\google_sign_in_helper.dart:278: final List<String> scopes;
+C:\Apps\swaply\lib\utils\google_sign_in_helper.dart:283: this.scopes = const ['email', 'profile'],
+C:\Apps\swaply\lib\utils\google_sign_in_helper.dart:290: scopes: ['email', 'profile', 'openid'], forceCodeForRefreshToken: true);
+C:\Apps\swaply\lib\utils\share_utils.dart:74: /// Facebook：尝试用 fb://facewebmodal 拉起 App，不成就走网页分享
+C:\Apps\swaply\lib\utils\share_utils.dart:75: static Future<void> toFacebook({required String url}) async {
+C:\Apps\swaply\lib\utils\share_utils.dart:80: 'fb://facewebmodal/f?href=https://www.facebook.com/sharer/sharer.php?u=$encodedUrl');
+C:\Apps\swaply\lib\utils\share_utils.dart:85: 'https://www.facebook.com/sharer/sharer.php?u=$encodedUrl');

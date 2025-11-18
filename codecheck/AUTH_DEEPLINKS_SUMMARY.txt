@@ -1,0 +1,16 @@
+﻿==== AUTH / DEEPLINKS AUDIT SUMMARY ====
+auth_deeplinks_listeners.txt             :      0 lines
+auth_deeplinks_recovery_probe.txt        :      0 lines
+auth_deeplinks_exchange_code_calls.txt   :      0 lines
+auth_oauth_facebook_calls.txt            :    165 lines
+auth_state_listeners.txt                 :      9 lines
+auth_signout_triggers.txt                :      2 lines
+auth_error_gates.txt                     :    245 lines
+auth_android_manifest_grep.txt           :     37 lines
+auth_ios_entitlements_grep.txt           :      4 lines
+auth_pubspec_sniff.txt                   :      5 lines
+auth_android_activity_hooks.txt          :      0 lines
+
+---- QUICK FLAGS ----
+RED FLAG: recovery_probe.dart does NOT skip /login-callback
+YELLOW: onAuthStateChange listeners = 5 (ensure only ONE owns navigation)

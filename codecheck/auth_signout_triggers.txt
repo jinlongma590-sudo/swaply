@@ -1,0 +1,2 @@
+﻿C:\Apps\swaply\lib\pages\account_settings_page.dart:171: await client.auth.signOut(); // 仅在删除成功后调用
+C:\Apps\swaply\lib\services\auth_service.dart:352: await supabase.auth.signOut();

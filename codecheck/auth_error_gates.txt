@@ -1,0 +1,245 @@
+﻿C:\Apps\swaply\lib\admin\admin_coupon_management.dart:406: child: const Text('Refresh'),
+C:\Apps\swaply\lib\admin\admin_coupon_management.dart:441: return RefreshIndicator(
+C:\Apps\swaply\lib\admin\admin_coupon_management.dart:442: onRefresh: _loadAllCoupons,
+C:\Apps\swaply\lib\admin\admin_coupon_management.dart:479: return RefreshIndicator(
+C:\Apps\swaply\lib\admin\admin_coupon_management.dart:480: onRefresh: _loadSystemStats,
+C:\Apps\swaply\lib\admin\admin_coupon_management.dart:536: onPressed: _cleanupExpiredData,
+C:\Apps\swaply\lib\admin\admin_coupon_management.dart:538: label: const Text('Cleanup Expired Data'),
+C:\Apps\swaply\lib\admin\admin_coupon_management.dart:830: Future<void> _cleanupExpiredData() async {
+C:\Apps\swaply\lib\admin\admin_coupon_management.dart:832: 'Cleanup Expired Data',
+C:\Apps\swaply\lib\admin\admin_coupon_management.dart:833: 'This will mark all expired data as expired. Continue?',
+C:\Apps\swaply\lib\admin\admin_coupon_management.dart:843: final expiredCoupons = await Supabase.instance.client
+C:\Apps\swaply\lib\admin\admin_coupon_management.dart:845: .update({'status': 'expired'})
+C:\Apps\swaply\lib\admin\admin_coupon_management.dart:850: final expiredCount = expiredCoupons.length;
+C:\Apps\swaply\lib\admin\admin_coupon_management.dart:852: _showSuccess('Cleaned up $expiredCount expired coupons');
+C:\Apps\swaply\lib\auth\reset_password_page.dart:58: _toast('Reset link is invalid or expired. Please request a new one.');
+C:\Apps\swaply\lib\models\coupon.dart:289: expired('expired', 'Expired', 'Expired'),
+C:\Apps\swaply\lib\models\coupon.dart:527: status == CouponStatus.active && !isExpired && usedCount < maxUses;
+C:\Apps\swaply\lib\models\coupon.dart:529: bool get isExpired => DateTime.now().isAfter(expiresAt);
+C:\Apps\swaply\lib\models\coupon.dart:539: if (isExpired) return 0;
+C:\Apps\swaply\lib\models\coupon.dart:544: if (isExpired) return 'Expired';
+C:\Apps\swaply\lib\models\coupon.dart:552: if (isExpired || status == CouponStatus.expired) return 0xFF9E9E9E;
+C:\Apps\swaply\lib\models\coupon.dart:577: if (isExpired) return 'Expired';
+C:\Apps\swaply\lib\models\coupon.dart:735: final int expiredCoupons;
+C:\Apps\swaply\lib\models\coupon.dart:744: required this.expiredCoupons,
+C:\Apps\swaply\lib\models\coupon.dart:752: int active = 0, used = 0, expired = 0, revoked = 0;
+C:\Apps\swaply\lib\models\coupon.dart:759: if (coupon.isExpired) {
+C:\Apps\swaply\lib\models\coupon.dart:760: expired++;
+C:\Apps\swaply\lib\models\coupon.dart:768: case CouponStatus.expired:
+C:\Apps\swaply\lib\models\coupon.dart:769: expired++;
+C:\Apps\swaply\lib\models\coupon.dart:783: expiredCoupons: expired,
+C:\Apps\swaply\lib\models\offer.dart:9: expired('expired', 'Expired', 0xFF9E9E9E),
+C:\Apps\swaply\lib\models\offer.dart:233: bool get isExpired {
+C:\Apps\swaply\lib\models\offer.dart:244: return 'Expired';
+C:\Apps\swaply\lib\models\offer.dart:299: bool get canWithdraw => status == OfferStatus.pending && !isExpired;
+C:\Apps\swaply\lib\models\offer.dart:302: bool get canRespond => status == OfferStatus.pending && !isExpired;
+C:\Apps\swaply\lib\models\offer.dart:341: final int expired;
+C:\Apps\swaply\lib\models\offer.dart:351: this.expired = 0,
+C:\Apps\swaply\lib\models\offer.dart:363: expired: map['expired'] ?? 0,
+C:\Apps\swaply\lib\models\offer.dart:376: 'expired': expired,
+C:\Apps\swaply\lib\pages\category_products_page.dart:215: futures.add(_refreshTotalCount());
+C:\Apps\swaply\lib\pages\category_products_page.dart:240: Future<void> _refreshTotalCount() async {
+C:\Apps\swaply\lib\pages\category_products_page.dart:479: child: RefreshIndicator(
+C:\Apps\swaply\lib\pages\category_products_page.dart:480: onRefresh: () async {
+C:\Apps\swaply\lib\pages\category_products_page.dart:1256: icon: Icon(Icons.refresh, size: 14.sp),
+C:\Apps\swaply\lib\pages\category_products_page.dart:1302: icon: Icon(Icons.refresh, size: 14.sp),
+C:\Apps\swaply\lib\pages\category_products_page.dart:1303: label: const Text('Refresh'),
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:32: bool _isRefreshing = false;
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:37: List<CouponModel> _expiredCoupons = [];
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:83: _expiredCoupons = [];
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:109: Future<void> _onPullToRefresh() async {
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:110: setState(() => _isRefreshing = true);
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:113: if (mounted) setState(() => _isRefreshing = false);
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:202: final expiredCoupons = <CouponModel>[];
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:206: bool isCurrentlyExpired = false;
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:208: isCurrentlyExpired =
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:211: isCurrentlyExpired = false;
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:219: } else if (coupon.status == CouponStatus.expired || isCurrentlyExpired) {
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:220: expiredCoupons.add(coupon);
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:222: !isCurrentlyExpired &&
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:226: expiredCoupons.add(coupon);
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:242: _expiredCoupons = expiredCoupons;
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:247: 'expired_coupons': expiredCoupons.length,
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:260: 'expired_coupons': 0,
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:308: _buildCouponList(_expiredCoupons, 'No expired coupons'),
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:348: final Widget refreshButton = GestureDetector(
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:349: onTap: _isRefreshing ? null : _onPullToRefresh,
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:356: child: _isRefreshing
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:363: : const Icon(Icons.refresh, color: Colors.white, size: 18),
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:420: refreshButton, // 使用上面定义的 34x34 按钮
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:442: refreshButton,
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:567: final expiredCount = _expiredCoupons.length;
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:621: const Text('Expired'),
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:623: Text('($expiredCount)', style: const TextStyle(fontSize: 10)),
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:757: onPressed: _onPullToRefresh,
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:758: icon: const Icon(Icons.refresh),
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:776: return RefreshIndicator(
+C:\Apps\swaply\lib\pages\coupon_management_page.dart:777: onRefresh: _onPullToRefresh,
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:24: bool _isRefreshing = false;
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:109: Future<void> _refreshData() async {
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:110: setState(() => _isRefreshing = true);
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:112: setState(() => _isRefreshing = false);
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:115: Future<void> _refreshCode() async {
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:125: _showSnack('Code refreshed successfully');
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:127: _showSnack('Failed to refresh code: $e', isError: true);
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:186: await _refreshData();
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:261: final refreshBtnWidget = _isRefreshing
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:270: : Icon(Icons.refresh, size: 20.r);
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:273: // final iosRefreshBtn = ... (old 36x36 definition removed)
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:309: onPressed: _isRefreshing ? null : _refreshData,
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:310: icon: refreshBtnWidget,
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:378: onTap: _isRefreshing ? null : _refreshData,
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:385: child: _isRefreshing
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:394: : const Icon(Icons.refresh,
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:413: child: RefreshIndicator(
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:414: onRefresh: _refreshData,
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:858: onPressed: _regenerating ? null : _refreshCode,
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:865: : const Icon(Icons.refresh, size: 16),
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:866: // 文案改为 Refresh，避免误导
+C:\Apps\swaply\lib\pages\invite_friends_page.dart:867: label: Text(_regenerating ? 'Refreshing...' : 'Refresh Code'),
+C:\Apps\swaply\lib\pages\my_listings_page.dart:208: Future<void> _refreshData() async {
+C:\Apps\swaply\lib\pages\my_listings_page.dart:697: return RefreshIndicator(
+C:\Apps\swaply\lib\pages\my_listings_page.dart:698: onRefresh: _refreshData,
+C:\Apps\swaply\lib\pages\my_listings_page.dart:721: return RefreshIndicator(
+C:\Apps\swaply\lib\pages\my_listings_page.dart:722: onRefresh: _refreshData,
+C:\Apps\swaply\lib\pages\my_listings_page.dart:1652: onPressed: _refreshData,
+C:\Apps\swaply\lib\pages\offer_detail_page.dart:68: _refreshBlockStatus();
+C:\Apps\swaply\lib\pages\offer_detail_page.dart:73: _refreshBlockStatus();
+C:\Apps\swaply\lib\pages\offer_detail_page.dart:134: Future<void> _refreshBlockStatus() async {
+C:\Apps\swaply\lib\pages\offer_detail_page.dart:506: await _refreshBlockStatus();
+C:\Apps\swaply\lib\pages\product_detail_page.dart:1137: if (e is PostgrestException && e.code == 'P0001') {
+C:\Apps\swaply\lib\pages\task_management_page.dart:46: bool _isRefreshing = false;
+C:\Apps\swaply\lib\pages\task_management_page.dart:316: Future<void> _refreshData() async {
+C:\Apps\swaply\lib\pages\task_management_page.dart:317: setState(() => _isRefreshing = true);
+C:\Apps\swaply\lib\pages\task_management_page.dart:320: if (mounted) setState(() => _isRefreshing = false);
+C:\Apps\swaply\lib\pages\task_management_page.dart:437: if (_isRewardCoupon(c.type) && !c.isExpired) {
+C:\Apps\swaply\lib\pages\task_management_page.dart:455: .where((c) => _isRewardCoupon(c.type) && !c.isExpired)
+C:\Apps\swaply\lib\pages\task_management_page.dart:535: onTap: _isRefreshing ? null : _refreshData,
+C:\Apps\swaply\lib\pages\task_management_page.dart:542: child: _isRefreshing
+C:\Apps\swaply\lib\pages\task_management_page.dart:551: : Icon(Icons.refresh,
+C:\Apps\swaply\lib\pages\task_management_page.dart:595: final Widget iosRefreshButton = SizedBox(
+C:\Apps\swaply\lib\pages\task_management_page.dart:599: onTap: _isRefreshing ? null : _refreshData,
+C:\Apps\swaply\lib\pages\task_management_page.dart:606: child: _isRefreshing
+C:\Apps\swaply\lib\pages\task_management_page.dart:615: : const Icon(Icons.refresh, color: Colors.white, size: 18),
+C:\Apps\swaply\lib\pages\task_management_page.dart:656: iosRefreshButton,
+C:\Apps\swaply\lib\pages\task_management_page.dart:892: return RefreshIndicator(
+C:\Apps\swaply\lib\pages\task_management_page.dart:893: onRefresh: _refreshData,
+C:\Apps\swaply\lib\pages\task_management_page.dart:917: return RefreshIndicator(
+C:\Apps\swaply\lib\pages\task_management_page.dart:918: onRefresh: _refreshData,
+C:\Apps\swaply\lib\pages\task_management_page.dart:942: return RefreshIndicator(
+C:\Apps\swaply\lib\pages\task_management_page.dart:943: onRefresh: _refreshData,
+C:\Apps\swaply\lib\pages\verification_page.dart:141: if (!ok) throw Exception('Invalid or expired verification code');
+C:\Apps\swaply\lib\pages\verification_page.dart:188: Future<void> _refreshStatus() async {
+C:\Apps\swaply\lib\pages\verification_page.dart:198: Icon(Icons.refresh_rounded, color: Colors.white, size: 16.sp),
+C:\Apps\swaply\lib\pages\verification_page.dart:200: Text('Verification status refreshed', style: TextStyle(fontSize: 13.sp)),
+C:\Apps\swaply\lib\pages\verification_page.dart:463: onPressed: _refreshStatus,
+C:\Apps\swaply\lib\pages\verification_page.dart:464: icon: Icon(Icons.refresh_rounded, size: 16.w),
+C:\Apps\swaply\lib\pages\verification_page.dart:465: label: Text('Refresh Status', style: TextStyle(fontSize: 12.sp)),
+C:\Apps\swaply\lib\pages\wishlist_page.dart:23: bool _isRefreshing = false;
+C:\Apps\swaply\lib\pages\wishlist_page.dart:25: Timer? _autoRefreshTimer;
+C:\Apps\swaply\lib\pages\wishlist_page.dart:47: _startAutoRefresh();
+C:\Apps\swaply\lib\pages\wishlist_page.dart:55: _autoRefreshTimer?.cancel();
+C:\Apps\swaply\lib\pages\wishlist_page.dart:148: void _startAutoRefresh() {
+C:\Apps\swaply\lib\pages\wishlist_page.dart:149: _autoRefreshTimer?.cancel();
+C:\Apps\swaply\lib\pages\wishlist_page.dart:150: _autoRefreshTimer =
+C:\Apps\swaply\lib\pages\wishlist_page.dart:152: if (mounted && !_isRefreshing) {
+C:\Apps\swaply\lib\pages\wishlist_page.dart:244: Future<void> _refreshWishlist() async {
+C:\Apps\swaply\lib\pages\wishlist_page.dart:245: setState(() => _isRefreshing = true);
+C:\Apps\swaply\lib\pages\wishlist_page.dart:247: setState(() => _isRefreshing = false);
+C:\Apps\swaply\lib\pages\wishlist_page.dart:937: : RefreshIndicator(
+C:\Apps\swaply\lib\pages\wishlist_page.dart:938: onRefresh: _refreshWishlist,
+C:\Apps\swaply\lib\services\auth_service.dart:28: DateTime? _lastRefresh;
+C:\Apps\swaply\lib\services\auth_service.dart:30: Future<void> refreshSession({Duration minInterval = const Duration(seconds: 30)}) async {
+C:\Apps\swaply\lib\services\auth_service.dart:31: debugPrint('[AuthService] refreshSession() disabled. Using Supabase auto-refresh.');
+C:\Apps\swaply\lib\services\auth_service.dart:253: await Supabase.instance.client.auth.refreshSession();
+C:\Apps\swaply\lib\services\auth_service.dart:260: await supabase.auth.refreshSession();
+C:\Apps\swaply\lib\services\auth_service.dart:263: debugPrint('[AuthService] session refreshed');
+C:\Apps\swaply\lib\services\coupon_service.dart:540: final isNotExpired = !coupon.isExpired;
+C:\Apps\swaply\lib\services\coupon_service.dart:543: if (isActive && isNotExpired) coupons.add(coupon);
+C:\Apps\swaply\lib\services\coupon_service.dart:590: throw Exception('Coupon has expired');
+C:\Apps\swaply\lib\services\coupon_service.dart:1020: /// Clean up expired coupons
+C:\Apps\swaply\lib\services\coupon_service.dart:1021: static Future<int> cleanupExpiredCoupons() async {
+C:\Apps\swaply\lib\services\coupon_service.dart:1023: _debugPrint('Starting expired coupon cleanup');
+C:\Apps\swaply\lib\services\coupon_service.dart:1026: final expiredCoupons = await _client
+C:\Apps\swaply\lib\services\coupon_service.dart:1028: .update({'status': 'expired'})
+C:\Apps\swaply\lib\services\coupon_service.dart:1033: int expiredCount = 0;
+C:\Apps\swaply\lib\services\coupon_service.dart:1034: expiredCount = expiredCoupons.length;
+C:\Apps\swaply\lib\services\coupon_service.dart:1036: _debugPrint('Cleaned up $expiredCount expired coupons');
+C:\Apps\swaply\lib\services\coupon_service.dart:1037: return expiredCount;
+C:\Apps\swaply\lib\services\coupon_service.dart:1039: _debugPrint('Failed to cleanup expired coupons: $e');
+C:\Apps\swaply\lib\services\coupon_service.dart:1044: /// Clean up expired pinned ads
+C:\Apps\swaply\lib\services\coupon_service.dart:1045: static Future<int> cleanupExpiredPinnedAds() async {
+C:\Apps\swaply\lib\services\coupon_service.dart:1047: _debugPrint('Starting expired pinned ads cleanup');
+C:\Apps\swaply\lib\services\coupon_service.dart:1050: final expiredAds = await _client
+C:\Apps\swaply\lib\services\coupon_service.dart:1052: .update({'status': 'expired'})
+C:\Apps\swaply\lib\services\coupon_service.dart:1057: int expiredCount = 0;
+C:\Apps\swaply\lib\services\coupon_service.dart:1058: expiredCount = expiredAds.length;
+C:\Apps\swaply\lib\services\coupon_service.dart:1060: _debugPrint('Cleaned up $expiredCount expired pinned ads');
+C:\Apps\swaply\lib\services\coupon_service.dart:1061: return expiredCount;
+C:\Apps\swaply\lib\services\coupon_service.dart:1063: _debugPrint('Failed to cleanup expired pinned ads: $e');
+C:\Apps\swaply\lib\services\coupon_service.dart:1377: case 'cleanup_expired':
+C:\Apps\swaply\lib\services\coupon_service.dart:1378: final expiredCoupons = await cleanupExpiredCoupons();
+C:\Apps\swaply\lib\services\coupon_service.dart:1379: final expiredAds = await cleanupExpiredPinnedAds();
+C:\Apps\swaply\lib\services\coupon_service.dart:1382: 'expired_coupons': expiredCoupons,
+C:\Apps\swaply\lib\services\coupon_service.dart:1383: 'expired_ads': expiredAds,
+C:\Apps\swaply\lib\services\coupon_service.dart:1388: .update({'status': 'expired'})
+C:\Apps\swaply\lib\services\coupon_service.dart:1469: int available = 0, used = 0, expired = 0;
+C:\Apps\swaply\lib\services\coupon_service.dart:1477: expired++;
+C:\Apps\swaply\lib\services\coupon_service.dart:1482: expired++; // revoked 等其它状态归类为过期
+C:\Apps\swaply\lib\services\coupon_service.dart:1486: _debugPrint('Coupon stats: All=$all, Available=$available, Used=$used, Expired=$expired');
+C:\Apps\swaply\lib\services\coupon_service.dart:1492: expiredCoupons: expired,
+C:\Apps\swaply\lib\services\message_service.dart:126: if (e is PostgrestException) {
+C:\Apps\swaply\lib\services\message_service.dart:128: 'PostgrestException: code=${e.code}, message=${e.message}, details=${e.details}, hint=${e.hint}');
+C:\Apps\swaply\lib\services\offer_service.dart:719: 'expired': 0,
+C:\Apps\swaply\lib\services\offer_service.dart:746: 'expired': sentOffers.where((o) => o['status'] == 'expired').length +
+C:\Apps\swaply\lib\services\offer_service.dart:747: receivedOffers.where((o) => o['status'] == 'expired').length,
+C:\Apps\swaply\lib\services\offer_service.dart:759: static Future<int> markExpiredOffers() async {
+C:\Apps\swaply\lib\services\offer_service.dart:761: _debugPrint('Marking expired offers...');
+C:\Apps\swaply\lib\services\offer_service.dart:766: 'status': OfferStatus.expired.value,
+C:\Apps\swaply\lib\services\offer_service.dart:773: final expiredCount = (result as List).length;
+C:\Apps\swaply\lib\services\offer_service.dart:774: _debugPrint('Marked $expiredCount offers as expired');
+C:\Apps\swaply\lib\services\offer_service.dart:775: return expiredCount;
+C:\Apps\swaply\lib\services\offer_service.dart:777: _debugPrint('Error marking expired offers: $e');
+C:\Apps\swaply\lib\services\profile_service.dart:234: } on PostgrestException catch (e) {
+C:\Apps\swaply\lib\services\profile_service.dart:266: } on PostgrestException catch (e) {
+C:\Apps\swaply\lib\services\profile_service.dart:428: Future<void> refreshUserSession() async {
+C:\Apps\swaply\lib\services\profile_service.dart:430: // 留空：统一在上层调用 auth.refreshSession()
+C:\Apps\swaply\lib\services\profile_service.dart:432: throw Exception('Failed to refresh session: $e');
+C:\Apps\swaply\lib\services\reward_service.dart:4: // - 不在本 Service 内调用 supabase.auth.refreshSession()
+C:\Apps\swaply\lib\services\reward_service.dart:248: } on PostgrestException catch (e) {
+C:\Apps\swaply\lib\services\reward_service.dart:250: _debugPrint('Unauthorized (401) - return empty summary');
+C:\Apps\swaply\lib\services\reward_service.dart:264: static bool _is401Error(PostgrestException e) {
+C:\Apps\swaply\lib\services\reward_service.dart:273: code == '401' ||
+C:\Apps\swaply\lib\services\reward_service.dart:274: msg.contains('invalid jwt') ||
+C:\Apps\swaply\lib\services\reward_service.dart:275: msg.contains('jwt expired') ||
+C:\Apps\swaply\lib\services\reward_service.dart:276: msg.contains('unauthorized') ||
+C:\Apps\swaply\lib\services\reward_service.dart:277: hint.contains('invalid jwt') ||
+C:\Apps\swaply\lib\services\reward_service.dart:278: hint.contains('jwt expired') ||
+C:\Apps\swaply\lib\services\reward_service.dart:279: details.contains('invalid jwt') ||
+C:\Apps\swaply\lib\services\reward_service.dart:280: details.contains('jwt expired');
+C:\Apps\swaply\lib\services\reward_service.dart:656: } on PostgrestException catch (e) {
+C:\Apps\swaply\lib\services\reward_service.dart:1106: } on PostgrestException catch (e) {
+C:\Apps\swaply\lib\services\reward_service.dart:1108: _debugPrint('Unauthorized - returning empty stats');
+C:\Apps\swaply\lib\services\reward_service.dart:1161: } on PostgrestException catch (e) {
+C:\Apps\swaply\lib\services\reward_service.dart:1227: } on PostgrestException catch (e) {
+C:\Apps\swaply\lib\services\reward_service.dart:1426: static Future<Map<String, dynamic>> cleanupExpiredData() async {
+C:\Apps\swaply\lib\services\reward_service.dart:1428: _debugPrint('Starting expired data cleanup');
+C:\Apps\swaply\lib\services\reward_service.dart:1434: final expiredTasksResponse = await _client
+C:\Apps\swaply\lib\services\reward_service.dart:1436: .update({'status': 'expired'})
+C:\Apps\swaply\lib\services\reward_service.dart:1441: final expiredTasksCount = expiredTasksResponse.length;
+C:\Apps\swaply\lib\services\reward_service.dart:1465: 'Cleanup: tasks=$expiredTasksCount, referrals_cancelled=$cancelledReferralsCount, quotas_deleted=$deletedQuotasCount');
+C:\Apps\swaply\lib\services\reward_service.dart:1472: 'expired_tasks': expiredTasksCount,
+C:\Apps\swaply\lib\services\reward_service.dart:1482: 'expired_tasks': 0,
+C:\Apps\swaply\lib\services\reward_service.dart:1642: } on PostgrestException catch (e) {
+C:\Apps\swaply\lib\utils\error_handler.dart:75: if (error is PostgrestException) return _handlePostgrestException(error);
+C:\Apps\swaply\lib\utils\error_handler.dart:117: static AppException _handlePostgrestException(PostgrestException error) {
+C:\Apps\swaply\lib\utils\google_sign_in_helper.dart:136: static Future<String?> refreshAccessToken() async {
+C:\Apps\swaply\lib\utils\google_sign_in_helper.dart:281: final bool forceCodeForRefreshToken;
+C:\Apps\swaply\lib\utils\google_sign_in_helper.dart:286: this.forceCodeForRefreshToken = false,
+C:\Apps\swaply\lib\utils\google_sign_in_helper.dart:290: scopes: ['email', 'profile', 'openid'], forceCodeForRefreshToken: true);
+C:\Apps\swaply\lib\widgets\my_rewards_tile.dart:30: Future<void> _refresh() async {
+C:\Apps\swaply\lib\widgets\my_rewards_tile.dart:68: icon: const Icon(Icons.refresh_rounded,
+C:\Apps\swaply\lib\widgets\my_rewards_tile.dart:70: onPressed: _refresh,
+C:\Apps\swaply\lib\widgets\my_rewards_tile.dart:72: onTap: _refresh,
+C:\Apps\swaply\lib\widgets\pinned_ad_card.dart:342: return 'Expired';
+C:\Apps\swaply\lib\widgets\pinned_ad_card.dart:359: return 'Expired';

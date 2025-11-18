@@ -1,4 +1,4 @@
-// lib/auth/login_screen.dart - 最终修复：Apple 登录改回 OAuth 流程
+// lib/auth/login_screen.dart - 最终修复：Apple 登录改回 OAuth 流程（统一单入口 + 防重入 + FB 精简权限）
 
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 import 'package:flutter/material.dart';
@@ -7,8 +7,10 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
 
-// ✅ 修复：移除了 'as sf' 别名
+// ✅ 统一使用 Supabase 官方 SDK
 import 'package:supabase_flutter/supabase_flutter.dart';
+// ✅ LaunchMode 枚举（authScreenLaunchMode 需要）
+import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 
 // ✅ 统一定义 iOS 和 Android 的回调 URL（用于 Google/Facebook/Apple）
 const String _kMobileRedirect = 'cc.swaply.app://login-callback';
@@ -29,6 +31,9 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _rememberMe = false;
   bool _busy = false;
 
+  // ✅ 防重入：确保任意时刻只有一次 OAuth 发起（避免“点两次确认”）
+  static bool _oauthInFlight = false;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -36,21 +41,37 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // ✅ 这个函数现在给 Google, Facebook, 和 Apple 统一使用
+  // ✅ 统一 OAuth 入口（Google / Facebook / Apple 共用）
   Future<void> _oauthSignIn(
       OAuthProvider provider, {
         String? scopes,
         Map<String, String>? queryParams,
       }) async {
-    await Supabase.instance.client.auth.signInWithOAuth(
-      provider,
-      redirectTo: kIsWeb
-          ? 'https://swaply.cc/auth/callback' // Web 走 https 通用链接
-          : _kMobileRedirect, // App 走自定义 Scheme
-      authScreenLaunchMode: LaunchMode.externalApplication,
-      scopes: scopes,
-      queryParams: queryParams,
-    );
+    if (_oauthInFlight) return; // 防重复触发
+    _oauthInFlight = true;      // 调用前置位
+    setState(() => _busy = true);
+
+    try {
+      await Supabase.instance.client.auth.signInWithOAuth(
+        provider,
+        redirectTo: kIsWeb
+            ? 'https://swaply.cc/auth/callback' // Web 走 https 通用链接
+            : _kMobileRedirect,                 // App 走自定义 Scheme
+        authScreenLaunchMode: LaunchMode.externalApplication,
+        scopes: scopes,
+        queryParams: queryParams,
+      );
+      // 说明：返回由 onAuthStateChange/回调路由处理，这里不做额外导航
+    } on AuthException catch (e) {
+      _showError(e.message);
+    } catch (e, st) {
+      debugPrint('[OAuth] signInWithOAuth error: $e\n$st');
+      _showError('Sign-in failed. Please try again.');
+    } finally {
+      // 关键：一定要复位，防止下一次无法点击
+      _oauthInFlight = false;
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _loginEmailPassword() async {
@@ -74,65 +95,30 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleGoogleLogin() async {
     if (_busy) return;
-    setState(() => _busy = true);
-    try {
-      await _oauthSignIn(
-        OAuthProvider.google,
-        queryParams: const {'prompt': 'select_account'},
-      );
-    } on AuthException catch (e) {
-      final msg = e.message.toLowerCase();
-      if (msg.contains('cancel') ||
-          msg.contains('canceled') ||
-          msg.contains('popup_closed')) {
-        // 用户取消，不提示
-      } else {
-        _showError('Google sign-in error: ${e.message}');
-      }
-    } catch (_) {
-      Future.delayed(const Duration(seconds: 1), () {
-        final user = Supabase.instance.client.auth.currentUser;
-        if (mounted && user == null) {
-          _showError('Failed to start Google sign-in. Please try again.');
-        }
-      });
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+    await _oauthSignIn(
+      OAuthProvider.google,
+      // 建议带上 prompt，便于切换账号
+      queryParams: const {'prompt': 'select_account'},
+    );
   }
 
   Future<void> _handleFacebookLogin() async {
     if (_busy) return;
-    setState(() => _busy = true);
-    try {
-      await _oauthSignIn(
-        OAuthProvider.facebook,
-      );
-    } on AuthException catch (e) {
-      _showError(e.message);
-    } catch (_) {
-      _showError('Facebook 登录启动失败，请稍后再试');
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+    // ✅ 精简 FB 权限（减少二次确认），并显式使用 popup 展示方式
+    await _oauthSignIn(
+      OAuthProvider.facebook,
+      scopes: 'public_profile,email',
+      queryParams: const {'display': 'popup'},
+    );
   }
 
   Future<void> _handleAppleLogin() async {
     if (_busy) return;
-    setState(() => _busy = true);
-    try {
-      // ✅ 最终修复：Apple 必须使用 _oauthSignIn，因为它是现在唯一正确配置的回调方式
-      await _oauthSignIn(
-        OAuthProvider.apple,
-        scopes: 'name email',
-      );
-    } on AuthException catch (e) {
-      _showError(e.message);
-    } catch (_) {
-      _showError('Apple 登录启动失败，请稍后再试');
-    } finally {
-      if (mounted) setState(() => _busy = false);
-    }
+    // ✅ Apple 走 OAuth + scopes（name email）
+    await _oauthSignIn(
+      OAuthProvider.apple,
+      scopes: 'name email',
+    );
   }
 
   void _showError(String msg) {
@@ -262,7 +248,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     Flexible(
                       child: GestureDetector(
-                        // ✅ 修复：点击进入忘记密码页
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
@@ -377,11 +362,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     Text(
                       "Don't have an account? ",
-                      style:
-                      TextStyle(color: Colors.grey[600], fontSize: 12.sp),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12.sp),
                     ),
                     GestureDetector(
-                      // ✅ 修复：将 _showError 替换为实际导航
                       onTap: () => Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
@@ -417,14 +400,12 @@ class _LoginScreenState extends State<LoginScreen> {
       child: ElevatedButton.icon(
         onPressed: _busy ? null : _handleAppleLogin,
         icon: const Icon(Icons.apple, color: Colors.white),
-        label:
-        const Text('Sign in with Apple', overflow: TextOverflow.ellipsis),
+        label: const Text('Sign in with Apple', overflow: TextOverflow.ellipsis),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.black,
           foregroundColor: Colors.white,
           elevation: 0,
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
           textStyle: TextStyle(fontSize: 15.sp, fontWeight: FontWeight.w600),
         ),
       ),

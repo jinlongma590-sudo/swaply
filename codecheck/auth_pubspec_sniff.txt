@@ -1,0 +1,5 @@
+﻿C:\Apps\swaply\pubspec.yaml:7: sdk: '>=3.3.0 <4.0.0'   # 与 supabase_flutter 2.7.x / sign_in_with_apple 7.x 兼容
+C:\Apps\swaply\pubspec.yaml:22: url_launcher: ^6.3.0
+C:\Apps\swaply\pubspec.yaml:26: app_links: ^6.4.1
+C:\Apps\swaply\pubspec.yaml:40: supabase_flutter: ^2.10.3
+C:\Apps\swaply\pubspec.yaml:59: adaptive_icon_background: "#1877F2"   # Facebook 蓝

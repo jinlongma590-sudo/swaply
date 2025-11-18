@@ -793,7 +793,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
 
     // ① 尝试直接深链（优先带号码）
     if (digits.length >= 7) {
-      if (await _tryLaunch(Uri.parse('whatsapp://send?phone=$digits&text=$encMsg'))) {
+      if (await _tryLaunch(
+          Uri.parse('whatsapp://send?phone=$digits&text=$encMsg'))) {
         return;
       }
     }
@@ -851,7 +852,14 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
+      useRootNavigator: true, // [✅ 补丁] 修复遮挡
+      useSafeArea: true, // [✅ 补丁] 增加安全区
+      builder: (BuildContext sheetCtx) {
+        // [✅ 补丁] 改用 sheetCtx
+        // [✅ 补丁] 从新的 sheetCtx 获取 padding
+        final keyboardPadding = MediaQuery.of(sheetCtx).viewInsets.bottom;
+        final safeAreaPadding = MediaQuery.of(sheetCtx).padding.bottom;
+
         return Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -860,8 +868,11 @@ class _ProductDetailPageState extends State<ProductDetailPage>
               topRight: Radius.circular(16.r),
             ),
           ),
+          // [✅ 补丁] 使用新的 padding 算法
           padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 16.h,
+            bottom: keyboardPadding > 0
+                ? keyboardPadding + 8.h // 键盘弹出时，只加键盘高度
+                : safeAreaPadding + 16.h, // 键盘未弹出时，加安全区和常规间距
             top: 16.h,
             left: 16.w,
             right: 16.w,
@@ -897,7 +908,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     ],
                   ),
                   IconButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.pop(sheetCtx), // [✅ 补丁] 使用 sheetCtx
                     icon: Container(
                       padding: EdgeInsets.all(6.r),
                       decoration: BoxDecoration(
@@ -924,7 +935,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                     final percentage =
                     price > 0 ? ((offer / price) * 100).round() : 0;
                     return InkWell(
-                      onTap: () => offerController.text = offer.toStringAsFixed(0),
+                      onTap: () =>
+                      offerController.text = offer.toStringAsFixed(0),
                       borderRadius: BorderRadius.circular(8.r),
                       child: Container(
                         padding: EdgeInsets.symmetric(
@@ -1052,7 +1064,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                         _toast('Please enter a valid offer amount');
                         return;
                       }
-                      Navigator.pop(context);
+                      Navigator.pop(sheetCtx); // [✅ 补丁] 使用 sheetCtx
                       await _recordInquiry('offer');
                       await _sendOffer(
                         amount,
@@ -1190,6 +1202,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
       context: context,
       isScrollControlled: false,
       useSafeArea: true,
+      useRootNavigator: true, // [✅ 补丁] 防止被底部导航覆盖
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -2136,6 +2149,8 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     const types = ['Spam', 'Scam', 'Harassment', 'Other'];
     return showModalBottomSheet<String>(
       context: context,
+      useRootNavigator: true, // [✅ 补丁] 修复遮挡
+      useSafeArea: true, // [✅ 补丁] 增加安全区
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(14)),
       ),
@@ -2162,7 +2177,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
                   onTap: () => Navigator.pop(ctx, types[i]),
                 ),
               ),
-              SizedBox(height: MediaQuery.of(ctx).padding.bottom),
+              // [✅ 补丁] 移除硬编码的SizedBox, SafeArea 会自动处理
             ],
           ),
         );

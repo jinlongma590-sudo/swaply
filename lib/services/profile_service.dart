@@ -4,6 +4,7 @@
 
 import 'dart:io';
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart'; // kDebugMode
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/coupon_service.dart'; // 发放欢迎券
 
@@ -16,48 +17,130 @@ class ProfileService {
 
   SupabaseClient get _sb => Supabase.instance.client;
   String? get uid => _sb.auth.currentUser?.id;
-  /// 从 auth.currentUser.userMetadata 同步基础资料到 public.profiles
-  /// - 只管 id / full_name / phone / email / updated_at
-  /// - 不写 verification_type / email_verified / is_verified（交给 DB 默认）
+
+  // ===== 轻量缓存（可选）=====
+  final Map<String, Map<String, dynamic>> _cache = {};
+  void invalidateCache(String userId) => _cache.remove(userId);
+
+  // ========== 登录补丁（推荐对外使用这个而不是 syncProfileFromAuthUser） ==========
+  /// 仅用于登录态建立时的“资料兜底”：
+  /// - 若不存在：插入一行，并允许**仅此一次**用 auth meta 的 full_name/avatar_url 作为默认值；
+  /// - 若已存在：只更新 email / updated_at，**绝不覆盖**用户可编辑字段（full_name / avatar_url / phone / bio / city）。
+  Future<void> patchProfileOnLogin() async {
+    final supa = Supabase.instance.client;
+    final user = supa.auth.currentUser;
+    if (user == null) return;
+
+    final now = DateTime.now().toUtc().toIso8601String();
+
+    // ⚠️ 当前 Supabase Dart 版本：select() 不带泛型
+    final row = await supa
+        .from('profiles')
+        .select()
+        .eq('id', user.id)
+        .maybeSingle();
+
+    final Map<String, dynamic>? rowMap =
+    row == null ? null : Map<String, dynamic>.from(row as Map);
+
+    if (rowMap == null) {
+      // 首登：允许默认写 full_name / avatar_url（仅此一次）
+      final meta = user.userMetadata ?? {};
+      final email = (user.email ?? '').trim();
+      final fullNameMeta = (meta['full_name'] ?? '').toString().trim();
+      final displayName =
+      fullNameMeta.isNotEmpty ? fullNameMeta : (email.isNotEmpty ? email : 'User');
+
+      await supa.from('profiles').insert({
+        'id': user.id,
+        'email': email.isNotEmpty ? email : null,
+        'full_name': displayName,
+        'avatar_url': meta['avatar_url'],
+        'welcome_reward_granted': false,
+        'is_official': false,
+        // verification_type / email_verified / is_verified 交由 DB 默认
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      if (kDebugMode) print('[Profile] inserted profile for ${user.id}');
+    } else {
+      // 已有：只更新不会破坏用户编辑的字段
+      await supa
+          .from('profiles')
+          .update({
+        'email': user.email,
+        'updated_at': now,
+      })
+          .eq('id', user.id);
+
+      if (kDebugMode) {
+        print('[Profile] touched profile (no overwrite) for ${user.id}');
+      }
+    }
+
+    // 登录后清理缓存，确保后续读取是新值
+    invalidateCache(user.id);
+  }
+
+  /// （保留）历史接口：现在改为“遵循不覆盖原则”的同步
+  /// - 若不存在：插入（同 patchProfileOnLogin 的“首次策略”）
+  /// - 若已存在：只更新 email / updated_at
   static Future<void> syncProfileFromAuthUser() async {
     final supa = Supabase.instance.client;
     final user = supa.auth.currentUser;
     if (user == null) return;
 
+    final now = DateTime.now().toUtc().toIso8601String();
     final meta = user.userMetadata ?? {};
     final email = (user.email ?? '').trim();
     final fullNameMeta = (meta['full_name'] ?? '').toString().trim();
-    final phoneMeta = (meta['phone'] ?? '').toString().trim();
 
-    final displayName = fullNameMeta.isNotEmpty
-        ? fullNameMeta
-        : (email.isNotEmpty ? email : 'User');
+    final row = await supa
+        .from('profiles')
+        .select()
+        .eq('id', user.id)
+        .maybeSingle();
 
-    final upsertData = <String, dynamic>{
-      'id': user.id,
-      'full_name': displayName,
-      'updated_at': DateTime.now().toIso8601String(),
-    };
+    final Map<String, dynamic>? rowMap =
+    row == null ? null : Map<String, dynamic>.from(row as Map);
 
-    if (email.isNotEmpty) {
-      upsertData['email'] = email;
+    if (rowMap == null) {
+      final displayName =
+      fullNameMeta.isNotEmpty ? fullNameMeta : (email.isNotEmpty ? email : 'User');
+
+      await supa.from('profiles').insert({
+        'id': user.id,
+        'email': email.isNotEmpty ? email : null,
+        'full_name': displayName,
+        'avatar_url': meta['avatar_url'],
+        'welcome_reward_granted': false,
+        'is_official': false,
+        'created_at': now,
+        'updated_at': now,
+      });
+
+      if (kDebugMode) {
+        print('[ProfileService] synced (insert) for ${user.id} full_name=$displayName');
+      }
+    } else {
+      await supa
+          .from('profiles')
+          .update({
+        'email': email.isNotEmpty ? email : null,
+        'updated_at': now,
+      })
+          .eq('id', user.id);
+
+      if (kDebugMode) {
+        print('[ProfileService] synced (touch only) for ${user.id}');
+      }
     }
-    if (phoneMeta.isNotEmpty) {
-      upsertData['phone'] = phoneMeta;
-    }
-
-    await supa.from('profiles').upsert(
-      upsertData,
-      onConflict: 'id',
-    );
-
-    // ignore: avoid_print
-    print('[ProfileService] synced profile for ${user.id}'
-        ' full_name=$displayName phone=$phoneMeta');
   }
 
-
   // ========== 核心方法：返回是否本次新发了欢迎券 ==========
+  /// 登录后跑的欢迎券流程 + 资料兜底
+  /// - 仅在“新建 profile”时写默认 editable 字段；已有则只更新 email/时间
   Future<bool> ensureProfileAndWelcome({
     required String userId,
     String? email,
@@ -68,8 +151,8 @@ class ProfileService {
     bool grantedNow = false;
 
     try {
-      final nowIso = DateTime.now().toIso8601String();
-      print('🔄 开始处理用户档案和欢迎券: $userId');
+      final nowIso = DateTime.now().toUtc().toIso8601String();
+      if (kDebugMode) print('🔄 开始处理用户档案和欢迎券: $userId');
 
       // 1) 查是否已有 profile
       final existing = await supa
@@ -80,39 +163,40 @@ class ProfileService {
 
       final isNew = existing == null;
 
-      // 2) upsert 同步资料（⚠️ 不写 verification_type / email_verified / is_verified）
-      final upsertData = <String, dynamic>{
-        'id': userId,
-        'updated_at': nowIso,
-      };
-
+      // 2) 遵循“不覆盖”原则的 upsert/insert 行为
       if (isNew) {
-        // 仅做非认证相关的初始化
-        upsertData['welcome_reward_granted'] = false;
-        upsertData['is_official'] = false;
-        upsertData['created_at'] = nowIso;
-        // verification_type / email_verified / is_verified 交给 DB 默认
+        // 仅新建时允许带入 full_name/avatar_url 作为默认值
+        await supa.from('profiles').insert({
+          'id': userId,
+          'email': email,
+          'full_name': (fullName ?? email ?? 'User'),
+          'avatar_url': avatarUrl,
+          'welcome_reward_granted': false,
+          'is_official': false,
+          // verification_type 系列由 DB 默认
+          'created_at': nowIso,
+          'updated_at': nowIso,
+        });
+        if (kDebugMode) print('✅ 新用户档案创建或初始化成功: $userId');
+      } else {
+        // 已存在：只更新 email / updated_at
+        await supa
+            .from('profiles')
+            .update({
+          'email': email,
+          'updated_at': nowIso,
+        })
+            .eq('id', userId);
       }
 
-      if (email != null) upsertData['email'] = email;
-      if (fullName != null) upsertData['full_name'] = fullName;
-      if (avatarUrl != null) upsertData['avatar_url'] = avatarUrl;
-
-      await supa.from('profiles').upsert(upsertData, onConflict: 'id');
-
-      if (isNew) {
-        print('✅ 新用户档案创建或初始化成功: $userId');
-      }
-
-      // 3) 读取欢迎券标记（使用 maybeSingle 防止抛错）
+      // 3) 读取欢迎券标记
       final prof = await supa
           .from('profiles')
           .select('welcome_reward_granted')
           .eq('id', userId)
           .maybeSingle();
 
-      final alreadyGranted =
-          (prof?['welcome_reward_granted'] as bool?) ?? false;
+      final alreadyGranted = (prof?['welcome_reward_granted'] as bool?) ?? false;
 
       // 4) 未发过 → 发券 + 标记
       if (!alreadyGranted) {
@@ -123,31 +207,37 @@ class ProfileService {
         try {
           final result = await CouponService.createWelcomeCoupon(userId);
           if (result['success'] == true) {
-            print('🎁 欢迎券发放成功: ${result['code']}');
+            if (kDebugMode) print('🎁 欢迎券发放成功: ${result['code']}');
           } else {
-            print('⚠️ 欢迎券发放失败: ${result['message']}');
+            if (kDebugMode) print('⚠️ 欢迎券发放失败: ${result['message']}');
           }
         } catch (e) {
-          print('❌ 欢迎券发放异常: $e');
+          if (kDebugMode) print('❌ 欢迎券发放异常: $e');
         }
 
         // 4.3 标记已发券（仅更新欢迎券相关字段）
-        await supa.from('profiles').update({
+        await supa
+            .from('profiles')
+            .update({
           'welcome_reward_granted': true,
-          'updated_at': DateTime.now().toIso8601String(),
-        }).eq('id', userId);
+          'updated_at': DateTime.now().toUtc().toIso8601String(),
+        })
+            .eq('id', userId);
 
         grantedNow = true;
-        print('🎉 新用户欢迎券发放流程完成: $userId');
+        if (kDebugMode) print('🎉 新用户欢迎券发放流程完成: $userId');
       }
 
+      // 登录后清缓存
+      invalidateCache(userId);
       return grantedNow;
     } on PostgrestException catch (e) {
-      print(
-          '❌ Profile/Welcome setup Postgrest error: ${e.message} (code: ${e.code})');
+      if (kDebugMode) {
+        print('❌ Profile/Welcome setup Postgrest error: ${e.message} (code: ${e.code})');
+      }
       return false;
     } catch (e) {
-      print('❌ Profile/Welcome setup error: $e');
+      if (kDebugMode) print('❌ Profile/Welcome setup error: $e');
       return false;
     }
   }
@@ -169,13 +259,13 @@ class ProfileService {
           'user_id': userId,
           'code': code,
           'status': 'active',
-          'created_at': DateTime.now().toIso8601String(),
+          'created_at': DateTime.now().toUtc().toIso8601String(),
         });
-        print('🔮 邀请码生成成功: $code');
+        if (kDebugMode) print('🔮 邀请码生成成功: $code');
         return;
       } on PostgrestException catch (e) {
         if (e.code == '23505') {
-          if (i == maxTries - 1) {
+          if (i == maxTries - 1 && kDebugMode) {
             print('❌ 邀请码生成多次冲突，放弃：${e.message}');
           }
           continue;
@@ -215,15 +305,23 @@ class ProfileService {
     final id = uid;
     if (id == null) return null;
 
+    // 先看本地缓存
+    final cached = _cache[id];
+    if (cached != null) return Map<String, dynamic>.from(cached);
+
     try {
       final data = await _sb
           .from('profiles')
           .select('*, verification_type')
           .eq('id', id)
           .maybeSingle();
-      return data == null ? null : Map<String, dynamic>.from(data);
+
+      if (data == null) return null;
+      final map = Map<String, dynamic>.from(data as Map);
+      _cache[id] = map;
+      return Map<String, dynamic>.from(map);
     } catch (e) {
-      print('Error in getMyProfile: $e');
+      if (kDebugMode) print('Error in getMyProfile: $e');
       return null;
     }
   }
@@ -242,11 +340,17 @@ class ProfileService {
         phone: phone ?? currentData['phone']?.toString(),
         avatarUrl: avatarUrl ?? currentData['avatar_url']?.toString(),
       );
+
+      // 成功后清缓存
+      final id = uid;
+      if (id != null) invalidateCache(id);
     } catch (e) {
       throw Exception('Failed to update user profile: $e');
     }
   }
 
+  /// ⚠️ 注意：这里用于“用户主动编辑”的保存，允许更新可编辑字段。
+  /// 不用于登录补丁（登录补丁请走 patchProfileOnLogin / ensureProfileAndWelcome）。
   Future<void> upsertProfile({
     required String fullName,
     String? phone,
@@ -259,9 +363,8 @@ class ProfileService {
 
     try {
       final updateData = <String, dynamic>{
-        'id': id,
         'full_name': fullName,
-        'updated_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
       };
 
       if (phone != null) updateData['phone'] = phone;
@@ -271,7 +374,8 @@ class ProfileService {
         updateData['verification_status'] = verificationStatus;
       }
 
-      await _sb.from('profiles').upsert(updateData);
+      // 用 update 更稳妥（已存在行），避免 upsert 触发行默认值覆盖
+      await _sb.from('profiles').update(updateData).eq('id', id);
     } catch (e) {
       throw Exception('Failed to upsert profile: $e');
     }
@@ -285,9 +389,14 @@ class ProfileService {
       final ext = _fileExt(file.path);
       final storagePath = '$id/avatar$ext';
 
-      await _sb.storage.from('avatars').upload(storagePath, file,
-          fileOptions: const FileOptions(upsert: true));
+      await _sb.storage.from('avatars').upload(
+        storagePath,
+        file,
+        fileOptions: const FileOptions(upsert: true),
+      );
 
+      // 成功后清缓存
+      invalidateCache(id);
       return _sb.storage.from('avatars').getPublicUrl(storagePath);
     } catch (e) {
       throw Exception('Failed to upload avatar: $e');
@@ -332,10 +441,13 @@ class ProfileService {
     if (currentUser == null) throw Exception('Not authenticated');
 
     try {
-      await _sb.from('profiles').update({
+      await _sb
+          .from('profiles')
+          .update({
         'is_official': isOfficial,
-        'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', userId);
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      })
+          .eq('id', userId);
     } catch (e) {
       throw Exception('Failed to set official status: $e');
     }
@@ -385,7 +497,7 @@ class ProfileService {
 
       if (profile == null) return null;
 
-      final data = Map<String, dynamic>.from(profile);
+      final data = Map<String, dynamic>.from(profile as Map);
       final raw = data['verification_type']?.toString();
       var normalized = _normalizeVerificationType(raw);
 
@@ -395,6 +507,8 @@ class ProfileService {
       }
 
       data['verification_type'] = normalized;
+      // 写入缓存
+      _cache[targetId] = Map<String, dynamic>.from(data);
       return data;
     } catch (_) {
       return null;
@@ -412,7 +526,7 @@ class ProfileService {
           .eq('user_id', id)
           .order('created_at', ascending: false);
       return rows
-          .map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e))
+          .map<Map<String, dynamic>>((e) => Map<String, dynamic>.from(e as Map))
           .toList();
     } catch (_) {
       return [];
@@ -442,7 +556,7 @@ class ProfileService {
         await _sb.from('favorites').insert({
           'user_id': id,
           'listing_id': listingId,
-          'created_at': DateTime.now().toIso8601String(),
+          'created_at': DateTime.now().toUtc().toIso8601String(),
         });
         return true;
       }

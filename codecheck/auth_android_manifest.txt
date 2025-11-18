@@ -1,0 +1,166 @@
+﻿<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="cc.swaply.app">
+
+    <!-- 缃戠粶 / 鐩告満 / 瀛樺偍鏉冮檺 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
+    <!-- Android 13+ 璇诲彇鍥剧墖 -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- Android 12 鍙婁互涓嬪閮ㄥ瓨鍌ㄨ鍙栨潈闄?-->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+
+    <application
+        android:label="Swaply"
+        android:icon="@mipmap/adaptive"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:logo="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true"
+        android:requestLegacyExternalStorage="true"
+        android:enableOnBackInvokedCallback="true">
+
+        <!-- 鍏ュ彛 Activity -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+
+            <!-- 鍚姩 -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Supabase 榛樿 OAuth 鍥炶皟锛歩o.supabase.flutter://callback -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="io.supabase.flutter" android:host="callback" />
+            </intent-filter>
+
+            <!-- 鑷畾涔夋繁閾?-->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="cc.swaply.app" android:host="login-callback" />
+                <data android:scheme="cc.swaply.app" android:host="reset-password" />
+            </intent-filter>
+
+        </activity>
+
+        <meta-data android:name="flutterEmbedding" android:value="2" />
+    </application>
+
+    <!-- Android 11+ 鍙煡璇㈢殑澶栭儴搴旂敤 -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT" />
+            <data android:mimeType="text/plain" />
+        </intent>
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+        <package android:name="org.telegram.messenger" />
+        <package android:name="com.facebook.katana" />
+        <package android:name="com.facebook.orca" />
+        <package android:name="com.android.chrome" />
+    </queries>
+
+</manifest>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="cc.swaply.app">
+
+    <!-- 缃戠粶 / 鐩告満 / 瀛樺偍鏉冮檺 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
+    <!-- Android 13+ 璇诲彇鍥剧墖 -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <!-- Android 12 鍙婁互涓嬪閮ㄥ瓨鍌ㄨ鍙栨潈闄?-->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+
+    <application
+        android:label="Swaply"
+        android:icon="@mipmap/adaptive"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:logo="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true"
+        android:requestLegacyExternalStorage="true"
+        android:enableOnBackInvokedCallback="true">
+
+        <!-- 鍏ュ彛 Activity -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+
+            <!-- 鍚姩 -->
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- Supabase 榛樿 OAuth 鍥炶皟锛歩o.supabase.flutter://callback -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="io.supabase.flutter" android:host="callback" />
+            </intent-filter>
+
+            <!-- 鑷畾涔夋繁閾?-->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="cc.swaply.app" android:host="login-callback" />
+                <data android:scheme="cc.swaply.app" android:host="reset-password" />
+            </intent-filter>
+
+        </activity>
+
+        <meta-data android:name="flutterEmbedding" android:value="2" />
+    </application>
+
+    <!-- Android 11+ 鍙煡璇㈢殑澶栭儴搴旂敤 -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT" />
+            <data android:mimeType="text/plain" />
+        </intent>
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+        <package android:name="org.telegram.messenger" />
+        <package android:name="com.facebook.katana" />
+        <package android:name="com.facebook.orca" />
+        <package android:name="com.android.chrome" />
+    </queries>
+
+</manifest>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="cc.swaply.app">
+    <!-- The INTERNET permission is required for development. Specifically,
+         the Flutter tool needs it to communicate with the running application
+         to allow setting breakpoints, to provide hot reload, etc.
+    -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+</manifest>
+

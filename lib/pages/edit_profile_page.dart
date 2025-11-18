@@ -1,10 +1,11 @@
 // lib/pages/edit_profile_page.dart
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/profile_service.dart';
+import 'package:swaply/services/image_normalizer.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -21,11 +22,11 @@ class EditProfilePageState extends State<EditProfilePage> {
 
   String _selectedCity = 'Harare';
   String? _avatarUrl;
-  File? _selectedImage;
+  Uint8List? _selectedImageBytes; // bytes 存储头像
   bool _loading = true;
   bool _saving = false;
 
-  final List<String> _cities = [
+  final List<String> _cities = const [
     'Harare',
     'Bulawayo',
     'Chitungwiza',
@@ -75,9 +76,8 @@ class EditProfilePageState extends State<EditProfilePage> {
         });
       } else if (mounted) {
         setState(() {
-          _nameController.text = user?.userMetadata?['full_name'] ??
-              user?.email?.split('@').first ??
-              '';
+          _nameController.text =
+              user?.userMetadata?['full_name'] ?? user?.email?.split('@').first ?? '';
           _phoneController.text = user?.phone ?? '';
           _loading = false;
         });
@@ -87,12 +87,10 @@ class EditProfilePageState extends State<EditProfilePage> {
         setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading profile: $e',
-                style: TextStyle(fontSize: 14.sp)),
+            content: Text('Error loading profile: $e', style: TextStyle(fontSize: 14.sp)),
             backgroundColor: Colors.red.shade600,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
             margin: EdgeInsets.all(16.w),
           ),
         );
@@ -140,8 +138,10 @@ class EditProfilePageState extends State<EditProfilePage> {
                       maxHeight: 500,
                     );
                     if (image != null) {
+                      // 统一 JPG + 规范化
+                      final norm = await ImageNormalizer.normalizeXFile(image);
                       setState(() {
-                        _selectedImage = File(image.path);
+                        _selectedImageBytes = norm.bytes;
                       });
                     }
                   },
@@ -158,13 +158,14 @@ class EditProfilePageState extends State<EditProfilePage> {
                       maxHeight: 500,
                     );
                     if (image != null) {
+                      final norm = await ImageNormalizer.normalizeXFile(image);
                       setState(() {
-                        _selectedImage = File(image.path);
+                        _selectedImageBytes = norm.bytes;
                       });
                     }
                   },
                 ),
-                if (_avatarUrl != null || _selectedImage != null)
+                if (_avatarUrl != null || _selectedImageBytes != null)
                   _buildImagePickerOption(
                     icon: Icons.delete_rounded,
                     title: 'Remove Photo',
@@ -172,7 +173,7 @@ class EditProfilePageState extends State<EditProfilePage> {
                     onTap: () {
                       Navigator.of(context).maybePop();
                       setState(() {
-                        _selectedImage = null;
+                        _selectedImageBytes = null;
                         _avatarUrl = null;
                       });
                     },
@@ -206,8 +207,7 @@ class EditProfilePageState extends State<EditProfilePage> {
             Container(
               padding: EdgeInsets.all(12.w),
               decoration: BoxDecoration(
-                color:
-                    isDestructive ? Colors.red.shade50 : Colors.grey.shade100,
+                color: isDestructive ? Colors.red.shade50 : Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(12.r),
               ),
               child: Icon(
@@ -237,60 +237,81 @@ class EditProfilePageState extends State<EditProfilePage> {
     setState(() => _saving = true);
 
     try {
+      final supa = Supabase.instance.client;
+      final user = supa.auth.currentUser;
+      if (user == null) {
+        throw 'Not signed in';
+      }
+
       String? newAvatarUrl = _avatarUrl;
 
-      // 如果选择了新头像，先上传
-      if (_selectedImage != null) {
-        newAvatarUrl =
-            await ProfileService.instance.uploadAvatar(_selectedImage!);
-      }
-
-      // 与 ProfileService 的签名对齐
-      await ProfileService.instance.updateUserProfile(
-        fullName: _nameController.text.trim(),
-        phone: _phoneController.text.trim().isEmpty
-            ? null
-            : _phoneController.text.trim(),
-        avatarUrl: newAvatarUrl,
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Profile updated successfully',
-                style: TextStyle(fontSize: 14.sp)),
-            backgroundColor: Colors.green.shade600,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r)),
-            margin: EdgeInsets.all(16.w),
+      // 选择了新头像 → 以 bytes 上传（JPG + upsert）
+      if (_selectedImageBytes != null) {
+        final path = 'avatars/${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        await supa.storage.from('avatars').uploadBinary(
+          path,
+          _selectedImageBytes!,
+          fileOptions: const FileOptions(
+            contentType: 'image/jpeg',
+            upsert: true,
           ),
         );
-        // 关闭当前页面（使用当前 context 的导航，不使用 rootNavigator）
-        Navigator.of(context).maybePop(true);
+        newAvatarUrl = supa.storage.from('avatars').getPublicUrl(path);
       }
+
+      // 写 profiles 并刷新 updated_at
+      final name = _nameController.text.trim();
+      final phone = _phoneController.text.trim();
+      final bio = _bioController.text.trim();
+      final city = _selectedCity;
+
+      await supa.from('profiles').update({
+        'full_name': name,
+        'phone': phone.isEmpty ? null : phone,
+        'avatar_url': newAvatarUrl,
+        'bio': bio,
+        'city': city,
+        'updated_at': DateTime.now().toUtc().toIso8601String(),
+      }).eq('id', user.id);
+
+      // 清前端缓存；由 pop(true) 通知上层刷新
+      ProfileService.instance.invalidateCache(user.id);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Profile updated successfully', style: TextStyle(fontSize: 14.sp)),
+          backgroundColor: Colors.green.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+          margin: EdgeInsets.all(16.w),
+        ),
+      );
+
+      // 返回并告知“有更新”，上层按 result==true 触发刷新
+      Navigator.pop(context, true);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error updating profile: $e',
-                style: TextStyle(fontSize: 14.sp)),
+            content: Text('Error updating profile: $e', style: TextStyle(fontSize: 14.sp)),
             backgroundColor: Colors.red.shade600,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
             margin: EdgeInsets.all(16.w),
           ),
         );
       }
     } finally {
-      if (mounted) {
-        setState(() => _saving = false);
-      }
+      if (mounted) setState(() => _saving = false);
     }
   }
 
   Widget _buildAvatarSection() {
+    final hasBytes = _selectedImageBytes != null;
+    final hasUrl = _avatarUrl != null && _avatarUrl!.isNotEmpty;
+
     return Center(
       child: Stack(
         children: [
@@ -312,14 +333,13 @@ class EditProfilePageState extends State<EditProfilePage> {
             child: CircleAvatar(
               radius: 60.r,
               backgroundColor: Colors.white,
-              backgroundImage: _selectedImage != null
-                  ? FileImage(_selectedImage!) as ImageProvider
-                  : _avatarUrl != null
-                      ? NetworkImage(_avatarUrl!) as ImageProvider
-                      : null,
-              child: (_selectedImage == null && _avatarUrl == null)
-                  ? Icon(Icons.person_rounded,
-                      size: 60.w, color: Colors.grey.shade400)
+              backgroundImage: hasBytes
+                  ? MemoryImage(_selectedImageBytes!) as ImageProvider
+                  : hasUrl
+                  ? NetworkImage(_avatarUrl!) as ImageProvider
+                  : null,
+              child: (!hasBytes && !hasUrl)
+                  ? Icon(Icons.person_rounded, size: 60.w, color: Colors.grey.shade400)
                   : null,
             ),
           ),
@@ -344,11 +364,7 @@ class EditProfilePageState extends State<EditProfilePage> {
                     ),
                   ],
                 ),
-                child: Icon(
-                  Icons.camera_alt_rounded,
-                  color: Colors.white,
-                  size: 20.w,
-                ),
+                child: Icon(Icons.camera_alt_rounded, color: Colors.white, size: 20.w),
               ),
             ),
           ),
@@ -411,8 +427,7 @@ class EditProfilePageState extends State<EditProfilePage> {
             ),
             filled: true,
             fillColor: Colors.grey.shade50,
-            contentPadding:
-                EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+            contentPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
             counterText: maxLength != null ? null : '',
           ),
         ),
@@ -456,20 +471,12 @@ class EditProfilePageState extends State<EditProfilePage> {
             ),
             filled: true,
             fillColor: Colors.grey.shade50,
-            contentPadding:
-                EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+            contentPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
           ),
-          items: _cities.map((city) {
-            return DropdownMenuItem(
-              value: city,
-              child: Text(city),
-            );
-          }).toList(),
-          onChanged: (value) {
-            setState(() {
-              _selectedCity = value!;
-            });
-          },
+          items: _cities
+              .map((city) => DropdownMenuItem(value: city, child: Text(city)))
+              .toList(),
+          onChanged: (value) => setState(() => _selectedCity = value!),
         ),
       ],
     );
@@ -482,11 +489,7 @@ class EditProfilePageState extends State<EditProfilePage> {
       appBar: AppBar(
         title: Text(
           'Edit Profile',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 20.sp,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 20.sp),
         ),
         backgroundColor: Colors.transparent,
         flexibleSpace: Container(
@@ -511,197 +514,178 @@ class EditProfilePageState extends State<EditProfilePage> {
                 onPressed: _saving ? null : _saveProfile,
                 style: TextButton.styleFrom(
                   backgroundColor: Colors.white.withOpacity(0.2),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.r)),
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                 ),
                 child: _saving
                     ? SizedBox(
-                        width: 20.w,
-                        height: 20.h,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.w,
-                          color: Colors.white,
-                        ),
-                      )
+                  width: 20.w,
+                  height: 20.h,
+                  child: CircularProgressIndicator(strokeWidth: 2.w, color: Colors.white),
+                )
                     : Text(
-                        'Save',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16.sp,
-                        ),
-                      ),
+                  'Save',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16.sp,
+                  ),
+                ),
               ),
             ),
         ],
       ),
       body: _loading
           ? Center(
-              child: CircularProgressIndicator(
-                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF667EEA)),
-                strokeWidth: 3.w,
-              ),
-            )
+        child: CircularProgressIndicator(
+          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF667EEA)),
+          strokeWidth: 3.w,
+        ),
+      )
           : SingleChildScrollView(
-              padding: EdgeInsets.all(24.w),
-              child: Form(
-                key: _formKey,
+        padding: EdgeInsets.all(24.w),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: 20.h),
+
+              _buildAvatarSection(),
+              SizedBox(height: 40.h),
+
+              _buildTextField(
+                controller: _nameController,
+                label: 'Display Name',
+                hint: 'Enter your display name',
+                icon: Icons.person_outline_rounded,
+                isRequired: true,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter your display name';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 24.h),
+
+              _buildTextField(
+                controller: _phoneController,
+                label: 'Phone Number',
+                hint: '+263 77 123 4567',
+                icon: Icons.phone_outlined,
+                keyboardType: TextInputType.phone,
+              ),
+              SizedBox(height: 24.h),
+
+              _buildDropdownField(),
+              SizedBox(height: 24.h),
+
+              _buildTextField(
+                controller: _bioController,
+                label: 'Bio',
+                hint: 'Tell others about yourself...',
+                icon: Icons.description_outlined,
+                maxLines: 4,
+                maxLength: 500,
+              ),
+              SizedBox(height: 40.h),
+
+              SizedBox(
+                width: double.infinity,
+                height: 56.h,
+                child: ElevatedButton(
+                  onPressed: _saving ? null : _saveProfile,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
+                  ),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                      ),
+                      borderRadius: BorderRadius.circular(16.r),
+                    ),
+                    child: Container(
+                      alignment: Alignment.center,
+                      child: _saving
+                          ? SizedBox(
+                        width: 24.w,
+                        height: 24.h,
+                        child:
+                        CircularProgressIndicator(color: Colors.white, strokeWidth: 2.w),
+                      )
+                          : Text(
+                        'Save Changes',
+                        style: TextStyle(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 24.h),
+
+              Container(
+                padding: EdgeInsets.all(20.w),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 20.r,
+                      offset: Offset(0, 4.h),
+                    ),
+                  ],
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(height: 20.h),
-
-                    // 头像部分
-                    _buildAvatarSection(),
-                    SizedBox(height: 40.h),
-
-                    // 姓名
-                    _buildTextField(
-                      controller: _nameController,
-                      label: 'Display Name',
-                      hint: 'Enter your display name',
-                      icon: Icons.person_outline_rounded,
-                      isRequired: true,
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Please enter your display name';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: 24.h),
-
-                    // 手机号
-                    _buildTextField(
-                      controller: _phoneController,
-                      label: 'Phone Number',
-                      hint: '+263 77 123 4567',
-                      icon: Icons.phone_outlined,
-                      keyboardType: TextInputType.phone,
-                    ),
-                    SizedBox(height: 24.h),
-
-                    // 城市（先保留到 UI）
-                    _buildDropdownField(),
-                    SizedBox(height: 24.h),
-
-                    // 个人简介（先保留在 UI）
-                    _buildTextField(
-                      controller: _bioController,
-                      label: 'Bio',
-                      hint: 'Tell others about yourself...',
-                      icon: Icons.description_outlined,
-                      maxLines: 4,
-                      maxLength: 500,
-                    ),
-                    SizedBox(height: 40.h),
-
-                    // 保存按钮（移动端）
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56.h,
-                      child: ElevatedButton(
-                        onPressed: _saving ? null : _saveProfile,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16.r)),
-                        ),
-                        child: Ink(
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.all(10.w),
                           decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-                            ),
-                            borderRadius: BorderRadius.circular(16.r),
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12.r),
                           ),
-                          child: Container(
-                            alignment: Alignment.center,
-                            child: _saving
-                                ? SizedBox(
-                                    width: 24.w,
-                                    height: 24.h,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2.w,
-                                    ),
-                                  )
-                                : Text(
-                                    'Save Changes',
-                                    style: TextStyle(
-                                      fontSize: 18.sp,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.white,
-                                    ),
-                                  ),
+                          child: Icon(Icons.info_outline_rounded,
+                              color: Colors.grey.shade600, size: 20.w),
+                        ),
+                        SizedBox(width: 12.w),
+                        Text(
+                          'Account Information',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18.sp,
+                            color: Colors.grey.shade800,
                           ),
                         ),
-                      ),
+                      ],
                     ),
-                    SizedBox(height: 24.h),
-
-                    // 账户信息
-                    Container(
-                      padding: EdgeInsets.all(20.w),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 20.r,
-                            offset: Offset(0, 4.h),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.all(10.w),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
-                                  borderRadius: BorderRadius.circular(12.r),
-                                ),
-                                child: Icon(
-                                  Icons.info_outline_rounded,
-                                  color: Colors.grey.shade600,
-                                  size: 20.w,
-                                ),
-                              ),
-                              SizedBox(width: 12.w),
-                              Text(
-                                'Account Information',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18.sp,
-                                  color: Colors.grey.shade800,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 16.h),
-                          _buildInfoRow(
-                            Icons.email_outlined,
-                            Supabase.instance.client.auth.currentUser?.email ??
-                                'No email',
-                          ),
-                          SizedBox(height: 12.h),
-                          _buildInfoRow(
-                            Icons.access_time_rounded,
-                            'Member since ${_formatDate(Supabase.instance.client.auth.currentUser?.createdAt)}',
-                          ),
-                        ],
-                      ),
+                    SizedBox(height: 16.h),
+                    _buildInfoRow(
+                      Icons.email_outlined,
+                      Supabase.instance.client.auth.currentUser?.email ?? 'No email',
+                    ),
+                    SizedBox(height: 12.h),
+                    _buildInfoRow(
+                      Icons.access_time_rounded,
+                      'Member since ${_formatDate(Supabase.instance.client.auth.currentUser?.createdAt)}',
                     ),
                   ],
                 ),
               ),
-            ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

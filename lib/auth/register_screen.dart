@@ -1,22 +1,18 @@
-// lib/auth/register_screen.dart —— 最终版：统一回调到 swaply://
+// lib/auth/register_screen.dart —— 最终版：统一回调到 cc.swaply.app://login-callback
+// - 与 login_screen.dart 的 OAuth 流程完全一致（单入口 + 防重入）
+// - Facebook 精简权限 + display=popup，减少二次确认
+// - Apple 使用 OAuth + scopes: name email
+// - 注册后主动同步一次 profile，并尝试绑定邀请码
 
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:swaply/services/reward_service.dart';
-
-// ✅ 修复：移除了 'as sf' 别名
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-// 保留全局配置（用于 emailRedirectTo 等）
 import 'package:swaply/config/auth_config.dart';
-
-// ✅ 修复：添加此 import 以便跳转
 import 'login_screen.dart';
-// ✅ [ADDED] 遵照指示：添加 ProfileService 导入
 import 'package:swaply/services/profile_service.dart';
 
-// ✅ 修复：常量与 login_screen.dart 保持一致
 const String _kMobileRedirect = 'cc.swaply.app://login-callback';
 
 class RegisterScreen extends StatefulWidget {
@@ -45,6 +41,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _agreeToTerms = false;
   bool _showInvitationCode = false;
 
+  // ✅ 防重入：避免多次触发 OAuth 导致“两次确认”
+  static bool _oauthInFlight = false;
+
   @override
   void initState() {
     super.initState();
@@ -66,31 +65,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // ✅ 与 login_screen.dart 完全一致的 _oauthSignIn
+  // ✅ 与 login_screen.dart 完全一致的统一 OAuth 入口
   Future<void> _oauthSignIn(
       OAuthProvider provider, {
         String? scopes,
         Map<String, String>? queryParams,
       }) async {
-    String? redirectUrl;
-    if (kIsWeb) {
-      redirectUrl = null;
-    } else {
-      if (defaultTargetPlatform == TargetPlatform.iOS ||
-          defaultTargetPlatform == TargetPlatform.android) {
-        redirectUrl = _kMobileRedirect;
-      }
-    }
+    if (_oauthInFlight) return;
+    _oauthInFlight = true;
+    setState(() => _isLoading = true);
 
-    await Supabase.instance.client.auth.signInWithOAuth(
-      provider,
-      redirectTo: (kIsWeb
-          ? 'https://swaply.cc/auth/callback'
-          : 'cc.swaply.app://login-callback'),
-      authScreenLaunchMode: LaunchMode.externalApplication,
-      scopes: scopes,
-      queryParams: queryParams,
-    );
+    try {
+      await Supabase.instance.client.auth.signInWithOAuth(
+        provider,
+        redirectTo: kIsWeb ? 'https://swaply.cc/auth/callback' : _kMobileRedirect,
+        authScreenLaunchMode: LaunchMode.externalApplication,
+        scopes: scopes,
+        queryParams: queryParams,
+      );
+      // 回调由 Supabase/深链处理
+    } on AuthException catch (e) {
+      _showError(e.message);
+    } catch (_) {
+      _showError('Sign-in failed. Please try again.');
+    } finally {
+      _oauthInFlight = false;
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   Future<void> _maybeBindInviteCode(String? code) async {
@@ -104,7 +105,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         await RewardService.submitInviteCode(normalized);
         RegisterScreen.clearPendingCode();
       } catch (_) {
-        // ignore, wait for signedIn listener
+        // ignore, 等待 signedIn 后再重试
       }
     }
   }
@@ -133,7 +134,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final code = _pickCodeFromUI();
       await _maybeBindInviteCode(code);
 
-      // ✅ [MODIFIED] 遵照指示：获取 full name 和 phone
       final fullName = _nameController.text.trim();
       final phone = _phoneController.text.trim();
       final email = _emailController.text.trim();
@@ -144,19 +144,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final res = await supa.auth.signUp(
         email: email,
         password: password,
-        emailRedirectTo: kAuthRedirectUri,
-        // ✅ [MODIFIED] 遵照指示：严格使用此 data 结构
+        emailRedirectTo: kAuthRedirectUri, // 从 config/auth_config.dart
         data: {
           'full_name': fullName,
           'phone': phone,
         },
       );
 
-      // ✅ [ADDED] 遵照指示：添加日志
       debugPrint('[Register] signUp user: ${res.user?.id}');
       debugPrint('[Register] user metadata: ${res.user?.userMetadata}');
 
-      // ✅ [ADDED] 遵照指示：注册完，主动同步一次 profile
+      // 主动同步一次 profile
       await ProfileService.syncProfileFromAuthUser();
 
       if (res.session != null) {
@@ -168,7 +166,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } on AuthException catch (e) {
       _showError(e.message);
     } catch (e, st) {
-      // ✅ [MODIFIED] 遵照指示：捕获更详细的错误
       debugPrint('[Register] error: $e\n$st');
       if (!mounted) return;
       _showError('Register failed: $e');
@@ -195,7 +192,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (msg.contains('cancel') ||
           msg.contains('canceled') ||
           msg.contains('popup_closed')) {
-        // 用户主动取消，静默忽略
+        // 用户取消，静默
       } else {
         _showError('Google sign-in error: ${e.message}');
       }
@@ -218,8 +215,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final code = _pickCodeFromUI();
       await _maybeBindInviteCode(code);
 
+      // ✅ 与登录页一致：精简 scopes + 显式 popup，减少二次确认
       await _oauthSignIn(
         OAuthProvider.facebook,
+        scopes: 'public_profile,email',
+        queryParams: const {'display': 'popup'},
       );
 
       await _maybeBindInviteCode(code);
@@ -239,7 +239,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final code = _pickCodeFromUI();
       await _maybeBindInviteCode(code);
 
-      // ✅ Apple 必须用 _oauthSignIn
       await _oauthSignIn(
         OAuthProvider.apple,
         scopes: 'name email',
@@ -268,7 +267,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
       _showInfo('Email verified.');
     } on AuthException catch (e) {
-      // ✅ 这里必须是 _showError（有下划线）
       _showError(e.message);
     } catch (_) {
       _showError('Verification failed. Please try again.');
@@ -402,8 +400,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                   validator: (v) {
-                    if (v == null || v.isEmpty)
+                    if (v == null || v.isEmpty) {
                       return 'Please enter your password';
+                    }
                     if (v.length < 6) {
                       return 'Password must be at least 6 characters';
                     }
@@ -419,8 +418,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   icon: Icons.lock_outline,
                   obscureText: !_isConfirmPasswordVisible,
                   suffixIcon: IconButton(
-                    onPressed: () => setState(() =>
-                    _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
+                    onPressed: () => setState(
+                            () => _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
                     icon: Icon(
                       _isConfirmPasswordVisible
                           ? Icons.visibility_off_outlined
@@ -528,8 +527,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       padding: EdgeInsets.symmetric(horizontal: 12.w),
                       child: Text(
                         'OR',
-                        style:
-                        TextStyle(color: Colors.grey[500], fontSize: 12.sp),
+                        style: TextStyle(color: Colors.grey[500], fontSize: 12.sp),
                       ),
                     ),
                     Expanded(child: Divider(color: Colors.grey[300])),
@@ -569,8 +567,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     Text(
                       "Already have an account? ",
-                      style:
-                      TextStyle(color: Colors.grey[600], fontSize: 12.sp),
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12.sp),
                     ),
                     GestureDetector(
                       onTap: () => Navigator.pushReplacement(
@@ -821,8 +818,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           backgroundColor: Colors.black,
           foregroundColor: Colors.white,
           elevation: 0,
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
           padding: EdgeInsets.symmetric(horizontal: 12.w),
         ),
         child: Row(
@@ -832,8 +828,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             SizedBox(width: 8.w),
             const Text(
               'Sign in with Apple',
-              style:
-              TextStyle(fontWeight: FontWeight.w600, letterSpacing: 0.2),
+              style: TextStyle(fontWeight: FontWeight.w600, letterSpacing: 0.2),
             ),
           ],
         ),

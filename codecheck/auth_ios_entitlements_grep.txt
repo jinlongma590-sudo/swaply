@@ -1,0 +1,4 @@
+﻿C:\Apps\swaply\ios\Runner\Info.plist:91: <key>CFBundleURLSchemes</key>
+C:\Apps\swaply\ios\Runner\Info.plist:99: <key>CFBundleURLSchemes</key>
+C:\Apps\swaply\ios\Runner\Runner.entitlements:7: <string>applinks:swaply.cc</string>
+C:\Apps\swaply\ios\Runner\Runner.entitlements:8: <string>applinks:www.swaply.cc</string>
