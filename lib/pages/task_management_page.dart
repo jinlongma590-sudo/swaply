@@ -1,3 +1,4 @@
+﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/pages/task_management_page.dart
 // 修复：
 // 1) Realtime 订阅使用 PostgresChangeFilterType 枚举；
@@ -21,7 +22,7 @@ import 'package:swaply/services/coupon_service.dart';
 import 'package:swaply/models/coupon.dart';
 import 'package:swaply/pages/sell_form_page.dart';
 import 'package:flutter/services.dart';
-
+import 'package:swaply/router/safe_navigator.dart';
 class TaskManagementPage extends StatefulWidget {
   final int initialTab;
 
@@ -1340,7 +1341,7 @@ class _TaskManagementPageState extends State<TaskManagementPage>
 
   void _onUseNowPressed(CouponModel coupon) {
     if (!coupon.canPin || !coupon.isUsable) return;
-    Navigator.of(context).push(
+    SafeNavigator.push(
       MaterialPageRoute(
         builder: (context) => const SellFormPage(), // ✅ 正确的 WidgetBuilder
         settings: RouteSettings(arguments: {'couponId': coupon.id}),

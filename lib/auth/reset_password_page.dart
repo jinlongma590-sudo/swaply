@@ -1,8 +1,9 @@
-// lib/auth/reset_password_page.dart
+﻿// lib/auth/reset_password_page.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:swaply/router/root_nav.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   const ResetPasswordPage({super.key});
@@ -74,8 +75,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
         ),
       );
 
-      // 成功后回登录页
-      Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
+      // 成功后回登录页（统一走 root_nav 助手）
+      await navReplaceAll('/login'); // ✅ 不要传 context
     } on AuthException catch (e) {
       if (!mounted) return;
       _toast(e.message);
@@ -135,9 +136,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                   child: OutlinedButton(
                     onPressed: _busy
                         ? null
-                        : () {
-                      Navigator.of(context)
-                          .pushNamedAndRemoveUntil('/login', (r) => false);
+                        : () async {
+                      await navReplaceAll('/login'); // ✅ 不要传 context
                     },
                     child: const Text('Back to Login'),
                   ),

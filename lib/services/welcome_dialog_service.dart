@@ -2,13 +2,14 @@
 //
 // Backward-compatible Welcome dialog service.
 //
-// ✅ Public API for旧代码兼容：`WelcomeDialogService.maybeShow(context)`
-// ✅ 新逻辑修复：
-//   1) “已弹过”会话标记按 **uid 维度** 存储（不会误伤新账号）。
-//   2) 仅在 **对话框真正关闭后** 才写入本地“已展示”标记（防止误判）。
-//   3) 先轻量确保欢迎券存在（RewardService），再查询；查询优先 user_coupons，缺省回退 coupons。
-//   4) 同时兼容两种历史本地键：`welcome_gift_shown_$uid` 与 `welcome_dialog_shown_$uid`。
-//   5) 提供 `scheduleCheck(context)` 便于首帧后调用，避免与首页构建竞争。
+// ✅ 公共兼容入口：WelcomeDialogService.maybeShow(context)
+// ✅ 新逻辑：
+//   1) “会话去重”按 uid 存储（_shownForUid）。
+//   2) 只在对话框真正关闭后才写本地“已展示”标记（历史两种 key 都写）。
+//   3) **彻底移除 user_coupons 查询**，只保留对 coupons 的轻量校验。
+//   4) 与 main.dart 新逻辑联动：优先读取 `new_user_welcome_pending_<uid>` 决定是否弹窗，
+//      这个 pending 位由 `RewardService.ensureWelcomeForCurrentUser()` 计算并在登录时写入。
+//   5) 提供 scheduleCheck(context) 便于首帧后触发，降低与首页首帧竞争。
 //
 // 依赖：
 //   shared_preferences: ^2.0.0+
@@ -28,24 +29,28 @@ import 'package:swaply/widgets/welcome_coupon_dialog.dart';
 class WelcomeDialogService {
   WelcomeDialogService._();
 
-  /// 会话级去重（按 uid 维度）
+  /// 会话级去重（按 uid）
   static final Map<String, bool> _shownForUid = <String, bool>{};
 
   /// 防并发重复弹
   static bool _isShowing = false;
 
-  /// 旧代码兼容入口：HomePage 里可直接调用
+  /// 旧代码兼容入口
   static Future<void> maybeShow(BuildContext context) async {
     await showWelcomeDialogIfNeeded(context);
   }
 
-  /// 首帧后安排检查（推荐放在拿到 context 的地方调用）
+  /// 首帧后安排检查（推荐）
   static void scheduleCheck(BuildContext context, {bool force = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // fire-and-forget
       showWelcomeDialogIfNeeded(context, force: force);
     });
   }
+
+  static String _pendingKey(String uid) => 'new_user_welcome_pending_$uid';
+  static String _shownGiftKey(String uid) => 'welcome_gift_shown_$uid';
+  static String _shownDialogKey(String uid) => 'welcome_dialog_shown_$uid';
 
   /// 核心：检查并弹出欢迎券对话框
   static Future<void> showWelcomeDialogIfNeeded(
@@ -64,7 +69,7 @@ class WelcomeDialogService {
 
     final uid = user.id;
 
-    // 会话级去重（按 uid）
+    // —— 1) 会话级去重（按 uid）
     if (!force && (_shownForUid[uid] == true)) {
       if (kDebugMode) {
         // ignore: avoid_print
@@ -75,14 +80,12 @@ class WelcomeDialogService {
 
     final prefs = await SharedPreferences.getInstance();
 
-    // 兼容两种历史本地键（任一为 true 即视为已展示过）
-    final keyGift = 'welcome_gift_shown_$uid';
-    final keyDialog = 'welcome_dialog_shown_$uid';
+    // —— 2) 历史“已展示”位（兼容两种 key）
     final alreadyShownEver =
-        (prefs.getBool(keyGift) ?? false) || (prefs.getBool(keyDialog) ?? false);
-
+        (prefs.getBool(_shownGiftKey(uid)) ?? false) ||
+            (prefs.getBool(_shownDialogKey(uid)) ?? false);
     if (!force && alreadyShownEver) {
-      _shownForUid[uid] = true; // 同步会话位，减少重复判断
+      _shownForUid[uid] = true;
       if (kDebugMode) {
         // ignore: avoid_print
         print('[WelcomeDialog] already shown historically for $uid');
@@ -90,62 +93,59 @@ class WelcomeDialogService {
       return;
     }
 
-    // 1) 轻量确保服务端存在欢迎券（若已存在，此调用为 no-op；失败不阻断）
-    try {
-      await RewardService.ensureWelcomeGiftFor(uid);
-    } catch (e) {
-      if (kDebugMode) {
-        // ignore: avoid_print
-        print('[WelcomeDialog] ensure welcome gift failed: $e');
-      }
-    }
+    // —— 3) 与 main.dart 联动的 pending 位
+    // main.dart 的 wireAuthHook 在 signedIn/initialSession 时会调用
+    // RewardService.ensureWelcomeForCurrentUser()，当 shouldPopup=true 就置位此 pending。
+    final hasPending = prefs.getBool(_pendingKey(uid)) == true;
 
-    // 2) 查询是否存在“welcome”券（优先 user_coupons，失败回退 coupons）
-    List<dynamic> rows = const [];
-    try {
-      rows = await client
-          .from('user_coupons')
-          .select('id, code, title, description, expires_at, created_at, type, status')
-          .eq('user_id', uid)
-          .eq('type', 'welcome')
-          .limit(1);
-    } catch (e) {
+    if (!force && !hasPending) {
+      // 未置位则不打扰用户、也不做多余查询
       if (kDebugMode) {
         // ignore: avoid_print
-        print('[WelcomeDialog] query user_coupons failed, fallback to coupons: $e');
-      }
-      try {
-        rows = await client
-            .from('coupons')
-            .select('id, code, title, description, expires_at, created_at, type, status, user_id')
-            .eq('user_id', uid)
-            .eq('type', 'welcome')
-        // 某些库里存在 status 字段；如果没有也能工作（忽略 eq）
-            .maybeEq('status', 'active')
-            .limit(1);
-      } catch (e2) {
-        if (kDebugMode) {
-          // ignore: avoid_print
-          print('[WelcomeDialog] fallback coupons query failed: $e2');
-        }
-        return;
-      }
-    }
-
-    if (rows.isEmpty) {
-      if (kDebugMode) {
-        // ignore: avoid_print
-        print('[WelcomeDialog] no welcome coupon row yet for $uid');
+        print('[WelcomeDialog] no pending flag -> skip');
       }
       return;
     }
 
+    // —— 4) 轻量校验 coupons 表，确认确有 welcome 券（不涉及 user_coupons）
+    List<Map<String, dynamic>> rows = [];
+    try {
+      rows = await client
+          .from('coupons')
+          .select(
+        'id, code, title, description, expires_at, created_at, type, status, user_id',
+      )
+          .eq('user_id', uid)
+          .eq('type', 'welcome')
+          .limit(1);
+      if (rows.isEmpty) {
+        if (kDebugMode) {
+          // ignore: avoid_print
+          print('[WelcomeDialog] no welcome coupon -> clear pending & skip');
+        }
+        // 安全起见：没有券就清掉 pending，避免下次仍判定要弹
+        await prefs.setBool(_pendingKey(uid), false);
+        return;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print('[WelcomeDialog] query coupons failed: $e');
+      }
+      // 查询失败也清 pending，避免反复尝试；如你希望保留，可改成不清
+      await prefs.setBool(_pendingKey(uid), false);
+      return;
+    }
+
+    // —— 5) 防并发 & 小延迟，降低与首帧竞争
     if (_isShowing) return;
     _isShowing = true;
 
-    // 稍等首页首帧完成，降低竞争（可按需调整/删除）
     await Future<void>.delayed(const Duration(milliseconds: 300));
-    if (!context.mounted) {
+    // （根据你的 Flutter 版本，如果不支持 context.mounted，可以删掉此判断）
+    // ignore: use_build_context_synchronously
+    // （你的工程之前使用过此写法，说明版本已支持）
+    if (!(context.mounted)) {
       _isShowing = false;
       return;
     }
@@ -155,20 +155,32 @@ class WelcomeDialogService {
       print('[WelcomeDialog] found welcome coupon -> showing dialog');
     }
 
-    // 3) 真正弹出（仅在关闭后才写“已展示”）
+    // —— 6) 真正弹出；关闭后再写已展示
+    // ignore: use_build_context_synchronously
     await showDialog<void>(
       context: context,
       barrierDismissible: true,
       builder: (_) => WelcomeCouponDialog(
-        couponData: rows.first as Map<String, dynamic>,
+        couponData: rows.first,
       ),
     );
 
-    // 4) 关闭后记录“已展示”：两种键都写，保持向后兼容
-    await prefs.setBool(keyGift, true);
-    await prefs.setBool(keyDialog, true);
+    // 关闭后落盘：两种历史键都写，保证向后兼容
+    await prefs.setBool(_shownGiftKey(uid), true);
+    await prefs.setBool(_shownDialogKey(uid), true);
+
+    // 清掉 pending（只弹一次）
+    await prefs.setBool(_pendingKey(uid), false);
+
     _shownForUid[uid] = true;
     _isShowing = false;
+
+    // —— 7) 保险：若你希望“确保券一定存在”，也可在此补一次无害 Ensure（可选）
+    try {
+      await RewardService.ensureWelcomeGiftFor(uid);
+    } catch (_) {
+      // 忽略，保证 UI 不受影响
+    }
   }
 
   /// 调试：清除某个 uid 的会话标记
@@ -183,8 +195,8 @@ class WelcomeDialogService {
   /// 调试：清除“已展示”历史标记（单用户）
   static Future<void> clearShownFlag(String userId) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('welcome_gift_shown_$userId');
-    await prefs.remove('welcome_dialog_shown_$userId');
+    await prefs.remove(_shownGiftKey(userId));
+    await prefs.remove(_shownDialogKey(userId));
     if (kDebugMode) {
       // ignore: avoid_print
       print('[WelcomeDialog] cleared shown flags for user $userId');
@@ -194,9 +206,13 @@ class WelcomeDialogService {
   /// 调试：清除“已展示”历史标记（所有用户）
   static Future<void> clearAllShownFlags() async {
     final prefs = await SharedPreferences.getInstance();
-    final keys = prefs.getKeys().where((k) =>
+    final keys = prefs
+        .getKeys()
+        .where((k) =>
     k.startsWith('welcome_gift_shown_') ||
-        k.startsWith('welcome_dialog_shown_')).toList();
+        k.startsWith('welcome_dialog_shown_') ||
+        k.startsWith('new_user_welcome_pending_'))
+        .toList();
     for (final k in keys) {
       await prefs.remove(k);
     }

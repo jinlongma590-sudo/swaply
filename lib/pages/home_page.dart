@@ -1,3 +1,4 @@
+﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/pages/home_page.dart
 // ✅ 功能：基于代码二（保留 Pub/Sub 自动刷新）
 // ✅ UI：  应用代码一的“紧凑型”分类网格 UI（44.w 图标）
@@ -20,7 +21,7 @@ import 'package:swaply/listing_api.dart';
 import 'dart:async'; // ✅ 功能保留
 import 'package:swaply/services/listing_events_bus.dart'; // ✅ 功能保留
 import 'package:swaply/services/welcome_dialog_service.dart'; // ✅ [PATCH B] 顶部导入
-
+import 'package:swaply/router/safe_navigator.dart';
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
   @override
@@ -270,7 +271,7 @@ class _HomePageState extends State<HomePage>
     if (categoryId == "trending") {
       _scrollToTrending();
     } else {
-      Navigator.of(context).push(
+      SafeNavigator.push(
         MaterialPageRoute(
           builder: (_) => CategoryProductsPage(
             categoryId: categoryId,
@@ -282,7 +283,7 @@ class _HomePageState extends State<HomePage>
   }
 
   void _navigateToProductDetail(String productId) {
-    Navigator.of(context).push(
+    SafeNavigator.push(
       MaterialPageRoute(
           builder: (_) => ProductDetailPage(productId: productId)),
     );
@@ -302,7 +303,7 @@ class _HomePageState extends State<HomePage>
   void _performSearch() {
     final keyword = _searchCtrl.text.trim();
     if (keyword.isEmpty) return;
-    Navigator.of(context).push(
+    SafeNavigator.push(
       MaterialPageRoute(
         builder: (_) =>
             SearchResultsPage(keyword: keyword, location: _selectedLocation),
@@ -332,12 +333,12 @@ class _HomePageState extends State<HomePage>
         ),
       );
       if (goLogin == true && mounted) {
-        await Navigator.of(context, rootNavigator: true).pushNamed('/login');
+        await SafeNavigator.pushNamed('/login');
       }
       if (Supabase.instance.client.auth.currentUser == null) return;
     }
     if (!mounted) return;
-    final ok = await Navigator.of(context).push(
+    final ok = await SafeNavigator.push(
       MaterialPageRoute(builder: (_) => const SellFormPage()),
     );
     if (ok == true && mounted) {

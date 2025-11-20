@@ -1,3 +1,4 @@
+﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/pages/wishlist_page.dart
 import 'dart:async';
 import 'package:flutter/material.dart';

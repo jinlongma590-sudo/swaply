@@ -1,3 +1,4 @@
+﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/pages/search_results_page.dart
 import 'package:flutter/foundation.dart'; // ✅ 仅为平台判断与 kIsWeb
 import 'package:flutter/material.dart';

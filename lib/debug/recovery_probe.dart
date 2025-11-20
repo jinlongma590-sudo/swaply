@@ -1,3 +1,4 @@
+﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/debug/recovery_probe.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -7,33 +8,36 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class RecoveryProbe {
   static StreamSubscription<Uri>? _sub;
 
-  /// 判断是否为 Supabase 的认证回调，必须让 Supabase 自己处理
+  /// 统一判断：是否是 Supabase 的认证回调（必须让 supabase_flutter 自己处理）
   static bool _isSupabaseAuthCallback(Uri uri) {
-    if (uri.pathSegments.isEmpty) return false;
-
-    final first = uri.pathSegments.first;
-    final isLoginCallback = first == 'login-callback';
-
-    // 自定义 scheme：cc.swaply.app://login-callback?code=...
+    // 1) 自定义 scheme：cc.swaply.app://login-callback?code=...
+    //    注意：此时 login-callback 在 host 中，不在 path 里
     final isOurScheme = uri.scheme == 'cc.swaply.app';
+    final host = (uri.host).toLowerCase();
+    final isLoginHost = host == 'login-callback';
+    final isResetHost = host == 'reset-password'; // 有些恢复流程会走这个 host
 
-    // Android App Links / iOS Associated Domains（https 形式）
-    // 这里同时容忍 cc.swaply.app / swaply.cc / www.swaply.cc 三种 host
-    final isOurHttpsHost = uri.scheme == 'https' &&
-        (uri.host == 'cc.swaply.app' ||
-            uri.host == 'swaply.cc' ||
-            uri.host == 'www.swaply.cc');
+    final schemeAuth = isOurScheme && (isLoginHost || isResetHost);
 
-    // 一些场景会走 https://swaply.cc/auth/callback?type=...（重置密码等）
-    final isAuthCallbackHttps = isOurHttpsHost &&
-        first == 'auth' &&
-        uri.pathSegments.length >= 2 &&
-        uri.pathSegments[1] == 'callback';
+    // 2) App/Universal Links（https）
+    final isHttps = uri.scheme == 'https';
+    final isOurHttpsHost = isHttps &&
+        (uri.host == 'swaply.cc' ||
+            uri.host == 'www.swaply.cc' ||
+            uri.host == 'cc.swaply.app');
 
-    // 需要跳过的两类：
-    // 1) 自定义 scheme 的 login-callback
-    // 2) https 的 /auth/callback（交由 supabase_flutter 处理）
-    return (isLoginCallback && (isOurScheme || isOurHttpsHost)) || isAuthCallbackHttps;
+    //    - https://swaply.cc/auth/callback?...   ← supabase 官方回调
+    //    - （兜底）https://swaply.cc/login-callback?... 也视为回调，防止误拦截
+    final segments = uri.pathSegments;
+    final first = segments.isNotEmpty ? segments.first : '';
+    final second = segments.length >= 2 ? segments[1] : '';
+
+    final isAuthCallbackHttps =
+        isOurHttpsHost && first == 'auth' && second == 'callback';
+    final isLoginCallbackHttps =
+        isOurHttpsHost && first == 'login-callback';
+
+    return schemeAuth || isAuthCallbackHttps || isLoginCallbackHttps;
   }
 
   static Future<void> attach() async {
@@ -43,7 +47,8 @@ class RecoveryProbe {
     final initial = await appLinks.getInitialLink();
     if (initial != null) {
       if (_isSupabaseAuthCallback(initial)) {
-        debugPrint('[RECOVERY.PROBE] skip initial auth-callback (handled by Supabase)');
+        debugPrint(
+            '[RECOVERY.PROBE] skip initial auth-callback (handled by Supabase): $initial');
       } else {
         _handle(initial, source: 'initial');
       }
@@ -54,8 +59,9 @@ class RecoveryProbe {
     _sub = appLinks.uriLinkStream.listen(
           (uri) {
         if (_isSupabaseAuthCallback(uri)) {
-          debugPrint('[RECOVERY.PROBE] skip login/auth callback (handled by Supabase)');
-          return; // ← 关键：不要拦截 Supabase 的认证回调
+          debugPrint(
+              '[RECOVERY.PROBE] skip login/auth callback (handled by Supabase): $uri');
+          return; // ✅ 不拦截 supabase 的认证回调
         }
         _handle(uri, source: 'stream');
       },
@@ -69,7 +75,8 @@ class RecoveryProbe {
     final isRecovery = qType == 'recovery' || fragHasRecovery;
 
     debugPrint('[RECOVERY.PROBE] $source deeplink: $uri');
-    debugPrint('[RECOVERY.PROBE] query.type=$qType | fragmentHasRecovery=$fragHasRecovery');
+    debugPrint(
+        '[RECOVERY.PROBE] query.type=$qType | fragmentHasRecovery=$fragHasRecovery');
 
     // ✅ 不主动调用 SupabaseAuth.onDeepLink(uri)
     // 交由 supabase_flutter 内部处理并通过 onAuthStateChange 通知
@@ -80,7 +87,8 @@ class RecoveryProbe {
     debugPrint('[RECOVERY.PROBE] post-handoff sessionUser=${s?.user.id}');
 
     if (isRecovery) {
-      debugPrint('[RECOVERY.PROBE] >>> 识别为恢复流程 (type=recovery)，交给 onAuthStateChange 跳转重置页');
+      debugPrint(
+          '[RECOVERY.PROBE] >>> 识别为恢复流程 (type=recovery)，交给 onAuthStateChange 跳转重置页');
     }
   }
 

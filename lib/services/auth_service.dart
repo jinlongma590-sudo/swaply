@@ -1,18 +1,19 @@
 ﻿// lib/services/auth_service.dart
-// 鐧诲綍/娉ㄥ唽/OAuth 缁熶竴锛氬洖璋?URI銆佹渶灏忔潈闄愩€侀伩鍏嶄簩娆＄‘璁わ紱profile 鍒涘缓涓庢杩庡脊绐楀鎵?ProfileService
-// 2.1 鍓嶇涓嶅啀鐩存帴鍐?profiles 鐨勨€滈獙璇佺浉鍏斥€濆瓧娈碉紙email_verified / is_verified / verification_type 鐢?DB 璐熻矗锛?
-// 2.2 onEmailCodeVerified 浠呭埛鏂版湰鍦颁細璇濓紝涓嶅啓 DB
-// 2.3 UI/妯″瀷浠?auth 涓哄噯锛宲rofiles 浠呭仛鍩虹淇℃伅锛堣 verification_utils.dart锛?
+// 登录/注册/OAuth 统一：回调 URI、最小权限、防重复确认；profile 创建与欢迎弹窗交给 ProfileService
+// 2.1 前端不再直接写 profiles 的“验证相关”字段（email_verified / is_verified / verification_type 由 DB 负责）
+// 2.2 onEmailCodeVerified 仅本地会话刷新，不写 DB
+// 2.3 UI/模型以 auth 为准；profiles 做基础资料（见 verification_utils.dart）
 
 import 'dart:async';
 
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint, kDebugMode;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:swaply/services/profile_service.dart'; // 缁熶竴鍒涘缓 profile / 娆㈣繋寮圭獥
 import 'package:swaply/config/auth_config.dart';
+import 'package:swaply/services/profile_service.dart'; // 统一创建 profile / 欢迎弹窗
+import 'package:swaply/services/oauth_entry.dart';     // OAuthEntry 封装
 
-// 缁熶竴绉诲姩绔洖璋冿紙宸插湪 iOS Info.plist / Android Manifest 閰嶅ソ锛?
+// 统一移动端回调（已在 iOS Info.plist / Android Manifest 配好）
 const String _kMobileRedirect = 'cc.swaply.app://login-callback';
 
 class AuthService {
@@ -21,13 +22,15 @@ class AuthService {
   User? get currentUser => supabase.auth.currentUser;
   bool get isSignedIn => currentUser != null;
 
-  // legacy: 閭楠岃瘉鐘舵€佷氦鐢?DB 涓庢湇鍔＄鍒ゅ畾锛岃繖閲屼笉鍐嶇淮鎶ゆ湰鍦板竷灏?
+  // legacy: 邮箱验证状态交给 DB 与服务端判定，这里不再本地兜底
   bool get isEmailVerified => false;
 
-  // ====== 浼氳瘽鎵嬪姩鍒锋柊锛堜繚鎸佹帴鍙ｏ紝浣嗛粯璁や笉鐢紝浜ょ敱 Supabase 鑷姩鍒锋柊锛?======
+  // ====== 会话手动刷新（保留接口，但默认不用，由 Supabase 自动刷新）======
   DateTime? _lastRefresh;
 
-  Future<void> refreshSession({Duration minInterval = const Duration(seconds: 30)}) async {
+  Future<void> refreshSession({
+    Duration minInterval = const Duration(seconds: 30),
+  }) async {
     debugPrint('[AuthService] refreshSession() disabled. Using Supabase auto-refresh.');
     return;
   }
@@ -42,7 +45,7 @@ class AuthService {
       final user = supabase.auth.currentUser;
       if (user == null) throw const AuthException('Login failed');
 
-      // 鍒ゆ柇鏄惁鏂扮敤鎴凤紙浠?profiles 鏄惁瀛樺湪涓哄噯锛?
+      // 判断是否新用户（以 profiles 是否存在为准）
       final existing = await supabase
           .from('profiles')
           .select('id')
@@ -50,7 +53,7 @@ class AuthService {
           .maybeSingle();
       final isNew = existing == null;
 
-      // 缁熶竴浜ょ粰 ProfileService锛氫繚璇?profile 瀛樺湪 + 娆㈣繋寮圭獥
+      // 交给 ProfileService：确保 profile 存在 + 欢迎弹窗
       await ProfileService.instance.ensureProfileAndWelcome(
         userId: user.id,
         email: email.trim().toLowerCase(),
@@ -81,13 +84,13 @@ class AuthService {
         email: email.trim().toLowerCase(),
         password: password,
         data: meta.isEmpty ? null : meta,
-        emailRedirectTo: kAuthRedirectUri, // 缁熶竴鍥炶皟
+        emailRedirectTo: kAuthRedirectUri, // 统一回调
       );
 
       final user = supabase.auth.currentUser;
       if (user == null) throw const AuthException('Registration failed');
 
-      // 鏂版敞鍐岀敤鎴凤細鍒濆鍖?profile + 娆㈣繋寮圭獥锛堥獙璇佸瓧娈典粛浜ょ敱 DB锛?
+      // 新注册用户：初始化 profile + 欢迎弹窗（验证字段仍由 DB 处理）
       await ProfileService.instance.ensureProfileAndWelcome(
         userId: user.id,
         email: email.trim().toLowerCase(),
@@ -103,15 +106,12 @@ class AuthService {
     }
   }
 
-  // --- 鐩存帴浣跨敤 Supabase OAuth锛坕OS/Android/Web 缁熶竴鍥炶皟锛?---
+  // --- 直接使用 Supabase OAuth（iOS/Android/Web 统一回调）---
 
   Future<bool> signInWithGoogle() async {
     try {
-      await supabase.auth.signInWithOAuth(
+      await OAuthEntry.signIn(
         OAuthProvider.google,
-        redirectTo: kIsWeb ? 'https://swaply.cc/auth/callback' : _kMobileRedirect,
-        authScreenLaunchMode: LaunchMode.externalApplication,
-        // 鏄惧紡鎻愮ず璐﹀彿閫夋嫨锛岄伩鍏嶉潤榛橀€変腑瀵艰嚧閲嶅寰€杩?
         queryParams: const {'prompt': 'select_account'},
       );
 
@@ -140,13 +140,11 @@ class AuthService {
 
   Future<bool> signInWithFacebook() async {
     try {
-      await supabase.auth.signInWithOAuth(
+      await OAuthEntry.signIn(
         OAuthProvider.facebook,
-        redirectTo: kIsWeb ? 'https://swaply.cc/auth/callback' : _kMobileRedirect,
-        authScreenLaunchMode: LaunchMode.externalApplication,
-        // 绮剧畝鍒版渶甯哥敤鏉冮檺锛屾惌閰?display=popup锛屽噺灏戔€滀袱娆＄‘璁も€?
         scopes: 'public_profile,email',
-        queryParams: const {'display': 'popup'},
+        // ✅ 仅 Web 传 popup；移动端不传，避免“双弹”
+        queryParams: kIsWeb ? const {'display': 'popup'} : null,
       );
 
       final user = supabase.auth.currentUser;
@@ -174,7 +172,7 @@ class AuthService {
     }
   }
 
-  // 鈥斺€?鍙鐢ㄧ殑 profile 鍐欏叆宸ュ叿锛堜笉鍐欓獙璇佺浉鍏冲瓧娈碉級 鈥斺€?//
+  // —— 可复用的 profile 写入工具（不写验证相关字段） —— //
   Future<void> _createOrUpdateUserProfileForNewUser({
     required String userId,
     String? email,
@@ -186,7 +184,7 @@ class AuthService {
       final data = <String, dynamic>{
         'id': userId,
         'updated_at': DateTime.now().toIso8601String(),
-        // 鈿狅笍 涓嶅啓 email_verified / is_verified / verification_type
+        // ⚠️ 不写 email_verified / is_verified / verification_type
       };
 
       if (email?.isNotEmpty == true) {
@@ -196,13 +194,18 @@ class AuthService {
       if (phone?.isNotEmpty == true) data['phone'] = phone;
       if (avatarUrl?.isNotEmpty == true) data['avatar_url'] = avatarUrl;
 
-      await supabase.from('profiles').upsert(data, onConflict: 'id');
+      await supabase.from('profiles').upsert(
+        data,
+        onConflict: 'id',
+      );
 
       if (kDebugMode) {
         print('[AuthService] New user profile created (verification fields by DB defaults)');
       }
     } catch (e) {
-      if (kDebugMode) print('Failed to upsert user profile: $e');
+      if (kDebugMode) {
+        print('Failed to upsert user profile: $e');
+      }
     }
   }
 
@@ -214,13 +217,17 @@ class AuthService {
     String? avatarUrl,
   }) async {
     try {
-      // 浠呮鏌ユ槸鍚﹀瓨鍦?
-      await supabase.from('profiles').select('id').eq('id', userId).maybeSingle();
+      // 先检查是否存在（可省略，但保留可读性）
+      await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', userId)
+          .maybeSingle();
 
       final data = <String, dynamic>{
         'id': userId,
         'updated_at': DateTime.now().toIso8601String(),
-        // 鈿狅笍 涓嶅啓楠岃瘉瀛楁
+        // ⚠️ 不写验证字段
       };
 
       if (email?.isNotEmpty == true) {
@@ -230,31 +237,39 @@ class AuthService {
       if (phone?.isNotEmpty == true) data['phone'] = phone;
       if (avatarUrl?.isNotEmpty == true) data['avatar_url'] = avatarUrl;
 
-      await supabase.from('profiles').upsert(data, onConflict: 'id');
+      await supabase.from('profiles').upsert(
+        data,
+        onConflict: 'id',
+      );
     } catch (e) {
-      if (kDebugMode) print('Failed to upsert user profile: $e');
+      if (kDebugMode) {
+        print('Failed to upsert user profile: $e');
+      }
     }
   }
 
-  // 灞€閮ㄦ洿鏂帮紙涓嶈Е纰伴獙璇佸瓧娈碉級
+  // 局部更新（不改验证字段）
   Future<void> _upsertProfilePartial(Map<String, dynamic> patch) async {
     final u = currentUser;
     if (u == null) return;
-    await supabase.from('profiles').upsert({
-      'id': u.id,
-      'updated_at': DateTime.now().toIso8601String(),
-      ...patch,
-    }, onConflict: 'id');
+    await supabase.from('profiles').upsert(
+      {
+        'id': u.id,
+        'updated_at': DateTime.now().toIso8601String(),
+        ...patch,
+      },
+      onConflict: 'id',
+    );
   }
 
-  /// 楠岃瘉鐮侀獙璇佸悗鐨勫洖璋冿細浠呭埛鏂颁細璇濓紝鎷夊彇鏈€鏂?app_metadata锛屼笉鍐?DB
+  /// 验证码验证后的回调：仅本地会话刷新，拉取最新 app_metadata，不写 DB
   Future<void> onEmailCodeVerified() async {
     try {
       await Supabase.instance.client.auth.refreshSession();
     } catch (_) {}
   }
 
-  /// 鍚屾鏈湴 session锛圢O-OP锛氫笉鍐?profiles 鐨?email_verified锛?
+  /// 同步本地 session（NO-OP：不写 profiles 的 email_verified）
   Future<void> syncEmailVerificationStatus() async {
     try {
       await supabase.auth.refreshSession();
@@ -263,7 +278,9 @@ class AuthService {
         debugPrint('[AuthService] session refreshed');
       }
     } catch (e) {
-      if (kDebugMode) print('syncEmailVerificationStatus failed: $e');
+      if (kDebugMode) {
+        print('syncEmailVerificationStatus failed: $e');
+      }
     }
   }
 
@@ -278,7 +295,7 @@ class AuthService {
     }
   }
 
-  // 缁熶竴鍥炶皟 URI 鍙戦€侀噸缃偖浠?
+  // 统一回调 URI 的重置邮件
   Future<void> resetPassword(String email) async {
     try {
       await supabase.auth.resetPasswordForEmail(
@@ -317,7 +334,7 @@ class AuthService {
             email: email?.trim().toLowerCase(),
             data: meta.isEmpty ? null : meta,
           ),
-          emailRedirectTo: kAuthRedirectUri, // 缁熶竴鍥炶皟
+          emailRedirectTo: kAuthRedirectUri, // 统一回调
         );
       }
 
@@ -327,12 +344,14 @@ class AuthService {
           'id': user.id,
           'updated_at': DateTime.now().toIso8601String(),
         };
-        if (email != null) patch['email'] = email.trim().toLowerCase();
+        if (email != null) {
+          patch['email'] = email.trim().toLowerCase();
+        }
         if (fullName != null) patch['full_name'] = fullName;
         if (phone != null) patch['phone'] = phone;
         if (avatarUrl != null) patch['avatar_url'] = avatarUrl;
 
-        // 涓嶄慨鏀归獙璇佺姸鎬?
+        // 不修改验证状态
         await supabase.from('profiles').upsert(patch, onConflict: 'id');
       }
     } on AuthException catch (e) {
@@ -342,16 +361,27 @@ class AuthService {
     }
   }
 
-  // ====== 闃查噸澶嶇櫥鍑?======
+  // ====== 防重登出 ======
   static bool _signingOut = false;
 
-  Future<void> signOut() async {
-    if (_signingOut) return;
+  /// 默认 LOCAL 登出，避免误伤其它设备会话；
+  /// 仅在“设置→退出登录(所有设备)”等场景传 global=true。
+  Future<void> signOut({bool global = false, String reason = ''}) async {
+    if (_signingOut) {
+      debugPrint('[[SIGNOUT-TRACE]] AuthService.signOut skipped (inflight) reason=$reason');
+      return;
+    }
+
+    debugPrint('[[SIGNOUT-TRACE]] AuthService.signOut scope=${global ? 'global' : 'local'} reason=$reason');
+    debugPrint(StackTrace.current.toString()); // 打印调用栈
+
     _signingOut = true;
     try {
-      await supabase.auth.signOut(scope: SignOutScope.global);
-    } catch (e) {
-      throw Exception('Sign out failed: $e');
+      await Supabase.instance.client.auth
+          .signOut(scope: global ? SignOutScope.global : SignOutScope.local);
+    } catch (e, st) {
+      debugPrint('[[SIGNOUT-TRACE]] error: $e\n$st');
+      rethrow;
     } finally {
       _signingOut = false;
     }
@@ -361,7 +391,9 @@ class AuthService {
   Future<void> deleteAccount() async {
     try {
       final user = currentUser;
-      if (user == null) throw Exception('No user signed in');
+      if (user == null) {
+        throw Exception('No user signed in');
+      }
 
       await Future.wait<void>([
         supabase.from('profiles').delete().eq('id', user.id).then((_) {}),
@@ -372,13 +404,12 @@ class AuthService {
         supabase.from('pinned_ads').delete().eq('user_id', user.id).then((_) {}),
       ]);
 
-      await signOut();
+      await signOut(); // 默认 local
     } catch (e) {
       throw Exception('Account deletion failed: $e');
     }
   }
 
-  // 澶栭儴浣跨敤 Supabase 鐨勫師鐢熶簨浠舵祦锛堟澶勪笉鑷缓鐩戝惉锛?
+  // 对外使用 Supabase 的原生事件流（此处不自建监听）
   Stream<AuthState> get authStateChanges => supabase.auth.onAuthStateChange;
 }
-

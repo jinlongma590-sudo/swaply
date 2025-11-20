@@ -1,7 +1,7 @@
 // lib/startup_screen.dart
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:swaply/router/safe_navigator.dart';
 class StartupScreen extends StatefulWidget {
   const StartupScreen({super.key});
 
@@ -44,13 +44,13 @@ class _StartupScreenState extends State<StartupScreen>
 
       if (currentUser != null) {
         // 用户已登录，跳转到主页
-        Navigator.of(context).pushNamedAndRemoveUntil(
+        SafeNavigator.pushNamedAndRemoveUntil(
           '/home',
           (route) => false,
         );
       } else {
         // 用户未登录，跳转到欢迎页
-        Navigator.of(context).pushNamedAndRemoveUntil(
+        SafeNavigator.pushNamedAndRemoveUntil(
           '/welcome',
           (route) => false,
         );
@@ -58,7 +58,7 @@ class _StartupScreenState extends State<StartupScreen>
     } catch (e) {
       // 发生错误时，默认跳转到欢迎页
       if (mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil(
+        SafeNavigator.pushNamedAndRemoveUntil(
           '/welcome',
           (route) => false,
         );

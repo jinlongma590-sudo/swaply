@@ -1,3 +1,4 @@
+﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/auth/forgot_password_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -16,11 +17,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   bool _isLoading = false;
   bool _isEmailSent = false;
 
-  // ✅ 关键修改：将重置密码的回调地址从自定义 Scheme 切换到 Universal Link (https)
-  //    这将修复 iOS 上无法从邮件 App 唤起的问题。
-  //    (OAuth 登录可以继续使用 cc.swaply.app://login-callback，两者不冲突)
-  // ⬇️ ⬇️ ⬇️ 按照要求，已修改为 'www' 域名
-  static const String kAuthRedirectUri = 'https://www.swaply.cc/auth/callback';
+  // ✅ 关键修改：重置密码的回调地址使用自定义 Scheme（不依赖 https 域名）
+  //    收到邮件点击后会跳到：cc.swaply.app://reset-password#type=recovery
+  //    交给你的 DeepLink 处理器解析并 pushNamed('/reset-password')
+  static const String kAuthRedirectUri = 'cc.swaply.app://reset-password';
 
   @override
   void dispose() {
@@ -33,10 +33,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
     setState(() => _isLoading = true);
     try {
-      // ✅ 关键修改：使用 redirectTo 并指向 https 的 Universal Link
+      // ✅ 使用 redirectTo 指向自定义 Scheme
       await Supabase.instance.client.auth.resetPasswordForEmail(
         _emailController.text.trim(),
-        redirectTo: kAuthRedirectUri, // ← 现在指向 'https://www.swaply.cc/auth/callback'
+        redirectTo: kAuthRedirectUri,
       );
 
       if (!mounted) return;

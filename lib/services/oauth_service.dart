@@ -1,44 +1,34 @@
-// lib/services/oauth_service.dart
+﻿// lib/services/oauth_service.dart
 //
-// 缁熶竴鐨?OAuth 鐧诲綍灏佽锛圙oogle / Facebook / Apple锛?
-// - 杩斿洖绫诲瀷缁熶竴 Future<void>锛堝吋瀹规棫鐗堣繑鍥?bool銆佹柊鐗堣繑鍥?AuthResponse锛?
-// - redirectTo锛歐eb 浼?null锛涚Щ鍔ㄧ浼?swaply://login-callback锛堣 auth_config.dart锛?
-//
-// 涓嶅奖鍝?Android锛沬OS 渚濊禆 Info.plist 閲岀殑 URL Schemes 宸插氨缁€?
+// 轻量封装：三方登录统一从 OAuthEntry 走；
+// - Google：带 prompt=select_account，便于切换账号
+// - Facebook：仅 Web 传 display=popup，移动端一律不传（避免“双弹窗”）
+// - Apple：默认 scopes 走系统流程
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart' as sf;
-// kAuthRedirectUri = 'cc.swaply.app://login-callback'
+import 'package:swaply/services/oauth_entry.dart';
 
 class OAuthService {
   OAuthService._();
 
-  static sf.SupabaseClient get _sb => sf.Supabase.instance.client;
-
-  /// Google 鐧诲綍
   static Future<void> signInWithGoogle() async {
-    await _sb.auth.signInWithOAuth(
+    await OAuthEntry.signIn(
       sf.OAuthProvider.google,
-      redirectTo: (kIsWeb ? 'https://swaply.cc/auth/callback' : 'cc.swaply.app://login-callback'),
       queryParams: const {'prompt': 'select_account'},
     );
   }
 
-  /// Facebook 鐧诲綍
   static Future<void> signInWithFacebook() async {
-    await _sb.auth.signInWithOAuth(
+    await OAuthEntry.signIn(
       sf.OAuthProvider.facebook,
-      redirectTo: (kIsWeb ? 'https://swaply.cc/auth/callback' : 'cc.swaply.app://login-callback'),
+      scopes: 'public_profile,email',
+      // ✅ 仅 Web 才传 popup。移动端不传，底层也会再次净化。
+      queryParams: kIsWeb ? const {'display': 'popup'} : null,
     );
   }
 
-  /// Apple 鐧诲綍锛堜粎 iOS 鏄剧ず鎸夐挳锛?
   static Future<void> signInWithApple() async {
-    await _sb.auth.signInWithOAuth(
-      sf.OAuthProvider.apple,
-      redirectTo: (kIsWeb ? 'https://swaply.cc/auth/callback' : 'cc.swaply.app://login-callback'),
-    );
+    await OAuthEntry.signIn(sf.OAuthProvider.apple);
   }
 }
-
-

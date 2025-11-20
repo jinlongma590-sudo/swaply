@@ -1,9 +1,10 @@
+﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/services/verification_guard.dart
 import 'dart:async'; // ✅ [PATCH] 遵照要求新增
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:swaply/router/safe_navigator.dart';
 import 'package:swaply/services/email_verification_service.dart';
 import 'package:swaply/utils/verification_utils.dart' as vutils;
 import 'package:swaply/pages/verification_page.dart';
@@ -189,10 +190,16 @@ class VerificationGuard {
               ElevatedButton(
                 onPressed: () async {
                   Navigator.of(ctx).pop(false);
-                  // 跳到验证页
-                  final changed = await Navigator.of(context).push<bool>(
-                    MaterialPageRoute(builder: (_) => const VerificationPage()),
-                  );
+                  // 先关弹窗（用对话框自己的 ctx 关，保留即可）
+                  Navigator.of(ctx).pop(false);
+                  await Future.delayed(Duration.zero);
+                  final changed = await SafeNavigator.push<bool>(
+                    MaterialPageRoute(
+                      builder: (_) => const VerificationPage(),
+                      settings: const RouteSettings(name: '/verification'),
+                    ),
+                  ) ?? false; // 防空：未返回时按 false 处理
+
                   // 返回后失效缓存，便于后续放行
                   invalidateCache();
                   if (changed == true) {

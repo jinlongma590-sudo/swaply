@@ -1,19 +1,15 @@
-// lib/auth/login_screen.dart - 最终修复：Apple 登录改回 OAuth 流程（统一单入口 + 防重入 + FB 精简权限）
+﻿// lib/auth/login_screen.dart
+import 'package:swaply/services/oauth_entry.dart';
+import 'package:swaply/router/safe_navigator.dart';
 
-import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
+import 'package:flutter/foundation.dart'
+    show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
-
-// ✅ 统一使用 Supabase 官方 SDK
-import 'package:supabase_flutter/supabase_flutter.dart';
-// ✅ LaunchMode 枚举（authScreenLaunchMode 需要）
-import 'package:url_launcher/url_launcher.dart' show LaunchMode;
-
-// ✅ 统一定义 iOS 和 Android 的回调 URL（用于 Google/Facebook/Apple）
-const String _kMobileRedirect = 'cc.swaply.app://login-callback';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -31,9 +27,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _rememberMe = false;
   bool _busy = false;
 
-  // ✅ 防重入：确保任意时刻只有一次 OAuth 发起（避免“点两次确认”）
-  static bool _oauthInFlight = false;
-
   @override
   void dispose() {
     _emailController.dispose();
@@ -41,42 +34,43 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  // ✅ 统一 OAuth 入口（Google / Facebook / Apple 共用）
+  /// 统一 OAuth 入口（Google/Facebook/Apple 共用）
   Future<void> _oauthSignIn(
       OAuthProvider provider, {
         String? scopes,
         Map<String, String>? queryParams,
       }) async {
-    if (_oauthInFlight) return; // 防重复触发
-    _oauthInFlight = true;      // 调用前置位
-    setState(() => _busy = true);
+    // ✅ 双重防抖：全局 OAuth 流程进行中 或 本页正忙 都不再触发
+    if (OAuthEntry.inFlight || _busy) {
+      debugPrint(
+        '[OAuth GUARD][login] ignore duplicate: provider=$provider '
+            'busy=$_busy inFlight=${OAuthEntry.inFlight}\n${StackTrace.current}',
+      );
+      return;
+    }
 
+    debugPrint('[OAuth START][login] provider=$provider inFlight=${OAuthEntry.inFlight}');
+    setState(() => _busy = true);
     try {
-      await Supabase.instance.client.auth.signInWithOAuth(
+      await OAuthEntry.signIn(
         provider,
-        redirectTo: kIsWeb
-            ? 'https://swaply.cc/auth/callback' // Web 走 https 通用链接
-            : _kMobileRedirect,                 // App 走自定义 Scheme
-        authScreenLaunchMode: LaunchMode.externalApplication,
         scopes: scopes,
         queryParams: queryParams,
       );
-      // 说明：返回由 onAuthStateChange/回调路由处理，这里不做额外导航
+      // 回调由 Supabase onAuthStateChange/深链处理，这里无需额外跳转
     } on AuthException catch (e) {
       _showError(e.message);
     } catch (e, st) {
-      debugPrint('[OAuth] signInWithOAuth error: $e\n$st');
+      debugPrint('[OAuth ERROR][login] provider=$provider error=$e\n$st');
       _showError('Sign-in failed. Please try again.');
     } finally {
-      // 关键：一定要复位，防止下一次无法点击
-      _oauthInFlight = false;
       if (mounted) setState(() => _busy = false);
     }
   }
 
   Future<void> _loginEmailPassword() async {
     final valid = _formKey.currentState?.validate() ?? false;
-    if (!valid || _busy) return;
+    if (!valid || _busy || OAuthEntry.inFlight) return;
 
     setState(() => _busy = true);
     try {
@@ -94,17 +88,17 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleGoogleLogin() async {
-    if (_busy) return;
+    if (_busy || OAuthEntry.inFlight) return;
     await _oauthSignIn(
       OAuthProvider.google,
-      // 建议带上 prompt，便于切换账号
+      // 建议加 prompt 便于切换账号
       queryParams: const {'prompt': 'select_account'},
     );
   }
 
   Future<void> _handleFacebookLogin() async {
-    if (_busy) return;
-    // ✅ 精简 FB 权限（减少二次确认），并显式使用 popup 展示方式
+    if (_busy || OAuthEntry.inFlight) return;
+    // 精简 FB 权限，并使用 popup 显示样式
     await _oauthSignIn(
       OAuthProvider.facebook,
       scopes: 'public_profile,email',
@@ -113,8 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleAppleLogin() async {
-    if (_busy) return;
-    // ✅ Apple 走 OAuth + scopes（name email）
+    if (_busy || OAuthEntry.inFlight) return;
     await _oauthSignIn(
       OAuthProvider.apple,
       scopes: 'name email',
@@ -249,7 +242,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Flexible(
                       child: GestureDetector(
                         onTap: () {
-                          Navigator.of(context).push(
+                          SafeNavigator.push(
                             MaterialPageRoute(
                               builder: (_) => const ForgotPasswordScreen(),
                             ),
@@ -289,7 +282,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: _busy ? null : _loginEmailPassword,
+                      onTap: _busy || OAuthEntry.inFlight ? null : _loginEmailPassword,
                       borderRadius: BorderRadius.circular(12.r),
                       child: Center(
                         child: _busy
@@ -398,7 +391,7 @@ class _LoginScreenState extends State<LoginScreen> {
       width: double.infinity,
       height: 44.h,
       child: ElevatedButton.icon(
-        onPressed: _busy ? null : _handleAppleLogin,
+        onPressed: _busy || OAuthEntry.inFlight ? null : _handleAppleLogin,
         icon: const Icon(Icons.apple, color: Colors.white),
         label: const Text('Sign in with Apple', overflow: TextOverflow.ellipsis),
         style: ElevatedButton.styleFrom(
@@ -500,7 +493,7 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: _busy ? null : onPressed,
+          onTap: (_busy || OAuthEntry.inFlight) ? null : onPressed,
           borderRadius: BorderRadius.circular(10.r),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

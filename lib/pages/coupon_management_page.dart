@@ -1,3 +1,4 @@
+﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/pages/coupon_management_page.dart - iOS 头部对齐 + 顶部蓝色范围缩小 + Facebook 蓝统一 + WidgetBuilder 修正 + 防循环（30s TTL）
 import 'dart:async';
 import 'package:flutter/foundation.dart'; // kIsWeb / defaultTargetPlatform
@@ -8,7 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/coupon_service.dart';
 import 'package:swaply/models/coupon.dart';
 import 'package:swaply/pages/sell_form_page.dart';
-
+import 'package:swaply/router/safe_navigator.dart';
 class CouponManagementPage extends StatefulWidget {
   const CouponManagementPage({super.key});
   @override
@@ -1146,7 +1147,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
   // ===== 入口动作（修正为 WidgetBuilder 签名） =====
   void _onUseNow(CouponModel coupon) {
     if (coupon.canPin) {
-      Navigator.of(context).push(
+      SafeNavigator.push(
         MaterialPageRoute(
           builder: (context) => const SellFormPage(), // ✅ 正确：WidgetBuilder
           settings: RouteSettings(arguments: {'couponId': coupon.id}),
@@ -1217,7 +1218,7 @@ class _CouponManagementPageState extends State<CouponManagementPage>
             ElevatedButton.icon(
               onPressed: () {
                 Navigator.pop(context);
-                Navigator.of(context).push(
+                SafeNavigator.push(
                   MaterialPageRoute(
                     builder: (context) =>
                     const SellFormPage(), // ✅ 正确：WidgetBuilder

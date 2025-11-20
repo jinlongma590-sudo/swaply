@@ -1,8 +1,11 @@
-﻿// lib/pages/account_settings_page.dart
+﻿import 'package:swaply/router/nav_throttler.dart';
+// lib/pages/account_settings_page.dart
 import 'package:flutter/foundation.dart'; // 鉁?For platform check
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:swaply/services/auth_service.dart'; // ✅ 新增：统一走 AuthService 登出
+import 'package:swaply/router/safe_navigator.dart';
 
 class AccountSettingsPage extends StatefulWidget {
   const AccountSettingsPage({super.key});
@@ -168,12 +171,15 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
         if (!_logoutAfterDeletionOnce) {
           _logoutAfterDeletionOnce = true;
           try {
-            await client.auth.signOut(scope: SignOutScope.global); // 浠呭湪鍒犻櫎鎴愬姛鍚庤皟鐢?
+            // 统一从 AuthService 登出，并打印调用栈，便于追踪来源
+            debugPrint('[[SIGNOUT-TRACE]] account_settings_page -> direct signOut');
+            debugPrint(StackTrace.current.toString());
+            await AuthService().signOut();
           } catch (_) {/* 闈欓粯 */}
         }
 
         if (!mounted) return;
-        // 鍥炲埌鏍硅矾鐢憋紙鎴栨寜浣犻」鐩敼涓?pushNamedAndRemoveUntil('/welcome', (_) => false)锛?
+        // 鍥炲埌鏍硅矾鐢憋紙鎴栨寜浣犻」鐩敼涓?SafeNavigator.pushNamedAndRemoveUntil('/welcome', (_) => false)锛?
         Navigator.of(context).popUntil((r) => r.isFirst);
         return;
       } else {
@@ -369,7 +375,8 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                   child: ElevatedButton(
                     onPressed: _canSubmit ? _deleteAccount : null,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _canSubmit ? danger : danger.withOpacity(.5),
+                      backgroundColor:
+                      _canSubmit ? danger : danger.withOpacity(.5),
                       textStyle: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -393,4 +400,3 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     );
   }
 }
-

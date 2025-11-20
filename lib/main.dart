@@ -1,26 +1,25 @@
 ﻿// lib/main.dart
 import 'dart:async';
-import 'dart:developer' as dev; // ✅ 新增的 import
 import 'dart:io';
-import 'package:swaply/main_navigation.dart';
-import 'package:swaply/services/verification_guard.dart';
-import 'package:app_links/app_links.dart'; // ✅ 深链支持（替代 uni_links）
+
 import 'package:flutter/foundation.dart';
-import 'package:swaply/services/listing_events_bus.dart';
+import 'package:flutter/foundation.dart' show SynchronousFuture;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // ✅ 全局状态栏/系统UI控制
+import 'package:flutter/services.dart' show SystemNavigator; // ✅ 退出 App 支持
+import 'package:flutter/widgets.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:swaply/pages/profile_page.dart';
 
-// ====== 应用内的依赖 ======
+// ====== 项目内的依赖 ======
 import 'package:swaply/auth/login_screen.dart';
-import 'package:swaply/auth/reset_password_page.dart'; // ✅ 新增：密码找回完成后设置新密码页面
 import 'package:swaply/auth/welcome_screen.dart';
+import 'package:swaply/auth/reset_password_page.dart'; // ✅ Reset Password
+import 'package:swaply/models/coupon.dart';
 import 'package:swaply/models/listing_store.dart';
 import 'package:swaply/models/verification_types.dart' as vt;
 import 'package:swaply/pages/account_settings_page.dart';
@@ -33,6 +32,7 @@ import 'package:swaply/pages/product_detail_page.dart';
 import 'package:swaply/pages/sell_form_page.dart';
 import 'package:swaply/pages/task_management_page.dart';
 import 'package:swaply/pages/verification_page.dart';
+import 'package:swaply/services/auth_service.dart';
 import 'package:swaply/services/coupon_service.dart';
 import 'package:swaply/services/dual_favorites_service.dart';
 import 'package:swaply/services/email_verification_service.dart';
@@ -41,44 +41,42 @@ import 'package:swaply/services/listing_service.dart';
 import 'package:swaply/services/notification_service.dart';
 import 'package:swaply/services/profile_service.dart';
 import 'package:swaply/services/reward_service.dart';
-import 'package:swaply/services/welcome_dialog_service.dart'; // ✅ 欢迎券弹窗统一入口
+import 'package:swaply/services/deep_link_service.dart'; // ✅ DeepLinkService
+import 'package:swaply/router/root_nav.dart'; // ✅ 全局 rootNavKey
+import 'package:swaply/router/safe_navigator.dart';
 import 'package:swaply/utils/verification_utils.dart' as vutils;
-import 'package:swaply/widgets/ios_insets_guard.dart';
+import 'package:swaply/widgets/my_rewards_tile.dart';
 import 'package:swaply/widgets/verified_avatar.dart';
-import 'debug/recovery_probe.dart';
+import 'package:swaply/widgets/verification_badge.dart' as vb;
+import 'package:swaply/widgets/verification_badge_mini.dart';
+// ✅ iOS 安全区域
+import 'package:swaply/widgets/ios_insets_guard.dart';
+import 'startup_screen.dart';
 
-// ✅ 新增：版本更新提示服务
-import 'package:swaply/services/app_update_service.dart';
-
-// ✅ 新增：认证 deeplink 去重阀
-import 'package:swaply/services/auth_deeplink_guard.dart';
-
-// ========= 全局导航 & 深链 =========
-final GlobalKey<NavigatorState> appNavKey = GlobalKey<NavigatorState>();
-// ✅ 只导航一次到重置页的保护位（仍供深链使用）
-bool _navigatedToReset = false;
-// ✅ 深链订阅（全局保存，便于取消）
-StreamSubscription? _deeplinkSub;
+// ========= 全局 Auth 事件监听（只注册一次）=========
+bool _authHookWired = false;
+StreamSubscription<AuthState>? _globalAuthSub;
+// ✅ 新增：通知订阅桥是否已挂载（避免重复）
+bool _notifBridgeWired = false;
 
 class AppLocalizations {
   final Locale locale;
-
   AppLocalizations(this.locale);
+
   static AppLocalizations? of(BuildContext context) {
     return AppLocalizations(const Locale('en'));
   }
 
   static const LocalizationsDelegate<AppLocalizations> delegate =
   _AppLocalizationsDelegate();
+
   // ---------- Generic / Auth ----------
   String get appTitle => 'Swaply';
   String get loginRequired => 'Login required';
-  String loginRequiredMessage(String feature) =>
-      'Please login to use $feature.';
+  String loginRequiredMessage(String feature) => 'Please login to use $feature.';
   String get cancel => 'Cancel';
   String get login => 'Login';
   String get logout => 'Logout';
-  String get logoutConfirmation => 'Are you sure you want to logout?';
   String get createAccount => 'Create account';
   String get alreadyHaveAccount => 'Already have an account?';
   String get signUpNow => 'Sign up now';
@@ -89,6 +87,7 @@ class AppLocalizations {
   String get about => 'About';
   String get settings => 'Settings';
   String get helpSupport => 'Help & Support';
+
   // ---------- Tabs / Common ----------
   String get home => 'Home';
   String get saved => 'Saved';
@@ -97,10 +96,12 @@ class AppLocalizations {
   String get profile => 'Profile';
   String get favorites => 'Favorites';
   String get rating => 'Rating';
+
   // ---------- Home ----------
   String get whatLookingFor => 'What are you looking for?';
   String get allZimbabwe => 'All Zimbabwe';
   String get searchPlaceholder => 'Search...';
+
   // Categories
   String get trending => 'Trending';
   String get vehicles => 'Vehicles';
@@ -118,6 +119,7 @@ class AppLocalizations {
   String get seekingWork => 'Seeking Work & CVs';
   String get fashion => 'Fashion';
   String get foodDrinks => 'Food, Agriculture & Drinks';
+
   // ---------- Saved ----------
   String get myFavorites => 'My Favorites';
   String get loginToSaveFavorites =>
@@ -135,6 +137,7 @@ class AppLocalizations {
   String get savedOn => 'saved on';
   String get wishlist => 'Wishlist';
   String get noSavedSearches => 'No saved searches';
+
   // ---------- Sell ----------
   String get sellItem => 'Sell Item';
   String get loginToPost => 'Login to post your listings.';
@@ -160,20 +163,22 @@ class AppLocalizations {
   String get navigateToSavedTab => 'Navigate to Saved tab';
   String get myPurchases => 'My Purchases';
   String get postListings => 'post listings';
+
   // ---------- Notifications ----------
   String get notificationDeleted => 'Notification deleted';
   String get loginToReceiveNotifications => 'Login to receive notifications.';
   String get markAllAsRead => 'Mark all as read';
   String get clearAll => 'Clear all';
   String get noNotifications => 'No notifications';
-  String get notificationsWillAppearHere =>
-      'Your notifications will appear here.';
+  String get notificationsWillAppearHere => 'Your notifications will appear here.';
   String get receiveNotifications => 'Login to receive notifications.';
+
   // ---------- Profile ----------
   String get guestUser => 'Guest user';
   String get browseWithoutAccount => 'Browsing without an account';
   String memberSince(String m) => 'Member since $m';
   String get editProfile => 'Edit Profile';
+
   // ---------- Cities ----------
   String get harare => 'Harare';
   String get bulawayo => 'Bulawayo';
@@ -188,21 +193,25 @@ class AppLocalizations {
   String get bindura => 'Bindura';
   String get marondera => 'Marondera';
   String get redcliff => 'Redcliff';
+
   // ---------- Variants / Typos ----------
   String get saveItems => 'Save items';
-  String get saveltems => 'Save items'; // l/I 误写
+  String get saveltems => 'Save items'; // l/I 手误兼容
+
   @override
   dynamic noSuchMethod(Invocation invocation) => '';
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
+
   @override
   bool isSupported(Locale locale) => true;
+
   @override
   Future<AppLocalizations> load(Locale locale) =>
       SynchronousFuture<AppLocalizations>(AppLocalizations(const Locale('en')));
+
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
@@ -211,6 +220,7 @@ class LanguageProvider extends ChangeNotifier {
   Locale _current = const Locale('en');
   Locale get currentLocale => _current;
   bool get isEnglish => true;
+
   void changeLanguage([Locale? locale]) {
     _current = const Locale('en');
     notifyListeners();
@@ -222,158 +232,178 @@ class LanguageProvider extends ChangeNotifier {
   }
 }
 
-// ===== 兼容旧版本：占位函数（不再使用，但保留以免编译报错） =====
-@pragma('vm:prefer-inline')
-String _fixUtf8Mojibake(String? raw) => raw ?? '';
+// ========= 全局 Auth 处理（带欢迎弹窗：一次性）=========
+void wireAuthHook() {
+  if (_authHookWired) return;
+  _authHookWired = true;
 
-@pragma('vm:prefer-inline')
-void _showWelcomeGiftDialog() {
-  // 已废弃：欢迎券弹窗由新版 WelcomeCouponDialog 在页面侧触发。
-}
+  final auth = Supabase.instance.client.auth;
+  _globalAuthSub?.cancel();
+  _globalAuthSub = auth.onAuthStateChange.listen((data) async {
+    final event = data.event;
 
-Future<void> _migrateWelcomeKeys(String userId) async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.remove('new_user_welcome_pending_$userId');
-  await prefs.remove('welcome_gift_shown_$userId');
-}
-
-// ✅ 统一处理 Supabase 深链
-Future<void> _handleSupabaseUri(Uri? uri) async {
-  if (uri == null) return;
-
-  // 双保险：登录回调交给 supabase_flutter 处理，这里跳过
-  try {
-    final isSwaplyAuthCallback =
-        ((uri.scheme == 'cc.swaply.app') || (uri.host == 'cc.swaply.app')) &&
-        (uri.path == '/login-callback');
-    if (isSwaplyAuthCallback) {
-      debugPrint('[DeepLink] skip /login-callback (handled by Supabase)');
+    if (event == AuthChangeEvent.tokenRefreshed ||
+        event == AuthChangeEvent.userUpdated) {
+      debugPrint('[Auth] $event - skipping business logic');
       return;
     }
-  } catch (_) {}
 
-  // 统一解析 query + fragment
-  final params = <String, String>{};
-  try {
-    params.addAll(uri.queryParameters);
-    if (uri.fragment.isNotEmpty) {
-      try {
-        params.addAll(Uri.splitQueryString(uri.fragment));
-      } catch (_) {
-        final frag = uri.fragment.replaceAll('#', '').replaceAll('?', '&');
-        try { params.addAll(Uri.splitQueryString(frag)); } catch (_) {}
+    debugPrint('[Auth] Event: $event');
+
+    if (event == AuthChangeEvent.signedIn ||
+        event == AuthChangeEvent.initialSession) {
+      final u = auth.currentUser;
+      if (u != null) {
+        // ❌ 这里不再做 NotificationService 订阅（交给统一订阅桥）
+        // ✅ 欢迎礼一次性逻辑
+        try {
+          final res = await RewardService.ensureWelcomeForCurrentUser();
+          if (res.shouldPopup) {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('new_user_welcome_pending_${u.id}', true);
+          }
+        } catch (e) {
+          debugPrint('[Auth] ensureWelcomeForCurrentUser error: $e');
+        }
+
+        final ctx = rootNavKey.currentContext;
+        if (ctx != null) {
+          // ✅ 冷启动(initialSession)不再导航，避免二次 push；
+          // 仅在真正登录(signedIn)且当前不在 /home 时导航到首页
+          if (event == AuthChangeEvent.signedIn) {
+            final current = ModalRoute.of(ctx)?.settings.name;
+            if (current != '/home') {
+              SafeNavigator.pushNamedAndRemoveUntil('/home', (route) => false);
+            }
+          }
+        }
       }
     }
-  } catch (_) {}
 
-  final type = (params['type'] ?? params['event'] ?? '').toLowerCase();
+    if (event == AuthChangeEvent.signedOut) {
+      // ❌ 取消订阅同样交给统一订阅桥处理
+      CouponService.clearCache();
+      DualFavoritesService.clearCache();
+      RewardService.clearCache();
 
-  // 仅处理恢复；其他链接不在这里做任何认证相关动作，避免重复消费
-  if (type != 'recovery') {
-    debugPrint('[DeepLink] non-recovery link, skip manual handling: $uri');
-    return;
-  }
-
-  // 恢复流程：只做导航，不手动 exchange/setSession
-  if (!_navigatedToReset) {
-    _navigatedToReset = true;
-    appNavKey.currentState?.pushNamed('/reset-password');
-    debugPrint('[DeepLink] navigate -> /reset-password');
-  }
-}
-
-// ✅ 获取初始深链并尝试恢复会话
-Future<void> _recoverInitialSupabaseSession() async {
-  try {
-    final uri = await AppLinks().getInitialLink();
-    await _handleSupabaseUri(uri);
-    if (uri != null) {
-      debugPrint('[DeepLink] initial uri handled: $uri');
-    }
-  } catch (e) {
-    debugPrint('[DeepLink] initial recover error: $e');
-  }
-}
-
-// ✅ 资料兜底（仍作为兜底使用，登录补丁改为 ProfileService().patchProfileOnLogin 由页面监听触发）
-Future<void> _ensureProfileForCurrentUserOnce() async {
-  final client = Supabase.instance.client;
-  final u = client.auth.currentUser;
-  if (u == null) return;
-
-  try {
-    final rows =
-    await client.from('profiles').select('id').eq('id', u.id).limit(1);
-
-    final meta = u.userMetadata ?? const {};
-    final fullName = (meta['full_name'] ?? meta['name'] ?? '').toString(); // ✅ 修复此行
-    final phone = (meta['phone'] ?? '').toString();
-
-    if (rows.isEmpty) {
-      await client.from('profiles').insert({
-        'id': u.id,
-        'email': u.email,
-        if (fullName.isNotEmpty) 'full_name': fullName,
-        if (phone.isNotEmpty) 'phone': phone,
-        'created_at': DateTime.now().toUtc().toIso8601String(),
-        'updated_at': DateTime.now().toUtc().toIso8601String(),
-      });
-      debugPrint('[Profile] created profile row for ${u.id}');
-    } else {
-      final patch = <String, dynamic>{};
-      if (fullName.isNotEmpty) patch['full_name'] = fullName;
-      if (phone.isNotEmpty) patch['phone'] = phone;
-      if (patch.isNotEmpty) {
-        patch['updated_at'] = DateTime.now().toUtc().toIso8601String();
-        await client.from('profiles').update(patch).eq('id', u.id);
-        debugPrint('[Profile] patched profile for ${u.id}');
+      final ctx = rootNavKey.currentContext;
+      if (ctx != null) {
+        SafeNavigator.pushNamedAndRemoveUntil('/home', (route) => false);
       }
     }
-  } catch (e) {
-    debugPrint('[Profile] ensure/sync error: $e');
-  }
-}
-
-// ✅ 前台监听后续深链
-void _listenDeepLinksForSupabase() {
-  _deeplinkSub?.cancel();
-  final links = AppLinks();
-  _deeplinkSub = links.uriLinkStream.listen((Uri uri) async {
-    try {
-      await _handleSupabaseUri(uri);
-      debugPrint('[DeepLink] stream uri handled: $uri');
-    } catch (e) {
-      debugPrint('[DeepLink] stream recover error: $e');
-    }
-  }, onError: (e) {
-    debugPrint('[DeepLink] stream error: $e');
   });
+}
+
+// —— 简单 UTF-8 乱码修复（把“芒”“脙”等还原）——
+String _fixUtf8Mojibake(String? raw) {
+  if (raw == null || raw.isEmpty) return raw ?? '';
+  var s = raw;
+
+  if (!s.contains('冒') && !s.contains('脙') && !s.contains('芒')) return s;
+
+  const map = <String, String>{};
+
+  map.forEach((k, v) => s = s.replaceAll(k, v));
+  return s;
+}
+
+// 简单的“欢迎礼包”弹窗
+void _showWelcomeGiftDialog() {
+  final ctx = rootNavKey.currentContext;
+  if (ctx == null) return;
+
+  showDialog(
+    context: ctx,
+    barrierDismissible: true,
+    builder: (dCtx) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
+      contentPadding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 12.h),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 60.w,
+            height: 60.w,
+            decoration: BoxDecoration(
+              color: const Color(0xFF2196F3).withOpacity(0.12),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.card_giftcard,
+                size: 30.w, color: const Color(0xFF2196F3)),
+          ),
+          SizedBox(height: 12.h),
+          Text(
+            _fixUtf8Mojibake('Welcome gift 🎁'),
+            style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w700),
+          ),
+          SizedBox(height: 6.h),
+          Text(
+            _fixUtf8Mojibake(
+              'A Welcome Coupon has been added to your account.\n'
+                  'You can find it in My Coupons or My Rewards → Coupons tab.',
+            ),
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 13.sp, color: Colors.black87),
+          ),
+          SizedBox(height: 14.h),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.emoji_events_outlined),
+                  onPressed: () {
+                    Navigator.of(dCtx).pop();
+                    rootNavKey.currentState?.push(
+                      MaterialPageRoute(builder: (_) => TaskManagementPage()),
+                    );
+                  },
+                  label: Text(_fixUtf8Mojibake('My Rewards')),
+                ),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.card_giftcard),
+                  onPressed: () {
+                    Navigator.of(dCtx).pop();
+                    rootNavKey.currentState?.push(
+                      MaterialPageRoute(
+                        builder: (_) => CouponManagementPage(),
+                      ),
+                    );
+                  },
+                  label: Text(_fixUtf8Mojibake('My Coupons')),
+                ),
+              ),
+            ],
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dCtx).pop(),
+            child: Text(_fixUtf8Mojibake('Later')),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ Edge-to-Edge
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-    statusBarIconBrightness: Brightness.light,
-    statusBarBrightness: Brightness.dark,
-  ));
-
-  // 屏蔽刷新日志
+  // === 屏蔽 Supabase refresh session 噪音日志（仅开发期）===
       {
-    final orig = debugPrint;
+    final _orig = debugPrint;
     debugPrint = (String? message, {int? wrapWidth}) {
       if (message != null &&
           message.contains('supabase.auth: INFO: Refresh session')) {
-        return;
+        return; // 忽略这一条
       }
-      orig(message, wrapWidth: wrapWidth);
+      _orig(message, wrapWidth: wrapWidth);
     };
   }
+  // =====================================================
 
-  // 全局错误兜底
+  // ========= 全局错误兜底 =========
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.presentError(details);
   };
@@ -395,9 +425,13 @@ Future<void> main() async {
               children: [
                 Icon(Icons.error_outline, color: Colors.red, size: 28.w),
                 SizedBox(height: 6.h),
-                Text('Something went wrong',
-                    style:
-                    TextStyle(fontWeight: FontWeight.bold, fontSize: 14.sp)),
+                Text(
+                  'Something went wrong',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14.sp,
+                  ),
+                ),
                 SizedBox(height: 4.h),
                 Text(
                   details.exceptionAsString(),
@@ -412,81 +446,80 @@ Future<void> main() async {
     );
   };
 
-  // ✅ Supabase 初始化
+  // ✅ 启用 PKCE OAuth（移动端必须）
   await Supabase.initialize(
     url: 'https://rhckybselarzglkmlyqs.supabase.co',
     anonKey:
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJoY2t5YnNlbGFyemdsa21seXFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwMTM0NTgsImV4cCI6MjA3MDU4OTQ1OH0.3I0T2DidiF-q9l2tWeHOjB31QogXHDqRtEjDn0RfVbU',
     authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.pkce,
       autoRefreshToken: true,
     ),
-    // debug: true,
   );
 
-  // ✅ 初始深链
-  await _recoverInitialSupabaseSession();
+  // ✅ Supabase 初始化后，runApp 前挂全局 Auth 监听（保留导航/欢迎礼逻辑）
+  wireAuthHook();
 
-  // ✅ 冷/热启动：如当前已登录，先订阅通知
-  final supaClient = Supabase.instance.client;
-  final bootUser = supaClient.auth.currentUser;
-  if (bootUser != null) {
-    await NotificationService.subscribeUser(bootUser.id);
+  // === 统一的通知订阅桥（只在登录时订一次；退出时统一取消） ===
+  if (!_notifBridgeWired) {
+    _notifBridgeWired = true;
+
+    final auth = Supabase.instance.client.auth;
+    auth.onAuthStateChange.listen((data) async {
+      final event = data.event;
+      final user = auth.currentUser;
+
+      if (event == AuthChangeEvent.signedIn && user != null) {
+        await NotificationService.subscribeUser(user.id);
+      }
+
+      if (event == AuthChangeEvent.signedOut ||
+          event == AuthChangeEvent.userDeleted) {
+        await NotificationService.unsubscribe();
+      }
+    });
   }
 
-  // ✅ 启动应用
   runApp(
-    ChangeNotifierProvider<LanguageProvider>(
-      create: (context) => LanguageProvider(),
+    ChangeNotifierProvider(
+      create: (_) => LanguageProvider(),
       child: const MyApp(),
     ),
   );
-
-  // ✅ 前台深链
-  _listenDeepLinksForSupabase();
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+  const MyApp({Key? key}) : super(key: key);
+
   @override
   State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
-  // ===== Auth navigation owner (added by patch) =====
-  StreamSubscription<AuthState>? _authNavSub;
-  bool _navLocked = false;
+  bool _deepLinkStarted = false; // ✅ 防止 DeepLink 重复初始化
 
   @override
   void initState() {
     super.initState();
-    RecoveryProbe.attach(); // 仅打印日志
     WidgetsBinding.instance.addObserver(this);
-  
-// ===== Auth navigation listener (added by patch) =====
-    _authNavSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      if (!mounted || _navLocked) return;
-      final e = data.event;
-      final s = data.session;
 
-      if (e == AuthChangeEvent.signedIn && s?.user != null) {
-        _navLocked = true;
-        appNavKey.currentState?.pushNamedAndRemoveUntil('/home', (r) => false);
-        _navLocked = false;
-      } else if (e == AuthChangeEvent.signedOut) {
-        _navLocked = true;
-        appNavKey.currentState?.pushNamedAndRemoveUntil('/welcome', (r) => false);
-        _navLocked = false;
-      }
-      // 其余事件（如 passwordRecovery）不在此做导航
-    });}
+    // 首帧渲染完成后启动深链（只一次）
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _deepLinkStarted) return;
+      _deepLinkStarted = true;
+
+      // ✅ 新版 DeepLinkService：bootstrap + 100ms 后 flushQueue
+      DeepLinkService.instance.bootstrap();
+      Future.delayed(const Duration(milliseconds: 100), () {
+        DeepLinkService.instance.flushQueue();
+      });
+    });
+  }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    RecoveryProbe.dispose();
-    
-    _authNavSub?.cancel();
-super.dispose();
+    super.dispose();
   }
 
   @override
@@ -494,7 +527,7 @@ super.dispose();
     super.didChangeAppLifecycleState(state);
     switch (state) {
       case AppLifecycleState.resumed:
-        debugPrint('App resumed - clearing notifications if needed');
+        debugPrint('App resumed');
         break;
       case AppLifecycleState.paused:
         debugPrint('App paused');
@@ -513,8 +546,6 @@ super.dispose();
 
   @override
   Widget build(BuildContext context) {
-    final hasSession = Supabase.instance.client.auth.currentSession != null;
-
     return Consumer<LanguageProvider>(
       builder: (context, languageProvider, child) {
         return ScreenUtilInit(
@@ -525,7 +556,9 @@ super.dispose();
             return MaterialApp(
               title: 'Swaply',
               debugShowCheckedModeBanner: false,
-              navigatorKey: appNavKey,
+              navigatorKey: rootNavKey, // ✅ 全局路由控制
+              initialRoute: '/', // ✅ 统一走 '/'
+              onGenerateRoute: _onGenerateRoute, // ✅ 路由工厂（在文件后半部分）
               locale: languageProvider.currentLocale,
               localizationsDelegates: const [
                 AppLocalizations.delegate,
@@ -563,19 +596,6 @@ super.dispose();
                   ),
                 ),
               ),
-              initialRoute: hasSession ? '/home' : '/welcome',
-              routes: <String, WidgetBuilder>{
-                '/welcome': (BuildContext context) => const WelcomeScreen(),
-                '/login': (BuildContext context) => const LoginScreen(),
-                '/home': (BuildContext context) => MainNavigationPage(
-                  isGuest:
-                  Supabase.instance.client.auth.currentSession == null,
-                ),
-                '/coupons': (BuildContext context) =>
-                const CouponManagementPage(),
-                '/reset-password': (BuildContext context) =>
-                const ResetPasswordPage(),
-              },
             );
           },
         );
@@ -584,11 +604,11 @@ super.dispose();
   }
 }
 
-// ===================== MainNavigationPage (patched) =====================
+// ---------------- MainNavigationPage ----------------
 
 class MainNavigationPage extends StatefulWidget {
   final bool isGuest;
-  const MainNavigationPage({super.key, this.isGuest = false});
+  const MainNavigationPage({Key? key, this.isGuest = false}) : super(key: key);
   @override
   State<MainNavigationPage> createState() => _MainNavigationPageState();
 }
@@ -601,98 +621,17 @@ const double _CUSTOM_HEADER_HEIGHT = 110.0;
 class _MainNavigationPageState extends State<MainNavigationPage>
     with TickerProviderStateMixin {
   int _selectedIndex = 0;
-
-  // 🔔 未读角标 & 订阅句柄
   int _notificationCount = 0;
-  StreamSubscription<Map<String, dynamic>>? _notifSub;
-
-  // ✅ 唯一的 Auth 监听（只在这里）—— 只做登录补丁一次
-  StreamSubscription<AuthState>? _authSub;
-  bool _loginPatchedOnce = false;
-
-  // 冷启动或需要时同步未读数
-  Future<void> _syncUnread() async {
-    final n = await NotificationService.getUnreadNotificationsCount();
-    if (!mounted) return;
-    setState(() => _notificationCount = n);
-  }
-
   late AnimationController _sellButtonController;
   late Animation<double> _sellButtonAnimation;
 
-  final _homeKey = GlobalKey<NavigatorState>();
-  final _savedKey = GlobalKey<NavigatorState>();
-  final _sellKey = GlobalKey<NavigatorState>();
-  final _notifKey = GlobalKey<NavigatorState>();
-  final _profileKey = GlobalKey<NavigatorState>();
-
-  late final List<GlobalKey<NavigatorState>> _navigatorKeys = [
-    _homeKey,
-    _savedKey,
-    _sellKey,
-    _notifKey,
-    _profileKey,
-  ];
-
   static bool _welcomeGiftChecked = false;
-
-  // === 首帧优化：防重复 & 标记 ===
-  bool _didSchedulePostFrame = false; // 防止重复 post-frame 调度
-  bool _bootLightDone = false; // 关键任务完成标记
 
   @override
   void initState() {
     super.initState();
+    _loadNotificationCount();
 
-    // ✅ 只保留这一处监听：登录后补丁一次
-    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen(
-          (data) async {
-        final event = data.event;
-        if (event == AuthChangeEvent.signedIn && !_loginPatchedOnce) {
-          _loginPatchedOnce = true;
-          try {
-            await ProfileService().patchProfileOnLogin();
-          } catch (e) {
-            debugPrint('[AuthPatch] patchProfileOnLogin error: $e');
-          }
-        }
-      },
-    );
-
-    // 1) 订阅通知事件流（本地监听很轻）
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user != null) {
-      _notifSub = NotificationService.stream.listen((evt) {
-        if (!mounted) return;
-
-        // 可选：服务端广播重置信号
-        if (evt['_type'] == '__reset__') {
-          setState(() => _notificationCount = 0);
-          return;
-        }
-
-        // 只处理属于当前用户的事件
-        final recipient = (evt['recipient_id'] ?? '').toString();
-        if (recipient != user.id) return;
-
-        final isRead = evt['is_read'] == true;
-        final isDeleted = evt['is_deleted'] == true;
-
-        // UPDATE（已读/删除）→ 全量刷新；INSERT（未读）→ +1
-        if (isRead || isDeleted) {
-          _syncUnread();
-        } else {
-          setState(() {
-            _notificationCount = (_notificationCount + 1).clamp(0, 999);
-          });
-        }
-      });
-    }
-
-    // 2) 关键任务（极轻）
-    _bootLight();
-
-    // 3) UI 动画控制器
     _sellButtonController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
@@ -701,81 +640,22 @@ class _MainNavigationPageState extends State<MainNavigationPage>
       CurvedAnimation(parent: _sellButtonController, curve: Curves.easeInOut),
     );
 
-    // 4) 首帧之后的重任务
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || _didSchedulePostFrame) return;
-      _didSchedulePostFrame = true;
-
-      AppUpdateService.checkForUpdates(context);
-
-      if (!widget.isGuest) {
+    final isGuest =
+        Supabase.instance.client.auth.currentSession == null; // 当前访客态
+    if (!isGuest) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         Future.delayed(const Duration(milliseconds: 1500), () {
           if (mounted) {
             _checkAndShowWelcomeGift();
           }
         });
-      }
-
-      _safe(() async {
-        if (!widget.isGuest) {
-          await _loadNotificationCount();
-        }
       });
-
-      _bootHeavyStaggered();
-    });
-  }
-
-  Future<void> _bootLight() async {
-    try {
-      await EmailVerificationService().fetchVerificationRow();
-    } catch (_) {}
-    _bootLightDone = true;
-  }
-
-  Future<void> _bootHeavyStaggered() async {
-    if (!mounted) return;
-
-    _safe(() async {
-      final u = Supabase.instance.client.auth.currentUser;
-      if (u != null) {
-        await NotificationService.subscribeUser(u.id);
-      }
-    });
-
-    await Future.delayed(const Duration(milliseconds: 20));
-    _safe(() async {
-      if (!widget.isGuest) {
-        await _loadNotificationCount();
-      }
-    });
-
-    await Future.delayed(const Duration(milliseconds: 20));
-    _safe(() async {
-      await WelcomeDialogService.maybeShow(context);
-    });
-
-    await Future.delayed(const Duration(milliseconds: 20));
-    _safe(() async {
-      final user = Supabase.instance.client.auth.currentUser;
-      if (user != null) {
-        await CouponService.getPinningEligibleCoupons(user.id);
-      }
-    });
-  }
-
-  Future<void> _safe(Future<void> Function() f) async {
-    try {
-      await f();
-    } catch (_) {}
+    }
   }
 
   @override
   void dispose() {
     _sellButtonController.dispose();
-    _notifSub?.cancel();
-    _notifSub = null;
-    _authSub?.cancel();
     super.dispose();
   }
 
@@ -789,13 +669,6 @@ class _MainNavigationPageState extends State<MainNavigationPage>
       final prefs = await SharedPreferences.getInstance();
       final pendingKey = 'new_user_welcome_pending_${user.id}';
       final shownKey = 'welcome_gift_shown_${user.id}';
-
-      final alreadyShown = prefs.getBool(shownKey) ?? false;
-      if (alreadyShown) {
-        _welcomeGiftChecked = true;
-        await prefs.remove(pendingKey);
-        return;
-      }
 
       final pending = prefs.getBool(pendingKey) ?? false;
       if (!pending) {
@@ -813,8 +686,8 @@ class _MainNavigationPageState extends State<MainNavigationPage>
             .eq('status', 'active')
             .order('created_at', ascending: false)
             .limit(1);
-        if (rows.isNotEmpty) {
-          row = rows.first;
+        if (rows is List && rows.isNotEmpty) {
+          row = rows.first as Map<String, dynamic>;
         }
       } catch (_) {}
 
@@ -828,7 +701,9 @@ class _MainNavigationPageState extends State<MainNavigationPage>
       } else {
         _showWelcomeGiftDialog();
       }
-    } catch (_) {}
+    } catch (e) {
+      if (kDebugMode) {}
+    }
   }
 
   void _showLocalWelcomeDialog(Map<String, dynamic> couponData) {
@@ -854,7 +729,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
             ),
             SizedBox(height: 12.h),
             Text(
-              'Welcome gift 🎁',
+              _fixUtf8Mojibake('Welcome gift 🎁'),
               style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w700),
             ),
             SizedBox(height: 6.h),
@@ -876,8 +751,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                       Navigator.of(dCtx).pop();
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                            builder: (context) => const TaskManagementPage()),
+                        MaterialPageRoute(builder: (_) => TaskManagementPage()),
                       );
                     },
                     label: Text(_fixUtf8Mojibake('My Rewards')),
@@ -892,8 +766,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (context) =>
-                            const CouponManagementPage()),
+                            builder: (_) => CouponManagementPage()),
                       );
                     },
                     label: Text(_fixUtf8Mojibake('My Coupons')),
@@ -912,21 +785,78 @@ class _MainNavigationPageState extends State<MainNavigationPage>
   }
 
   Future<void> _loadNotificationCount() async {
-    if (!widget.isGuest) {
+    final isGuest =
+        Supabase.instance.client.auth.currentSession == null; // 当前访客态
+    if (!isGuest) {
       try {
-        final count =
-        await NotificationService.getUnreadNotificationsCount();
+        final count = await NotificationService.getUnreadNotificationsCount();
         if (mounted) {
           setState(() => _notificationCount = count);
         }
-      } catch (_) {}
+      } catch (e) {
+        if (kDebugMode) {}
+      }
     }
   }
 
-  void _onPopInvokedWithResult(bool didPop, Object? result) {
+  // ✅ 替换后的：物理返回键逻辑（Tab 内回退 -> 切回首页 -> 确认退出）
+  void _onPopInvokedWithResult(bool didPop, Object? result) async {
     if (didPop) return;
-    final current = _navigatorKeys[_selectedIndex].currentState!;
-    if (current.canPop()) current.pop();
+
+    // 若不在首页，先切回首页
+    if (_selectedIndex != 0) {
+      if (mounted) setState(() => _selectedIndex = 0);
+      return;
+    }
+
+    // 已在首页：Android 弹确认退出；iOS 不做强退
+    if (Platform.isAndroid) {
+      final ok = await _confirmExit(context);
+      if (ok == true) {
+        SystemNavigator.pop(); // 优雅退出到后台
+      }
+    }
+  }
+
+  // ✅ 新增：确认退出对话框
+  Future<bool> _confirmExit(BuildContext context) async {
+    return await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogCtx) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.w),
+          ),
+          title: Text(
+            'Exit Swaply?',
+            style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w700),
+          ),
+          content: Text(
+            'Press Exit to close the app.',
+            style: TextStyle(fontSize: 13.sp, height: 1.35),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogCtx).maybePop(false),
+              child: Text(
+                'Stay',
+                style: TextStyle(fontSize: 13.sp, color: Colors.grey[700]),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(dialogCtx).maybePop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _PRIMARY_BLUE,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('Exit', style: TextStyle(fontSize: 13.sp)),
+            ),
+          ],
+        );
+      },
+    ) ??
+        false;
   }
 
   void _clearNotifications() {
@@ -941,34 +871,42 @@ class _MainNavigationPageState extends State<MainNavigationPage>
         return AlertDialog(
           shape:
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
-          title: Text(l10n.loginRequired,
-              style:
-              TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600)),
-          content: Text(l10n.loginRequiredMessage(feature),
-              style: TextStyle(fontSize: 13.sp, height: 1.4)),
+          title: Text(
+            l10n.loginRequired,
+            style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
+          ),
+          content: Text(
+            l10n.loginRequiredMessage(feature),
+            style: TextStyle(fontSize: 13.sp, height: 1.4),
+          ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(l10n.cancel,
-                    style: TextStyle(
-                        fontSize: 13.sp, color: Colors.grey[600]))),
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                l10n.cancel,
+                style: TextStyle(fontSize: 13.sp, color: Colors.grey[600]),
+              ),
+            ),
             Container(
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                    colors: [Color(0xFF2196F3), Color(0xFF1E88E5)]),
+                  colors: [Color(0xFF2196F3), Color(0xFF1E88E5)],
+                ),
                 borderRadius: BorderRadius.circular(6.w),
               ),
               child: TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop();
-                  Navigator.of(context)
-                      .pushNamedAndRemoveUntil('/welcome', (route) => false);
+                  SafeNavigator.pushNamedAndRemoveUntil('/welcome', (route) => false);
                 },
-                child: Text(l10n.login,
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w600)),
+
+                child: Text(
+                  l10n.login,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
           ],
@@ -978,15 +916,12 @@ class _MainNavigationPageState extends State<MainNavigationPage>
   }
 
   Widget _buildTabNavigator(
-      GlobalKey<NavigatorState> key, Widget root, LanguageProvider languageProvider) {
-    return Navigator(
-      key: key,
-      onGenerateRoute: (_) => MaterialPageRoute(
-        builder: (_) => ChangeNotifierProvider<LanguageProvider>.value(
-          value: languageProvider,
-          child: root,
-        ),
-      ),
+      Widget root,
+      LanguageProvider languageProvider,
+      ) {
+    return ChangeNotifierProvider<LanguageProvider>.value(
+      value: languageProvider,
+      child: root,
     );
   }
 
@@ -999,120 +934,115 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     final l10n = AppLocalizations.of(context)!;
     final languageProvider = Provider.of<LanguageProvider>(context);
 
-    // ✅ 导航条实际占用：图标行 52 + 上下 padding 12 + iOS Home 指示器安全区
-    final double _navGap = 52.h + 12.h + MediaQuery.of(context).padding.bottom;
-
-    final List<Widget> pages = [
+    // ✅ 首页包一层 IosInsetsGuard
+    final List<Widget> _pages = [
       _buildTabNavigator(
-        _homeKey,
-        const IosInsetsGuard(child: _HomeRoot()),
+        IosInsetsGuard(child: const _HomeRoot()),
         languageProvider,
       ),
       _buildTabNavigator(
-        _savedKey,
         _SavedRoot(
-          isGuest: widget.isGuest,
+          isGuest:
+          Supabase.instance.client.auth.currentSession == null, // guest态
           onNavigateToHome: _navigateToHome,
         ),
         languageProvider,
       ),
       _buildTabNavigator(
-        _sellKey,
-        _SellRoot(isGuest: widget.isGuest),
+        _SellRoot(
+          isGuest: Supabase.instance.client.auth.currentSession == null,
+        ),
         languageProvider,
       ),
       _buildTabNavigator(
-        _notifKey,
         _NotifRoot(
           onClearBadge: _clearNotifications,
-          isGuest: widget.isGuest,
+          isGuest: Supabase.instance.client.auth.currentSession == null,
           onNotificationCountChanged: (count) {
-            if (mounted) setState(() => _notificationCount = count);
+            if (mounted) {
+              setState(() => _notificationCount = count);
+            }
           },
         ),
         languageProvider,
       ),
       _buildTabNavigator(
-        _profileKey,
-        _ProfileRoot(isGuest: widget.isGuest),
+        _ProfileRoot(
+          isGuest: Supabase.instance.client.auth.currentSession == null,
+        ),
         languageProvider,
       ),
     ];
-
-    final bool _isProfileTab = _selectedIndex == 4;
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: _onPopInvokedWithResult,
       child: Scaffold(
-        extendBody: !_isProfileTab,
         backgroundColor: Colors.white,
         body: IndexedStack(
           index: _selectedIndex,
-          children: pages,
+          children: _pages,
         ),
-        bottomNavigationBar: Builder(
-          builder: (ctx) {
-            final double bottomPad = MediaQuery.of(ctx).padding.bottom;
-            final bool isiOS = defaultTargetPlatform == TargetPlatform.iOS;
-            final Color barBg = isiOS ? const Color(0xFFF2F2F7) : Colors.white;
-
-            return Material(
-              color: barBg,
-              surfaceTintColor: Colors.transparent,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: barBg,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 10.h,
-                      offset: Offset(0, -2.h),
-                    ),
-                  ],
-                ),
-                padding: EdgeInsets.fromLTRB(8.w, 6.h, 8.w, 6.h + bottomPad),
-                child: SizedBox(
-                  height: 52.h,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _buildCompactNavItem(
-                        icon: Icons.home_outlined,
-                        activeIcon: Icons.home_rounded,
-                        label: l10n.home,
-                        index: 0,
-                        context: ctx,
-                      ),
-                      _buildCompactNavItem(
-                        icon: Icons.bookmark_outline_rounded,
-                        activeIcon: Icons.bookmark_rounded,
-                        label: l10n.saved,
-                        index: 1,
-                        context: ctx,
-                      ),
-                      _buildCentralSellButton(ctx),
-                      _buildCompactNavItemWithBadge(
-                        icon: Icons.notifications_outlined,
-                        activeIcon: Icons.notifications_rounded,
-                        label: l10n.notifications,
-                        index: 3,
-                        badgeCount: _notificationCount,
-                        context: ctx,
-                      ),
-                      _buildCompactNavItem(
-                        icon: Icons.person_outline_rounded,
-                        activeIcon: Icons.person_rounded,
-                        label: l10n.profile,
-                        index: 4,
-                        context: ctx,
-                      ),
-                    ],
-                  ),
-                ),
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 10.h,
+                offset: Offset(0, -2.h),
               ),
-            );
-          },
+            ],
+          ),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              8.w,
+              8.h,
+              8.w,
+              (Theme.of(context).platform == TargetPlatform.iOS &&
+                  MediaQuery.of(context).padding.bottom > 0)
+                  ? 10.0.h
+                  : 8.0.h,
+            ),
+            child: SizedBox(
+              height: 56.h,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildCompactNavItem(
+                    icon: Icons.home_outlined,
+                    activeIcon: Icons.home_rounded,
+                    label: l10n.home,
+                    index: 0,
+                    context: context,
+                  ),
+                  _buildCompactNavItem(
+                    icon: Icons.bookmark_outline_rounded,
+                    activeIcon: Icons.bookmark_rounded,
+                    label: l10n.saved,
+                    index: 1,
+                    context: context,
+                  ),
+                  _buildCentralSellButton(context),
+                  _buildCompactNavItemWithBadge(
+                    icon: Icons.notifications_outlined,
+                    activeIcon: Icons.notifications_rounded,
+                    label: l10n.notifications,
+                    index: 3,
+                    badgeCount: _notificationCount,
+                    context: context,
+                  ),
+                  _buildCompactNavItem(
+                    icon: Icons.person_outline_rounded,
+                    activeIcon: Icons.person_rounded,
+                    label: l10n.profile,
+                    index: 4,
+                    context: context,
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -1130,14 +1060,15 @@ class _MainNavigationPageState extends State<MainNavigationPage>
 
     return GestureDetector(
       onTap: () {
-        if (widget.isGuest && (index == 1)) {
+        if (Supabase.instance.client.auth.currentSession == null &&
+            (index == 1)) {
           _showLoginRequired(l10n.saveItems, context);
           return;
         }
         setState(() => _selectedIndex = index);
       },
       child: SizedBox(
-        width: 64.w,
+        width: 60.w,
         height: 52.h,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -1154,7 +1085,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                 duration: const Duration(milliseconds: 150),
                 child: Icon(
                   isSelected ? activeIcon : icon,
-                  key: ValueKey('${index}_$isSelected'),
+                  key: ValueKey('${index}_${isSelected}'),
                   color: isSelected ? _PRIMARY_BLUE : Colors.grey[600],
                   size: 22.w,
                 ),
@@ -1165,17 +1096,13 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                 style: TextStyle(
                   color: isSelected ? _PRIMARY_BLUE : Colors.grey[600],
                   fontSize: 8.5.sp,
-                  fontWeight:
-                  isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.visible,
-                    textAlign: TextAlign.center,
-                  ),
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                 ),
               ),
             ],
@@ -1198,19 +1125,17 @@ class _MainNavigationPageState extends State<MainNavigationPage>
 
     return GestureDetector(
       onTap: () {
-        if (widget.isGuest) {
+        if (Supabase.instance.client.auth.currentSession == null) {
           _showLoginRequired(l10n.receiveNotifications, context);
           return;
         }
         setState(() {
           _selectedIndex = index;
-          if (index == 3) {
-            _notificationCount = 0;
-          }
+          if (index == 3) _loadNotificationCount();
         });
       },
       child: SizedBox(
-        width: 64.w,
+        width: 60.w,
         height: 52.h,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -1230,12 +1155,13 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                     duration: const Duration(milliseconds: 150),
                     child: Icon(
                       isSelected ? activeIcon : icon,
-                      key: ValueKey('${index}_$isSelected'),
+                      key: ValueKey('${index}_${isSelected}'),
                       color: isSelected ? _PRIMARY_BLUE : Colors.grey[600],
                       size: 22.w,
                     ),
                   ),
-                  if (badgeCount > 0 && !widget.isGuest)
+                  if (badgeCount > 0 &&
+                      Supabase.instance.client.auth.currentSession != null)
                     Positioned(
                       right: -6.w,
                       top: -4.h,
@@ -1286,17 +1212,13 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                 style: TextStyle(
                   color: isSelected ? _PRIMARY_BLUE : Colors.grey[600],
                   fontSize: 8.5.sp,
-                  fontWeight:
-                  isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 ),
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.visible,
-                    textAlign: TextAlign.center,
-                  ),
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                 ),
               ),
             ],
@@ -1315,7 +1237,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
       onTapUp: (_) => _sellButtonController.reverse(),
       onTapCancel: () => _sellButtonController.reverse(),
       onTap: () {
-        if (widget.isGuest) {
+        if (Supabase.instance.client.auth.currentSession == null) {
           _showLoginRequired(l10n.postListings, context);
         } else {
           setState(() => _selectedIndex = 2);
@@ -1409,21 +1331,9 @@ class _MainNavigationPageState extends State<MainNavigationPage>
   }
 }
 
-// 其他页面根组件（_HomeRoot/_SavedRoot/_SellRoot/_NotifRoot/_ProfileRoot 等）
-// ……（若下面还有，你本地保持原样即可）
-
-// ===== 这里以下按你项目原样继续（五个根容器 _HomeRoot / _SavedRoot / _SellRoot / _NotifRoot / _ProfileRoot 等实现）=====
-// 由于你“前 1400 行”包含这些根容器的定义，保持原样贴在这里即可。
-// 我没有动任何 UI/业务逻辑，只在 MainNavigationPage 中增加首帧优化的调度。
-
-// ===================== /MainNavigationPage (patched) =====================
-
 /* ------------------------------------------------ */
 /* =========== TOP-LEVEL WIDGETS START HERE =========== */
 /* ------------------------------------------------ */
-
-// 盲驴庐氓陇陋茅鈥⒙棵寂捗λ嗏€樏ヂ徛ヂ扁€⒚ぢ好ぢ衡€犆ぢ柯︹€澛姑♀€灻?赂氓驴茠茅茠篓氓藛鈥犆ｂ偓鈥毭モ€β睹ぢ解劉茅茠篓氓藛鈥犆ぢ柯澝ε捖伱ぢ嘎嵜ヂ徦?
-/* ---------------- Tab 忙 鹿茅隆碌 ---------------- */
 
 class _HomeRoot extends StatelessWidget {
   const _HomeRoot();
@@ -1431,22 +1341,17 @@ class _HomeRoot extends StatelessWidget {
   Widget build(BuildContext context) => const swaply.HomePage();
 }
 
-// 盲驴庐忙鈥澛姑寂∶β仿幻ヅ?氓炉录猫藛陋氓鈥号久捌捗ヂ忊€毭︹€⒙?
 class _SavedRoot extends StatelessWidget {
-  // 'isGuest' 已经不再需要，但为了兼容构造函数调用，暂时保留
   final bool isGuest;
   final VoidCallback? onNavigateToHome;
-
-  const _SavedRoot({this.isGuest = false, this.onNavigateToHome, super.key});
-
+  const _SavedRoot({this.isGuest = false, this.onNavigateToHome});
   @override
-  Widget build(BuildContext context) {
-    // 这里不再传递 isGuest，因为 SavedPage 已经改为自动检测登录状态
-    return SavedPage(
-      onNavigateToHome: onNavigateToHome,
-    );
-  }
+  Widget build(BuildContext context) => SavedPage(
+    isGuest: isGuest,
+    onNavigateToHome: onNavigateToHome,
+  );
 }
+
 class _SellRoot extends StatelessWidget {
   final bool isGuest;
   const _SellRoot({this.isGuest = false});
@@ -1480,67 +1385,162 @@ class _ProfileRoot extends StatelessWidget {
   Widget build(BuildContext context) => ProfilePage(isGuest: isGuest);
 }
 
-/* ---------------- Saved Page (收藏页) START ---------------- */
-class SavedPage extends StatefulWidget {
-  final bool? isGuestOverride;
-  final VoidCallback? onNavigateToHome;
+/// ===== 路由工厂（阶段 3 新增）=====
+Route<dynamic> _onGenerateRoute(RouteSettings settings) {
+  final String name = settings.name ?? '/';
+  final bool hasSession = Supabase.instance.client.auth.currentSession != null;
 
-  const SavedPage({super.key, this.isGuestOverride, this.onNavigateToHome});
+  Widget page;
+
+  switch (name) {
+  // 统一入口：根据会话态决定落到哪
+    case '/':
+      page = hasSession
+          ? MainNavigationPage(isGuest: false)
+          : const WelcomeScreen();
+      return _fade(page, name);
+
+  // 显式首页
+    case '/home':
+      page = MainNavigationPage(isGuest: !hasSession);
+      return _fade(page, name);
+
+  // 显式欢迎/登录
+    case '/welcome':
+      page = const WelcomeScreen();
+      return _fade(page, name);
+
+    case '/login':
+      page = const LoginScreen();
+      return _fade(page, name);
+
+  // 优惠券管理
+    case '/coupons':
+      page = CouponManagementPage();
+      return _fade(page, name);
+
+  // 重置密码（你已 import 了）
+    case '/reset-password':
+      page = const ResetPasswordPage();
+      return _fade(page, name);
+
+  // ✅ 新增：Listing 详情
+    case '/listing':
+      final id = settings.arguments as String;
+      page = ProductDetailPage(productId: id);
+      return _fade(page, name);
+
+  // 兜底：任何未知路由都回首页（按当前会话态）
+    default:
+      page = MainNavigationPage(isGuest: !hasSession);
+      return _fade(page, '/home');
+  }
+}
+
+// 统一淡入转场（如你已有同名函数，可用这版覆盖）
+PageRoute _fade(Widget page, String name) {
+  return PageRouteBuilder(
+    settings: RouteSettings(name: name),
+    pageBuilder: (_, __, ___) => page,
+    transitionsBuilder: (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
+    transitionDuration: const Duration(milliseconds: 180),
+  );
+}
+/* ---------------- Saved Page (收藏页) START ---------------- */
+
+class SavedPage extends StatefulWidget {
+  final bool isGuest;
+  final VoidCallback? onNavigateToHome;
+  const SavedPage({Key? key, this.isGuest = false, this.onNavigateToHome})
+      : super(key: key);
+
   @override
   State<SavedPage> createState() => _SavedPageState();
 }
 
 class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
-  static const Color _PRIMARY_BLUE = Color(0xFF1877F2);
-
   List<Map<String, dynamic>> _favoriteItems = [];
   bool _isLoading = true;
   bool _isRefreshing = false;
   String? _errorMessage;
   Timer? _autoRefreshTimer;
   StreamSubscription<FavoriteUpdateEvent>? _favoritesSubscription;
-  StreamSubscription<AuthState>? _authSub;
 
-  bool get _isGuest =>
-      widget.isGuestOverride ??
-          (Supabase.instance.client.auth.currentUser == null);
+  // 自定义头部组件，用于统一蓝色、大标题和间距
+  Widget _buildCustomHeader(String title, {bool hasMenu = true}) {
+    return Container(
+      color: _PRIMARY_BLUE, // 统一的深蓝
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: 16.h), // 标题距安全区顶部约 16dp
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24.sp, // 统一字体大小
+                        fontWeight: FontWeight.w600, // SemiBold
+                        height: 1.2,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (hasMenu && _favoriteItems.isNotEmpty && !_isLoading)
+                    PopupMenuButton<String>(
+                      icon: Icon(Icons.more_vert_rounded,
+                          color: Colors.white, size: 16.w),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.w)),
+                      onSelected: (value) {
+                        if (value == 'clear_all') {
+                          _showClearAllDialog();
+                        }
+                      },
+                      itemBuilder: (BuildContext context) => [
+                        PopupMenuItem(
+                          value: 'clear_all',
+                          child: Row(
+                            children: [
+                              Icon(Icons.clear_all_rounded,
+                                  color: Colors.red, size: 12.w),
+                              SizedBox(width: 8.w),
+                              Text('Clear All',
+                                  style: TextStyle(fontSize: 11.sp)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+            SizedBox(height: 16.h),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    // 关键 V3：监听登录态变化
-    _authSub =
-        Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-          if (!mounted) return;
-
-          // 状态已改变，重新检查 _isGuest
-          final bool wasGuest = !_isGuest; // 这是检查 *新* 状态，所以反转
-          final bool isNowGuest = _isGuest;
-
-          setState(() {
-            // 触发 build 方法重新检查 _isGuest
-          });
-
-          if (isNowGuest) {
-            // 刚刚登出了
-            if (kDebugMode) print('[SavedPage] Auth listener detected LOGOUT');
-            _stopActivities(); // V3 核心：停止所有活动
-            setState(() {
-              _favoriteItems.clear(); // 清空数据
-              _isLoading = false;
-            });
-          } else if (wasGuest && !isNowGuest) {
-            // 刚刚登录了
-            if (kDebugMode) print('[SavedPage] Auth listener detected LOGIN');
-            _startActivities(); // V3 核心：开始活动
-          }
-        });
-
-    // 初始加载
-    if (!_isGuest) {
-      _startActivities(); // V3 核心：开始活动
+    if (!widget.isGuest) {
+      _loadFavorites();
+      // 氓聬炉氓艩篓猫鈥÷ヅ犅ニ喡访︹€撀懊ヂ∶︹€斅睹モ劉篓茂录藛忙炉聫30莽搂鈥櫭βｂ偓忙鸥楼盲赂鈧β∶尖€?
+      _startAutoRefresh();
+      // 猫庐戮莽陆庐忙鈥澛睹ㄢ€斅徝︹€郝疵︹€撀懊р€衡€樏ヂ惵?
+      _setupFavoritesListener();
     } else {
       setState(() => _isLoading = false);
     }
@@ -1549,369 +1549,65 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _stopActivities(); // V3 核心：停止所有活动
-    _authSub?.cancel();
+    _autoRefreshTimer?.cancel();
+    _favoritesSubscription?.cancel();
     super.dispose();
   }
 
-  // V3：封装所有需要启动的活动
-  void _startActivities() {
-    if (kDebugMode) print('[SavedPage] Starting activities...');
-    _loadFavorites();
-    _startAutoRefresh();
-    _setupFavoritesListener();
-  }
-
-  // V3：封装所有需要停止的活动
-  void _stopActivities() {
-    if (kDebugMode) print('[SavedPage] Stopping activities...');
-    _autoRefreshTimer?.cancel();
-    _favoritesSubscription?.cancel();
-    _autoRefreshTimer = null;
-    _favoritesSubscription = null;
-  }
-
+  // 芒艙鈥?盲驴庐氓陇聧茂录拧猫驴鈩⒚┾€∨捗ヂ衡€澝ッλ溌р€澟该モ€樎矫モ€樎ε撆该モ€号久捌捗寂捗ㄢ偓艗盲赂聧忙藴炉猫路炉莽鈥澛泵β澛∶р€郝?
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // 仅当App恢复且用户已登录时刷新
-    if (state == AppLifecycleState.resumed && !_isGuest) {
+    if (state == AppLifecycleState.resumed && !widget.isGuest) {
+      // 氓潞鈥澝р€澛┾€÷嵜︹€撀懊β库偓忙麓禄忙鈥斅睹ニ喡访︹€撀懊︹€⒙懊β嵚?
       _loadFavorites();
     }
   }
 
-  /// ✅ 自动刷新（V3：确保启动前取消旧的）
-  void _startAutoRefresh() {
-    _autoRefreshTimer?.cancel(); // 先取消旧的，避免重复
-    _autoRefreshTimer =
-        Timer.periodic(const Duration(seconds: 30), (timer) {
-          if (!_isGuest && mounted && !_isRefreshing) {
-            if (kDebugMode) print('Auto-refresh favorites…');
-            _loadFavorites();
-          }
-        });
-  }
-
-  /// ✅ 收藏监听（V3：确保启动前取消旧的）
+  /// 猫庐戮莽陆庐忙鈥澛睹ㄢ€斅徝︹€郝疵︹€撀懊р€衡€樏ヂ惵?
   void _setupFavoritesListener() {
-    _favoritesSubscription?.cancel(); // 先取消旧的
-    _favoritesSubscription =
-        FavoritesUpdateService().favoritesStream.listen((event) {
-          if (!mounted || _isGuest) return;
-          if (kDebugMode) {}
-          if (event.isAdded && event.listingData != null) {
-            _addToLocalFavorites(event.listingData!);
-          } else if (!event.isAdded) {
-            _removeFromLocalFavorites(event.listingId);
-          }
-        }, onError: (error) {
-          if (kDebugMode) print('Error in favorites stream: $error');
-        });
-  }
+    _favoritesSubscription = FavoritesUpdateService().favoritesStream.listen(
+          (event) {
+        if (!mounted || widget.isGuest) return;
 
+        if (kDebugMode) {}
 
-  // 确保你的 build 方法是这样的：
-  @override
-  Widget build(BuildContext context) {
-    AppLocalizations? l10n;
-    try {
-      l10n = AppLocalizations.of(context);
-    } catch (e) {
-      if (kDebugMode) {}
-    }
-
-    // ✅ V3：现在这个 _isGuest 判断是完全动态和可靠的
-    if (_isGuest) {
-      // ---------------------------------
-      //  访客/登出状态：显示"请登录"
-      // ---------------------------------
-      return Scaffold(
-        backgroundColor: const Color(0xFFF8F9FA),
-        body: Column(
-          children: [
-            _blueHeader(
-              context: context,
-              title: l10n?.myFavorites ?? 'My Favorites',
-              centerTitle: false,
-              trailing: null,
-            ),
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 80.w,
-                      height: 80.w,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[200],
-                        borderRadius: BorderRadius.circular(40.w),
-                      ),
-                      child: Icon(
-                        Icons.lock_outline_rounded,
-                        size: 40.w,
-                        color: Colors.grey[500],
-                      ),
-                    ),
-                    SizedBox(height: 16.h),
-                    Text(
-                      l10n?.loginRequired ?? 'Login Required',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    SizedBox(height: 6.h),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 24.w),
-                      child: Text(
-                        l10n?.loginToSaveFavorites ??
-                            'Please login to view and save your favorite items.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 11.sp,
-                          height: 1.3,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 20.h),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [_PRIMARY_BLUE, Color(0xFF1E88E5)],
-                        ),
-                        borderRadius: BorderRadius.circular(8.w),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _PRIMARY_BLUE.withOpacity(0.3),
-                            blurRadius: 8.w,
-                            offset: Offset(0, 3.h),
-                          ),
-                        ],
-                      ),
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).pushNamedAndRemoveUntil(
-                              '/welcome', (route) => false);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 16.w, vertical: 8.h),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8.w),
-                          ),
-                        ),
-                        icon: Icon(Icons.login_rounded,
-                            size: 12.w, color: Colors.white),
-                        label: Text(
-                          l10n?.loginNow ?? 'Login Now',
-                          style: TextStyle(
-                            fontSize: 11.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    // ---------------------------------
-    //  登录状态：显示收藏列表
-    // ---------------------------------
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      body: Column(
-        children: [
-          _blueHeader(
-            context: context,
-            title: 'My Favorites (${_favoriteItems.length})',
-            centerTitle: false,
-            trailing: (_favoriteItems.isNotEmpty && !_isLoading)
-                ? _buildMenuButton()
-                : null,
-          ),
-          Expanded(
-            child: _isLoading
-                ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 24.w,
-                    height: 24.w,
-                    child: CircularProgressIndicator(
-                      valueColor:
-                      const AlwaysStoppedAnimation<Color>(_PRIMARY_BLUE),
-                      strokeWidth: 2.w,
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  Text(
-                    'Loading favorites...',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 11.sp,
-                    ),
-                  ),
-                ],
-              ),
-            )
-                : _errorMessage != null
-                ? _buildErrorState()
-                : _favoriteItems.isEmpty
-                ? _buildEmptyState()
-                : RefreshIndicator(
-              onRefresh: _refreshFavorites,
-              color: _PRIMARY_BLUE,
-              backgroundColor: Colors.white,
-              strokeWidth: 2.w,
-              child: ListView.builder(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: EdgeInsets.only(top: 12.h),
-                itemCount: _favoriteItems.length,
-                itemBuilder: (context, index) {
-                  return _buildFavoriteCard(
-                      _favoriteItems[index], index);
-                },
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- 保持你所有的私有方法 ---
-  // --- (我只复制头部，你不需要动它们) ---
-  Widget _blueHeader(
-      {required BuildContext context,
-        required String title,
-        required bool centerTitle,
-        Widget? trailing}) {
-    // ... 你的实现
-    final double statusBar = MediaQuery.of(context).padding.top;
-    const double kHeaderVisual = 48.0;
-    const double kSide = 20.0;
-
-    return SizedBox(
-      height: statusBar + kHeaderVisual,
-      child: Stack(
-        children: [
-          const Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF1877F2), Color(0xFF1E88E5)],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            left: kSide,
-            right: 12.0,
-            top: statusBar + 6.0,
-            child: SizedBox(
-              height: 36.0,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      textAlign: centerTitle ? TextAlign.center : TextAlign.left,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                        height: 1.1,
-                      ),
-                    ),
-                  ),
-                  if (trailing != null) trailing,
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMenuButton() {
-    // ... 你的实现
-    final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    return PopupMenuButton<String>(
-      padding: EdgeInsets.zero,
-      offset: const Offset(0, 10),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10.w),
-      ),
-      onSelected: (value) {
-        if (value == 'clear_all') {
-          _showClearAllDialog();
+        if (event.isAdded && event.listingData != null) {
+          // 忙路禄氓艩 氓藛掳忙鈥澛睹ㄢ€斅徝寂∶€姑ヂ嵚趁β仿幻ヅ?氓藛掳忙艙卢氓艙掳氓藛鈥斆÷?
+          _addToLocalFavorites(event.listingData!);
+        } else if (!event.isAdded) {
+          // 盲禄沤忙鈥澛睹ㄢ€斅徝幻┾劉陇茂录拧莽芦鈥姑ヂ嵚趁ぢ慌矫ε撀ヅ撀懊ニ嗏€斆÷幻┾劉陇
+          _removeFromLocalFavorites(event.listingId);
         }
       },
-      itemBuilder: (BuildContext context) => [
-        PopupMenuItem(
-          value: 'clear_all',
-          child: Row(
-            children: [
-              Icon(Icons.clear_all_rounded, color: Colors.red, size: 12.w),
-              SizedBox(width: 8.w),
-              Text('Clear All', style: TextStyle(fontSize: 11.sp)),
-            ],
-          ),
-        ),
-      ],
-      child: SizedBox(
-        height: 28.w,
-        width: 28.w,
-        child: Material(
-          color: Colors.white.withOpacity(0.18),
-          shape: const StadiumBorder(),
-          clipBehavior: Clip.antiAlias,
-          child: Center(
-            child: Icon(
-              isIOS ? Icons.more_horiz_rounded : Icons.more_vert_rounded,
-              color: Colors.white,
-              size: 18.w,
-            ),
-          ),
-        ),
-      ),
+      onError: (error) {
+        if (kDebugMode) print('Error in favorites stream: $error');
+      },
     );
   }
 
+  /// 莽芦鈥姑ヂ嵚趁β仿幻ヅ?氓藛掳忙艙卢氓艙掳忙鈥澛睹ㄢ€斅徝ニ嗏€斆÷?
   void _addToLocalFavorites(Map<String, dynamic> listingData) {
-    // ... 你的实现
     try {
+      // 忙拢鈧ε嘎ッλ溌ヂ惵γヂ仿裁ヂ溍ヅ撀?
       final listingId = listingData['id']?.toString();
       if (listingId == null) return;
+
       final exists = _favoriteItems.any((item) =>
       item['listing_id']?.toString() == listingId ||
           item['listing']?['id']?.toString() == listingId);
+
       if (!exists) {
+        // 忙啪鈥灻┾偓 莽卢娄氓聬藛忙鈥澛睹ㄢ€斅徝?录氓录聫莽拧鈥灻︹€⒙懊β嵚?
         final favoriteItem = {
           'listing_id': listingId,
           'listing': _safeMapConvert(listingData),
           'created_at': DateTime.now().toIso8601String(),
         };
+
         setState(() {
-          _favoriteItems.insert(0, favoriteItem);
+          _favoriteItems.insert(0, favoriteItem); // 忙聫鈥櫭モ€βッニ喡懊ニ嗏€斆÷ヂ尖偓氓陇麓
         });
+
         if (kDebugMode) {}
       }
     } catch (e) {
@@ -1919,15 +1615,17 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
+  /// 莽芦鈥姑ヂ嵚趁ぢ慌矫ε撀ヅ撀懊︹€澛睹ㄢ€斅徝ニ嗏€斆÷幻┾劉陇
   void _removeFromLocalFavorites(String listingId) {
-    // ... 你的实现
     try {
       final initialLength = _favoriteItems.length;
+
       setState(() {
         _favoriteItems.removeWhere((item) =>
         item['listing_id']?.toString() == listingId ||
             item['listing']?['id']?.toString() == listingId);
       });
+
       if (_favoriteItems.length < initialLength) {
         if (kDebugMode) {}
       }
@@ -1936,9 +1634,21 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
+  /// 氓聬炉氓艩篓猫鈥÷ヅ犅ニ喡访︹€撀懊ヂ∶︹€斅睹モ劉篓
+  void _startAutoRefresh() {
+    _autoRefreshTimer?.cancel();
+    _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (!widget.isGuest && mounted && !_isRefreshing) {
+        if (kDebugMode) print('猫鈥÷ヅ犅ニ喡访︹€撀懊︹€澛睹ㄢ€斅徝ニ嗏€斆÷?..');
+        _loadFavorites();
+      }
+    });
+  }
+
+  /// 氓庐鈥懊モ€β♀€灻甭幻ヅ锯€姑铰β嵚⒚︹€撀姑β斥€?
   Map<String, dynamic> _safeMapConvert(dynamic input) {
-    // ... Găsește-mi-o ... 你的实现
     if (input == null) return <String, dynamic>{};
+
     if (input is Map<String, dynamic>) {
       return input;
     } else if (input is Map) {
@@ -1949,12 +1659,13 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         return <String, dynamic>{};
       }
     }
+
     return <String, dynamic>{};
   }
 
+  /// 氓庐鈥懊モ€βㄅ铰访ヂ忊€撁ヂ€斆γぢ嘎裁モ偓录
   String _safeGetString(Map<String, dynamic> map, String key,
       {String defaultValue = ''}) {
-    // ... 你的实现
     try {
       return map[key]?.toString() ?? defaultValue;
     } catch (e) {
@@ -1963,8 +1674,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
+  /// 氓艩 猫陆陆忙鈥澛睹ㄢ€斅徝ニ嗏€斆÷?- 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService
   Future<void> _loadFavorites() async {
-    // ... 你的实现
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
       setState(() {
@@ -1973,35 +1684,45 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       });
       return;
     }
+
     try {
       setState(() {
         _isLoading = true;
         _errorMessage = null;
       });
+
       if (kDebugMode) {}
+
+      // 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService 猫沤路氓聫鈥撁︹€澛睹ㄢ€斅徝ニ嗏€斆÷妓喢ぢ慌?favorites 猫隆篓茂录鈥?
       final rawItems = await DualFavoritesService.getUserFavorites(
         userId: user.id,
         limit: 100,
       );
+
       if (mounted) {
+        // 氓庐鈥懊モ€β铰β嵚⒚︹€⒙懊β嵚?
         final safeItems = <Map<String, dynamic>>[];
         for (final item in rawItems) {
           final safeItem = _safeMapConvert(item);
           if (safeItem.isNotEmpty) {
+            // 莽隆庐盲驴聺 listing 忙鈥⒙懊β嵚ぢ古该λ溌ヂ€懊モ€β铰β嵚⒚♀€?
             if (safeItem.containsKey('listing')) {
               safeItem['listing'] = _safeMapConvert(safeItem['listing']);
             }
             safeItems.add(safeItem);
           }
         }
+
         setState(() {
           _favoriteItems = safeItems;
           _isLoading = false;
         });
+
         if (kDebugMode) {}
       }
     } catch (e) {
       if (kDebugMode) {}
+
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -2011,30 +1732,36 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
+  /// 氓藛路忙鈥撀懊︹€澛睹ㄢ€斅徝ニ嗏€斆÷?
   Future<void> _refreshFavorites() async {
-    // ... 你的实现
     setState(() => _isRefreshing = true);
     await _loadFavorites();
     setState(() => _isRefreshing = false);
   }
 
+  /// 盲禄沤忙鈥澛睹ㄢ€斅徝ヂぢ姑幻┾劉陇氓鈥⑩€犆モ€溌?- 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService
   Future<void> _removeFromFavorites(String listingId, int index) async {
-    // ... 你的实现
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
+
     try {
+      // 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼莽搂禄茅鈩⒙?
       final success = await DualFavoritesService.removeFromFavorites(
         userId: user.id,
         listingId: listingId,
       );
+
       if (success && mounted) {
         setState(() {
           _favoriteItems.removeAt(index);
         });
+
+        // 氓聫鈥樏┾偓聛氓庐啪忙鈥斅睹︹€郝疵︹€撀懊┾偓拧莽鸥楼
         FavoritesUpdateService().notifyFavoriteChanged(
           listingId: listingId,
           isAdded: false,
         );
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -2047,8 +1774,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
             ),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
-            shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.w)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6.w)),
             margin: EdgeInsets.all(8.w),
           ),
         );
@@ -2057,6 +1784,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       }
     } catch (e) {
       if (kDebugMode) {}
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -2077,8 +1805,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
+  /// 猫沤路氓聫鈥撁モ€⑩€犆モ€溌伱モ€郝久р€扳€?- 氓庐鈥懊モ€βр€八喢ε撀?
   String _getListingImage(Map<String, dynamic> listing) {
-    // ... 你的实现
     try {
       final images = listing['images'] ?? listing['image_urls'];
       if (images is List && images.isNotEmpty) {
@@ -2090,16 +1818,19 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     return 'assets/images/placeholder.jpg';
   }
 
+  /// 忙 录氓录聫氓艗鈥撁ぢ宦访?录 - 氓庐鈥懊モ€βр€八喢ε撀?
   String _formatPrice(dynamic price) {
-    // ... 你的实现
     if (price == null) return 'Price not available';
+
     try {
       final priceStr = price.toString();
       if (priceStr.startsWith('\$')) return priceStr;
+
       final numPrice = double.tryParse(priceStr);
       if (numPrice != null) {
         return '\$${numPrice.toStringAsFixed(0)}';
       }
+
       return priceStr.isNotEmpty ? priceStr : 'Price not available';
     } catch (e) {
       if (kDebugMode) print('Error formatting price: $e');
@@ -2107,22 +1838,28 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
+  /// 忙啪鈥灻ヂ宦好モ€⑩€犆モ€溌伱ヂ嵚∶р€扳€?- 盲驴庐氓陇聧莽鈥八喢ε撀?
   Widget _buildFavoriteCard(Map<String, dynamic> item, int index) {
-    // ... 你的实现
     try {
+      // 氓庐鈥懊モ€β♀€灻甭幻ヅ锯€姑铰β嵚?- 莽禄鸥盲赂鈧ぢ铰棵р€澛?'listing' 茅鈥澛?
       final safeListing = _safeMapConvert(item['listing'] ?? {});
       final safeItem = _safeMapConvert(item);
+
       final listingId = _safeGetString(safeItem, 'listing_id');
       if (listingId.isEmpty) {
-        if (kDebugMode) print('Warning: Empty listing ID for item at $index');
+        if (kDebugMode)
+          print('Warning: Empty listing ID for item at index $index');
         return const SizedBox.shrink();
       }
+
       final title =
       _safeGetString(safeListing, 'title', defaultValue: 'Unknown Item');
       final price = _formatPrice(safeListing['price']);
       final city = _safeGetString(safeListing, 'city');
       final imageUrl = _getListingImage(safeListing);
       final createdAt = _safeGetString(safeItem, 'created_at');
+
+      // 忙 录氓录聫氓艗鈥撁︹€澛睹ㄢ€斅徝︹€斅睹┾€斅?
       final timeAdded = DualFavoritesService.formatSavedTime(createdAt);
 
       return Card(
@@ -2141,7 +1878,10 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                     productData: safeListing,
                   ),
                 ),
-              ).then((_) => _loadFavorites());
+              ).then((_) {
+                // 盲禄沤氓鈥⑩€犆モ€溌伱γζ掆€γ┞÷得库€澝モ€号久ヂ恻矫ニ喡访︹€撀懊ニ嗏€斆÷?
+                _loadFavorites();
+              });
             }
           },
           borderRadius: BorderRadius.circular(8.w),
@@ -2161,7 +1901,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // 图片
+                  // 氓鈥⑩€犆モ€溌伱モ€郝久р€扳€?- 莽录漏氓掳聫
                   Hero(
                     tag: 'favorite_image_$listingId',
                     child: ClipRRect(
@@ -2231,7 +1971,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                   ),
                   SizedBox(width: 8.w),
 
-                  // 文本信息
+                  // 氓鈥⑩€犆モ€溌伱ぢ柯∶β伮?- 莽录漏氓掳聫氓颅鈥斆ぢ解€溍モ€櫯捗┾€斅疵仿?
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2309,7 +2049,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                     ),
                   ),
 
-                  // 右侧按钮
+                  // 莽搂禄茅鈩⒙っε掆€懊┾€櫬?- 莽录漏氓掳聫
                   Container(
                     margin: EdgeInsets.only(left: 4.w),
                     decoration: BoxDecoration(
@@ -2319,7 +2059,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () => _showRemoveDialog(title, listingId, index),
+                        onTap: () => _showRemoveDialog(listingId, title, index),
                         borderRadius: BorderRadius.circular(6.w),
                         child: Padding(
                           padding: EdgeInsets.all(6.w),
@@ -2338,8 +2078,9 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           ),
         ),
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (kDebugMode) {}
+      // 猫驴鈥澝モ€号久┾€濃劉猫炉炉氓聧隆莽鈥扳€∶ㄢ偓艗盲赂聧忙藴炉氓麓漏忙潞茠
       return Container(
         margin: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
         padding: EdgeInsets.all(16.w),
@@ -2367,8 +2108,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  void _showRemoveDialog(String title, String listingId, int index) {
-    // ... 你的实现
+  /// 忙藴戮莽陇潞莽搂禄茅鈩⒙っ÷っヂ姑澝β♀€?
+  void _showRemoveDialog(String listingId, String title, int index) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -2432,8 +2173,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
+  /// 忙啪鈥灻ヂ宦好┞好犅睹︹偓聛 - 莽麓搂氓鈥♀€樏р€八?
   Widget _buildEmptyState() {
-    // ... 你的实现
     return Center(
       child: Padding(
         padding: EdgeInsets.all(20.w),
@@ -2506,9 +2247,11 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
               ),
               child: ElevatedButton.icon(
                 onPressed: () {
+                  // 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛モ€号久捌捗モ€÷矫︹€⒙懊ヂ济ㄋ喡ニ喡懊┞︹€撁┞÷?
                   if (widget.onNavigateToHome != null) {
                     widget.onNavigateToHome!();
                   } else {
+                    // 氓陇鈥∶р€澛︹€撀姑β∷喢寂∶ヂ悸姑モ€÷好ニ喡懊┞÷睹ヂ扁€?
                     Navigator.of(context).popUntil((route) => route.isFirst);
                   }
                 },
@@ -2539,8 +2282,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
+  /// 忙啪鈥灻ヂ宦好┾€濃劉猫炉炉莽艩露忙鈧?
   Widget _buildErrorState() {
-    // ... 你的实现
     return Center(
       child: Padding(
         padding: EdgeInsets.all(20.w),
@@ -2612,8 +2355,178 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
+  @override
+  Widget build(BuildContext context) {
+    // 氓庐鈥懊モ€βㄅ铰访ヂ忊€撁ε撀ヅ撀懊ヅ掆€撁寂捗┞伮棵モ€β嵜ぢ嘎好┞?
+    AppLocalizations? l10n;
+    try {
+      l10n = AppLocalizations.of(context);
+    } catch (e) {
+      if (kDebugMode) {}
+    }
+
+    // 猫庐驴氓庐垄莽艩露忙鈧?
+    if (widget.isGuest) {
+      // Guest View: 统一蓝色
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
+        appBar: AppBar(
+          backgroundColor: _PRIMARY_BLUE, // 统一蓝色
+          title: Text(
+            l10n?.myFavorites ?? 'My Favorites',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          elevation: 0,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80.w,
+                height: 80.w,
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(40.w),
+                ),
+                child: Icon(
+                  Icons.lock_outline_rounded,
+                  size: 40.w,
+                  color: Colors.grey[500],
+                ),
+              ),
+              SizedBox(height: 16.h),
+              Text(
+                l10n?.loginRequired ?? 'Login Required',
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                ),
+              ),
+              SizedBox(height: 6.h),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24.w),
+                child: Text(
+                  l10n?.loginToSaveFavorites ??
+                      'Please login to view and save your favorite items.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 11.sp,
+                    height: 1.3,
+                  ),
+                ),
+              ),
+              SizedBox(height: 20.h),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    // 统一蓝色
+                    colors: [_PRIMARY_BLUE, const Color(0xFF1E88E5)],
+                  ),
+                  borderRadius: BorderRadius.circular(8.w),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _PRIMARY_BLUE.withOpacity(0.3),
+                      blurRadius: 8.w,
+                      offset: Offset(0, 3.h),
+                    ),
+                  ],
+                ),
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    SafeNavigator.pushNamedAndRemoveUntil('/welcome', (route) => false);
+                  },
+
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    padding:
+                    EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.w),
+                    ),
+                  ),
+                  icon: Icon(Icons.login_rounded,
+                      size: 12.w, color: Colors.white),
+                  label: Text(
+                    l10n?.loginNow ?? 'Login Now',
+                    style: TextStyle(
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // 氓路虏莽鈩⒙幻ヂ解€⒚犅睹︹偓聛
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
+      // 头部使用自定义组件
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(_CUSTOM_HEADER_HEIGHT), // 使用统一高度
+        child: _buildCustomHeader('My Favorites (${_favoriteItems.length})'),
+      ),
+      body: _isLoading
+          ? Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 24.w,
+              height: 24.w,
+              child: CircularProgressIndicator(
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                    _PRIMARY_BLUE), // 统一蓝色
+                strokeWidth: 2.w,
+              ),
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              'Loading favorites...',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 11.sp,
+              ),
+            ),
+          ],
+        ),
+      )
+          : _errorMessage != null
+          ? _buildErrorState()
+          : _favoriteItems.isEmpty
+          ? _buildEmptyState()
+          : RefreshIndicator(
+        onRefresh: _refreshFavorites,
+        color: _PRIMARY_BLUE, // 统一蓝色
+        backgroundColor: Colors.white,
+        strokeWidth: 2.w,
+        child: ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.symmetric(vertical: 6.h),
+          itemCount: _favoriteItems.length,
+          itemBuilder: (context, index) {
+            return _buildFavoriteCard(
+                _favoriteItems[index], index);
+          },
+        ),
+      ),
+    );
+  }
+
+  /// 忙藴戮莽陇潞忙赂鈥γ┞好︹€扳偓忙舱鈥懊÷っヂ姑澝β♀€?
   void _showClearAllDialog() {
-    // ... 你的实现
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -2677,18 +2590,25 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
+  /// 忙赂鈥γ┞好︹€扳偓忙舱鈥懊︹€澛睹ㄢ€斅?- 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼忙赂鈥γ┞?
   Future<void> _clearAllFavorites() async {
-    // ... 你的实现
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
+
     try {
+      // 氓鈥λ喢ぢ柯澝ヂ溍ヂ解€溍モ€奥嵜ニ嗏€斆÷┞÷姑寂捗р€澛ぢ号矫ヂ忊€樏┾偓聛茅鈧∶嘎?
       final currentItems = List<Map<String, dynamic>>.from(_favoriteItems);
+
+      // 盲驴庐氓陇聧茂录拧盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼忙赂鈥γ┞?
       final success =
       await DualFavoritesService.clearUserFavorites(userId: user.id);
+
       if (success && mounted) {
         setState(() {
           _favoriteItems.clear();
         });
+
+        // 氓聫鈥樏┾偓聛氓庐啪忙鈥斅睹β糕€γ┞好┾偓拧莽鸥楼
         for (final item in currentItems) {
           final listingId = item['listing_id']?.toString();
           if (listingId != null) {
@@ -2698,6 +2618,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
             );
           }
         }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -2710,8 +2631,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
             ),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
-            shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.w)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6.w)),
             margin: EdgeInsets.all(8.w),
           ),
         );
@@ -2720,6 +2641,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       }
     } catch (e) {
       if (kDebugMode) {}
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -2740,10 +2662,11 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 }
-/* ---------------- Wishlist Page 收藏夹页面 - 统一服务 ---------------- */
+
+/* ---------------- Wishlist Page 氓驴茠忙鈥灺棵ヂ嶁€⒚┞÷得┞澛?- 忙鈥撀懊ヂ⑴?---------------- */
 
 class WishlistPage extends StatefulWidget {
-  const WishlistPage({super.key});
+  const WishlistPage({Key? key}) : super(key: key);
 
   @override
   State<WishlistPage> createState() => _WishlistPageState();
@@ -2761,7 +2684,7 @@ class _WishlistPageState extends State<WishlistPage> {
     _loadWishlist();
   }
 
-  /// 加载收藏夹列表
+  /// 氓艩 猫陆陆氓驴茠忙鈥灺棵ヂ嶁€⒚ニ嗏€斆÷?
   Future<void> _loadWishlist() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
@@ -2780,7 +2703,7 @@ class _WishlistPageState extends State<WishlistPage> {
 
       if (kDebugMode) {}
 
-      // 使用 DualFavoritesService 获取收藏夹（包含 wishlists 和 favorites）
+      // 盲陆驴莽鈥澛?DualFavoritesService 猫沤路氓聫鈥撁ヂ科捗︹€灺棵ヂ嶁€⒚ニ嗏€斆÷妓喢ぢ慌?wishlists 猫隆篓茂录鈥?
       final items = await DualFavoritesService.getUserWishlist(
         userId: user.id,
         limit: 100,
@@ -2806,20 +2729,20 @@ class _WishlistPageState extends State<WishlistPage> {
     }
   }
 
-  /// 刷新收藏夹
+  /// 氓藛路忙鈥撀懊ヂ科捗︹€灺棵ヂ嶁€⒚ニ嗏€斆÷?
   Future<void> _refreshWishlist() async {
     setState(() => _isRefreshing = true);
     await _loadWishlist();
     setState(() => _isRefreshing = false);
   }
 
-  /// 从收藏夹和喜爱中移除
+  /// 盲禄沤氓驴茠忙鈥灺棵ヂ嶁€⒚幻┾劉陇氓鈥⑩€犆モ€溌?
   Future<void> _removeFromWishlist(String listingId, int index) async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
     try {
-      // 使用 DualFavoritesService 移除
+      // 盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼莽搂禄茅鈩⒙?
       final success = await DualFavoritesService.removeFromFavorites(
         userId: user.id,
         listingId: listingId,
@@ -2873,7 +2796,7 @@ class _WishlistPageState extends State<WishlistPage> {
     }
   }
 
-  /// 获取列表图片
+  /// 猫沤路氓聫鈥撁モ€⑩€犆モ€溌伱モ€郝久р€扳€?
   String _getListingImage(Map<String, dynamic> listing) {
     final images = listing['images'] ?? listing['image_urls'];
     if (images is List && images.isNotEmpty) {
@@ -2882,7 +2805,7 @@ class _WishlistPageState extends State<WishlistPage> {
     return 'assets/images/placeholder.jpg';
   }
 
-  /// 格式化价格
+  /// 忙 录氓录聫氓艗鈥撁ぢ宦访?录
   String _formatPrice(dynamic price) {
     if (price == null) return 'Price not available';
 
@@ -2897,7 +2820,7 @@ class _WishlistPageState extends State<WishlistPage> {
     return priceStr;
   }
 
-  /// 构建收藏卡片
+  /// 忙啪鈥灻ヂ宦好ヂ科捗︹€灺棵ヂ嶁€⒚ヂ嵚∶р€扳€?
   Widget _buildWishlistCard(Map<String, dynamic> item, int index) {
     final listing = item['listing'] ?? {};
     final listingId =
@@ -2908,7 +2831,7 @@ class _WishlistPageState extends State<WishlistPage> {
     final imageUrl = _getListingImage(listing);
     final createdAt = item['created_at']?.toString() ?? '';
 
-    // 格式化时间
+    // 忙 录氓录聫氓艗鈥撁β仿幻ヅ?忙鈥斅睹┾€斅?
     final timeAdded = DualFavoritesService.formatSavedTime(createdAt);
 
     return Card(
@@ -2928,7 +2851,7 @@ class _WishlistPageState extends State<WishlistPage> {
                 ),
               ),
             ).then((_) {
-              // 返回时重新加载，以防用户在详情页取消了收藏
+              // 盲禄沤氓鈥⑩€犆モ€溌伱γζ掆€γ┞÷得库€澝モ€号久ヂ恻矫ニ喡访︹€撀懊ニ嗏€斆÷?
               _loadWishlist();
             });
           }
@@ -2950,7 +2873,7 @@ class _WishlistPageState extends State<WishlistPage> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 图片
+                // 氓鈥⑩€犆モ€溌伱モ€郝久р€扳€?
                 Hero(
                   tag: 'wishlist_image_$listingId',
                   child: ClipRRect(
@@ -3020,7 +2943,7 @@ class _WishlistPageState extends State<WishlistPage> {
                 ),
                 SizedBox(width: 12.w),
 
-                // 信息
+                // 氓鈥⑩€犆モ€溌伱ぢ柯∶β伮?
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -3098,7 +3021,7 @@ class _WishlistPageState extends State<WishlistPage> {
                   ),
                 ),
 
-                // 移除按钮
+                // 莽搂禄茅鈩⒙っε掆€懊┾€櫬?
                 Container(
                   margin: EdgeInsets.only(left: 6.w),
                   decoration: BoxDecoration(
@@ -3129,7 +3052,7 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  /// 弹出移除确认框
+  /// 忙藴戮莽陇潞莽搂禄茅鈩⒙っ÷っヂ姑澝β♀€?
   void _showRemoveDialog(String listingId, String title, int index) {
     showDialog(
       context: context,
@@ -3194,7 +3117,7 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  /// 构建空状态
+  /// 忙啪鈥灻ヂ宦好┞好犅睹︹偓聛
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -3295,7 +3218,7 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  /// 构建错误状态
+  /// 忙啪鈥灻ヂ宦好┾€濃劉猫炉炉莽艩露忙鈧?
   Widget _buildErrorState() {
     return Center(
       child: Padding(
@@ -3368,147 +3291,49 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  // ✅ [MODIFIED] 统一的 AppBar 构建器 (已按 verification_page.dart 标准重写)
-  PreferredSizeWidget _buildStandardAppBar(BuildContext context) {
-    final double statusBar = MediaQuery.of(context).padding.top;
-    final bool isIOS = Theme.of(context).platform == TargetPlatform.iOS;
-    const Color kBgColor = Colors.pink; // 此页面的背景色
-
-    // 动态标题
-    final String title = 'My Wishlist (${_wishlistItems.length})';
-    final titleStyle = TextStyle(
-      color: Colors.white,
-      fontSize: 16.sp, // (保持原 sp)
-      fontWeight: FontWeight.w600,
-    );
-
-    // 动态 Actions
-    final actionsWidget = (_wishlistItems.isNotEmpty && !_isLoading)
-        ? PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert_rounded,
-          color: Colors.white, size: 20.w), // (保持原 w)
-      shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10.w)),
-      onSelected: (value) {
-        if (value == 'clear_all') {
-          _showClearAllDialog();
-        }
-      },
-      itemBuilder: (BuildContext context) => [
-        PopupMenuItem(
-          value: 'clear_all',
-          child: Row(
-            children: [
-              Icon(Icons.clear_all_rounded,
-                  color: Colors.red, size: 16.w),
-              SizedBox(width: 10.w),
-              Text('Clear All', style: TextStyle(fontSize: 13.sp)),
-            ],
-          ),
-        ),
-      ],
-    )
-        : null; // iOS 侧如果为 null，SizedBox 占位
-
-    // ============== Android & 其他：保持原 AppBar 不变 ==============
-    if (!isIOS) {
-      return AppBar(
-        backgroundColor: kBgColor,
-        title: Text(title, style: titleStyle),
-        elevation: 0,
-        actions: actionsWidget != null ? [actionsWidget] : [],
-        leading: IconButton(
-          // (确保 Android 也有返回按钮)
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-      );
-    }
-
-    // ===== ✅ [MODIFIED] iOS：使用“基准页” (verification_page.dart) 的 44pt Row 布局 =====
-
-    // 1. 标准布局数值
-    const double kNavBarHeight = 44.0; // 标准导航条高度
-    const double kButtonSize = 32.0; // 标准按钮尺寸
-    const double kSidePadding = 16.0; // 标准左右内边距
-    const double kButtonSpacing = 12.0; // 标准间距
-
-    // 2. 构建 32x32 返回按钮
-    final Widget iosBackButton = SizedBox(
-      width: kButtonSize,
-      height: kButtonSize,
-      child: GestureDetector(
-        onTap: () => Navigator.pop(context),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(10), // 保持原圆角
-          ),
-          alignment: Alignment.center,
-          child: const Icon(Icons.arrow_back_ios_new, // 保持原图标
-              size: 18,
-              color: Colors.white),
-        ),
-      ),
-    );
-
-    // 3. 构建居中标题
-    final Widget iosTitle = Expanded(
-      child: Text(
-        title, // 动态标题
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.center, // 保证居中
-        style: const TextStyle(
-          // (应用标准 Style)
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
-          fontSize: 18,
-        ),
-      ),
-    );
-
-    // 4. 构建 32x32 右侧 Action
-    final Widget iosRightButton = SizedBox(
-      width: kButtonSize,
-      height: kButtonSize,
-      child: actionsWidget != null
-          ? Center(child: actionsWidget) // 居中 Action
-          : null, // 如果没有 Action，则为空
-    );
-
-    // 5. 组装
-    return PreferredSize(
-      preferredSize: Size.fromHeight(statusBar + kNavBarHeight), // ✅ 44pt + statusBar
-      child: Container(
-        color: kBgColor,
-        padding: EdgeInsets.only(top: statusBar), // 让出状态栏
-        child: SizedBox(
-          height: kNavBarHeight, // 44pt
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: kSidePadding), // 16
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center, // 垂直居中
-              children: [
-                iosBackButton, // 32x32
-                const SizedBox(width: kButtonSpacing), // 12
-                iosTitle, // Expanded
-                const SizedBox(width: kButtonSpacing), // 12
-                iosRightButton, // 32x32 (Action 或空占位)
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      // ✅ [MODIFIED] 替换 AppBar
-      appBar: _buildStandardAppBar(context),
+      appBar: AppBar(
+        backgroundColor: Colors.pink,
+        title: Text(
+          'My Wishlist (${_wishlistItems.length})',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        elevation: 0,
+        actions: [
+          if (_wishlistItems.isNotEmpty && !_isLoading)
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert_rounded,
+                  color: Colors.white, size: 20.w),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.w)),
+              onSelected: (value) {
+                if (value == 'clear_all') {
+                  _showClearAllDialog();
+                }
+              },
+              itemBuilder: (BuildContext context) => [
+                PopupMenuItem(
+                  value: 'clear_all',
+                  child: Row(
+                    children: [
+                      Icon(Icons.clear_all_rounded,
+                          color: Colors.red, size: 16.w),
+                      SizedBox(width: 10.w),
+                      Text('Clear All', style: TextStyle(fontSize: 13.sp)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
       body: _isLoading
           ? Center(
         child: Column(
@@ -3556,7 +3381,7 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  /// 弹出清空确认框
+  /// 忙藴戮莽陇潞忙赂鈥γ┞好︹€扳偓忙舱鈥懊÷っヂ姑澝β♀€?
   void _showClearAllDialog() {
     showDialog(
       context: context,
@@ -3621,13 +3446,13 @@ class _WishlistPageState extends State<WishlistPage> {
     );
   }
 
-  /// 清空收藏夹
+  /// 忙赂鈥γ┞好︹€扳偓忙舱鈥懊ヂ科捗︹€灺棵ヂ嶁€?
   Future<void> _clearAllWishlist() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
     try {
-      // 使用 DualFavoritesService 清空
+      // 盲陆驴莽鈥澛?DualFavoritesService 氓聬艗忙颅楼忙赂鈥γ┞?
       final success =
       await DualFavoritesService.clearUserFavorites(userId: user.id);
 
@@ -3680,11 +3505,12 @@ class _WishlistPageState extends State<WishlistPage> {
   }
 }
 // 莽卢卢氓鈥衡€好┢捖ニ嗏€犆寂ellPage 氓鈥÷好モ€澛┞÷?(忙聛垄氓陇聧氓庐艗忙鈥⒙疵ヅ犈该ㄆ捖? 氓鈥櫯?NotificationPage 茅鈧∶嘎ッ┞÷?(盲陆驴莽鈥澛ぢ号捗ぢ嘎р€八喢ε撀♀€濻ervice茅鈥衡€犆λ喡?
-/* ---------------- Sell Page ---------------- */
+
+/* ---------------- Sell Page 氓鈥÷好モ€澛┞÷?(莽戮沤氓艗鈥撁р€八喢ε撀? ---------------- */
 
 class SellPage extends StatefulWidget {
   final bool isGuest;
-  const SellPage({super.key, this.isGuest = false});
+  const SellPage({Key? key, this.isGuest = false}) : super(key: key);
 
   @override
   State<SellPage> createState() => _SellPageState();
@@ -3694,157 +3520,6 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-
-  // ✅ [MODIFIED] 统一蓝色头部（iOS 已按 standard 布局；Android 改为与 iOS 同构的行布局，标题与右上角按钮严格对齐，并缩短蓝色区域）
-  Widget _blueHeader({
-    required BuildContext context,
-    required String title,
-    required bool centerTitle,
-    Widget? trailing,
-    double trailingTopAdjust = 0.0, // (参数保留；Android 新布局不再需要额外上移)
-  }) {
-    final double statusBar = MediaQuery.of(context).padding.top;
-    final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    const Color kUserPrimaryBlue = Color(0xFF1877F2);
-
-    // ============== Android (NEW: 同构行布局，蓝区更短) ==============
-    if (!isIOS) {
-      const double kHeaderVisual = 44.0;   // ✅ 缩短蓝色区域
-      const double kSideTop = 2.0;         // ✅ 顶部行距
-      const double kSide = 16.0;           // ✅ 左右边距
-      const double kBtnSize = 32.0;        // ✅ 右上角按钮尺寸
-      const double kSpacing = 16.0;        // ✅ 占位与标题间距
-      const double kTitleTop = -5.0;       // ✅ 轻微上移标题，和按钮基线视觉对齐
-
-      return SizedBox(
-        height: statusBar + kHeaderVisual,
-        child: Stack(
-          children: [
-            const Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [kUserPrimaryBlue, Color(0xFF1E88E5)],
-                  ),
-                ),
-              ),
-            ),
-            // 左侧占位（保持标题真正居中）
-            Positioned(
-              top: statusBar + kSideTop,
-              left: kSide,
-              child: const SizedBox(width: kBtnSize, height: kBtnSize),
-            ),
-            // 标题（左右各预留按钮+间距，确保与右侧按钮处于同一“行”）
-            Positioned(
-              top: statusBar + kTitleTop,
-              left: kSide + kBtnSize + kSpacing,
-              right: kSide + kBtnSize + kSpacing,
-              child: Text(
-                title,
-                textAlign: centerTitle ? TextAlign.center : TextAlign.left,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            // 右上角按钮 —— 与标题同一行顶距（已对齐）
-            if (trailing != null)
-              Positioned(
-                top: statusBar + kSideTop, // ✅ 与标题“行”对齐
-                right: kSide,
-                child: SizedBox(height: kBtnSize, width: kBtnSize, child: trailing),
-              ),
-          ],
-        ),
-      );
-    }
-
-    // ============== iOS (Verification Page Standard Logic) ==============
-    const double kHeaderVisual = 38.0; // Standard
-    const double kTitleTop = -7.0;     // Standard
-    const double kSideTop = 2.0;       // Standard
-    const double kSide = 16.0;         // Standard
-    const double kBtnSize = 32.0;
-    const double kSpacing = 16.0;
-
-    return SizedBox(
-      height: statusBar + kHeaderVisual,
-      child: Stack(
-        children: [
-          const Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [kUserPrimaryBlue, Color(0xFF1E88E5)],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            top: statusBar + kSideTop,
-            left: kSide,
-            child: const SizedBox(width: kBtnSize, height: kBtnSize),
-          ),
-          Positioned(
-            top: statusBar + kTitleTop,
-            left: kSide + kBtnSize + kSpacing,
-            right: kSide + kBtnSize + kSpacing,
-            child: Text(
-              title,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 28,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          if (trailing != null)
-            Positioned(
-              top: statusBar + kSideTop,
-              right: kSide,
-              child: SizedBox(height: kBtnSize, width: kBtnSize, child: trailing),
-            ),
-        ],
-      ),
-    );
-  }
-
-  // 右上角「+」按钮（外框 28×28，更小更紧凑）
-  Widget _buildPlusButton(BuildContext context) {
-    const double box = 32.0;
-    const double icon = 19.0;
-
-    return Container(
-      width: box,
-      height: box,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.18),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: IconButton(
-        onPressed: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => const SellFormPage()),
-        ),
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
-        iconSize: icon,
-        padding: EdgeInsets.zero,
-        constraints: const BoxConstraints.tightFor(width: box, height: box),
-        splashRadius: box / 2,
-        visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-        tooltip: 'Add New Listing',
-      ),
-    );
-  }
 
   @override
   void initState() {
@@ -3878,29 +3553,19 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     final l10n = AppLocalizations.of(context)!;
 
     if (widget.isGuest) {
-      // 访客视图保持不变
       return _buildGuestView(l10n);
     }
 
     final raw = ListingStore.i.getAll();
-    final List<Map<String, dynamic>> myListings =
-    (raw is List) ? List<Map<String, dynamic>>.from(raw) : const <Map<String, dynamic>>[];
+    final List<Map<String, dynamic>> myListings = (raw is List)
+        ? List<Map<String, dynamic>>.from(raw)
+        : const <Map<String, dynamic>>[];
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       body: CustomScrollView(
-        physics: const NeverScrollableScrollPhysics(),
         slivers: [
-          // 头部：标题居中，右上角 + 与标题对齐
-          SliverToBoxAdapter(
-            child: _blueHeader(
-              context: context,
-              title: l10n.sellItem,
-              centerTitle: true,
-              trailing: _buildPlusButton(context),
-              trailingTopAdjust: -6.0, // （Android 新布局已对齐，此值不再生效，但保留参数）
-            ),
-          ),
+          _buildSliverAppBar(l10n, myListings.length),
           if (myListings.isEmpty)
             _buildEmptyState(l10n)
           else
@@ -3911,11 +3576,10 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   }
 
   Widget _buildGuestView(AppLocalizations l10n) {
-    // 访客视图保持不变
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1877F2),
+        backgroundColor: const Color(0xFF2196F3),
         title: Text(
           l10n.sellItem,
           style: TextStyle(
@@ -3990,12 +3654,12 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                     height: 56.h,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF1877F2), Color(0xFF1E88E5)],
+                        colors: [Color(0xFF2196F3), Color(0xFF1E88E5)],
                       ),
                       borderRadius: BorderRadius.circular(16.r),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF1877F2).withOpacity(0.4),
+                          color: const Color(0xFF2196F3).withOpacity(0.4),
                           blurRadius: 16.r,
                           offset: Offset(0, 8.h),
                         ),
@@ -4003,7 +3667,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                     ),
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        Navigator.of(context).pushNamedAndRemoveUntil(
+                        SafeNavigator.pushNamedAndRemoveUntil(
                             '/welcome', (route) => false);
                       },
                       style: ElevatedButton.styleFrom(
@@ -4034,171 +3698,210 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildEmptyState(AppLocalizations l10n) {
-    // ✅ 使用 Facebook 蓝
-    const Color kUserPrimaryBlue = Color(0xFF1877F2);
+  Widget _buildSliverAppBar(AppLocalizations l10n, int listingsCount) {
+    return SliverAppBar(
+      expandedHeight: 120.h,
+      floating: false,
+      pinned: true,
+      backgroundColor: const Color(0xFF2196F3),
+      flexibleSpace: FlexibleSpaceBar(
+        title: Text(
+          l10n.sellItem,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18.sp,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        background: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF2196F3),
+                Color(0xFF1E88E5),
+                Color(0xFF1976D2),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        Container(
+          margin: EdgeInsets.only(right: 16.w, top: 8.h, bottom: 8.h),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          child: IconButton(
+            onPressed: () => SafeNavigator.push(
+              MaterialPageRoute(builder: (_) => const SellFormPage()),
+            ),
+            icon: Icon(Icons.add_rounded, color: Colors.white, size: 24.r),
+            tooltip: 'Add New Listing',
+          ),
+        ),
+      ],
+    );
+  }
 
+  Widget _buildEmptyState(AppLocalizations l10n) {
     return SliverFillRemaining(
-      child: Transform.scale(
-        scale: 0.8,
-        alignment: Alignment.topCenter,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-          child: SlideTransition(
-            position: _slideAnimation,
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24.w),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 140.w,
-                        height: 140.w,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              kUserPrimaryBlue.withOpacity(0.2),
-                              kUserPrimaryBlue.withOpacity(0.1),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(70.r),
-                          border: Border.all(
-                            color: kUserPrimaryBlue.withOpacity(0.3),
-                            width: 2,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: kUserPrimaryBlue.withOpacity(0.2),
-                              blurRadius: 24.r,
-                              offset: Offset(0, 12.h),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.add_a_photo_rounded,
-                          size: 70.r,
-                          color: kUserPrimaryBlue,
-                        ),
+      child: SlideTransition(
+        position: _slideAnimation,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24.w),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 140.w,
+                    height: 140.w,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFF2196F3).withOpacity(0.2),
+                          const Color(0xFF1E88E5).withOpacity(0.1),
+                        ],
                       ),
-                      SizedBox(height: 32.h),
-                      Text(
-                        l10n.sellYourItems,
-                        style: TextStyle(
-                          fontSize: 28.sp,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.black87,
-                          letterSpacing: -0.8,
-                        ),
-                        textAlign: TextAlign.center,
+                      borderRadius: BorderRadius.circular(70.r),
+                      border: Border.all(
+                        color: const Color(0xFF2196F3).withOpacity(0.3),
+                        width: 2,
                       ),
-                      SizedBox(height: 16.h),
-                      Text(
-                        l10n.takePhotoAndSell,
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 16.sp,
-                          height: 1.6,
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF2196F3).withOpacity(0.2),
+                          blurRadius: 24.r,
+                          offset: Offset(0, 12.h),
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                      SizedBox(height: 24.h),
-                      Container(
-                        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-                        decoration: BoxDecoration(
-                          color: kUserPrimaryBlue.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(16.r),
-                          border: Border.all(
-                            color: kUserPrimaryBlue.withOpacity(0.2),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Icon(Icons.camera_alt_rounded,
-                                    color: kUserPrimaryBlue, size: 20.r),
-                                SizedBox(width: 8.w),
-                                Text('Take quality photos',
-                                    style: TextStyle(
-                                        fontSize: 14.sp,
-                                        fontWeight: FontWeight.w600)),
-                              ],
-                            ),
-                            SizedBox(height: 8.h),
-                            Row(
-                              children: [
-                                Icon(Icons.edit_rounded,
-                                    color: kUserPrimaryBlue, size: 20.r),
-                                SizedBox(width: 8.w),
-                                Text('Write detailed description',
-                                    style: TextStyle(
-                                        fontSize: 14.sp,
-                                        fontWeight: FontWeight.w600)),
-                              ],
-                            ),
-                            SizedBox(height: 8.h),
-                            Row(
-                              children: [
-                                Icon(Icons.monetization_on_rounded,
-                                    color: kUserPrimaryBlue, size: 20.r),
-                                SizedBox(width: 8.w),
-                                Text('Set competitive price',
-                                    style: TextStyle(
-                                        fontSize: 14.sp,
-                                        fontWeight: FontWeight.w600)),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 40.h),
-                      Container(
-                        width: double.infinity,
-                        height: 56.h,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [kUserPrimaryBlue, Color(0xFF1E88E5)],
-                          ),
-                          borderRadius: BorderRadius.circular(16.r),
-                          boxShadow: [
-                            BoxShadow(
-                              color: kUserPrimaryBlue.withOpacity(0.4),
-                              blurRadius: 16.r,
-                              offset: Offset(0, 8.h),
-                            ),
-                          ],
-                        ),
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.transparent,
-                            shadowColor: Colors.transparent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16.r),
-                            ),
-                          ),
-                          onPressed: () => Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const SellFormPage()),
-                          ),
-                          icon: Icon(Icons.add_rounded,
-                              color: Colors.white, size: 24.r),
-                          label: Text(
-                            l10n.postNewAd,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.add_a_photo_rounded,
+                      size: 70.r,
+                      color: const Color(0xFF2196F3),
+                    ),
                   ),
-                ),
+                  SizedBox(height: 32.h),
+                  Text(
+                    l10n.sellYourItems,
+                    style: TextStyle(
+                      fontSize: 28.sp,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black87,
+                      letterSpacing: -0.8,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 16.h),
+                  Text(
+                    l10n.takePhotoAndSell,
+                    style: TextStyle(
+                      color: Colors.grey.shade600,
+                      fontSize: 16.sp,
+                      height: 1.6,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 24.h),
+                  Container(
+                    padding:
+                    EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2196F3).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16.r),
+                      border: Border.all(
+                        color: const Color(0xFF2196F3).withOpacity(0.2),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.camera_alt_rounded,
+                                color: const Color(0xFF2196F3), size: 20.r),
+                            SizedBox(width: 8.w),
+                            Text('Take quality photos',
+                                style: TextStyle(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                        SizedBox(height: 8.h),
+                        Row(
+                          children: [
+                            Icon(Icons.edit_rounded,
+                                color: const Color(0xFF2196F3), size: 20.r),
+                            SizedBox(width: 8.w),
+                            Text('Write detailed description',
+                                style: TextStyle(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                        SizedBox(height: 8.h),
+                        Row(
+                          children: [
+                            Icon(Icons.monetization_on_rounded,
+                                color: const Color(0xFF2196F3), size: 20.r),
+                            SizedBox(width: 8.w),
+                            Text('Set competitive price',
+                                style: TextStyle(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 40.h),
+                  Container(
+                    width: double.infinity,
+                    height: 56.h,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF2196F3), Color(0xFF1E88E5)],
+                      ),
+                      borderRadius: BorderRadius.circular(16.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF2196F3).withOpacity(0.4),
+                          blurRadius: 16.r,
+                          offset: Offset(0, 8.h),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16.r),
+                        ),
+                      ),
+                      onPressed: () => SafeNavigator.push(
+                        MaterialPageRoute(builder: (_) => const SellFormPage()),
+                      ),
+                      icon: Icon(Icons.add_rounded,
+                          color: Colors.white, size: 24.r),
+                      label: Text(
+                        l10n.postNewAd,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -4209,8 +3912,6 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
 
   Widget _buildListingsContent(
       List<Map<String, dynamic>> myListings, AppLocalizations l10n) {
-    const Color kUserPrimaryBlue = Color(0xFF1877F2);
-
     return SliverList(
       delegate: SliverChildBuilderDelegate(
             (context, index) {
@@ -4239,19 +3940,22 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
 
   Widget _buildStatsHeader(
       List<Map<String, dynamic>> myListings, AppLocalizations l10n) {
-    const Color kUserPrimaryBlue = Color(0xFF1877F2);
-
-    final totalViews = myListings.fold<int>(0, (sum, item) => sum + 234); // Mock
-    final totalLikes = myListings.fold<int>(0, (sum, item) => sum + 12);  // Mock
+    final totalViews =
+    myListings.fold<int>(0, (sum, item) => sum + 234); // Mock data
+    final totalLikes =
+    myListings.fold<int>(0, (sum, item) => sum + 12); // Mock data
 
     return Container(
       margin: EdgeInsets.all(16.w),
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Colors.white, Color(0xFFF8F9FA)],
+          colors: [
+            Colors.white,
+            const Color(0xFFF8F9FA),
+          ],
         ),
         borderRadius: BorderRadius.circular(20.r),
         boxShadow: [
@@ -4272,7 +3976,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    l10n.myListings,
+                    '${l10n.myListings}',
                     style: TextStyle(
                       fontSize: 20.sp,
                       fontWeight: FontWeight.w700,
@@ -4293,25 +3997,25 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                 padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
-                    colors: [kUserPrimaryBlue, Color(0xFF1E88E5)],
+                    colors: [Color(0xFF2196F3), Color(0xFF1E88E5)],
                   ),
                   borderRadius: BorderRadius.circular(12.r),
                   boxShadow: [
                     BoxShadow(
-                      color: kUserPrimaryBlue.withOpacity(0.3),
+                      color: const Color(0xFF2196F3).withOpacity(0.3),
                       blurRadius: 8.r,
                       offset: Offset(0, 4.h),
                     ),
                   ],
                 ),
                 child: GestureDetector(
-                  onTap: () => Navigator.of(context).push(
+                  onTap: () => SafeNavigator.push(
                     MaterialPageRoute(builder: (_) => const SellFormPage()),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.add_rounded, size: 12.r, color: Colors.white),
+                      Icon(Icons.add_rounded, size: 18.r, color: Colors.white),
                       SizedBox(width: 6.w),
                       Text(
                         l10n.newAd,
@@ -4331,31 +4035,25 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
           Row(
             children: [
               Expanded(
-                child: _buildStatCard(
-                  Icons.visibility_rounded,
-                  totalViews.toString(),
-                  'Total Views',
-                  kUserPrimaryBlue,
-                ),
-              ),
+                  child: _buildStatCard(
+                      Icons.visibility_rounded,
+                      totalViews.toString(),
+                      'Total Views',
+                      const Color(0xFF2196F3))),
               SizedBox(width: 12.w),
               Expanded(
-                child: _buildStatCard(
-                  Icons.favorite_rounded,
-                  totalLikes.toString(),
-                  'Total Likes',
-                  Colors.red.shade400,
-                ),
-              ),
+                  child: _buildStatCard(
+                      Icons.favorite_rounded,
+                      totalLikes.toString(),
+                      'Total Likes',
+                      Colors.red.shade400)),
               SizedBox(width: 12.w),
               Expanded(
-                child: _buildStatCard(
-                  Icons.trending_up_rounded,
-                  '${(totalViews * 0.15).toInt()}',
-                  'Engagement',
-                  Colors.green.shade400,
-                ),
-              ),
+                  child: _buildStatCard(
+                      Icons.trending_up_rounded,
+                      '${(totalViews * 0.15).toInt()}',
+                      'Engagement',
+                      Colors.green.shade400)),
             ],
           ),
         ],
@@ -4363,7 +4061,8 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildStatCard(IconData icon, String value, String label, Color color) {
+  Widget _buildStatCard(
+      IconData icon, String value, String label, Color color) {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
@@ -4399,8 +4098,6 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   }
 
   Widget _buildListingCard(Map<String, dynamic> item, AppLocalizations l10n) {
-    const Color kUserPrimaryBlue = Color(0xFF1877F2);
-
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
       decoration: BoxDecoration(
@@ -4432,7 +4129,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
             padding: EdgeInsets.all(16.w),
             child: Row(
               children: [
-                // 缩略图
+                // 氓鈥⑩€犆モ€溌伱モ€郝久р€扳€?
                 Hero(
                   tag: 'listing_${item['id']}',
                   child: Container(
@@ -4450,11 +4147,12 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                           ? Image.asset(
                         item['images'][0],
                         fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Icon(
-                          Icons.image_rounded,
-                          color: Colors.grey.shade400,
-                          size: 32.r,
-                        ),
+                        errorBuilder: (context, error, stackTrace) =>
+                            Icon(
+                              Icons.image_rounded,
+                              color: Colors.grey.shade400,
+                              size: 32.r,
+                            ),
                       )
                           : Icon(
                         Icons.image_rounded,
@@ -4466,7 +4164,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                 ),
                 SizedBox(width: 16.w),
 
-                // 文本
+                // 氓鈥⑩€犆モ€溌伱ぢ柯∶β伮?
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -4484,23 +4182,24 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                       ),
                       SizedBox(height: 8.h),
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 12.w, vertical: 6.h),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              kUserPrimaryBlue.withOpacity(0.15),
-                              kUserPrimaryBlue.withOpacity(0.08),
+                              const Color(0xFF2196F3).withOpacity(0.15),
+                              const Color(0xFF2196F3).withOpacity(0.08),
                             ],
                           ),
                           borderRadius: BorderRadius.circular(12.r),
                           border: Border.all(
-                            color: kUserPrimaryBlue.withOpacity(0.2),
+                            color: const Color(0xFF2196F3).withOpacity(0.2),
                           ),
                         ),
                         child: Text(
                           item['price'] ?? l10n.noPrice,
                           style: TextStyle(
-                            color: kUserPrimaryBlue,
+                            color: const Color(0xFF2196F3),
                             fontWeight: FontWeight.bold,
                             fontSize: 16.sp,
                           ),
@@ -4509,21 +4208,21 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                       SizedBox(height: 12.h),
                       Row(
                         children: [
-                          _buildEnhancedStatItem(
-                              Icons.visibility_rounded, '234', Colors.blue.shade400),
+                          _buildEnhancedStatItem(Icons.visibility_rounded,
+                              '234', Colors.blue.shade400),
                           SizedBox(width: 16.w),
-                          _buildEnhancedStatItem(
-                              Icons.favorite_rounded, '12', Colors.red.shade400),
+                          _buildEnhancedStatItem(Icons.favorite_rounded, '12',
+                              Colors.red.shade400),
                           SizedBox(width: 16.w),
-                          _buildEnhancedStatItem(
-                              Icons.chat_bubble_rounded, '3', Colors.green.shade400),
+                          _buildEnhancedStatItem(Icons.chat_bubble_rounded, '3',
+                              Colors.green.shade400),
                         ],
                       ),
                     ],
                   ),
                 ),
 
-                // 三点菜单
+                // 猫聫艙氓聧鈥⒚ε掆€懊┾€櫬?
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.grey.shade50,
@@ -4637,7 +4336,8 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
         title: Row(
           children: [
             Container(
@@ -4671,8 +4371,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.red.shade400, Colors.red.shade600],
-              ),
+                  colors: [Colors.red.shade400, Colors.red.shade600]),
               borderRadius: BorderRadius.circular(12.r),
             ),
             child: TextButton(
@@ -4683,10 +4382,9 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
               child: Text(
                 'Delete',
                 style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w600,
-                ),
+                    color: Colors.white,
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600),
               ),
             ),
           ),
@@ -4697,7 +4395,8 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
 
   void _deleteListing(Map<String, dynamic> item, AppLocalizations l10n) async {
     try {
-      final urls = (item['images'] as List?)?.cast<String>() ?? const <String>[];
+      final urls =
+          (item['images'] as List?)?.cast<String>() ?? const <String>[];
       final paths = urls
           .map(ListingService.publicUrlToObjectPath)
           .whereType<String>()
@@ -4713,14 +4412,16 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.check_circle_rounded, color: Colors.white, size: 20.r),
+                Icon(Icons.check_circle_rounded,
+                    color: Colors.white, size: 18.r),
                 SizedBox(width: 8.w),
                 Text(l10n.listingDeleted),
               ],
             ),
             backgroundColor: Colors.green.shade600,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r)),
             margin: EdgeInsets.all(16.w),
           ),
         );
@@ -4731,14 +4432,16 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
           SnackBar(
             content: Row(
               children: [
-                Icon(Icons.error_outline_rounded, color: Colors.white, size: 20.r),
+                Icon(Icons.error_outline_rounded,
+                    color: Colors.white, size: 18.r),
                 SizedBox(width: 8.w),
                 Expanded(child: Text('Delete failed: $e')),
               ],
             ),
             backgroundColor: Colors.red.shade600,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r)),
             margin: EdgeInsets.all(16.w),
           ),
         );
@@ -4747,20 +4450,19 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
   }
 }
 
-// ---------------- Notification Page ----------------
+/* ---------------- Notification Page 茅鈧∶嘎ッ┞÷?(莽麓搂氓鈥♀€樏九矫ヅ掆€撁р€八喢ε撀? ---------------- */
 
-/* ---------------- Notification Page (莽麓搂氓鈥♀€樏九矫ヅ掆€撁р€八喢ε撀? ---------------- */
 class NotificationPage extends StatefulWidget {
   final VoidCallback? onClearBadge;
   final bool isGuest;
   final Function(int)? onNotificationCountChanged;
 
   const NotificationPage({
-    super.key,
+    Key? key,
     this.onClearBadge,
     this.isGuest = false,
     this.onNotificationCountChanged,
-  });
+  }) : super(key: key);
 
   @override
   State<NotificationPage> createState() => _NotificationPageState();
@@ -4770,158 +4472,100 @@ class _NotificationPageState extends State<NotificationPage> {
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
 
-  // ✅ 统一使用首页的 Facebook 蓝
-  static const Color _PRIMARY_BLUE = Color(0xFF1877F2);
+  // 自定义头部组件，用于统一蓝色、大标题和间距
+  Widget _buildCustomHeader(String title) {
+    final l10n = AppLocalizations.of(context)!;
+    final unreadCount =
+        _notifications.where((n) => n['is_read'] != true).length;
+    final displayTitle = '${title}${unreadCount > 0 ? ' ($unreadCount)' : ''}';
 
-  // ✅ 新增：仅监听“全局通知流”，不在页面里直连 Supabase
-  StreamSubscription<Map<String, dynamic>>? _notifSub;
-
-  // ✅ A) 精简版蓝色头部（与 Sell 页一致：更短、更上移；标题与右上角按钮同一基线）
-  Widget _blueHeader({
-    required BuildContext context,
-    required String title,
-    required bool centerTitle,
-    Widget? trailing, // 右上角按钮（可选）
-  }) {
-    final double statusBar = MediaQuery.of(context).padding.top;
-    const double kHeaderVisual = 48.0; // 头部视觉高度（更短）
-    const double kSide = 20.0;
-
-    return SizedBox(
-      height: statusBar + kHeaderVisual,
-      child: Stack(
-        children: [
-          // 背景（渐变）
-          const Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF1877F2), Color(0xFF1E88E5)],
-                ),
-              ),
-            ),
-          ),
-          // 标题 + 右上角按钮：同一行、整体上移
-          Positioned(
-            left: kSide,
-            right: 12.0,
-            top: statusBar + 6.0,
-            child: SizedBox(
-              height: 36.0,
+    return Container(
+      color: _PRIMARY_BLUE, // 统一的深蓝
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(height: 16.h), // 标题距安全区顶部约 16dp
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
                     child: Text(
-                      title,
-                      textAlign: centerTitle ? TextAlign.center : TextAlign.left,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      displayTitle,
+                      style: TextStyle(
                         color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w700,
-                        height: 1.1,
+                        fontSize: 24.sp, // 统一字体大小
+                        fontWeight: FontWeight.w600, // SemiBold
+                        height: 1.2,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  if (trailing != null) trailing,
+                  if (_notifications.isNotEmpty)
+                    PopupMenuButton<String>(
+                      icon: Icon(Icons.more_vert_rounded,
+                          color: Colors.white, size: 18.r),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8.r)),
+                      onSelected: (value) {
+                        if (value == 'mark_all_read') {
+                          _markAllAsRead();
+                        } else if (value == 'clear_all') {
+                          _clearAll();
+                        }
+                      },
+                      itemBuilder: (BuildContext context) => [
+                        PopupMenuItem(
+                          value: 'mark_all_read',
+                          child: Row(
+                            children: [
+                              Icon(Icons.done_all_rounded,
+                                  size: 14.r, color: Colors.grey.shade600),
+                              SizedBox(width: 8.w),
+                              Text(l10n.markAllAsRead,
+                                  style: TextStyle(fontSize: 12.sp)),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'clear_all',
+                          child: Row(
+                            children: [
+                              Icon(Icons.clear_all_rounded,
+                                  color: Colors.red, size: 14.r),
+                              SizedBox(width: 8.w),
+                              Text(l10n.clearAll,
+                                  style: TextStyle(
+                                      fontSize: 12.sp, color: Colors.red)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ✅ B) 右上角菜单按钮：更小(28×28)并与标题对齐；弹出层更贴合
-  Widget _buildMenuButton() {
-    final l10n = AppLocalizations.of(context)!;
-    final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-
-    return PopupMenuButton<String>(
-      padding: EdgeInsets.zero,
-      offset: const Offset(0, 10),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10.w),
-      ),
-      onSelected: (value) {
-        if (value == 'mark_all_read') {
-          _markAllAsRead();
-        } else if (value == 'clear_all') {
-          _clearAll();
-        }
-      },
-      itemBuilder: (BuildContext context) => [
-        PopupMenuItem(
-          value: 'mark_all_read',
-          child: Row(
-            children: [
-              Icon(Icons.done_all_rounded,
-                  size: 14.r, color: Colors.grey.shade600),
-              SizedBox(width: 8.w),
-              Text(l10n.markAllAsRead, style: TextStyle(fontSize: 12.sp)),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: 'clear_all',
-          child: Row(
-            children: [
-              Icon(Icons.clear_all_rounded, color: Colors.red, size: 14.r),
-              SizedBox(width: 8.w),
-              Text(l10n.clearAll,
-                  style: TextStyle(fontSize: 12.sp, color: Colors.red)),
-            ],
-          ),
-        ),
-      ],
-      child: SizedBox(
-        height: 28.w,
-        width: 28.w,
-        child: Material(
-          color: Colors.white.withOpacity(0.18),
-          shape: const StadiumBorder(),
-          clipBehavior: Clip.antiAlias,
-          child: Center(
-            child: Icon(
-              isIOS ? Icons.more_horiz_rounded : Icons.more_vert_rounded,
-              color: Colors.white,
-              size: 18.w,
-            ),
-          ),
+            SizedBox(height: 16.h),
+          ],
         ),
       ),
     );
   }
 
-  // ⛔️ [_buildCustomHeader 已被删除，由 _blueHeader 替代]
   @override
   void initState() {
     super.initState();
     if (!widget.isGuest) {
-      _loadNotifications(); // 首屏拉历史
-      // ✅ 监听全局广播：任何新事件/更新都能及时进来（即使用户在别的页面）
-      _notifSub = NotificationService.stream.listen((row) {
-        if (!mounted) return;
-        final id = (row['id'] ?? '').toString();
-        final idx = _notifications.indexWhere(
-              (n) => (n['id'] ?? '').toString() == id,
-        );
-        setState(() {
-          if (idx >= 0) {
-            _notifications[idx] = row; // 覆盖更新
-          } else {
-            _notifications.insert(0, row); // 新增顶插
-          }
-        });
-        _updateUnreadCount();
-      });
+      _loadNotifications();
+      _subscribeToNotifications();
     } else {
       setState(() => _isLoading = false);
     }
+
     if (widget.onClearBadge != null) {
       WidgetsBinding.instance
           .addPostFrameCallback((_) => widget.onClearBadge!());
@@ -4930,17 +4574,19 @@ class _NotificationPageState extends State<NotificationPage> {
 
   @override
   void dispose() {
-    _notifSub?.cancel(); // ✅ 只取消对“流”的监听，不动全局订阅
+    _unsubscribeFromNotifications();
     super.dispose();
   }
 
   Future<void> _loadNotifications() async {
     try {
       setState(() => _isLoading = true);
+
       final notifications = await NotificationService.getUserNotifications(
         limit: 100,
         includeRead: true,
       );
+
       if (mounted) {
         setState(() {
           _notifications = notifications;
@@ -4956,9 +4602,27 @@ class _NotificationPageState extends State<NotificationPage> {
     }
   }
 
-  // ⛔️ 页面级订阅/退订已删除，统一改为监听 NotificationService.stream
-  // Future<void> _subscribeToNotifications() async { ... }
-  // Future<void> _unsubscribeFromNotifications() async { ... }
+  // 芒艙鈥?盲驴庐忙颅拢茂录拧盲陆驴莽鈥澛βＣ÷♀€灻ヂ忊€毭︹€⒙懊捌捗р€澛?
+  Future<void> _subscribeToNotifications() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+
+    await NotificationService.subscribeUser(
+      user.id, // 盲陆聧莽陆庐氓聫鈥毭︹€⒙?
+      onEvent: (Map<String, dynamic> notification) {
+        // 氓鈥樎矫ヂ惵嵜ヂ忊€毭︹€⒙?
+        if (!mounted) return;
+        setState(() {
+          _notifications.insert(0, notification);
+        });
+        _updateUnreadCount();
+      },
+    );
+  }
+
+  Future<void> _unsubscribeFromNotifications() async {
+    await NotificationService.unsubscribe();
+  }
 
   void _updateUnreadCount() {
     final unreadCount =
@@ -4971,10 +4635,12 @@ class _NotificationPageState extends State<NotificationPage> {
   Future<void> _markAsRead(int index) async {
     final notification = _notifications[index];
     if (notification['is_read'] == true) return;
+
     try {
       final success = await NotificationService.markNotificationAsRead(
         notification['id'].toString(),
       );
+
       if (success && mounted) {
         setState(() {
           _notifications[index]['is_read'] = true;
@@ -4990,10 +4656,12 @@ class _NotificationPageState extends State<NotificationPage> {
   Future<void> _deleteNotification(int index) async {
     final l10n = AppLocalizations.of(context)!;
     final notification = _notifications[index];
+
     try {
       final success = await NotificationService.deleteNotification(
         notification['id'].toString(),
       );
+
       if (success && mounted) {
         setState(() => _notifications.removeAt(index));
         _updateUnreadCount();
@@ -5010,10 +4678,10 @@ class _NotificationPageState extends State<NotificationPage> {
             ),
             backgroundColor: Colors.green.shade600,
             behavior: SnackBarBehavior.floating,
-            shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.r)),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6.r)),
             margin: EdgeInsets.all(8.w),
-            duration: const Duration(seconds: 2),
+            duration: Duration(seconds: 2),
           ),
         );
       }
@@ -5035,7 +4703,7 @@ class _NotificationPageState extends State<NotificationPage> {
           shape:
           RoundedRectangleBorder(borderRadius: BorderRadius.circular(6.r)),
           margin: EdgeInsets.all(8.w),
-          duration: const Duration(seconds: 2),
+          duration: Duration(seconds: 2),
         ),
       );
     }
@@ -5044,6 +4712,7 @@ class _NotificationPageState extends State<NotificationPage> {
   Future<void> _markAllAsRead() async {
     try {
       final success = await NotificationService.markAllNotificationsAsRead();
+
       if (success && mounted) {
         setState(() {
           for (var notification in _notifications) {
@@ -5061,6 +4730,7 @@ class _NotificationPageState extends State<NotificationPage> {
   Future<void> _clearAll() async {
     try {
       final success = await NotificationService.clearAllNotifications();
+
       if (success && mounted) {
         setState(() => _notifications.clear());
         _updateUnreadCount();
@@ -5073,6 +4743,7 @@ class _NotificationPageState extends State<NotificationPage> {
   Widget _getNotificationIcon(String type) {
     final color = Color(NotificationService.getNotificationColor(type));
     IconData iconData;
+
     switch (type) {
       case 'offer':
         iconData = Icons.local_offer_rounded;
@@ -5093,6 +4764,7 @@ class _NotificationPageState extends State<NotificationPage> {
       default:
         iconData = Icons.notifications_rounded;
     }
+
     return Container(
       width: 32.w,
       height: 32.w,
@@ -5125,9 +4797,16 @@ class _NotificationPageState extends State<NotificationPage> {
     if (index >= 0) {
       _markAsRead(index);
     }
+
+    // 忙路禄氓艩 猫掳茠猫炉鈥⒚︹€斅ッヂ库€?
+
     final type = notification['type']?.toString() ?? '';
+
+    // 氓掳聺猫炉鈥⒚ぢ慌矫ヂづ∶ぢ嘎ぢ铰嵜铰ㄅ铰访ヂ忊€揑D盲驴隆忙聛炉
     String? listingId = notification['listing_id']?.toString();
     String? offerId = notification['offer_id']?.toString();
+
+    // 氓娄鈥毭ε九撁р€郝疵ε铰ッヂ€斆β得ぢ嘎好┞好寂捗ヂ奥澝€⒚ぢ慌絧ayload盲赂颅猫沤路氓聫鈥?
     final payload = notification['payload'] as Map<String, dynamic>? ?? {};
     if ((listingId == null || listingId.isEmpty) && payload.isNotEmpty) {
       listingId = payload['listing_id']?.toString();
@@ -5135,6 +4814,8 @@ class _NotificationPageState extends State<NotificationPage> {
     if ((offerId == null || offerId.isEmpty) && payload.isNotEmpty) {
       offerId = payload['offer_id']?.toString();
     }
+
+    // 盲鹿鸥氓掳聺猫炉鈥⒚ぢ慌絤etadata盲赂颅猫沤路氓聫鈥?
     final metadata = notification['metadata'] as Map<String, dynamic>? ?? {};
     if ((listingId == null || listingId.isEmpty) && metadata.isNotEmpty) {
       listingId = metadata['listing_id']?.toString();
@@ -5142,11 +4823,15 @@ class _NotificationPageState extends State<NotificationPage> {
     if ((offerId == null || offerId.isEmpty) && metadata.isNotEmpty) {
       offerId = metadata['offer_id']?.toString();
     }
+
     final notificationId = notification['id']?.toString();
+
+    // 忙拢鈧ε嘎ッ︹€⒙懊β嵚ヂ捗︹€⒙疵︹偓搂
     if (type.isEmpty) {
       _showSnack('Notification data is incomplete', isError: true);
       return;
     }
+
     switch (type) {
       case 'message':
         if (offerId != null && offerId.isNotEmpty) {
@@ -5211,7 +4896,9 @@ class _NotificationPageState extends State<NotificationPage> {
       Map<String, dynamic> notification) {
     final metadata = notification['metadata'] as Map<String, dynamic>? ?? {};
     final offerId = notification['offer_id']?.toString();
+
     if (offerId == null) return null;
+
     return {
       'id': offerId,
       'offer_amount': metadata['offer_amount'],
@@ -5234,1994 +4921,371 @@ class _NotificationPageState extends State<NotificationPage> {
     if (widget.isGuest) {
       return Scaffold(
         backgroundColor: const Color(0xFFF8F9FA),
-        body: Column(
-          children: [
-            _blueHeader(
-              context: context,
-              title: l10n.notifications,
-              centerTitle: false,
-              trailing: null,
+        appBar: AppBar(
+          backgroundColor: _PRIMARY_BLUE, // 统一颜色
+          title: Text(
+            l10n.notifications,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18.sp,
+              fontWeight: FontWeight.w600,
             ),
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 60.w,
-                      height: 60.w,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(30.r),
-                      ),
-                      child: Icon(
-                        Icons.lock_outline_rounded,
-                        size: 30.r,
-                        color: Colors.grey.shade500,
-                      ),
-                    ),
-                    SizedBox(height: 16.h),
-                    Text(
-                      l10n.loginRequired,
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    SizedBox(height: 6.h),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 24.w),
-                      child: Text(
-                        l10n.loginToReceiveNotifications,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: Colors.grey.shade600,
-                          fontSize: 12.sp,
-                          height: 1.4,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 20.h),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [_PRIMARY_BLUE, Color(0xFF1E88E5)],
-                        ),
-                        borderRadius: BorderRadius.circular(10.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _PRIMARY_BLUE.withOpacity(0.3),
-                            blurRadius: 8.r,
-                            offset: Offset(0, 3.h),
-                          ),
-                        ],
-                      ),
-                      child: ElevatedButton.icon(
-                        onPressed: () => Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const LoginScreen()),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 20.w, vertical: 10.h),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10.r),
-                          ),
-                        ),
-                        icon: Icon(Icons.login_rounded,
-                            size: 14.r, color: Colors.white),
-                        label: Text(
-                          l10n.loginNow,
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
+          ),
+          elevation: 0,
+          centerTitle: true,
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 60.w,
+                height: 60.w,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(30.r),
+                ),
+                child: Icon(
+                  Icons.lock_outline_rounded,
+                  size: 30.r,
+                  color: Colors.grey.shade500,
+                ),
+              ),
+              SizedBox(height: 16.h),
+              Text(
+                l10n.loginRequired,
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+              SizedBox(height: 6.h),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24.w),
+                child: Text(
+                  l10n.loginToReceiveNotifications,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 12.sp,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+              SizedBox(height: 20.h),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [_PRIMARY_BLUE, const Color(0xFF1E88E5)], // 统一颜色
+                  ),
+                  borderRadius: BorderRadius.circular(10.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _PRIMARY_BLUE.withOpacity(0.3), // 统一颜色
+                      blurRadius: 8.r,
+                      offset: Offset(0, 3.h),
                     ),
                   ],
                 ),
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const LoginScreen()),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    padding:
+                    EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10.r),
+                    ),
+                  ),
+                  icon: Icon(Icons.login_rounded,
+                      size: 14.r, color: Colors.white),
+                  label: Text(
+                    l10n.loginNow,
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
 
     final unreadCount =
         _notifications.where((n) => n['is_read'] != true).length;
-    final displayTitle =
-        '${l10n.notifications}${unreadCount > 0 ? ' ($unreadCount)' : ''}';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      body: Column(
-        children: [
-          _blueHeader(
-            context: context,
-            title: displayTitle,
-            centerTitle: false,
-            trailing: _notifications.isNotEmpty ? _buildMenuButton() : null,
+      // 头部使用自定义组件
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(_CUSTOM_HEADER_HEIGHT), // 使用统一高度
+        child: _buildCustomHeader(l10n.notifications),
+      ),
+      body: _isLoading
+          ? Center(
+        child: Container(
+          padding: EdgeInsets.all(24.w),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16.r),
+            boxShadow: [
+              BoxShadow(
+                color: _PRIMARY_BLUE.withOpacity(0.08), // 统一颜色
+                blurRadius: 10.r,
+                offset: Offset(0, 4.h),
+              ),
+            ],
           ),
-          Expanded(
-            child: _isLoading
-                ? Center(
-              child: Container(
-                padding: EdgeInsets.all(24.w),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40.w,
+                height: 40.w,
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _PRIMARY_BLUE.withOpacity(0.08),
-                      blurRadius: 10.r,
-                      offset: Offset(0, 4.h),
-                    ),
-                  ],
+                  gradient: LinearGradient(
+                    colors: [
+                      _PRIMARY_BLUE.withOpacity(0.2), // 统一颜色
+                      _PRIMARY_BLUE.withOpacity(0.1), // 统一颜色
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(20.r),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 40.w,
-                      height: 40.w,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            _PRIMARY_BLUE.withOpacity(0.2),
-                            _PRIMARY_BLUE.withOpacity(0.1),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(20.r),
-                      ),
-                      child: Center(
-                        child: SizedBox(
-                          width: 20.w,
-                          height: 20.w,
-                          child: const CircularProgressIndicator(
-                            valueColor:
-                            AlwaysStoppedAnimation<Color>(
-                                _PRIMARY_BLUE),
-                            strokeWidth: 2.5,
-                          ),
-                        ),
-                      ),
+                child: Center(
+                  child: SizedBox(
+                    width: 20.w,
+                    height: 20.w,
+                    child: CircularProgressIndicator(
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                          _PRIMARY_BLUE), // 统一颜色
+                      strokeWidth: 2.5,
                     ),
-                    SizedBox(height: 12.h),
-                    Text(
-                      'Loading notifications...',
-                      style: TextStyle(
-                        color: _PRIMARY_BLUE,
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            )
-                : _notifications.isEmpty
-                ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 60.w,
-                    height: 60.w,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          _PRIMARY_BLUE.withOpacity(0.1),
-                          const Color(0xFF1E88E5).withOpacity(0.05),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(30.r),
-                      border: Border.all(
-                        color:
-                        _PRIMARY_BLUE.withOpacity(0.2),
-                        width: 1,
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.notifications_none_rounded,
-                      size: 30.r,
-                      color: _PRIMARY_BLUE,
-                    ),
-                  ),
-                  SizedBox(height: 16.h),
-                  Text(
-                    l10n.noNotifications,
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  SizedBox(height: 6.h),
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 16.w),
-                    child: Text(
-                      l10n.notificationsWillAppearHere,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 12.sp,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                ],
+              SizedBox(height: 12.h),
+              Text(
+                'Loading notifications...',
+                style: TextStyle(
+                  color: _PRIMARY_BLUE, // 统一颜色
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            )
-                : RefreshIndicator(
-              onRefresh: _loadNotifications,
-              color: _PRIMARY_BLUE,
-              backgroundColor: Colors.white,
-              strokeWidth: 2.w,
-              child: ListView.builder(
-                physics: const AlwaysScrollableScrollPhysics(),
-                // ✅ 统一更紧凑的顶部间距：12
-                padding: EdgeInsets.only(top: 12.h),
-                itemCount: _notifications.length,
-                itemBuilder: (context, index) {
-                  final notification = _notifications[index];
-                  final isRead = notification['is_read'] == true;
-                  final type = notification['type']?.toString() ?? '';
-                  final createdAt =
-                      notification['created_at']?.toString() ?? '';
+            ],
+          ),
+        ),
+      )
+          : _notifications.isEmpty
+          ? Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 60.w,
+              height: 60.w,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    _PRIMARY_BLUE.withOpacity(0.1), // 统一颜色
+                    const Color(0xFF1E88E5).withOpacity(0.05),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(30.r),
+                border: Border.all(
+                  color: _PRIMARY_BLUE.withOpacity(0.2), // 统一颜色
+                  width: 1,
+                ),
+              ),
+              child: Icon(
+                Icons.notifications_none_rounded,
+                size: 30.r,
+                color: _PRIMARY_BLUE, // 统一颜色
+              ),
+            ),
+            SizedBox(height: 16.h),
+            Text(
+              l10n.noNotifications,
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            SizedBox(height: 6.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Text(
+                l10n.notificationsWillAppearHere,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.grey.shade600,
+                  fontSize: 12.sp,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
+        ),
+      )
+          : RefreshIndicator(
+        onRefresh: _loadNotifications,
+        color: _PRIMARY_BLUE, // 统一颜色
+        backgroundColor: Colors.white,
+        strokeWidth: 2.w,
+        child: ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          itemCount: _notifications.length,
+          itemBuilder: (context, index) {
+            final notification = _notifications[index];
+            final isRead = notification['is_read'] == true;
+            final type = notification['type']?.toString() ?? '';
+            final createdAt =
+                notification['created_at']?.toString() ?? '';
 
-                  return Dismissible(
-                    key: Key('${notification['id']}'),
-                    background: Container(
-                      color: Colors.red.shade600,
-                      alignment: Alignment.centerRight,
-                      padding: EdgeInsets.only(right: 12.w),
-                      child: Icon(
-                        Icons.delete_rounded,
-                        color: Colors.white,
-                        size: 20.r,
-                      ),
-                    ),
-                    direction: DismissDirection.endToStart,
-                    onDismissed: (direction) =>
-                        _deleteNotification(index),
+            return Dismissible(
+              key: Key('${notification['id']}'),
+              background: Container(
+                color: Colors.red.shade600,
+                alignment: Alignment.centerRight,
+                padding: EdgeInsets.only(right: 12.w),
+                child: Icon(
+                  Icons.delete_rounded,
+                  color: Colors.white,
+                  size: 20.r,
+                ),
+              ),
+              direction: DismissDirection.endToStart,
+              onDismissed: (direction) => _deleteNotification(index),
+              child: Container(
+                color: isRead
+                    ? Colors.white
+                    : _PRIMARY_BLUE.withOpacity(0.03), // 统一颜色
+                margin: EdgeInsets.only(bottom: 0.5.h),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _handleNotificationTap(notification),
+                    splashColor:
+                    _PRIMARY_BLUE.withOpacity(0.1), // 统一颜色
+                    highlightColor:
+                    _PRIMARY_BLUE.withOpacity(0.05), // 统一颜色
                     child: Container(
-                      color: isRead
-                          ? Colors.white
-                          : _PRIMARY_BLUE.withOpacity(0.03),
-                      margin: EdgeInsets.only(bottom: 0.5.h),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () =>
-                              _handleNotificationTap(notification),
-                          splashColor:
-                          _PRIMARY_BLUE.withOpacity(0.1),
-                          highlightColor:
-                          _PRIMARY_BLUE.withOpacity(0.05),
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 12.w,
-                              vertical: 8.h,
-                            ),
-                            child: Row(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12.w,
+                        vertical: 8.h,
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _getNotificationIcon(type),
+                          SizedBox(width: 10.w),
+                          Expanded(
+                            child: Column(
                               crossAxisAlignment:
                               CrossAxisAlignment.start,
                               children: [
-                                _getNotificationIcon(type),
-                                SizedBox(width: 10.w),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                    CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              '${notification['title'] ?? ''}',
-                                              style: TextStyle(
-                                                fontWeight: isRead
-                                                    ? FontWeight.w500
-                                                    : FontWeight.w600,
-                                                fontSize: 13.sp,
-                                                color: Colors.black87,
-                                                height: 1.3,
-                                              ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow
-                                                  .ellipsis,
-                                            ),
-                                          ),
-                                          if (!isRead)
-                                            Container(
-                                              width: 6.w,
-                                              height: 6.w,
-                                              margin:
-                                              EdgeInsets.only(
-                                                  left: 6.w),
-                                              decoration:
-                                              const BoxDecoration(
-                                                color:
-                                                _PRIMARY_BLUE,
-                                                shape:
-                                                BoxShape.circle,
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                      SizedBox(height: 2.h),
-                                      Text(
-                                        '${notification['message'] ?? ''}',
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        '${notification['title'] ?? ''}',
                                         style: TextStyle(
-                                          fontSize: 11.sp,
-                                          color:
-                                          Colors.grey.shade600,
-                                          height: 1.4,
+                                          fontWeight: isRead
+                                              ? FontWeight.w500
+                                              : FontWeight.w600,
+                                          fontSize: 13.sp,
+                                          color: Colors.black87,
+                                          height: 1.3,
                                         ),
                                         maxLines: 2,
                                         overflow:
                                         TextOverflow.ellipsis,
                                       ),
-                                      SizedBox(height: 4.h),
-                                      Row(
-                                        children: [
-                                          Icon(
-                                            Icons.access_time_rounded,
-                                            size: 10.r,
-                                            color: Colors
-                                                .grey.shade400,
-                                          ),
-                                          SizedBox(width: 2.w),
-                                          Text(
-                                            NotificationService
-                                                .formatNotificationTime(
-                                                createdAt),
-                                            style: TextStyle(
-                                              fontSize: 10.sp,
-                                              color: Colors
-                                                  .grey.shade400,
-                                            ),
-                                          ),
-                                        ],
+                                    ),
+                                    if (!isRead)
+                                      Container(
+                                        width: 6.w,
+                                        height: 6.w,
+                                        margin: EdgeInsets.only(
+                                            left: 6.w),
+                                        decoration:
+                                        const BoxDecoration(
+                                          color:
+                                          _PRIMARY_BLUE, // 统一颜色
+                                          shape: BoxShape.circle,
+                                        ),
                                       ),
-                                    ],
+                                  ],
+                                ),
+                                SizedBox(height: 2.h),
+                                Text(
+                                  '${notification['message'] ?? ''}',
+                                  style: TextStyle(
+                                    fontSize: 11.sp,
+                                    color: Colors.grey.shade600,
+                                    height: 1.4,
                                   ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                SizedBox(height: 4.h),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.access_time_rounded,
+                                      size: 10.r,
+                                      color: Colors.grey.shade400,
+                                    ),
+                                    SizedBox(width: 2.w),
+                                    Text(
+                                      NotificationService
+                                          .formatNotificationTime(
+                                          createdAt),
+                                      style: TextStyle(
+                                        fontSize: 10.sp,
+                                        color: Colors.grey.shade400,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
-                  );
-                },
+                  ),
+                ),
               ),
-            ),
-          ),
-        ],
+            );
+          },
+        ),
       ),
     );
   }
 }
 
+
 class NoGlowScrollBehavior extends ScrollBehavior {
   @override
-  Widget buildOverscrollIndicator(
-      BuildContext context, Widget child, ScrollableDetails details) {
+  Widget buildViewportChrome(
+      BuildContext context, Widget child, AxisDirection axisDirection) {
     return child;
   }
 }
 
 const _kPrivacyUrl = 'https://www.swaply.cc/privacy';
 const _kDeleteUrl = 'https://www.swaply.cc/delete-account';
-
-
-
-//---------------- Profile Page 个人资料页 ----------------
-class ProfilePage extends StatefulWidget {
-  final bool isGuest;
-  const ProfilePage({super.key, this.isGuest = false});
-
-  @override
-  State<ProfilePage> createState() => _ProfilePageState();
-}
-
-class _ProfilePageState extends State<ProfilePage>
-    with SingleTickerProviderStateMixin {
-  bool _loading = true;
-
-  /// 基础资料（用于显示：名/头像/时间等）
-  Map<String, dynamic>? _profile;
-
-  /// 仅读 profiles 行（包含 verification_type 等）
-  Map<String, dynamic>? _profileRow;
-
-  final _svc = ProfileService();
-
-  // ✅ 认证服务与状态（取 user_verifications）
-  final _verifySvc = EmailVerificationService();
-  bool _verified = false;
-  vt.VerificationBadgeType _badge = vt.VerificationBadgeType.none;
-  Map<String, dynamic>? _verificationRow;
-  bool _verifyLoading = false;
-
-  bool _uploadingAvatar = false;
-
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-
-  // ✅ 稳定性：保存订阅句柄 & 并发保护
-  StreamSubscription<AuthState>? _authSub;
-  bool _verifyBusy = false;
-
-  // ===== [PATCH A: Verification Refresh Hook] =====
-  StreamSubscription<bool>? _verifSub;
-  bool _verifHookInited = false;
-
-  // ===== [PATCH B: Profile Updated Hook] =====
-  StreamSubscription? _profileSub;
-
-  // ===== [PATCH C: 统一安全登出状态位] =====
-  bool _signingOut = false;
-
-  /// ✅ 显示用名字：
-  /// 1) profiles.full_name
-  /// 2) auth.users.user_metadata.full_name / name
-  /// 3) auth.users.email
-  /// 4) 兜底 "User"
-  String get _displayName {
-    final supa = Supabase.instance.client;
-    final user = supa.auth.currentUser;
-
-    final fromProfile = (_profile?['full_name'] ?? '').toString().trim();
-
-    final meta = user?.userMetadata ?? {};
-    final fromMeta =
-    (meta['full_name'] ?? meta['name'] ?? '').toString().trim();
-
-    final email = (user?.email ?? '').trim();
-
-    if (fromProfile.isNotEmpty) return fromProfile;
-    if (fromMeta.isNotEmpty) return fromMeta;
-    if (email.isNotEmpty) return email;
-    return 'User';
-  }
-
-  /// ✅ 显示用联系方式：
-  /// 1) profiles.phone
-  /// 2) auth.users.user_metadata.phone / phone_number
-  /// 3) auth.users.email
-  /// 4) 兜底空字符串
-  String get _displayContact {
-    final supa = Supabase.instance.client;
-    final user = supa.auth.currentUser;
-
-    final phoneProfile = (_profile?['phone'] ?? '').toString().trim();
-
-    final meta = user?.userMetadata ?? {};
-    final phoneMeta =
-    (meta['phone'] ?? meta['phone_number'] ?? '').toString().trim();
-
-    final email = (user?.email ?? '').trim();
-
-    if (phoneProfile.isNotEmpty) return phoneProfile;
-    if (phoneMeta.isNotEmpty) return phoneMeta;
-    if (email.isNotEmpty) return email;
-    return '';
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController =
-        AnimationController(duration: const Duration(milliseconds: 800), vsync: this);
-    _fadeAnimation =
-        CurvedAnimation(parent: _animationController, curve: Curves.easeInOut);
-
-    if (!widget.isGuest) {
-      // ✅ 统一用 _reloadProfile，便于后续强制刷新 / 清缓存
-      _reloadProfile();
-    } else {
-      _animationController.forward();
-    }
-
-    // ✅ 保存订阅，dispose 时取消
-    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((_) {
-      if (mounted) _reloadUserVerificationStatus();
-    });
-
-    // ===== [PATCH A] 首次进入先拉一次当前认证状态 =====
-    _reloadUserVerificationStatus();
-
-    // ===== [PATCH A] 只初始化一次订阅（避免热重载重复）=====
-    if (!_verifHookInited) {
-      _verifHookInited = true;
-      _verifSub = VerificationGuard.stream.listen((ok) async {
-        if (!mounted) return;
-        // 任何页面完成认证，这里立刻重拉
-        await _reloadUserVerificationStatus();
-        if (mounted) setState(() {});
-      });
-    }
-
-    // ===== [PATCH B] 监听 ProfileUpdatedEvent，强制重拉资料 =====
-    _profileSub = ListingEventsBus.instance.stream.listen((evt) {
-      if (!mounted) return;
-      if (evt is ProfileUpdatedEvent &&
-          evt.userId == Supabase.instance.client.auth.currentUser?.id) {
-        _reloadProfile(force: true);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _authSub?.cancel(); // ✅ 取消订阅
-    _verifSub?.cancel(); // ===== [PATCH A] 取消认证刷新订阅 =====
-    _profileSub?.cancel(); // ===== [PATCH B] 取消资料刷新订阅 =====
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  /// ✅ 统一的资料重载入口：
-  /// - force = true 时先清掉 ProfileService 缓存
-  /// - 然后按原有逻辑 _load() 刷新 _profile / _profileRow
-  Future<void> _reloadProfile({bool force = false}) async {
-    final uid = Supabase.instance.client.auth.currentUser?.id;
-    if (uid == null) return;
-
-    if (force) {
-      _svc.invalidateCache(uid);
-    }
-    await _load();
-  }
-
-  /// 仅读基础资料（显示用）
-  Future<void> _load() async {
-    try {
-      final base = await _svc.getUserProfile();
-      final map =
-      base == null ? <String, dynamic>{} : Map<String, dynamic>.from(base);
-
-      if (!mounted) return;
-      setState(() {
-        _profile = map;
-        _profileRow = map;
-        _loading = false;
-      });
-      _animationController.forward();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _loading = false);
-      _animationController.forward();
-    }
-  }
-
-  // ✅ 仅读 user_verifications，一次性计算 _verified/_badge，并更新状态
-  //    + [PATCH D] 公开行兜底：verification_type/badge_type = official/blue 也视为已认证
-  Future<void> _reloadUserVerificationStatus() async {
-    if (!mounted || _verifyBusy) return; // 并发 & 生命周期保护
-    _verifyBusy = true;
-    setState(() => _verifyLoading = true);
-
-    try {
-      // ✅ 一定用 getUser() 获取“最新用户”
-      final auth = Supabase.instance.client.auth;
-      final userResp = await auth.getUser();
-      final user = userResp.user;
-
-      // 1) 原有：从 user_verifications 读取
-      final row = await _verifySvc.fetchVerificationRow(); // user_verifications
-      final verifiedByUser = vutils.computeIsVerified(verificationRow: row, user: user);
-      final badgeByUser    = vutils.computeBadgeType(verificationRow: row, user: user);
-
-      // 2) 兜底：公开行里的 verification_type / badge_type
-      final vtRaw = (row?['verification_type'] ?? row?['badge_type'] ?? '').toString();
-      final verifiedByRow = vtRaw == 'official' || vtRaw == 'blue';
-      final badgeByRow = vtRaw == 'official'
-          ? vt.VerificationBadgeType.official
-          : (vtRaw == 'blue'
-          ? vt.VerificationBadgeType.blue
-          : vt.VerificationBadgeType.none);
-
-      if (!mounted) return;
-      setState(() {
-        _verificationRow = row;
-        _verified = verifiedByUser || verifiedByRow;
-        _badge = verifiedByUser ? (badgeByUser ?? vt.VerificationBadgeType.none) : badgeByRow;
-        _verifyLoading = false;
-      });
-    } catch (_) {
-      if (mounted) setState(() => _verifyLoading = false);
-    } finally {
-      _verifyBusy = false;
-    }
-  }
-
-  Future<void> _editNamePhone() async {
-    final nameCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
-
-    try {
-      final p = await ProfileService.instance.getUserProfile();
-      if (p != null) {
-        nameCtrl.text =
-            (p['display_name'] ?? p['full_name'] ?? '').toString();
-        phoneCtrl.text = (p['phone'] ?? '').toString();
-      }
-    } catch (_) {}
-
-    if (!mounted) {
-      nameCtrl.dispose();
-      phoneCtrl.dispose();
-      return;
-    }
-
-    final result = await showDialog<bool>(
-      context: context,
-      barrierDismissible: true,
-      builder: (dialogCtx) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          elevation: 8,
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Colors.white, Colors.grey.shade50],
-              ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(Icons.edit_rounded,
-                          color: Theme.of(context).primaryColor, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text('Edit Profile',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                TextField(
-                  controller: nameCtrl,
-                  style: const TextStyle(fontSize: 16),
-                  decoration: InputDecoration(
-                    labelText: 'Full name',
-                    labelStyle: const TextStyle(fontSize: 14),
-                    prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                      BorderSide(color: Theme.of(context).primaryColor, width: 2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: phoneCtrl,
-                  keyboardType: TextInputType.phone,
-                  style: const TextStyle(fontSize: 16),
-                  decoration: InputDecoration(
-                    labelText: 'Phone',
-                    labelStyle: const TextStyle(fontSize: 14),
-                    prefixIcon: const Icon(Icons.phone_outlined, size: 20),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                      BorderSide(color: Theme.of(context).primaryColor, width: 2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 28),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(dialogCtx).maybePop(false),
-                      style: TextButton.styleFrom(
-                          padding:
-                          const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
-                      child: const Text('Cancel', style: TextStyle(fontSize: 15)),
-                    ),
-                    const SizedBox(width: 12),
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                            colors: [Color(0xFF2196F3), Color(0xFF1E88E5)]),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.of(dialogCtx).maybePop(true),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          padding:
-                          const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: const Text('Save',
-                            style: TextStyle(fontSize: 15, color: Colors.white)),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-
-    if (result == true && mounted) {
-      try {
-        await ProfileService.instance.updateUserProfile(
-          fullName: nameCtrl.text.trim().isEmpty ? null : nameCtrl.text.trim(),
-          phone: phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
-        );
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-                SizedBox(width: 8),
-                Text('Profile updated successfully', style: TextStyle(fontSize: 14)),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
-        await _load();
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error_outline_rounded,
-                    color: Colors.white, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                    child:
-                    Text('Upload failed: $e', style: const TextStyle(fontSize: 14))),
-              ],
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
-      }
-    }
-
-    nameCtrl.dispose();
-    phoneCtrl.dispose();
-  }
-
-  // -----------------------------------------------------
-  // [PATCH C] 统一安全登出：只登出一次 + 清缓存 + 回到启动页
-  // -----------------------------------------------------
-  // 统一安全登出：只登出一次 + 清本地状态 + 回到主导航
-  Future<void> safeSignOut(BuildContext context) async {
-    if (_signingOut) return;
-    _signingOut = true;
-    try {
-      // 这些清缓存的调用不是必须；为避免未定义，先不调用
-      // try { DualFavoritesService.instance.clearCache(); } catch (_) {}
-
-      await Supabase.instance.client.auth.signOut(scope: SignOutScope.global);
-
-      if (context.mounted) {
-        // 回到你的主页面（如你项目不是 MainNavigation，请替换成 HomePage 或 AuthGate）
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          '/welcome',
-              (route) => false,
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Logout failed: $e')),
-        );
-      }
-    } finally {
-      _signingOut = false;
-    }
-  }
-
-  // -----------------------------------------------------
-  // 上传头像：并发保护 + 缓存破坏参数
-  // -----------------------------------------------------
-  Future<void> _uploadAvatarSimple() async {
-    if (!mounted) return;
-    setState(() => _uploadingAvatar = true);
-
-    try {
-      final picker = ImagePicker();
-      final XFile? image = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 512,
-        maxHeight: 512,
-        imageQuality: 80,
-      );
-      if (image == null) return;
-
-      final user = Supabase.instance.client.auth.currentUser;
-      if (user == null) throw Exception('User not authenticated');
-
-      final bytes = await File(image.path).readAsBytes();
-      final ext = image.path.split('.').last;
-      final path = '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.$ext';
-
-      if (!mounted) return;
-
-      await Supabase.instance.client.storage
-          .from('avatars')
-          .uploadBinary(path, bytes, fileOptions: const FileOptions(upsert: true));
-
-      final baseUrl =
-      Supabase.instance.client.storage.from('avatars').getPublicUrl(path);
-      final cacheBust = DateTime.now().millisecondsSinceEpoch;
-      final publicUrlWithCacheBust = '$baseUrl?v=$cacheBust';
-
-      await ProfileService.instance.updateUserProfile(avatarUrl: publicUrlWithCacheBust);
-
-      await _load();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
-              SizedBox(width: 8),
-              Text('Avatar updated successfully', style: TextStyle(fontSize: 14)),
-            ],
-          ),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          margin: const EdgeInsets.all(16),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              const Icon(Icons.error_outline_rounded, color: Colors.white, size: 18),
-              const SizedBox(width: 8),
-              Expanded(child: Text('Upload failed: $e', style: const TextStyle(fontSize: 14))),
-            ],
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          margin: const EdgeInsets.all(16),
-        ),
-      );
-    } finally {
-      if (mounted) setState(() => _uploadingAvatar = false);
-    }
-  }
-
-  // -----------------------------------------------------
-  // Header：自适应高度 + 内部 padding；恢复“Member since …”显示
-  // -----------------------------------------------------
-  Widget _buildHeaderClassic({
-    required bool isGuest,
-    required String name,
-    required String email,
-    String? avatarUrl,
-    String? memberSince,
-    vt.VerificationBadgeType verificationType = vt.VerificationBadgeType.none,
-  }) {
-    final double statusBar = MediaQuery.of(context).padding.top;
-
-    return Container(
-      // 渐变背景（与你之前的风格一致）
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF2563EB), Color(0xFF3B82F6), Color(0xFF60A5FA)],
-          stops: [0.0, 0.5, 1.0],
-        ),
-      ),
-      child: Padding(
-        // 内消化状态栏高度，整体不被拉高
-        padding: EdgeInsets.fromLTRB(24, (statusBar > 0 ? statusBar + 12 : 20), 24, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Hero(
-              tag: 'profile_avatar',
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(colors: [
-                    Colors.white.withOpacity(0.9),
-                    Colors.white.withOpacity(0.3),
-                  ]),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color.fromRGBO(0, 0, 0, 0.2),
-                      blurRadius: 16,
-                      offset: Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: VerifiedAvatar(
-                  avatarUrl: avatarUrl,
-                  radius: 42, // 保持你原来偏紧凑的头像尺寸
-                  verificationType: verificationType,
-                  onTap: !isGuest ? _uploadAvatarSimple : null,
-                  defaultIcon: isGuest ? Icons.person_outline : Icons.person,
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              name,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20.0,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
-                shadows: [
-                  Shadow(offset: Offset(0, 2), blurRadius: 4, color: Color(0x40000000)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.20),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.white.withOpacity(0.30), width: 1),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(email.contains('@') ? Icons.email : Icons.phone,
-                      size: 14, color: Colors.white.withOpacity(0.95)),
-                  const SizedBox(width: 6),
-                  Text(email,
-                      style: TextStyle(
-                          color: Colors.white.withOpacity(0.95),
-                          fontSize: 13.0,
-                          fontWeight: FontWeight.w500)),
-                ],
-              ),
-            ),
-            if (!isGuest && memberSince != null) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.calendar_today_outlined, size: 12, color: Colors.white),
-                    const SizedBox(width: 4),
-                    Text(
-                      memberSince,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
-    // Guest user interface
-    if (widget.isGuest) {
-      return MediaQuery(
-        data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
-        child: Scaffold(
-          backgroundColor: const Color(0xFFF8F9FA),
-          body: ScrollConfiguration(
-            behavior: const ScrollBehavior(),
-            child: CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: _buildHeaderClassic(
-                    isGuest: true,
-                    name: l10n.guestUser,
-                    email: l10n.browseWithoutAccount,
-                    avatarUrl: null,
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: const Padding(
-                      padding: EdgeInsets.all(20),
-                      child: _GuestSimpleOptions(),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    // Loading state
-    if (_loading) {
-      return MediaQuery(
-        data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
-        child: const Scaffold(
-          backgroundColor: Color(0xFFF8F9FA),
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                SizedBox(width: 36, height: 36, child: CircularProgressIndicator(strokeWidth: 3)),
-                SizedBox(height: 16),
-                Text('Loading profile...', style: TextStyle(color: Color(0xFF666666), fontSize: 15)),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    final fullName = _displayName;
-    final displayContact = _displayContact;
-    final avatarUrl = (_profile?['avatar_url'] ?? '') as String?;
-    final memberSince = _profile?['created_at']?.toString();
-    String? memberSinceText;
-    if (memberSince != null && memberSince.isNotEmpty) {
-      final cut = memberSince.length >= 10 ? memberSince.substring(0, 10) : memberSince;
-      memberSinceText = 'Member since $cut';
-    }
-
-    // Normal User interface
-    return MediaQuery(
-      data: MediaQuery.of(context).copyWith(textScaler: const TextScaler.linear(1.0)),
-      child: Scaffold(
-        extendBody: true,
-        backgroundColor: const Color(0xFFF8F9FA),
-        body: Stack(
-          children: [
-            ScrollConfiguration(
-              behavior: const ScrollBehavior(),
-              child: CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: _buildHeaderClassic(
-                      isGuest: false,
-                      name: fullName,
-                      email: displayContact,
-                      avatarUrl: (avatarUrl != null && avatarUrl.isNotEmpty) ? avatarUrl : null,
-                      memberSince: memberSinceText,
-                      verificationType: _verified ? _badge : vt.VerificationBadgeType.none,
-                    ),
-                  ),
-
-                  // 内容区域
-                  SliverToBoxAdapter(
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Profile',
-                                style: TextStyle(
-                                    fontSize: 16.0,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF6B7280),
-                                    letterSpacing: 0.5)),
-                            const SizedBox(height: 10),
-                            _ProfileOptionEnhanced(
-                              icon: Icons.edit_rounded,
-                              title: 'Edit Profile',
-                              color: Colors.blue,
-                              onTap: _editNamePhone,
-                            ),
-                            const SizedBox(height: 12),
-                            // -------------------------------------------------
-                            // ✅ [FIX 2] 替换为 .then() 刷新逻辑
-                            // -------------------------------------------------
-                            _VerificationTileCard(
-                              isVerified: _verified,
-                              isLoading: _verifyLoading,
-                              onTap: () {
-                                Navigator.of(context).push<bool>(
-                                  MaterialPageRoute(builder: (_) => const VerificationPage()),
-                                ).then((_) {
-                                  _reloadUserVerificationStatus();
-                                });
-                              },
-                            ),
-
-                            const SizedBox(height: 10),
-                            const Text('Rewards & Activities',
-                                style: TextStyle(
-                                    fontSize: 16.0,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF6B7280),
-                                    letterSpacing: 0.5)),
-                            const SizedBox(height: 10),
-
-                            _RewardsTileUnified(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(builder: (_) => const TaskManagementPage()),
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 12),
-
-                            _ProfileOptionEnhanced(
-                              icon: Icons.inventory_2_rounded,
-                              title: l10n.myListings,
-                              color: Colors.indigo,
-                              onTap: () => Navigator.push(
-                                  context, MaterialPageRoute(builder: (_) => const MyListingsPage())),
-                            ),
-                            const SizedBox(height: 12),
-
-                            _ProfileOptionEnhanced(
-                              icon: Icons.favorite_rounded,
-                              title: l10n.wishlist,
-                              color: Colors.pink,
-                              onTap: () {
-                                final user = Supabase.instance.client.auth.currentUser;
-                                if (user == null) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Please sign in to view Wishlist')),
-                                  );
-                                  return;
-                                }
-                                Navigator.push(
-                                    context, MaterialPageRoute(builder: (_) => const WishlistPage()));
-                              },
-                            ),
-                            const SizedBox(height: 12),
-
-                            _ProfileOptionEnhanced(
-                              icon: Icons.person_add_alt_1_rounded,
-                              title: 'Invite Friends',
-                              subtitle: 'Earn coupons by inviting friends',
-                              color: Colors.orange,
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const InviteFriendsPage() ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-
-                            _ProfileOptionEnhanced(
-                              icon: Icons.local_activity_rounded,
-                              title: 'My Coupons',
-                              subtitle: 'View and manage your coupons',
-                              color: Colors.purple,
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const CouponManagementPage()),
-                              ),
-                            ),
-
-                            const SizedBox(height: 10),
-                            const Text('Support',
-                                style: TextStyle(
-                                    fontSize: 16.0,
-                                    fontWeight: FontWeight.w600,
-                                    color: Color(0xFF6B7280),
-                                    letterSpacing: 0.5)),
-                            const SizedBox(height: 10),
-
-                            _ProfileOptionEnhanced(
-                              icon: Icons.manage_accounts,
-                              title: 'Account',
-                              subtitle: 'Password, devices, delete',
-                              color: Colors.cyan,
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const AccountSettingsPage() ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-
-                            _ProfileOptionEnhanced(
-                              icon: Icons.privacy_tip_outlined,
-                              title: 'Privacy Policy',
-                              color: Colors.blueGrey,
-                              onTap: () => launchUrl(Uri.parse(_kPrivacyUrl)),
-                            ),
-                            const SizedBox(height: 12),
-
-                            _ProfileOptionEnhanced(
-                              icon: Icons.delete_outline,
-                              title: 'Data Deletion / How to delete my account',
-                              color: Colors.deepOrange,
-                              onTap: () => launchUrl(Uri.parse(_kDeleteUrl)),
-                            ),
-                            const SizedBox(height: 12),
-
-                            _ProfileOptionEnhanced(
-                              icon: Icons.help_outline_rounded,
-                              title: l10n.helpSupport,
-                              color: Colors.teal,
-                              onTap: () => Navigator.push(
-                                  context, MaterialPageRoute(builder: (_) => const HelpSupportPage())),
-                            ),
-                            const SizedBox(height: 12),
-
-                            _ProfileOptionEnhanced(
-                              icon: Icons.info_outline_rounded,
-                              title: l10n.about,
-                              color: Colors.blueGrey,
-                              onTap: () =>
-                                  Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutPage())),
-                            ),
-                            const SizedBox(height: 18),
-
-                            // ===== [PATCH C] Logout → 统一安全登出 =====
-                            _ProfileOptionEnhanced(
-                              icon: Icons.logout_rounded,
-                              title: l10n.logout,
-                              color: Colors.red,
-                              onTap: () async {
-                                final confirmed = await showDialog<bool>(
-                                  context: context,
-                                  builder: (ctx) => AlertDialog(
-                                    shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(18)),
-                                    title: Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(8),
-                                          decoration: BoxDecoration(
-                                              color: Colors.red.withOpacity(0.1),
-                                              borderRadius: BorderRadius.circular(8)),
-                                          child: const Icon(Icons.logout_rounded,
-                                              color: Colors.red, size: 20),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        const Text('Logout',
-                                            style: TextStyle(
-                                                fontSize: 18, fontWeight: FontWeight.w600)),
-                                      ],
-                                    ),
-                                    content: const Text('Are you sure you want to logout?',
-                                        style: TextStyle(fontSize: 15, height: 1.4)),
-                                    actions: [
-                                      TextButton(
-                                          onPressed: () => Navigator.of(ctx).pop(false),
-                                          child: Text('Cancel',
-                                              style: TextStyle(fontSize: 15, color: Colors.grey[600]))),
-                                      Container(
-                                        decoration: BoxDecoration(
-                                            color: Colors.red,
-                                            borderRadius: BorderRadius.circular(8)),
-                                        child: TextButton(
-                                          onPressed: () => Navigator.of(ctx).pop(true),
-                                          child: const Text('Logout',
-                                              style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w600)),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                                // -------------------------------------------------
-                                // ✅ [FIX 1] 添加 safeSignOut 调用
-                                // -------------------------------------------------
-                                if (confirmed == true) {
-                                  await safeSignOut(context);
-                                }
-                              },
-                            ),
-                            const SizedBox(height: 40),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // 上传中遮罩
-            if (_uploadingAvatar)
-              Positioned.fill(
-                child: Container(
-                  color: Colors.black54,
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                          color: Colors.white, borderRadius: BorderRadius.circular(16)),
-                      child: const Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          SizedBox(width: 36, height: 36, child: CircularProgressIndicator() ),
-                          SizedBox(height: 16),
-                          Text('Uploading avatar...',
-                              style: TextStyle(color: Color(0xFF616161), fontSize: 15)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/* ---------------- Verification Tile（iOS 紧凑版；Android 原样） ---------------- */
-class _VerificationTileCard extends StatelessWidget {
-  final bool isVerified;
-  final bool isLoading;
-  final VoidCallback? onTap;
-
-  const _VerificationTileCard({
-    required this.isVerified,
-    required this.isLoading,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final Color badgeColor = isVerified ? Colors.green : Colors.grey;
-    final bool isIOS = Theme.of(context).platform == TargetPlatform.iOS;
-    final double vPad = isIOS ? 12 : 16;      // 垂直更紧凑
-    final double iconSize = isIOS ? 22 : 26;  // 图标略小
-    final double radius = isIOS ? 14 : 16;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(radius),
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: vPad),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(radius),
-            boxShadow: const [
-              BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.04), blurRadius: 12, offset: Offset(0, 2)),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(isIOS ? 10 : 12),
-                decoration: BoxDecoration(
-                  color: badgeColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(isIOS ? 12 : 14),
-                ),
-                child: Icon(Icons.verified, color: badgeColor, size: iconSize),
-              ),
-              const SizedBox(width: 18),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(isVerified ? 'Verified' : 'Verification',
-                        style: const TextStyle(fontSize: 16.0, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 3),
-                    Text(isVerified ? 'Status: Verified' : 'Status: Not verified',
-                        style: TextStyle(fontSize: 13.0, color: Colors.grey[600])),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              isLoading
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
-                  : Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey[400]),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/* ---------------- 通用列表项（iOS 紧凑版；Android 原样） ---------------- */
-class _ProfileOptionEnhanced extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String? subtitle;
-  final Color color;
-  final VoidCallback? onTap;
-
-  const _ProfileOptionEnhanced({
-    required this.icon,
-    required this.title,
-    required this.color,
-    this.subtitle,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isIOS = Theme.of(context).platform == TargetPlatform.iOS;
-    final double vPad = isIOS ? 12 : 16;
-    final double iconSize = isIOS ? 22 : 26;
-    final double radius = isIOS ? 14 : 16;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(radius),
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: vPad),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(radius),
-            boxShadow: const [
-              BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.04), blurRadius: 12, offset: Offset(0, 2))
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(isIOS ? 10 : 12),
-                decoration: BoxDecoration(
-                    color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(isIOS ? 12 : 14)),
-                child: Icon(icon, color: color, size: iconSize),
-              ),
-              const SizedBox(width: 18),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        style:
-                        const TextStyle(fontSize: 16.0, fontWeight: FontWeight.w600)),
-                    if (subtitle != null) ...[
-                      const SizedBox(height: 3),
-                      Text(subtitle!,
-                          style: TextStyle(fontSize: 13.0, color: Colors.grey[600])),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey[400]),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/* ---------------- My Rewards（iOS 紧凑版；Android 原样） ---------------- */
-class _RewardsTileUnified extends StatelessWidget {
-  final VoidCallback? onTap;
-  const _RewardsTileUnified({this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final bool isIOS = Theme.of(context).platform == TargetPlatform.iOS;
-    final double vPad = isIOS ? 12 : 16;
-    final double iconSize = isIOS ? 22 : 26;
-    final double radius = isIOS ? 14 : 16;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(radius),
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 16, vertical: vPad),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(radius),
-            boxShadow: const [
-              BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.04), blurRadius: 12, offset: Offset(0, 2)),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: EdgeInsets.all(isIOS ? 10 : 12),
-                decoration: BoxDecoration(
-                  color: Colors.deepPurple.withOpacity(0.10),
-                  borderRadius: BorderRadius.circular(isIOS ? 12 : 14),
-                ),
-                child: Icon(Icons.emoji_events_rounded,
-                    color: Colors.deepPurple, size: iconSize),
-              ),
-              const SizedBox(width: 18),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('My Rewards',
-                        style:
-                        TextStyle(fontSize: 16.0, fontWeight: FontWeight.w600)),
-                    SizedBox(height: 3),
-                    Text('Points: 0 · Coupons: 1',
-                        style: TextStyle(fontSize: 13.0, color: Color(0xFF6B7280))),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 10),
-              const Icon(Icons.arrow_forward_ios, size: 18, color: Color(0xFFBDBDBD)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/* ---------------- Guest 选项（简版） ---------------- */
-class _GuestSimpleOptions extends StatelessWidget {
-  const _GuestSimpleOptions();
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Column(
-      children: [
-        _ProfileOptionEnhanced(
-          icon: Icons.help_outline_rounded,
-          title: l10n.helpSupport,
-          color: Colors.blue,
-          onTap: () =>
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpSupportPage())),
-        ),
-        const SizedBox(height: 14),
-        _ProfileOptionEnhanced(
-          icon: Icons.info_outline_rounded,
-          title: l10n.about,
-          color: Colors.indigo,
-          onTap: () =>
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutPage())),
-        ),
-      ],
-    );
-  }
-}
-
-/* ---------------- Help & Support Page ---------------- */
-class HelpSupportPage extends StatelessWidget {
-  const HelpSupportPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      // ✅ [MODIFIED] 替换 AppBar
-      appBar: _buildStandardAppBar(context, l10n.helpSupport),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [Color(0xFF60A5FA), Color(0xFF3B82F6)]),
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: const [
-                  BoxShadow(
-                      color: Color.fromRGBO(37, 99, 235, 0.3),
-                      blurRadius: 24,
-                      offset: Offset(0, 12))
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Need Help?',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 10),
-                  Text('Our support team is here to help you 24/7',
-                      style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 15)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text('Contact Information',
-                style: TextStyle(
-                    fontSize: 18, fontWeight: FontWeight.w700, color: Colors.grey[800])),
-            const SizedBox(height: 14),
-            _buildContactCard(
-              icon: Icons.email_outlined,
-              title: 'Email Support',
-              subtitle: 'swaply@swaply.cc',
-              color: Colors.blue,
-              onTap: () => launchUrl(Uri(scheme: 'mailto', path: 'swaply@swaply.cc')),
-            ),
-            const SizedBox(height: 12),
-            _buildContactCard(
-              icon: Icons.language,
-              title: 'Website',
-              subtitle: 'www.swaply.cc',
-              color: Colors.green,
-              onTap: () => launchUrl(Uri.parse('https://www.swaply.cc')),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ✅ [MODIFIED] 统一的 AppBar 构建器 (已按 verification_page.dart 标准重写)
-  PreferredSizeWidget _buildStandardAppBar(BuildContext context, String title) {
-    final double statusBar = MediaQuery.of(context).padding.top;
-    // 使用 Theme.of(context).platform 因为它不需要 'foundation.dart'
-    final bool isIOS = Theme.of(context).platform == TargetPlatform.iOS;
-    const Color kBgColor = Color(0xFF2563EB); // 此页面的背景色
-
-    // ============== Android & 其他：保持原 AppBar 不变 ==============
-    if (!isIOS) {
-      return AppBar(
-        title: Text(title, style: const TextStyle(color: Colors.white)),
-        backgroundColor: kBgColor,
-        elevation: 0,
-      );
-    }
-
-    // ===== ✅ [MODIFIED] iOS：使用“基准页” 的 44pt Row 布局 =====
-    const double kNavBarHeight = 44.0;
-    const double kButtonSize = 32.0;
-    const double kSidePadding = 16.0;
-    const double kButtonSpacing = 12.0;
-
-    final Widget iosBackButton = SizedBox(
-      width: kButtonSize,
-      height: kButtonSize,
-      child: GestureDetector(
-        onTap: () => Navigator.pop(context),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          alignment: Alignment.center,
-          child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
-        ),
-      ),
-    );
-
-    final Widget iosTitle = Expanded(
-      child: Text(
-        title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
-          fontSize: 18,
-        ),
-      ),
-    );
-
-    const Widget iosRightPlaceholder =
-    SizedBox(width: kButtonSize, height: kButtonSize);
-
-    return PreferredSize(
-      preferredSize: Size.fromHeight(statusBar + kNavBarHeight),
-      child: Container(
-        color: kBgColor,
-        padding: EdgeInsets.only(top: statusBar),
-        child: SizedBox(
-          height: kNavBarHeight,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: kSidePadding),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                iosBackButton,
-                const SizedBox(width: kButtonSpacing),
-                iosTitle,
-                const SizedBox(width: kButtonSpacing),
-                iosRightPlaceholder,
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildContactCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    VoidCallback? onTap,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: const [
-              BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.04), blurRadius: 10, offset: Offset(0, 2))
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                    color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                child: Icon(icon, color: color, size: 26),
-              ),
-              const SizedBox(width: 18),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(title,
-                      style:
-                      TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey[800])),
-                  const SizedBox(height: 3),
-                  Text(subtitle, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                ]),
-              ),
-              if (onTap != null)
-                Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/* ---------------- About Page ---------------- */
-class AboutPage extends StatelessWidget {
-  const AboutPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      // ✅ [MODIFIED] 替换 AppBar
-      appBar: _buildStandardAppBar(context, 'About'),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: const [
-                  BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.05), blurRadius: 12, offset: Offset(0, 4))
-                ],
-              ),
-              child: const Column(
-                children: [
-                  Text('Trade What You Have\nFor What You Need',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF2F2F2F),
-                          height: 1.3)),
-                  SizedBox(height: 14),
-                  Text(
-                    'Swaply is your community marketplace for trading items you no longer need for things you actually want.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 15, color: Color(0xFF6B7280), height: 1.5),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: const [
-                  BoxShadow(color: Color.fromRGBO(0, 0, 0, 0.05), blurRadius: 12, offset: Offset(0, 4))
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.copyright_rounded, size: 18, color: Colors.grey[600]),
-                  const SizedBox(width: 5),
-                  Text('2024 Swaply. All rights reserved.',
-                      style: TextStyle(fontSize: 14, color: Colors.grey[600])),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ✅ [MODIFIED] 统一的 AppBar 构建器 (已按 verification_page.dart 标准重写)
-  PreferredSizeWidget _buildStandardAppBar(BuildContext context, String title) {
-    final double statusBar = MediaQuery.of(context).padding.top;
-    final bool isIOS = Theme.of(context).platform == TargetPlatform.iOS;
-    const Color kBgColor = Color(0xFF2563EB);
-
-    if (!isIOS) {
-      return AppBar(
-        title: Text(title, style: const TextStyle(color: Colors.white)),
-        backgroundColor: kBgColor,
-        elevation: 0,
-      );
-    }
-
-    const double kNavBarHeight = 44.0;
-    const double kButtonSize = 32.0;
-    const double kSidePadding = 16.0;
-    const double kButtonSpacing = 12.0;
-
-    final Widget iosBackButton = SizedBox(
-      width: kButtonSize,
-      height: kButtonSize,
-      child: GestureDetector(
-        onTap: () => Navigator.pop(context),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          alignment: Alignment.center,
-          child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
-        ),
-      ),
-    );
-
-    final Widget iosTitle = Expanded(
-      child: Text(
-        title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w700,
-          fontSize: 18,
-        ),
-      ),
-    );
-
-    const Widget iosRightPlaceholder =
-    SizedBox(width: kButtonSize, height: kButtonSize);
-
-    return PreferredSize(
-      preferredSize: Size.fromHeight(statusBar + kNavBarHeight),
-      child: Container(
-        color: kBgColor,
-        padding: EdgeInsets.only(top: statusBar),
-        child: SizedBox(
-          height: kNavBarHeight,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: kSidePadding),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                iosBackButton,
-                const SizedBox(width: kButtonSpacing),
-                iosTitle,
-                const SizedBox(width: kButtonSpacing),
-                iosRightPlaceholder,
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 登录态变更监听：用户 signedIn 时，确保 profiles 里有一行
-/// 只做一件事：如果 profiles 里没有该用户，就 upsert 一行
-Future<void> _ensureProfileExists(User user) async {
-  final supabase = Supabase.instance.client;
-
-  try {
-    // 查是否已存在
-    final existing = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', user.id)
-        .maybeSingle();
-
-    if (existing != null) return; // 已有，无需处理
-
-    // 尽量从 OAuth / 注册 metadata 里取到名字、头像和电话
-    final meta      = user.userMetadata ?? {};
-    final fullName  = (meta['full_name'] ?? meta['name'] ?? user.email ?? 'New User').toString();
-    final avatarUrl = (meta['avatar_url'] ?? meta['picture'])?.toString();
-    final phone     = (meta['phone'] ?? meta['phone_number'] ?? '').toString(); // ✅ 新增
-
-    // 用 upsert 防止重复/并发
-    await supabase.from('profiles').upsert(
-      {
-        'id':        user.id,
-        'email':     user.email,
-        'full_name': fullName,
-        if (avatarUrl != null && avatarUrl.isNotEmpty) 'avatar_url': avatarUrl,
-        if (phone.isNotEmpty) 'phone': phone,
-      },
-      onConflict: 'id',
-      ignoreDuplicates: true,
-    );
-  } catch (e, st) {
-    dev.log('ensureProfile error: $e', stackTrace: st);
-    // 不抛错，避免影响 UI
-  }
-}
-
-

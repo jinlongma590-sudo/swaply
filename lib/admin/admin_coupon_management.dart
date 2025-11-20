@@ -1,3 +1,4 @@
+﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/admin/admin_coupon_management.dart - Fixed English version with 3 core coupon types
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';

@@ -1,8 +1,10 @@
-// lib/auth/register_screen.dart —— 最终版：统一回调到 cc.swaply.app://login-callback
-// - 与 login_screen.dart 的 OAuth 流程完全一致（单入口 + 防重入）
-// - Facebook 精简权限 + display=popup，减少二次确认
+﻿// lib/auth/register_screen.dart —— 统一回调到 cc.swaply.app://login-callback
+// - 与 login_screen.dart 一致：OAuth 单入口 + 防重入
+// - Facebook 精简权限 + display=popup（减少二次确认）
 // - Apple 使用 OAuth + scopes: name email
-// - 注册后主动同步一次 profile，并尝试绑定邀请码
+// - 注册后同步一次 profile，并尝试绑定邀请码
+
+import 'package:swaply/services/oauth_entry.dart';
 
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
@@ -12,8 +14,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/config/auth_config.dart';
 import 'login_screen.dart';
 import 'package:swaply/services/profile_service.dart';
-
-const String _kMobileRedirect = 'cc.swaply.app://login-callback';
 
 class RegisterScreen extends StatefulWidget {
   final String? invitationCode;
@@ -41,9 +41,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _agreeToTerms = false;
   bool _showInvitationCode = false;
 
-  // ✅ 防重入：避免多次触发 OAuth 导致“两次确认”
-  static bool _oauthInFlight = false;
-
+  // ✅ 防重入：避免多次触发 OAuth 导致重复弹窗
   @override
   void initState() {
     super.initState();
@@ -65,31 +63,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // ✅ 与 login_screen.dart 完全一致的统一 OAuth 入口
+  // ✅ 与 login_screen.dart 一致的统一 OAuth 入口（补齐早退+日志）
   Future<void> _oauthSignIn(
       OAuthProvider provider, {
         String? scopes,
         Map<String, String>? queryParams,
       }) async {
-    if (_oauthInFlight) return;
-    _oauthInFlight = true;
-    setState(() => _isLoading = true);
+    if (OAuthEntry.inFlight || _isLoading) {
+      debugPrint(
+        '[OAuth GUARD][register] ignore duplicate: provider=$provider '
+            'loading=$_isLoading inFlight=${OAuthEntry.inFlight}\n${StackTrace.current}',
+      );
+      return;
+    }
 
+    debugPrint('[OAuth START][register] provider=$provider inFlight=${OAuthEntry.inFlight}');
+    setState(() => _isLoading = true);
     try {
-      await Supabase.instance.client.auth.signInWithOAuth(
+      await OAuthEntry.signIn(
         provider,
-        redirectTo: kIsWeb ? 'https://swaply.cc/auth/callback' : _kMobileRedirect,
-        authScreenLaunchMode: LaunchMode.externalApplication,
         scopes: scopes,
         queryParams: queryParams,
       );
-      // 回调由 Supabase/深链处理
+      // 回调由 Supabase/通用深链处理；此处不做导航
     } on AuthException catch (e) {
       _showError(e.message);
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('[OAuth ERROR][register] provider=$provider error=$e\n$st');
       _showError('Sign-in failed. Please try again.');
     } finally {
-      _oauthInFlight = false;
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -105,7 +107,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         await RewardService.submitInviteCode(normalized);
         RegisterScreen.clearPendingCode();
       } catch (_) {
-        // ignore, 等待 signedIn 后再重试
+        // ignore：等 signedIn 后再重试
       }
     }
   }
@@ -144,7 +146,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final res = await supa.auth.signUp(
         email: email,
         password: password,
-        emailRedirectTo: kAuthRedirectUri, // 从 config/auth_config.dart
+        emailRedirectTo: kAuthRedirectUri, // 来自 config/auth_config.dart
         data: {
           'full_name': fullName,
           'phone': phone,
@@ -175,7 +177,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _googleRegister() async {
-    if (_isLoading) return;
+    if (_isLoading || OAuthEntry.inFlight) return;
     setState(() => _isLoading = true);
     try {
       final code = _pickCodeFromUI();
@@ -183,6 +185,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       await _oauthSignIn(
         OAuthProvider.google,
+        // 便于切换账号
         queryParams: const {'prompt': 'select_account'},
       );
 
@@ -192,7 +195,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (msg.contains('cancel') ||
           msg.contains('canceled') ||
           msg.contains('popup_closed')) {
-        // 用户取消，静默
+        // 用户取消，忽略
       } else {
         _showError('Google sign-in error: ${e.message}');
       }
@@ -209,13 +212,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _facebookRegister() async {
-    if (_isLoading) return;
+    if (_isLoading || OAuthEntry.inFlight) return;
     setState(() => _isLoading = true);
     try {
       final code = _pickCodeFromUI();
       await _maybeBindInviteCode(code);
 
-      // ✅ 与登录页一致：精简 scopes + 显式 popup，减少二次确认
+      // 与登录页一致：精简 scopes + 样式 popup，减少二次确认
       await _oauthSignIn(
         OAuthProvider.facebook,
         scopes: 'public_profile,email',
@@ -226,14 +229,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } on AuthException catch (e) {
       _showError(e.message);
     } catch (_) {
-      _showError('Facebook 登录启动失败，请稍后重试');
+      _showError('Facebook sign-in failed. Please try again later.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _appleRegister() async {
-    if (_isLoading) return;
+    if (_isLoading || OAuthEntry.inFlight) return;
     setState(() => _isLoading = true);
     try {
       final code = _pickCodeFromUI();
@@ -248,7 +251,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } on AuthException catch (e) {
       _showError(e.message);
     } catch (_) {
-      _showError('Apple 登录启动失败，请稍后重试');
+      _showError('Apple sign-in failed. Please try again later.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -282,7 +285,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         content: Text(msg),
         backgroundColor: Colors.red[400],
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.r),
+        ),
       ),
     );
   }
@@ -294,7 +299,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         content: Text(msg),
         backgroundColor: Colors.black87,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.r),
+        ),
       ),
     );
   }
@@ -342,9 +349,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   label: 'Full Name *',
                   hint: 'Enter your full name',
                   icon: Icons.person_outline,
-                  validator: (v) => (v == null || v.isEmpty)
-                      ? 'Please enter your full name'
-                      : null,
+                  validator: (v) =>
+                  (v == null || v.isEmpty) ? 'Please enter your full name' : null,
                 ),
                 SizedBox(height: 14.h),
 
@@ -419,7 +425,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   obscureText: !_isConfirmPasswordVisible,
                   suffixIcon: IconButton(
                     onPressed: () => setState(
-                            () => _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
+                          () => _isConfirmPasswordVisible = !_isConfirmPasswordVisible,
+                    ),
                     icon: Icon(
                       _isConfirmPasswordVisible
                           ? Icons.visibility_off_outlined
@@ -460,8 +467,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     Expanded(
                       child: RichText(
                         text: TextSpan(
-                          style: TextStyle(
-                              fontSize: 12.sp, color: Colors.grey[700]),
+                          style: TextStyle(fontSize: 12.sp, color: Colors.grey[700]),
                           children: const [
                             TextSpan(text: 'I agree to the '),
                             TextSpan(
@@ -615,8 +621,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       child: Column(
         children: [
           InkWell(
-            onTap: () =>
-                setState(() => _showInvitationCode = !_showInvitationCode),
+            onTap: () => setState(() => _showInvitationCode = !_showInvitationCode),
             borderRadius: BorderRadius.vertical(
               top: Radius.circular(12.r),
               bottom: _showInvitationCode ? Radius.zero : Radius.circular(12.r),
@@ -631,8 +636,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       color: const Color(0xFF2196F3).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(6.r),
                     ),
-                    child: Icon(Icons.card_giftcard,
-                        color: const Color(0xFF2196F3), size: 18.r),
+                    child: Icon(
+                      Icons.card_giftcard,
+                      color: const Color(0xFF2196F3),
+                      size: 18.r,
+                    ),
                   ),
                   SizedBox(width: 10.w),
                   Expanded(
@@ -642,14 +650,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         Text(
                           'Have an invitation code?',
                           style: TextStyle(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87),
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
                         ),
                         Text(
                           "Get extra rewards with friend's invitation",
-                          style:
-                          TextStyle(fontSize: 11.sp, color: Colors.grey[600]),
+                          style: TextStyle(fontSize: 11.sp, color: Colors.grey[600]),
                         ),
                       ],
                     ),
@@ -680,10 +688,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     textCapitalization: TextCapitalization.characters,
                     decoration: InputDecoration(
                       hintText: 'Enter invitation code',
-                      hintStyle:
-                      TextStyle(fontSize: 12.sp, color: Colors.grey[400]),
-                      prefixIcon: Icon(Icons.vpn_key,
-                          size: 18.r, color: const Color(0xFF2196F3)),
+                      hintStyle: TextStyle(fontSize: 12.sp, color: Colors.grey[400]),
+                      prefixIcon: Icon(
+                        Icons.vpn_key,
+                        size: 18.r,
+                        color: const Color(0xFF2196F3),
+                      ),
                       filled: true,
                       fillColor: const Color(0xFF2196F3).withOpacity(0.05),
                       border: OutlineInputBorder(
@@ -741,7 +751,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           hintStyle: TextStyle(color: Colors.grey[400], fontSize: 12.sp),
           prefixIcon: Padding(
             padding: EdgeInsets.all(10.r),
-            child: Icon(icon, color: const Color(0xFF2196F3), size: 18.r),
+            child: Icon(
+              icon,
+              color: const Color(0xFF2196F3),
+              size: 18.r,
+            ),
           ),
           suffixIcon: suffixIcon,
           filled: true,
@@ -766,8 +780,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             borderRadius: BorderRadius.all(Radius.circular(12)),
             borderSide: BorderSide(color: Colors.red, width: 1.5),
           ),
-          contentPadding:
-          EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+          contentPadding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
         ),
       ),
     );
@@ -782,7 +795,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return SizedBox(
       height: 42.h,
       child: OutlinedButton(
-        onPressed: _isLoading ? null : onTap,
+        onPressed: (_isLoading || OAuthEntry.inFlight) ? null : () => onTap(),
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: Colors.grey[200]!),
           backgroundColor: Colors.white,
@@ -813,7 +826,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       width: double.infinity,
       height: 44.h,
       child: ElevatedButton(
-        onPressed: _isLoading ? null : _appleRegister,
+        onPressed: (_isLoading || OAuthEntry.inFlight) ? null : _appleRegister,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.black,
           foregroundColor: Colors.white,

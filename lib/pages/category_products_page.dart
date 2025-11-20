@@ -1,3 +1,4 @@
+﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/pages/category_products_page.dart
 // 使用Facebook亮蓝色和Jiji风格的自动图片调整功能 - 更紧凑设计
 // ✅ [DONE] 与 Sell / Notifications / Saved 一致的 iOS 顶部距离（statusBar + 44）

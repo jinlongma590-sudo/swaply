@@ -1,3 +1,4 @@
+﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/services/app_update_service.dart
 import 'dart:convert';
 import 'dart:io' show Platform;

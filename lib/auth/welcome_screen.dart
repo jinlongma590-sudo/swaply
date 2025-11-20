@@ -1,8 +1,10 @@
-// lib/auth/welcome_screen.dart
+﻿// lib/auth/welcome_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:swaply/router/root_nav.dart';
+import 'package:swaply/services/deep_link_service.dart'; // 深链服务
 import 'login_screen.dart';
 import 'register_screen.dart';
 
@@ -21,6 +23,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   late Animation<Offset> _slideAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<double> _floatAnimation;
+
+  // 页面层做导航，避免顶层 GlobalKey 冲突
+  StreamSubscription<AuthState>? _authSub;
 
   @override
   void initState() {
@@ -66,27 +71,37 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
     _animationController.forward();
 
+    // 在 Navigator 树之下启动 deep link（幂等）
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+    });
+
+    // 登录成功 -> 安全导航到 /home
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (!mounted) return;
+      if (data.event == AuthChangeEvent.signedIn &&
+          data.session?.user != null) {
+        navReplaceAll('/home'); // ✅ 不再传 context
+      }
+    });
+
     _bootAuth();
   }
 
-  // 仅用于“已存在会话时”直接进入首页；其余登录/登出导航交给 main.dart 的全局监听
+  /// 仅做提示，不在这里主动跳转；初始路由由 main.dart 的 initialRoute 决定
   Future<void> _bootAuth() async {
-    final auth = Supabase.instance.client.auth;
-    final s = auth.currentSession;
-    if (mounted && s != null) {
-      _goHome();
-    }
-  }
-
-  void _goHome() {
+    final s = Supabase.instance.client.auth.currentSession;
     if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed('/home');
+    if (s != null) {
+      debugPrint('[Welcome] session exists; initialRoute should be /home');
+    }
   }
 
   @override
   void dispose() {
     _animationController.dispose();
     _floatController.dispose();
+    _authSub?.cancel();
     super.dispose();
   }
 
@@ -212,10 +227,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           ],
                         ),
                         child: TextButton(
-                          onPressed: () {
+                          onPressed: () async {
                             Navigator.of(context).pop();
-                            Navigator.of(context).pushNamedAndRemoveUntil(
-                                '/home', (route) => false);
+                            // 游客模式不触发 onAuthStateChange，使用 root_nav 助手导航
+                            await navReplaceAll('/home'); // ✅ 不再传 context
                           },
                           style: TextButton.styleFrom(
                             padding: EdgeInsets.symmetric(vertical: 12.h),
@@ -437,12 +452,13 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                     mainAxisAlignment:
                                     MainAxisAlignment.spaceEvenly,
                                     children: [
-                                      _buildFeature(Icons.shopping_cart_rounded,
+                                      _buildFeature(
+                                          Icons.shopping_cart_rounded,
                                           'Shop Smart'),
-                                      _buildFeature(
-                                          Icons.near_me_rounded, 'Near You'),
-                                      _buildFeature(
-                                          Icons.security_rounded, 'Safe Trade'),
+                                      _buildFeature(Icons.near_me_rounded,
+                                          'Near You'),
+                                      _buildFeature(Icons.security_rounded,
+                                          'Safe Trade'),
                                     ],
                                   ),
                                 ),
@@ -482,8 +498,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                               Navigator.push(
                                                 context,
                                                 MaterialPageRoute(
-                                                    builder: (context) =>
-                                                    const RegisterScreen()),
+                                                  builder: (context) =>
+                                                  const RegisterScreen(),
+                                                ),
                                               );
                                             },
                                             borderRadius:
@@ -537,8 +554,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                               Navigator.push(
                                                 context,
                                                 MaterialPageRoute(
-                                                    builder: (context) =>
-                                                    const LoginScreen()),
+                                                  builder: (context) =>
+                                                  const LoginScreen(),
+                                                ),
                                               );
                                             },
                                             borderRadius:
@@ -578,7 +596,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                                 fontWeight: FontWeight.w500,
                                                 decoration:
                                                 TextDecoration.underline,
-                                                decorationColor: Colors.white30,
+                                                decorationColor:
+                                                Colors.white30,
                                               ),
                                             ),
                                           ],

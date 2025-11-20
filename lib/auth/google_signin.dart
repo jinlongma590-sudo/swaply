@@ -1,7 +1,11 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
+import 'package:swaply/router/nav_throttler.dart';
+import 'package:swaply/services/oauth_entry.dart';
 // lib/auth/google_signin.dart
 import 'package:flutter/material.dart';
+import 'package:swaply/services/oauth_entry.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:swaply/services/oauth_entry.dart';
 // for LaunchMode
 
 const String _kIOSRedirect = 'cc.swaply.app://login-callback';
@@ -15,16 +19,11 @@ class GoogleSignInButton extends StatelessWidget {
   Future<void> _startGoogleOAuth(BuildContext context) async {
     onBefore?.call();
     try {
-      await Supabase.instance.client.auth.signInWithOAuth(
-        OAuthProvider.google, // 鈫?杩欓噷涓€瀹氳鏈夐€楀彿
-        // 鍙湪 iOS 浼?deep link锛孉ndroid 浼?null
-        redirectTo: (kIsWeb ? 'https://swaply.cc/auth/callback' : 'cc.swaply.app://login-callback'),
-        // iOS 蹇呴』鐢ㄥ閮ㄥ簲鐢紝閬垮厤鍐呭祵椤靛叧涓嶆帀
-        authScreenLaunchMode: LaunchMode.externalApplication,
-      );
+      await OAuthEntry.signIn(
+        OAuthProvider.google);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Google 鐧诲綍澶辫触锛?e')),
+        const SnackBar(content: Text('Google 閻ц缍嶆径杈Е閿?e')),
       );
     } finally {
       onAfter?.call();
@@ -39,5 +38,7 @@ class GoogleSignInButton extends StatelessWidget {
     );
   }
 }
+
+
 
 

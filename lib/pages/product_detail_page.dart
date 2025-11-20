@@ -1,3 +1,4 @@
+﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/pages/product_detail_page.dart
 // 最终版：右上角按钮加大 + 分享弹窗改为“底部操作菜单”样式（非全屏）+ 未安装 App 时回落复制链接
 // + 关键操作守卫（拨号/WhatsApp/报价）VerificationGuard
