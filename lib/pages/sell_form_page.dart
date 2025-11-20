@@ -46,7 +46,12 @@ String _guessMime(String? ext) {
 }
 
 class SellFormPage extends StatefulWidget {
-  const SellFormPage({super.key});
+  final bool isGuest;   // ← 新增
+
+  const SellFormPage({
+    super.key,
+    this.isGuest = false,   // ← 默认 false，和 ProfilePage 一样
+  });
 
   @override
   State<SellFormPage> createState() => _SellFormPageState();

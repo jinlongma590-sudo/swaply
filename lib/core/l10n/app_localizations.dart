@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show SynchronousFuture;
+
 class AppLocalizations {
   final Locale locale;
   AppLocalizations(this.locale);
 
   static AppLocalizations? of(BuildContext context) {
+    // 你当前项目里是固定英文，如果后面做多语言再接 context
     return AppLocalizations(const Locale('en'));
   }
 
@@ -139,11 +141,19 @@ class AppLocalizations {
   String get saveItems => 'Save items';
   String get saveltems => 'Save items'; // l/I 手误兼容
 
+  // ---------- Welcome Gift (新增补齐) ----------
+  String get welcomeGiftTitle => 'Welcome gift 🎁';
+  String get welcomeGiftContent =>
+      'You received a special welcome coupon! Enjoy using Swaply.';
+  String get later => 'Later';
+  String get viewCoupons => 'My Coupons';
+
   @override
   dynamic noSuchMethod(Invocation invocation) => '';
 }
 
-class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate
+    extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -151,7 +161,9 @@ class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> 
 
   @override
   Future<AppLocalizations> load(Locale locale) =>
-      SynchronousFuture<AppLocalizations>(AppLocalizations(const Locale('en')));
+      SynchronousFuture<AppLocalizations>(
+        AppLocalizations(const Locale('en')),
+      );
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
