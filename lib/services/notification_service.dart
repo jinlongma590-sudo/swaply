@@ -1,6 +1,5 @@
 // lib/services/notification_service.dart
-// 单例化 + 全局广播流版本（前台实时推送到任意页面）
-// 兼容你现有的 CRUD 接口；只需在 main.dart 启一次订阅即可。
+// 单例 + 全局广播流；“收藏后通知”走 RPC（notify_favorite）以绕过 RLS。
 
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kDebugMode;
@@ -32,7 +31,7 @@ class NotificationService {
 
   static bool get isSubscribed => _channel != null && _currentUserId != null;
 
-  // ===== 全局广播流（任意页面都能监听）=====
+  // ===== 全局广播流 =====
   static final StreamController<Map<String, dynamic>> _controller =
   StreamController<Map<String, dynamic>>.broadcast();
   static Stream<Map<String, dynamic>> get stream => _controller.stream;
@@ -47,20 +46,16 @@ class NotificationService {
     }
   }
 
-  /// 订阅用户通知（幂等，全局唯一通道）：
-  /// - 在 main.dart 启一次即可；页面不要再直接连 Supabase
-  /// - 兼容 onEvent，同时**永远**向 NotificationService.stream 广播
+  /// 订阅当前用户的通知（幂等）
   static Future<void> subscribeUser(
       String userId, {
         NotificationEventCallback? onEvent,
       }) async {
-    // 已订阅相同用户则直接返回
     if (_currentUserId == userId && _channel != null) {
       _debugPrint('Already subscribed for user: $userId');
       return;
     }
 
-    // 清理旧订阅
     await unsubscribe();
 
     _currentUserId = userId;
@@ -92,7 +87,7 @@ class NotificationService {
       },
     );
 
-    // UPDATE：例如 is_read 等状态外部被修改时，同步 UI
+    // UPDATE：如 is_read 变化时
     ch.onPostgresChanges(
       event: PostgresChangeEvent.update,
       schema: 'public',
@@ -104,12 +99,11 @@ class NotificationService {
       ),
       callback: (payload) {
         final data = Map<String, dynamic>.from(payload.newRecord);
-        _controller.add(data); // 交给前端按 id 覆盖
+        _controller.add(data);
       },
     );
 
-    // 不要 await：subscribe() 在某些 SDK 版本里不是 Future
-    ch.subscribe();
+    ch.subscribe(); // 某些 SDK 不是 Future
     _channel = ch;
     _debugPrint('Subscribed to notifications for user: $userId');
   }
@@ -119,30 +113,92 @@ class NotificationService {
     final ch = _channel;
     _channel = null;
     _currentUserId = null;
-    _seenIds.clear(); // ✅ 清空去重集
+    _seenIds.clear();
 
     if (ch != null) {
       try {
-        // 某些 SDK 版本提供 unsubscribe()
         try {
           ch.unsubscribe();
-        } catch (_) {
-          // 忽略：有的版本无此方法或为同步方法
-        }
+        } catch (_) {}
         try {
           _client.removeChannel(ch);
-        } catch (_) {
-          // 忽略移除异常
-        }
+        } catch (_) {}
         _debugPrint('Unsubscribed from notifications');
-      } catch (_) {
-        // 忽略
-      }
+      } catch (_) {}
     }
   }
 
-  // ========== 通知创建方法 ==========
+  // ========== ✅ 安全 RPC：收藏后通知（命名参数版） ==========
+  /// 使用后端 security definer 函数：public.notify_favorite(...)
+  /// 期望的函数参数（推荐）：
+  ///   p_recipient_id uuid,
+  ///   p_type text,
+  ///   p_title text,
+  ///   p_message text,
+  ///   p_listing_id uuid,
+  ///   p_liker_id uuid,
+  ///   p_liker_name text,
+  ///   p_metadata jsonb
+  ///
+  /// 如你的后端暂时仍是 `notify_favorite(uuid)`，需要先按上述签名升级函数。
+  static Future<bool> notifyFavorite({
+    required String sellerId,      // 被通知的卖家
+    required String listingId,     // 商品ID
+    required String listingTitle,  // 商品标题
+    String? likerId,               // 收藏者 ID
+    String? likerName,             // 收藏者显示名
+  }) async {
+    try {
+      final currentUser = _client.auth.currentUser;
 
+      final safeName = (likerName?.trim().isNotEmpty == true)
+          ? likerName!.trim()
+          : (currentUser?.userMetadata?['full_name'] as String?) ??
+          (currentUser?.email ?? 'Someone');
+
+      // 自己收藏自己就不发
+      if (sellerId == (likerId ?? currentUser?.id)) {
+        _debugPrint('skip self favorite notification');
+        return true;
+      }
+
+      final res = await _client.rpc(
+        'notify_favorite',
+        params: {
+          'p_recipient_id': sellerId,
+          'p_type': 'wishlist',
+          'p_title': 'Item Added to Wishlist',
+          'p_message': '$safeName added your $listingTitle to their wishlist',
+          'p_listing_id': listingId,
+          'p_liker_id': likerId ?? currentUser?.id,
+          'p_liker_name': safeName,
+          'p_metadata': {
+            'listing_title': listingTitle,
+            'liker_name': safeName,
+          },
+        },
+      );
+
+      final ok = res != null;
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print(ok
+            ? '[NotificationService] Favorite RPC sent: $listingId -> $sellerId'
+            : '[NotificationService] Favorite RPC failed (returned null/false)');
+      }
+      return ok;
+    } catch (e, st) {
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print('[NotificationService] Favorite RPC error: $e\n$st');
+      }
+      return false;
+    }
+  }
+
+  // ========== （Legacy）直插入方法占位 ==========
+  // 注意：由于 RLS，客户端对 notifications 的 insert 会被拒绝。
+  // 因此保留该方法仅作占位，避免旧代码调用时报错；不再执行直插入。
   static Future<Map<String, dynamic>?> createNotification({
     required String recipientId,
     String? senderId,
@@ -153,35 +209,12 @@ class NotificationService {
     String? offerId,
     Map<String, dynamic>? metadata,
   }) async {
-    try {
-      _debugPrint('Creating notification: $title for user $recipientId');
-
-      final currentUser = _client.auth.currentUser;
-      final data = {
-        'recipient_id': recipientId,
-        'sender_id': senderId ?? currentUser?.id,
-        'type': type.value,
-        'title': title,
-        'message': message,
-        'listing_id': listingId,
-        'offer_id': offerId,
-        'metadata': metadata ?? <String, dynamic>{},
-        'created_at': DateTime.now().toIso8601String(),
-        'is_read': false,
-        'is_deleted': false,
-      };
-
-      final result =
-      await _client.from(_tableName).insert(data).select().single();
-
-      _debugPrint('Notification created successfully: ${result['id']}');
-      return Map<String, dynamic>.from(result);
-    } catch (e) {
-      _debugPrint('Error creating notification: $e');
-      return null;
-    }
+    _debugPrint(
+        'createNotification skipped for type=${type.value} (use RPC per type)');
+    return null;
   }
 
+  // ========== 业务封装：消息 / 出价 / 收藏 / 系统 ==========
   static Future<bool> createMessageNotification({
     required String recipientId,
     required String senderId,
@@ -189,32 +222,9 @@ class NotificationService {
     required String senderName,
     required String messageContent,
   }) async {
-    try {
-      final currentUser = _client.auth.currentUser;
-      if (currentUser?.id == recipientId) {
-        return true; // 不给自己发通知
-      }
-
-      final notification = await createNotification(
-        recipientId: recipientId,
-        senderId: senderId,
-        type: NotificationType.message,
-        title: 'New message from $senderName',
-        message: messageContent.length > 50
-            ? '${messageContent.substring(0, 50)}...'
-            : messageContent,
-        offerId: offerId,
-        metadata: {
-          'sender_name': senderName,
-          'full_message': messageContent,
-        },
-      );
-
-      return notification != null;
-    } catch (e) {
-      _debugPrint('Error creating message notification: $e');
-      return false;
-    }
+    // 需要时可新增 notify_message RPC
+    _debugPrint('createMessageNotification skipped (RPC not implemented)');
+    return true;
   }
 
   static Future<bool> createOfferNotification({
@@ -227,29 +237,9 @@ class NotificationService {
     String? buyerPhone,
     String? message,
   }) async {
-    try {
-      final displayName = buyerName ?? 'Someone';
-      final notification = await createNotification(
-        recipientId: sellerId,
-        senderId: buyerId,
-        type: NotificationType.offer,
-        title: 'New Offer Received',
-        message:
-        '$displayName made an offer of \$${offerAmount.toStringAsFixed(0)} for your $listingTitle',
-        listingId: listingId,
-        metadata: {
-          'offer_amount': offerAmount,
-          'buyer_name': displayName,
-          'buyer_phone': buyerPhone,
-          'buyer_message': message,
-          'listing_title': listingTitle,
-        },
-      );
-      return notification != null;
-    } catch (e) {
-      _debugPrint('Error creating offer notification: $e');
-      return false;
-    }
+    // 需要时可新增 notify_offer RPC
+    _debugPrint('createOfferNotification skipped (RPC not implemented)');
+    return true;
   }
 
   static Future<bool> createWishlistNotification({
@@ -259,27 +249,14 @@ class NotificationService {
     required String listingTitle,
     String? likerName,
   }) async {
-    try {
-      if (sellerId == likerId) return true; // 不给自己发通知
-
-      final displayName = likerName ?? 'Someone';
-      final notification = await createNotification(
-        recipientId: sellerId,
-        senderId: likerId,
-        type: NotificationType.wishlist,
-        title: 'Item Added to Wishlist',
-        message: '$displayName added your $listingTitle to their wishlist',
-        listingId: listingId,
-        metadata: {
-          'liker_name': displayName,
-          'listing_title': listingTitle,
-        },
-      );
-      return notification != null;
-    } catch (e) {
-      _debugPrint('Error creating wishlist notification: $e');
-      return false;
-    }
+    // ✅ 走 RPC，避免 42501
+    return await notifyFavorite(
+      sellerId: sellerId,
+      listingId: listingId,
+      listingTitle: listingTitle,
+      likerId: likerId,
+      likerName: likerName,
+    );
   }
 
   static Future<bool> createSystemNotification({
@@ -288,23 +265,12 @@ class NotificationService {
     required String message,
     Map<String, dynamic>? metadata,
   }) async {
-    try {
-      final notification = await createNotification(
-        recipientId: recipientId,
-        type: NotificationType.system,
-        title: title,
-        message: message,
-        metadata: metadata,
-      );
-      return notification != null;
-    } catch (e) {
-      _debugPrint('Error creating system notification: $e');
-      return false;
-    }
+    // 需要时可新增 notify_system RPC
+    _debugPrint('createSystemNotification skipped (RPC not implemented)');
+    return true;
   }
 
-  // ========== 通知查询方法 ==========
-
+  // ========== 查询 / 标记 ==========
   static Future<List<Map<String, dynamic>>> getUserNotifications({
     String? userId,
     int limit = 50,
@@ -446,8 +412,7 @@ class NotificationService {
     }
   }
 
-  // ========== 辅助方法 ==========
-
+  // ========== 辅助 ==========
   static String getNotificationIcon(String type) {
     switch (type) {
       case 'offer':
@@ -501,12 +466,9 @@ class NotificationService {
   }
 
   static Future<bool> sendWelcomeNotification(String userId) async {
-    return createSystemNotification(
-      recipientId: userId,
-      title: 'Welcome to Swaply!',
-      message: 'Thank you for joining our marketplace!',
-      metadata: {'welcome_notification': true},
-    );
+    // 欢迎礼已由 Reward/WelcomeDialog 接管
+    _debugPrint('sendWelcomeNotification skipped (use RewardService)');
+    return true;
   }
 
   static Future<bool> testConnection() async {

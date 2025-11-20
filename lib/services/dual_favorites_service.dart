@@ -2,6 +2,9 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
 
+// ✅ 使用 RPC 发送通知
+import 'package:swaply/services/notification_service.dart';
+
 /// 修复版双重收藏服务 - 同时管理 favorites 和 wishlists 表（带缓存和去重）
 class DualFavoritesService {
   static final SupabaseClient _client = Supabase.instance.client;
@@ -18,6 +21,7 @@ class DualFavoritesService {
 
   static void _debugPrint(String message) {
     if (kDebugMode) {
+      // ignore: avoid_print
       print('[DualFavoritesService] $message');
     }
   }
@@ -75,7 +79,7 @@ class DualFavoritesService {
       _debugPrint('用户ID: $userId');
       _debugPrint('商品ID: $listingId');
 
-      // 1) 已存在直接返回
+      // 1) 已存在直接返回（不再发送通知）
       final existingFavorite = await _client
           .from(_favoritesTable)
           .select('id')
@@ -84,7 +88,7 @@ class DualFavoritesService {
           .maybeSingle();
 
       if (existingFavorite != null) {
-        _debugPrint('商品已在收藏中');
+        _debugPrint('商品已在收藏中（跳过插入 & 通知）');
         return false;
       }
 
@@ -104,7 +108,7 @@ class DualFavoritesService {
         _debugPrint('准备插入收藏数据: $favoriteData');
 
         final favoriteResult =
-            await _client.from(_favoritesTable).insert(favoriteData).select();
+        await _client.from(_favoritesTable).insert(favoriteData).select();
 
         _debugPrint('Favorites 表插入结果: $favoriteResult');
         favoritesSuccess =
@@ -151,7 +155,7 @@ class DualFavoritesService {
         };
 
         final wishlistResult =
-            await _client.from(_wishlistsTable).insert(wishlistData).select();
+        await _client.from(_wishlistsTable).insert(wishlistData).select();
 
         wishlistSuccess = (wishlistResult is List) && wishlistResult.isNotEmpty;
 
@@ -168,6 +172,45 @@ class DualFavoritesService {
       final success = favoritesSuccess || wishlistSuccess;
       _debugPrint(
           '最终结果: $success (Favorites: $favoritesSuccess, Wishlist: $wishlistSuccess)');
+
+      if (success) {
+        // === ✅ 发送“被收藏”通知（RPC：notify_favorite） ===
+        try {
+          // 尝试拿到卖家ID与标题（只查一次最小字段）
+          final listingRow = await _client
+              .from('listings')
+              .select('user_id, title')
+              .eq('id', listingId)
+              .maybeSingle();
+
+          final sellerId = listingRow?['user_id'] as String?;
+          final listingTitleRaw = listingRow?['title'];
+          final safeTitle = (listingTitleRaw is String &&
+              listingTitleRaw.trim().isNotEmpty)
+              ? listingTitleRaw
+              : 'your item';
+
+          if (sellerId != null &&
+              sellerId.isNotEmpty &&
+              sellerId != userId) {
+            final ok = await NotificationService.notifyFavorite(
+              sellerId: sellerId,
+              listingId: listingId,
+              listingTitle: safeTitle, // 非空安全
+              likerId: userId,
+            );
+            _debugPrint(
+              ok
+                  ? 'Favorite RPC 通知已发送: $listingId -> $sellerId'
+                  : 'Favorite RPC 通知发送失败（返回 false）',
+            );
+          } else {
+            _debugPrint('未发送通知：sellerId 无效或自己收藏自己');
+          }
+        } catch (e) {
+          _debugPrint('发送 Favorite 通知时异常: $e');
+        }
+      }
 
       if (favoritesSuccess && wishlistSuccess) {
         _debugPrint('🟟 完美！同时添加到收藏和心愿单');
@@ -323,7 +366,7 @@ class DualFavoritesService {
 
     // 发起请求
     final future =
-        _fetchFavorites(userId: userId, limit: limit, offset: offset);
+    _fetchFavorites(userId: userId, limit: limit, offset: offset);
     _inflight[key] = future;
     try {
       final data = await future;
@@ -363,7 +406,7 @@ class DualFavoritesService {
       }
 
       final List<Map<String, dynamic>> favoritesData =
-          _safeListConvert(rawFavoritesData);
+      _safeListConvert(rawFavoritesData);
 
       final result = <Map<String, dynamic>>[];
       for (final favoriteItem in favoritesData) {
@@ -373,7 +416,7 @@ class DualFavoritesService {
             final rawListing = await _client
                 .from('listings')
                 .select(
-                    'id, title, price, city, images, image_urls, status, is_active, seller_name, category, description, created_at')
+                'id, title, price, city, images, image_urls, status, is_active, seller_name, category, description, created_at')
                 .eq('id', listingId)
                 .eq('is_active', true)
                 .maybeSingle();
@@ -465,7 +508,7 @@ class DualFavoritesService {
       }
 
       final List<Map<String, dynamic>> wishlistData =
-          _safeListConvert(rawWishlistData);
+      _safeListConvert(rawWishlistData);
 
       final result = <Map<String, dynamic>>[];
       for (final wishlistItem in wishlistData) {
@@ -475,7 +518,7 @@ class DualFavoritesService {
             final rawListing = await _client
                 .from('listings')
                 .select(
-                    'id, title, price, city, images, image_urls, status, is_active, seller_name, category, description, created_at')
+                'id, title, price, city, images, image_urls, status, is_active, seller_name, category, description, created_at')
                 .eq('id', listingId)
                 .eq('is_active', true)
                 .maybeSingle();
