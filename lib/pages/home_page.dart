@@ -1,4 +1,3 @@
-﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/pages/home_page.dart
 // ✅ 功能：基于代码二（保留 Pub/Sub 自动刷新）
 // ✅ UI：  应用代码一的“紧凑型”分类网格 UI（44.w 图标）
@@ -1278,3 +1277,6 @@ class _HomePageState extends State<HomePage>
     );
   }
 }
+
+
+

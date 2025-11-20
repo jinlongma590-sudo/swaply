@@ -1,4 +1,3 @@
-﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/debug/recovery_probe.dart
 import 'dart:async';
 import 'package:flutter/material.dart';

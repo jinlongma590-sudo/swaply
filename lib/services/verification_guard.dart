@@ -1,4 +1,3 @@
-﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/services/verification_guard.dart
 import 'dart:async'; // ✅ [PATCH] 遵照要求新增
 import 'package:flutter/foundation.dart';

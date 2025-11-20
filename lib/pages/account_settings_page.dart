@@ -1,11 +1,9 @@
-﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/pages/account_settings_page.dart
 import 'package:flutter/foundation.dart'; // 鉁?For platform check
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/auth_service.dart'; // ✅ 新增：统一走 AuthService 登出
-import 'package:swaply/router/safe_navigator.dart';
 
 class AccountSettingsPage extends StatefulWidget {
   const AccountSettingsPage({super.key});

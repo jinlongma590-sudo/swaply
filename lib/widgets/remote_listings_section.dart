@@ -1,10 +1,10 @@
-﻿import 'package:swaply/router/nav_throttler.dart';
-// lib/widgets/remote_listings_section.dart
+﻿// lib/widgets/remote_listings_section.dart
 import 'package:flutter/material.dart';
 import 'package:swaply/config.dart';
 import 'package:swaply/listing_api.dart';
 import 'package:swaply/pages/category_products_page.dart';
-import 'package:swaply/pages/product_detail_page.dart';
+// 使用集中路由：引入 root_nav 的 navPush（命名路由）
+import 'package:swaply/router/root_nav.dart';
 
 /// 首页/专区用的远端卡片列表区块
 /// - [title] 区块标题
@@ -130,7 +130,7 @@ class _RemoteListingsSectionState extends State<RemoteListingsSection> {
       return sorted.map<Map<String, dynamic>>((r) {
         final num? priceNum = r['price'] is num ? (r['price'] as num) : null;
         final priceText =
-            priceNum != null ? '\$${priceNum.toStringAsFixed(0)}' : '';
+        priceNum != null ? '\$${priceNum.toStringAsFixed(0)}' : '';
 
         return {
           'id': r['id'],
@@ -138,7 +138,7 @@ class _RemoteListingsSectionState extends State<RemoteListingsSection> {
           'price': priceText,
           'location': r['city'] ?? '',
           'images':
-              List<String>.from((r['image_urls'] ?? const <String>[]) as List),
+          List<String>.from((r['image_urls'] ?? const <String>[]) as List),
           'postedDate': r['created_at'] ?? '',
           'full': r,
         };
@@ -185,14 +185,14 @@ class _RemoteListingsSectionState extends State<RemoteListingsSection> {
     return page.map<Map<String, dynamic>>((r) {
       final num? priceNum = r['price'] is num ? (r['price'] as num) : null;
       final priceText =
-          priceNum != null ? '\$${priceNum.toStringAsFixed(0)}' : '';
+      priceNum != null ? '\$${priceNum.toStringAsFixed(0)}' : '';
       return {
         'id': r['id'],
         'title': r['title'] ?? '',
         'price': priceText,
         'location': r['city'] ?? '',
         'images':
-            List<String>.from((r['image_urls'] ?? const <String>[]) as List),
+        List<String>.from((r['image_urls'] ?? const <String>[]) as List),
         'postedDate': r['created_at'] ?? '',
         'full': r,
       };
@@ -252,32 +252,9 @@ class _RemoteListingsSectionState extends State<RemoteListingsSection> {
     );
   }
 
-  void _openDetail(Map<String, dynamic> item) {
-    final full = (item['full'] as Map?) ?? {};
-    final images = (item['images'] as List?) ?? [];
-
-    final pdData = {
-      'id': item['id'],
-      'title': item['title'],
-      'price': item['price'],
-      'location': item['location'],
-      'images': images,
-      'postedDate': item['postedDate'] ?? full['created_at'],
-      'description': full['description'] ?? '',
-      'sellerName': full['name'] ?? '',
-      'sellerPhone': full['phone'] ?? '',
-      'category': full['category'] ?? '',
-    };
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ProductDetailPage(
-          productId: item['id']?.toString(),
-          productData: pdData,
-        ),
-      ),
-    );
+  Future<void> _openDetail(Map<String, dynamic> item) async {
+    // 使用集中路由 /listing（navPush: (String routeName, {Object? arguments})）
+    await navPush('/listing', arguments: item['id']);
   }
 
   /* ---------------- UI ---------------- */
@@ -360,9 +337,9 @@ class _RemoteListingsSectionState extends State<RemoteListingsSection> {
             child: _loadingMore
                 ? const CircularProgressIndicator()
                 : TextButton(
-                    onPressed: _loadMore,
-                    child: const Text('Load more'),
-                  ),
+              onPressed: _loadMore,
+              child: const Text('Load more'),
+            ),
           ),
       ],
     );
@@ -407,7 +384,7 @@ class _RemoteListingsSectionState extends State<RemoteListingsSection> {
             Expanded(
               child: ClipRRect(
                 borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(14)),
+                const BorderRadius.vertical(top: Radius.circular(14)),
                 child: thumb,
               ),
             ),
@@ -444,7 +421,7 @@ class _RemoteListingsSectionState extends State<RemoteListingsSection> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style:
-                              const TextStyle(fontSize: 12, color: Colors.grey),
+                          const TextStyle(fontSize: 12, color: Colors.grey),
                         ),
                       ),
                     ],
@@ -459,40 +436,40 @@ class _RemoteListingsSectionState extends State<RemoteListingsSection> {
   }
 
   Widget _placeholder() => Container(
-        color: Colors.grey[300],
-        child: const Icon(Icons.image, size: 50, color: Colors.grey),
-      );
+    color: Colors.grey[300],
+    child: const Icon(Icons.image, size: 50, color: Colors.grey),
+  );
 
   Widget _skeleton() => GridView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 0.75,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-        ),
-        itemCount: 4,
-        itemBuilder: (_, __) => Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            children: [
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius:
-                        const BorderRadius.vertical(top: Radius.circular(14)),
-                  ),
-                ),
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    shrinkWrap: true,
+    physics: const NeverScrollableScrollPhysics(),
+    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: 2,
+      childAspectRatio: 0.75,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+    ),
+    itemCount: 4,
+    itemBuilder: (_, __) => Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(14)),
               ),
-              Container(height: 60, color: Colors.white),
-            ],
+            ),
           ),
-        ),
-      );
+          Container(height: 60, color: Colors.white),
+        ],
+      ),
+    ),
+  );
 }

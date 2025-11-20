@@ -44,6 +44,7 @@ dependencies:
   crypto: ^3.0.6
   flutter_custom_tabs: ^2.4.0    # 如无使用可后续移除
 
+  cross_file: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

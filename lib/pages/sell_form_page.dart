@@ -1,12 +1,10 @@
 // lib/pages/sell_form_page.dart
 import 'dart:io';
-import 'dart:typed_data';
 
-import 'package:cross_file/cross_file.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart'; // kIsWeb & defaultTargetPlatform
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // iOS 状态栏样式
+import 'package:flutter/services.dart'; // iOS 鐘舵€佹爮鏍峰紡
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
@@ -23,19 +21,19 @@ import 'package:swaply/services/listing_events_bus.dart';
 import 'package:swaply/services/reward_service.dart';
 import 'package:swaply/services/verification_guard.dart';
 
-// 统一主色
+// 缁熶竴涓昏壊
 const Color _PRIMARY_BLUE = Color(0xFF2196F3);
 
-// === 底栏留白：略大于真实底栏高度，确保内容不会被遮挡 ===
-// [✅ 补丁 3] 采用你建议的更保守的 gap 算法
+// === 搴曟爮鐣欑櫧锛氱暐澶т簬鐪熷疄搴曟爮楂樺害锛岀‘淇濆唴瀹逛笉浼氳閬尅 ===
+// [鉁?琛ヤ竵 3] 閲囩敤浣犲缓璁殑鏇翠繚瀹堢殑 gap 绠楁硶
 double _navGap(BuildContext context) {
   final safe = MediaQuery.of(context).padding.bottom;
-  final kb = MediaQuery.of(context).viewInsets.bottom; // 键盘弹出
-  const bar = 96.0; // 稍微保守
+  final kb = MediaQuery.of(context).viewInsets.bottom; // 閿洏寮瑰嚭
+  const bar = 96.0; // 绋嶅井淇濆畧
   return bar + safe + (kb > 0 ? 8.0 : 0.0);
 }
 
-// [✅ 补丁 5] 兼容旧版 Dart 2.x, 替代 Dart 3.0 的 switch expression
+// [鉁?琛ヤ竵 5] 鍏煎鏃х増 Dart 2.x, 鏇夸唬 Dart 3.0 鐨?switch expression
 String _guessMime(String? ext) {
   final e = (ext ?? '').toLowerCase();
   if (e == 'png') return 'image/png';
@@ -46,11 +44,11 @@ String _guessMime(String? ext) {
 }
 
 class SellFormPage extends StatefulWidget {
-  final bool isGuest;   // ← 新增
+  final bool isGuest;   // 鈫?鏂板
 
   const SellFormPage({
     super.key,
-    this.isGuest = false,   // ← 默认 false，和 ProfilePage 一样
+    this.isGuest = false,   // 鈫?榛樿 false锛屽拰 ProfilePage 涓€鏍?
   });
 
   @override
@@ -58,29 +56,29 @@ class SellFormPage extends StatefulWidget {
 }
 
 /* =========================
- * 相册选图：返回内存字节而不是路径
+ * 鐩稿唽閫夊浘锛氳繑鍥炲唴瀛樺瓧鑺傝€屼笉鏄矾寰?
  * ========================= */
 Future<({Uint8List bytes, String? name, String? ext, String? mime})?>
 pickImageBytes() async {
   final res = await FilePicker.platform.pickFiles(
     type: FileType.image,
-    withData: true, // 关键：要 bytes
+    withData: true, // 鍏抽敭锛氳 bytes
     allowMultiple: false,
   );
   if (res == null || res.files.isEmpty) return null;
 
   final f = res.files.single;
   Uint8List? bytes = f.bytes;
-  // 有些机型没给 bytes，但给了 path，兜底读一次
+  // 鏈変簺鏈哄瀷娌＄粰 bytes锛屼絾缁欎簡 path锛屽厹搴曡涓€娆?
   if (bytes == null && f.path != null) {
     bytes = await File(f.path!).readAsBytes();
   }
   if (bytes == null) return null;
 
-  // 猜扩展名/类型
+  // 鐚滄墿灞曞悕/绫诲瀷
   final ext = f.extension?.toLowerCase();
   final name = f.name;
-  // [✅ 补丁 5] 使用 Dart 2.x 兼容的辅助函数
+  // [鉁?琛ヤ竵 5] 浣跨敤 Dart 2.x 鍏煎鐨勮緟鍔╁嚱鏁?
   final mime = _guessMime(ext);
 
   return (bytes: bytes, name: name, ext: ext, mime: mime);
@@ -106,7 +104,7 @@ class _SellFormPageState extends State<SellFormPage>
   final Map<String, TextEditingController> _dynamicControllers = {};
   final _cameraPicker = ImagePicker();
 
-  // 用 record 存每张图的 bytes + 元信息
+  // 鐢?record 瀛樻瘡寮犲浘鐨?bytes + 鍏冧俊鎭?
   final List<({Uint8List bytes, String? name, String? ext, String? mime})>
   _images = [];
 
@@ -120,7 +118,7 @@ class _SellFormPageState extends State<SellFormPage>
   bool _loadingCoupons = false;
   bool _showCouponSection = false;
 
-  // 若从优惠券页跳转带入 couponId，这里读取并自动预选
+  // 鑻ヤ粠浼樻儬鍒搁〉璺宠浆甯﹀叆 couponId锛岃繖閲岃鍙栧苟鑷姩棰勯€?
   String? _initialCouponIdFromRoute;
 
   static const _maxPhotos = 10;
@@ -177,7 +175,7 @@ class _SellFormPageState extends State<SellFormPage>
       CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
 
-    // [✅ 最终补丁] 延迟加载优惠券，确保转场动画流畅
+    // [鉁?鏈€缁堣ˉ涓乚 寤惰繜鍔犺浇浼樻儬鍒革紝纭繚杞満鍔ㄧ敾娴佺晠
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _loadAvailableCoupons();
@@ -187,7 +185,7 @@ class _SellFormPageState extends State<SellFormPage>
     _animationController.forward();
   }
 
-  // 读取来自路由的 couponId（如果有）
+  // 璇诲彇鏉ヨ嚜璺敱鐨?couponId锛堝鏋滄湁锛?
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -453,8 +451,8 @@ class _SellFormPageState extends State<SellFormPage>
           fillColor: Colors.white,
           labelStyle: TextStyle(fontSize: 12.sp, color: Colors.grey.shade600),
         ),
-        // [✅ 补丁 1.b] 使用 value: 并正确处理 null
-        value: ((_dynamicValues[key]?.trim().isEmpty ?? true)
+        // [鉁?琛ヤ竵 1.b] 浣跨敤 value: 骞舵纭鐞?null
+        initialValue: ((_dynamicValues[key]?.trim().isEmpty ?? true)
             ? null
             : _dynamicValues[key]),
         items: items
@@ -462,7 +460,7 @@ class _SellFormPageState extends State<SellFormPage>
             value: c, child: Text(c, style: TextStyle(fontSize: 13.sp))))
             .toList(),
         onChanged: (v) => setState(() => _dynamicValues[key] = v ?? ''),
-        // [✅ 补丁 1.b] 修复 validator 逻辑
+        // [鉁?琛ヤ竵 1.b] 淇 validator 閫昏緫
         validator: isRequired
             ? (v) =>
         (v == null || v.trim().isEmpty) ? 'Please select $label' : null
@@ -474,9 +472,9 @@ class _SellFormPageState extends State<SellFormPage>
   }
 
   /* ---------- Submit Functions ---------- */
-  // 本地发布（mock）：需要把 bytes 写到临时文件才能预览
+  // 鏈湴鍙戝竷锛坢ock锛夛細闇€瑕佹妸 bytes 鍐欏埌涓存椂鏂囦欢鎵嶈兘棰勮
   Future<void> _publishLocalOnly() async {
-    // [✅ 补丁 2] 增加分类硬校验
+    // [鉁?琛ヤ竵 2] 澧炲姞鍒嗙被纭牎楠?
     if (_category.isEmpty) {
       _toast('Please select a category.');
       return;
@@ -508,7 +506,7 @@ class _SellFormPageState extends State<SellFormPage>
     final listing = {
       'id': id,
       'category': _category,
-      'images': paths, // 本地预览用路径，不涉及上传
+      'images': paths, // 鏈湴棰勮鐢ㄨ矾寰勶紝涓嶆秹鍙婁笂浼?
       'title': _titleCtrl.text.trim(),
       'price': '\$${_priceCtrl.text.trim()}',
       'location': _city,
@@ -529,9 +527,9 @@ class _SellFormPageState extends State<SellFormPage>
     );
   }
 
-  // [✅ 功能保留自 代码二] (ImageNormalizer, EventBus, etc.)
+  // [鉁?鍔熻兘淇濈暀鑷?浠ｇ爜浜宂 (ImageNormalizer, EventBus, etc.)
   Future<void> _submitListing() async {
-    // [✅ 补丁 2] 增加分类硬校验
+    // [鉁?琛ヤ竵 2] 澧炲姞鍒嗙被纭牎楠?
     if (_category.isEmpty) {
       _toast('Please select a category.');
       return;
@@ -566,7 +564,7 @@ class _SellFormPageState extends State<SellFormPage>
       }
       final userId = auth.currentUser!.id;
 
-      // ===== [✅ 功能保留自 代码二] 使用 bytes 上传, 统一转 JPG (HEIC 修复) =====
+      // ===== [鉁?鍔熻兘淇濈暀鑷?浠ｇ爜浜宂 浣跨敤 bytes 涓婁紶, 缁熶竴杞?JPG (HEIC 淇) =====
       final jpgUrls = <String>[];
       final origUrls = <String>[];
       final total = _images.length;
@@ -576,7 +574,7 @@ class _SellFormPageState extends State<SellFormPage>
         if (!mounted) return;
         setState(() => _progressMsg = 'Uploading photos ${i + 1} / $total');
 
-        // 1) 统一转成 JPG
+        // 1) 缁熶竴杞垚 JPG
         final tempXFile = XFile.fromData(
           img.bytes,
           mimeType: img.mime,
@@ -587,7 +585,7 @@ class _SellFormPageState extends State<SellFormPage>
         final ts = DateTime.now().millisecondsSinceEpoch;
         final pathJpg = '$userId/${ts}_img_$i.jpg';
 
-        // 2) 上传 JPG
+        // 2) 涓婁紶 JPG
         await Supabase.instance.client.storage.from('listings').uploadBinary(
           pathJpg,
           jpgBytes,
@@ -603,7 +601,7 @@ class _SellFormPageState extends State<SellFormPage>
         );
         jpgUrls.add(jpgUrl);
 
-        // 3) （可选）保留原图 —— ✅ 用 $ts（而不是 {ts}）
+        // 3) 锛堝彲閫夛級淇濈暀鍘熷浘 鈥斺€?鉁?鐢?$ts锛堣€屼笉鏄?{ts}锛?
         final origExt = (img.ext?.isNotEmpty == true) ? '.${img.ext}' : '';
         final origPath = '$userId/${ts}_raw_$i$origExt';
         await Supabase.instance.client.storage.from('listings').uploadBinary(
@@ -620,9 +618,9 @@ class _SellFormPageState extends State<SellFormPage>
         );
         origUrls.add(origUrl);
       }
-      // ===== 结束 =====
+      // ===== 缁撴潫 =====
 
-      // 组合额外字段
+      // 缁勫悎棰濆瀛楁
       final extrasLines = <String>[];
       for (final entry in _dynamicControllers.entries) {
         final v = entry.value.text.trim();
@@ -648,7 +646,7 @@ class _SellFormPageState extends State<SellFormPage>
         category: _category,
         city: _city,
         description: desc,
-        imageUrls: jpgUrls, // 一律 JPG, 用于展示
+        imageUrls: jpgUrls, // 涓€寰?JPG, 鐢ㄤ簬灞曠ず
         userId: userId,
         sellerName:
         _nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text.trim(),
@@ -669,7 +667,7 @@ class _SellFormPageState extends State<SellFormPage>
 
       _toast('Posted successfully!');
 
-      // [✅ 功能保留自 代码二] 广播 + 返回 true
+      // [鉁?鍔熻兘淇濈暀鑷?浠ｇ爜浜宂 骞挎挱 + 杩斿洖 true
       final String? newId = (row['id'] as String?);
       ListingEventsBus.instance.emitPublished(newId);
       if (mounted) {
@@ -713,7 +711,7 @@ class _SellFormPageState extends State<SellFormPage>
               SizedBox(width: 8.w),
               Expanded(
                 child: Text(
-                  '🎉 Coupon applied! Item pinned ${_getCouponPinningDescription(_selectedCoupon!.type)} for ${_selectedCoupon!.effectivePinDays} days.',
+                  '馃帀 Coupon applied! Item pinned ${_getCouponPinningDescription(_selectedCoupon!.type)} for ${_selectedCoupon!.effectivePinDays} days.',
                   style: TextStyle(fontSize: 14.sp),
                 ),
               ),
@@ -814,7 +812,7 @@ class _SellFormPageState extends State<SellFormPage>
                   Icon(Icons.celebration, color: Colors.white, size: 20.r),
                   SizedBox(width: 8.w),
                   const Text(
-                      '🎉 Congratulations! Publishing task completed - Hot pin earned!'),
+                      '馃帀 Congratulations! Publishing task completed - Hot pin earned!'),
                 ],
               ),
               backgroundColor: Colors.green[600],
@@ -835,7 +833,7 @@ class _SellFormPageState extends State<SellFormPage>
 
   /* ---------- Image Picker UI ---------- */
 
-  // [✅ UI 还原自 代码一] (这是你喜欢的版本)
+  // [鉁?UI 杩樺師鑷?浠ｇ爜涓€] (杩欐槸浣犲枩娆㈢殑鐗堟湰)
   Future<void> _pickImage() async {
     if (_images.length >= _maxPhotos) {
       _toast('You can upload up to $_maxPhotos photos.');
@@ -844,17 +842,17 @@ class _SellFormPageState extends State<SellFormPage>
 
     showModalBottomSheet(
       context: context,
-      useRootNavigator: true, // [✅ 补丁 4] 解决弹窗被导航栏遮挡
-      useSafeArea: true, // [✅ 补丁 4] 增加安全区
+      useRootNavigator: true, // [鉁?琛ヤ竵 4] 瑙ｅ喅寮圭獥琚鑸爮閬尅
+      useSafeArea: true, // [鉁?琛ヤ竵 4] 澧炲姞瀹夊叏鍖?
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
       ),
       builder: (BuildContext ctx) {
-        // [✅ 补丁 4] 改为 ctx
+        // [鉁?琛ヤ竵 4] 鏀逛负 ctx
         final bottom = MediaQuery.of(ctx).padding.bottom;
         return Padding(
-          // [✅ 补丁 4] 增加底部 Padding 兜底
+          // [鉁?琛ヤ竵 4] 澧炲姞搴曢儴 Padding 鍏滃簳
           padding: EdgeInsets.only(bottom: bottom > 0 ? bottom : 12.h),
           child: Container(
             padding: EdgeInsets.all(20.w),
@@ -882,7 +880,7 @@ class _SellFormPageState extends State<SellFormPage>
                         Icons.photo_camera_rounded,
                         'Camera',
                             () async {
-                          Navigator.pop(ctx); // [✅ 补丁 4] 用 ctx
+                          Navigator.pop(ctx); // [鉁?琛ヤ竵 4] 鐢?ctx
                           final file = await _cameraPicker.pickImage(
                             source: ImageSource.camera,
                             imageQuality: 80,
@@ -910,8 +908,8 @@ class _SellFormPageState extends State<SellFormPage>
                         Icons.photo_library_rounded,
                         'Gallery',
                             () async {
-                          Navigator.pop(ctx); // [✅ 补丁 4] 用 ctx
-                          // ✅ 只在一个地方调用 bytes 版选图
+                          Navigator.pop(ctx); // [鉁?琛ヤ竵 4] 鐢?ctx
+                          // 鉁?鍙湪涓€涓湴鏂硅皟鐢?bytes 鐗堥€夊浘
                           final picked = await pickImageBytes();
                           if (picked == null) {
                             debugPrint('[Picker] cancelled or failed');
@@ -936,7 +934,7 @@ class _SellFormPageState extends State<SellFormPage>
     );
   }
 
-  // [✅ UI 还原自 代码一] (这是你喜欢的版本)
+  // [鉁?UI 杩樺師鑷?浠ｇ爜涓€] (杩欐槸浣犲枩娆㈢殑鐗堟湰)
   Widget _buildImageOption(IconData icon, String label, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
@@ -983,13 +981,13 @@ class _SellFormPageState extends State<SellFormPage>
     );
   }
 
-  // [✅ 最终补丁] 帮你加入 cacheWidth 辅助函数
+  // [鉁?鏈€缁堣ˉ涓乚 甯綘鍔犲叆 cacheWidth 杈呭姪鍑芥暟
   int _px(BuildContext ctx, double logical) {
     final dpr = MediaQuery.of(ctx).devicePixelRatio;
     return (logical * dpr).round().clamp(64, 512);
   }
 
-  // 更紧凑的 AppBar (来自代码二)
+  // 鏇寸揣鍑戠殑 AppBar (鏉ヨ嚜浠ｇ爜浜?
   PreferredSizeWidget _buildStandardAppBar(BuildContext context) {
     const String title = 'New Advert';
     final double statusBar = MediaQuery.of(context).padding.top;
@@ -1105,12 +1103,12 @@ class _SellFormPageState extends State<SellFormPage>
               position: _slideAnimation,
               child: FadeTransition(
                 opacity: _fadeAnimation,
-                // [✅ 修复] 移除外部 Padding (问题 1)
+                // [鉁?淇] 绉婚櫎澶栭儴 Padding (闂 1)
                 child: SingleChildScrollView(
                   padding: EdgeInsets.all(12.w),
                   child: Form(
                     key: _formKey,
-                    // [✅ 功能保留自 代码二] (自动验证)
+                    // [鉁?鍔熻兘淇濈暀鑷?浠ｇ爜浜宂 (鑷姩楠岃瘉)
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1145,7 +1143,7 @@ class _SellFormPageState extends State<SellFormPage>
 
                         // Submit Button
                         _buildSubmitButton(),
-                        // [✅ 修复] 将 _navGap 作为内部 padding 添加到滚动列表末尾 (问题 1)
+                        // [鉁?淇] 灏?_navGap 浣滀负鍐呴儴 padding 娣诲姞鍒版粴鍔ㄥ垪琛ㄦ湯灏?(闂 1)
                         SizedBox(height: _navGap(context)),
                       ],
                     ),
@@ -1279,7 +1277,7 @@ class _SellFormPageState extends State<SellFormPage>
                 Image.memory(
                   bytes,
                   fit: BoxFit.cover,
-                  // [✅ 最终补丁] 增加 cacheWidth 优化解码
+                  // [鉁?鏈€缁堣ˉ涓乚 澧炲姞 cacheWidth 浼樺寲瑙ｇ爜
                   gaplessPlayback: true,
                   filterQuality: FilterQuality.low,
                   cacheWidth: _px(context, 60.w),
@@ -1342,7 +1340,7 @@ class _SellFormPageState extends State<SellFormPage>
 
   Widget _buildAddPhotoButton() {
     return GestureDetector(
-      onTap: _pickImage, // [✅ 已还原] 指向代码一的 _pickImage
+      onTap: _pickImage, // [鉁?宸茶繕鍘焆 鎸囧悜浠ｇ爜涓€鐨?_pickImage
       child: Container(
         width: 60.w,
         height: 60.w,
@@ -1409,9 +1407,9 @@ class _SellFormPageState extends State<SellFormPage>
           ),
           SizedBox(height: 10.h),
 
-          // 自定义设计的分类选择器
+          // 鑷畾涔夎璁＄殑鍒嗙被閫夋嫨鍣?
           GestureDetector(
-            onTap: _showCategoryPicker, // [✅ 已还原] 指向代码一的 _showCategoryPicker
+            onTap: _showCategoryPicker, // [鉁?宸茶繕鍘焆 鎸囧悜浠ｇ爜涓€鐨?_showCategoryPicker
             child: Container(
               width: double.infinity,
               padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 12.h),
@@ -1469,7 +1467,7 @@ class _SellFormPageState extends State<SellFormPage>
             ),
           ),
 
-          // 表单验证提示 (来自代码二, 依赖 Form 的 autovalidateMode)
+          // 琛ㄥ崟楠岃瘉鎻愮ず (鏉ヨ嚜浠ｇ爜浜? 渚濊禆 Form 鐨?autovalidateMode)
           if (_category.isEmpty && _formKey.currentState?.validate() == false)
             Padding(
               padding: EdgeInsets.only(top: 4.h, left: 12.w),
@@ -1482,7 +1480,7 @@ class _SellFormPageState extends State<SellFormPage>
               ),
             ),
 
-          // 选中的分类显示
+          // 閫変腑鐨勫垎绫绘樉绀?
           if (_category.isNotEmpty) ...[
             SizedBox(height: 8.h),
             Container(
@@ -1559,22 +1557,22 @@ class _SellFormPageState extends State<SellFormPage>
     );
   }
 
-  // [✅ UI 还原自 代码一] (修复你提到的 bug)
+  // [鉁?UI 杩樺師鑷?浠ｇ爜涓€] (淇浣犳彁鍒扮殑 bug)
   void _showCategoryPicker() {
     showModalBottomSheet(
       context: context,
-      useRootNavigator: true, // [✅ 补丁 4] 解决弹窗被导航栏遮挡
-      useSafeArea: true, // [✅ 补丁 4] 增加安全区
+      useRootNavigator: true, // [鉁?琛ヤ竵 4] 瑙ｅ喅寮圭獥琚鑸爮閬尅
+      useSafeArea: true, // [鉁?琛ヤ竵 4] 澧炲姞瀹夊叏鍖?
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (BuildContext ctx) {
-        // [✅ 补丁 4] 改为 ctx
+        // [鉁?琛ヤ竵 4] 鏀逛负 ctx
         final bottom = MediaQuery.of(ctx).padding.bottom;
         return Padding(
-          // [✅ 补丁 4] 增加底部 Padding 兜底
+          // [鉁?琛ヤ竵 4] 澧炲姞搴曢儴 Padding 鍏滃簳
           padding: EdgeInsets.only(bottom: bottom > 0 ? bottom : 12.h),
           child: Container(
-            // [✅ 修复] 调高弹窗 (问题 3)
+            // [鉁?淇] 璋冮珮寮圭獥 (闂 3)
             height: MediaQuery.of(ctx).size.height * 0.6,
             padding: EdgeInsets.all(12.w),
             decoration: BoxDecoration(
@@ -1620,7 +1618,7 @@ class _SellFormPageState extends State<SellFormPage>
                                   c.clear();
                                 }
                               });
-                              Navigator.pop(ctx); // [✅ 补丁 4] 用 ctx
+                              Navigator.pop(ctx); // [鉁?琛ヤ竵 4] 鐢?ctx
                             },
                             child: Container(
                               padding: EdgeInsets.symmetric(
@@ -1830,8 +1828,8 @@ class _SellFormPageState extends State<SellFormPage>
               ),
               labelStyle: TextStyle(fontSize: 12.sp),
             ),
-            // [✅ 补丁 1.a] 使用 value:
-            value: _city,
+            // [鉁?琛ヤ竵 1.a] 浣跨敤 value:
+            initialValue: _city,
             items: _cities
                 .map((c) => DropdownMenuItem(
                 value: c, child: Text(c, style: TextStyle(fontSize: 13.sp))))
@@ -2051,7 +2049,7 @@ class _SellFormPageState extends State<SellFormPage>
                         (coupon) => _buildCouponOption(
                       coupon,
                       coupon.title,
-                      '${_getCouponTypeDescription(coupon.type)} • ${coupon.expiryStatusText}',
+                      '${_getCouponTypeDescription(coupon.type)} 鈥?${coupon.expiryStatusText}',
                     ),
                   ),
                 ],
@@ -2138,7 +2136,7 @@ class _SellFormPageState extends State<SellFormPage>
   String _getCouponTypeDescription(CouponType type) {
     switch (type) {
       case CouponType.welcome:
-        return 'Welcome – Category Pinning (3 days)';
+        return 'Welcome 鈥?Category Pinning (3 days)';
       case CouponType.trending:
       case CouponType.trendingPin:
         return 'Hot Section Pinning';
@@ -2204,3 +2202,5 @@ class _SellFormPageState extends State<SellFormPage>
     );
   }
 }
+
+

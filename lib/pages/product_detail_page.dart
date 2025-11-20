@@ -1,4 +1,3 @@
-﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/pages/product_detail_page.dart
 // 最终版：右上角按钮加大 + 分享弹窗改为“底部操作菜单”样式（非全屏）+ 未安装 App 时回落复制链接
 // + 关键操作守卫（拨号/WhatsApp/报价）VerificationGuard
@@ -784,7 +783,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     // 仅保留数字（不保留+号，避免某些设备解析异常）
     final digits = raw.replaceAll(RegExp(r'[^\d]'), '');
 
-    Future<bool> _tryLaunch(Uri u) async {
+    Future<bool> tryLaunch(Uri u) async {
       if (await canLaunchUrl(u)) {
         await launchUrl(u, mode: LaunchMode.externalApplication);
         return true;
@@ -794,12 +793,12 @@ class _ProductDetailPageState extends State<ProductDetailPage>
 
     // ① 尝试直接深链（优先带号码）
     if (digits.length >= 7) {
-      if (await _tryLaunch(
+      if (await tryLaunch(
           Uri.parse('whatsapp://send?phone=$digits&text=$encMsg'))) {
         return;
       }
     }
-    if (await _tryLaunch(Uri.parse('whatsapp://send?text=$encMsg'))) {
+    if (await tryLaunch(Uri.parse('whatsapp://send?text=$encMsg'))) {
       return;
     }
 
@@ -807,7 +806,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
     final market = Uri.parse('market://details?id=com.whatsapp');
     final playWeb =
     Uri.parse('https://play.google.com/store/apps/details?id=com.whatsapp');
-    if (await _tryLaunch(market) || await _tryLaunch(playWeb)) return;
+    if (await tryLaunch(market) || await tryLaunch(playWeb)) return;
 
     // ③ 兜底：复制消息
     await Clipboard.setData(ClipboardData(text: message));

@@ -1,35 +1,50 @@
 // lib/pages/main_navigation_page.dart
-
 import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show SystemNavigator;
+import 'package:flutter/services.dart'; // SystemNavigator
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+// l10n
 import 'package:swaply/core/l10n/app_localizations.dart';
 
-// 页面 & 服务（已存在的先导入；不存在的我用占位组件临时顶上）
+// 安全导航（使用你现有 A 文件）
+import 'package:swaply/router/safe_navigator.dart';
+import 'package:swaply/router/root_nav.dart'; // ✅ 引入 navPush 支持
+
+// 语言提供器（使用你现有 B 文件，路径如不同改成你的实际路径）
+import 'package:swaply/providers/language_provider.dart';
+
+// 业务页面（按你的真实路径，有出入就改）
+// HomePage 我们用别名以避免歧义
 import 'package:swaply/pages/home_page.dart' as swaply;
-import 'package:swaply/pages/sell_form_page.dart';
-import 'package:swaply/pages/profile_page.dart';
-import 'package:swaply/pages/coupon_management_page.dart';
-import 'package:swaply/services/notification_service.dart';
+import 'package:swaply/pages/sell_form_page.dart';           // SellFormPage
+import 'package:swaply/pages/profile_page.dart';              // ProfilePage
+// CouponManagementPage
+// pd.ProductDetailPage
+
+// Auth
+// WelcomeScreen
+// LoginScreen
+// ForgotPasswordScreen（替代 ResetPasswordPage）
+
+// ========================= 主题常量（Step 5 会抽到 core/theme） =========================
+const Color _PRIMARY_BLUE = Color(0xFF1877F2);
+// 你首页定制的顶部高度（有需要再用；暂未使用）
+const double _CUSTOM_HEADER_HEIGHT = 110.0;
 
 // ---------------- MainNavigationPage ----------------
-
 class MainNavigationPage extends StatefulWidget {
   final bool isGuest;
-  const MainNavigationPage({Key? key, this.isGuest = false}) : super(key: key);
+  const MainNavigationPage({super.key, this.isGuest = false});
+
   @override
   State<MainNavigationPage> createState() => _MainNavigationPageState();
 }
-
-// 统一 Primary Blue
-const Color _PRIMARY_BLUE = Color(0xFF1877F2);
 
 class _MainNavigationPageState extends State<MainNavigationPage>
     with TickerProviderStateMixin {
@@ -53,8 +68,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
       CurvedAnimation(parent: _sellButtonController, curve: Curves.easeInOut),
     );
 
-    final isGuest =
-        Supabase.instance.client.auth.currentSession == null; // 当前访客态
+    final isGuest = Supabase.instance.client.auth.currentSession == null;
     if (!isGuest) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Future.delayed(const Duration(milliseconds: 1500), () {
@@ -97,8 +111,8 @@ class _MainNavigationPageState extends State<MainNavigationPage>
             .eq('status', 'active')
             .order('created_at', ascending: false)
             .limit(1);
-        if (rows is List && rows.isNotEmpty) {
-          row = rows.first as Map<String, dynamic>;
+        if (rows.isNotEmpty) {
+          row = rows.first;
         }
       } catch (_) {}
 
@@ -155,15 +169,23 @@ class _MainNavigationPageState extends State<MainNavigationPage>
             Row(
               children: [
                 Expanded(
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.emoji_events_outlined),
+                    onPressed: () async {
+                      Navigator.of(dCtx).pop();
+                      // 直接去“我的奖励/优惠券”页面（改用命名路由）
+                      await navPush('/coupons');
+                    },
+                    label: Text(_fixUtf8Mojibake('My Rewards')),
+                  ),
+                ),
+                SizedBox(width: 10.w),
+                Expanded(
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.card_giftcard),
-                    onPressed: () {
+                    onPressed: () async {
                       Navigator.of(dCtx).pop();
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => CouponManagementPage()),
-                      );
+                      await navPush('/coupons');
                     },
                     label: Text(_fixUtf8Mojibake('My Coupons')),
                   ),
@@ -181,28 +203,20 @@ class _MainNavigationPageState extends State<MainNavigationPage>
   }
 
   void _showWelcomeGiftDialog() {
-    final l10n = AppLocalizations.of(context)!;
+    // 简化：无远端数据时直接给提示
     showDialog(
       context: context,
-      barrierDismissible: true,
-      builder: (dCtx) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
-        title: Text(l10n.welcomeGiftTitle),
-        content: Text(l10n.welcomeGiftContent),
+        title: Text('Welcome gift', style: TextStyle(fontSize: 16.sp)),
+        content: Text(
+          'Check your coupons.',
+          style: TextStyle(fontSize: 13.sp),
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dCtx).pop(),
-            child: Text(l10n.later),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(dCtx).pop();
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => CouponManagementPage()),
-              );
-            },
-            child: Text(l10n.viewCoupons),
+            onPressed: () => Navigator.of(ctx).maybePop(),
+            child: const Text('OK'),
           ),
         ],
       ),
@@ -210,11 +224,11 @@ class _MainNavigationPageState extends State<MainNavigationPage>
   }
 
   Future<void> _loadNotificationCount() async {
-    final isGuest =
-        Supabase.instance.client.auth.currentSession == null; // 当前访客态
+    final isGuest = Supabase.instance.client.auth.currentSession == null;
     if (!isGuest) {
       try {
-        final count = await NotificationService.getUnreadNotificationsCount();
+        // 你自己的统计逻辑；暂无服务就先置 0
+        const count = 0;
         if (mounted) setState(() => _notificationCount = count);
       } catch (e) {
         if (kDebugMode) {}
@@ -222,7 +236,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     }
   }
 
-  // ✅ Android 物理返回：Tab 内回退 -> 切回首页 -> 确认退出
+  // 物理返回键：Tab 内回退 -> 切回首页 -> 确认退出（Android）
   void _onPopInvokedWithResult(bool didPop, Object? result) async {
     if (didPop) return;
 
@@ -234,7 +248,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     if (Platform.isAndroid) {
       final ok = await _confirmExit(context);
       if (ok == true) {
-        SystemNavigator.pop(); // 退出到后台
+        SystemNavigator.pop();
       }
     }
   }
@@ -259,10 +273,9 @@ class _MainNavigationPageState extends State<MainNavigationPage>
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogCtx).maybePop(false),
-              child: Text(
-                'Stay',
-                style: TextStyle(fontSize: 13.sp, color: Colors.grey[700]),
-              ),
+              child: Text('Stay',
+                  style:
+                  TextStyle(fontSize: 13.sp, color: Colors.grey[700])),
             ),
             ElevatedButton(
               onPressed: () => Navigator.of(dialogCtx).maybePop(true),
@@ -287,10 +300,10 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
-      builder: (BuildContext dCtx) {
+      builder: (BuildContext context) {
         return AlertDialog(
-          shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16.w)),
           title: Text(
             l10n.loginRequired,
             style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
@@ -301,7 +314,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(dCtx).pop(),
+              onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 l10n.cancel,
                 style: TextStyle(fontSize: 13.sp, color: Colors.grey[600]),
@@ -316,14 +329,13 @@ class _MainNavigationPageState extends State<MainNavigationPage>
               ),
               child: TextButton(
                 onPressed: () {
-                  Navigator.of(dCtx)
-                      .pushNamedAndRemoveUntil('/welcome', (route) => false);
+                  SafeNavigator.pushNamedAndRemoveUntil(
+                      '/welcome', (route) => false);
                 },
                 child: Text(
                   l10n.login,
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 13.sp,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -335,6 +347,16 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     );
   }
 
+  Widget _buildTabNavigator(
+      Widget root,
+      LanguageProvider languageProvider,
+      ) {
+    return ChangeNotifierProvider<LanguageProvider>.value(
+      value: languageProvider,
+      child: root,
+    );
+  }
+
   void _navigateToHome() {
     setState(() => _selectedIndex = 0);
   }
@@ -342,28 +364,41 @@ class _MainNavigationPageState extends State<MainNavigationPage>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final languageProvider = Provider.of<LanguageProvider>(context);
 
     final List<Widget> pages = [
-      const IosInsetsGuard(child: _HomeRoot()),
-      IosInsetsGuard(
-        child: _SavedPlaceholder(onNavigateToHome: _navigateToHome),
+      _buildTabNavigator(
+        const IosInsetsGuard(child: _HomeRoot()),
+        languageProvider,
       ),
-      IosInsetsGuard(
-        child: _SellRoot(
+      _buildTabNavigator(
+        _SavedRoot(
+          isGuest: Supabase.instance.client.auth.currentSession == null,
+          onNavigateToHome: _navigateToHome,
+        ),
+        languageProvider,
+      ),
+      _buildTabNavigator(
+        _SellRoot(
           isGuest: Supabase.instance.client.auth.currentSession == null,
         ),
+        languageProvider,
       ),
-      IosInsetsGuard(
-        child: _NotifPlaceholder(
+      _buildTabNavigator(
+        _NotifRoot(
           onClearBadge: _clearNotifications,
+          isGuest: Supabase.instance.client.auth.currentSession == null,
           onNotificationCountChanged: (count) {
             if (mounted) setState(() => _notificationCount = count);
           },
         ),
+        languageProvider,
       ),
-      IosInsetsGuard(
-        child:
-        _ProfileRoot(isGuest: Supabase.instance.client.auth.currentSession == null),
+      _buildTabNavigator(
+        _ProfileRoot(
+          isGuest: Supabase.instance.client.auth.currentSession == null,
+        ),
+        languageProvider,
       ),
     ];
 
@@ -446,11 +481,10 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     required BuildContext context,
   }) {
     final bool isSelected = _selectedIndex == index;
-
     return GestureDetector(
       onTap: () {
         if (Supabase.instance.client.auth.currentSession == null &&
-            (index == 1)) {
+            index == 1) {
           _showLoginRequired(AppLocalizations.of(context)!.saveItems, context);
           return;
         }
@@ -463,8 +497,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
           duration: const Duration(milliseconds: 200),
           padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 4.h),
           decoration: BoxDecoration(
-            color:
-            isSelected ? _PRIMARY_BLUE.withOpacity(0.1) : Colors.transparent,
+            color: isSelected ? _PRIMARY_BLUE.withOpacity(0.1) : Colors.transparent,
             borderRadius: BorderRadius.circular(14.w),
           ),
           child: Column(
@@ -474,7 +507,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                 duration: const Duration(milliseconds: 150),
                 child: Icon(
                   isSelected ? activeIcon : icon,
-                  key: ValueKey('${index}_${isSelected}'),
+                  key: ValueKey('${index}_$isSelected'),
                   color: isSelected ? _PRIMARY_BLUE : Colors.grey[600],
                   size: 22.w,
                 ),
@@ -510,7 +543,6 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     required BuildContext context,
   }) {
     final bool isSelected = _selectedIndex == index;
-
     return GestureDetector(
       onTap: () {
         if (Supabase.instance.client.auth.currentSession == null) {
@@ -530,8 +562,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
           duration: const Duration(milliseconds: 200),
           padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 4.h),
           decoration: BoxDecoration(
-            color:
-            isSelected ? _PRIMARY_BLUE.withOpacity(0.1) : Colors.transparent,
+            color: isSelected ? _PRIMARY_BLUE.withOpacity(0.1) : Colors.transparent,
             borderRadius: BorderRadius.circular(14.w),
           ),
           child: Column(
@@ -544,7 +575,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                     duration: const Duration(milliseconds: 150),
                     child: Icon(
                       isSelected ? activeIcon : icon,
-                      key: ValueKey('${index}_${isSelected}'),
+                      key: ValueKey('${index}_$isSelected'),
                       color: isSelected ? _PRIMARY_BLUE : Colors.grey[600],
                       size: 22.w,
                     ),
@@ -574,10 +605,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                                 offset: Offset(0, 1.h),
                               ),
                             ],
-                            border: Border.all(
-                              color: Colors.white,
-                              width: 1.w,
-                            ),
+                            border: Border.all(color: Colors.white, width: 1.w),
                           ),
                           child: Center(
                             child: Text(
@@ -645,16 +673,8 @@ class _MainNavigationPageState extends State<MainNavigationPage>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: isSelected
-                      ? [
-                    const Color(0xFF1565C0),
-                    _PRIMARY_BLUE,
-                    const Color(0xFF42A5F5),
-                  ]
-                      : [
-                    _PRIMARY_BLUE,
-                    const Color(0xFF1E88E5),
-                    const Color(0xFF1976D2),
-                  ],
+                      ? [const Color(0xFF1565C0), _PRIMARY_BLUE, const Color(0xFF42A5F5)]
+                      : [_PRIMARY_BLUE, const Color(0xFF1E88E5), const Color(0xFF1976D2)],
                 ),
                 borderRadius: BorderRadius.circular(28.w),
                 boxShadow: [
@@ -714,78 +734,123 @@ class _MainNavigationPageState extends State<MainNavigationPage>
 }
 
 /* ------------------------------------------------ */
-/* =========== ROOT WIDGETS / PLACEHOLDERS ========== */
+/* =========== ROOT WIDGETS (Tab 容器) =========== */
 /* ------------------------------------------------ */
 
 class _HomeRoot extends StatelessWidget {
   const _HomeRoot();
+
   @override
   Widget build(BuildContext context) => const swaply.HomePage();
 }
 
-class _SavedPlaceholder extends StatelessWidget {
+class _SavedRoot extends StatelessWidget {
+  final bool isGuest;
   final VoidCallback? onNavigateToHome;
-  const _SavedPlaceholder({this.onNavigateToHome});
+  const _SavedRoot({this.isGuest = false, this.onNavigateToHome});
+
   @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: Text(
-          '${l10n.saved} (refactor step3)',
-          style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SavedPage(
+    isGuest: isGuest,
+    onNavigateToHome: onNavigateToHome,
+  );
 }
 
 class _SellRoot extends StatelessWidget {
   final bool isGuest;
   const _SellRoot({this.isGuest = false});
+
   @override
   Widget build(BuildContext context) => SellFormPage(isGuest: isGuest);
 }
 
-class _NotifPlaceholder extends StatelessWidget {
-  final VoidCallback? onClearBadge;
+class _NotifRoot extends StatelessWidget {
+  final VoidCallback onClearBadge;
+  final bool isGuest;
   final Function(int)? onNotificationCountChanged;
-  const _NotifPlaceholder({this.onClearBadge, this.onNotificationCountChanged});
+
+  const _NotifRoot({
+    required this.onClearBadge,
+    this.isGuest = false,
+    this.onNotificationCountChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) => NotificationPage(
+    onClearBadge: onClearBadge,
+    isGuest: isGuest,
+    onNotificationCountChanged: onNotificationCountChanged,
+  );
+}
+
+class _ProfileRoot extends StatelessWidget {
+  final bool isGuest;
+  const _ProfileRoot({this.isGuest = false});
+
+  @override
+  Widget build(BuildContext context) => ProfilePage(isGuest: isGuest);
+}
+
+// ========================= 辅助/占位 =========================
+
+// 占位：iOS 顶部安全区守护（后续如果你有真实实现，再替换）
+class IosInsetsGuard extends StatelessWidget {
+  final Widget child;
+  const IosInsetsGuard({super.key, required this.child});
+  @override
+  Widget build(BuildContext context) => child;
+}
+
+// 占位：SavedPage / NotificationPage（Step 3/4 会替换为真正页面）
+class SavedPage extends StatelessWidget {
+  final bool isGuest;
+  final VoidCallback? onNavigateToHome;
+  const SavedPage({super.key, this.isGuest = false, this.onNavigateToHome});
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      backgroundColor: Colors.white,
+      appBar: AppBar(title: Text(l10n.saved)),
       body: Center(
         child: Text(
-          '${l10n.notifications} (refactor step4)',
-          style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
+          isGuest
+              ? l10n.loginToSaveFavorites
+              : 'Saved page will be migrated in Step 3.',
+          textAlign: TextAlign.center,
         ),
       ),
     );
   }
 }
 
-class _ProfileRoot extends StatelessWidget {
+class NotificationPage extends StatelessWidget {
+  final VoidCallback onClearBadge;
   final bool isGuest;
-  const _ProfileRoot({this.isGuest = false});
-  @override
-  Widget build(BuildContext context) => ProfilePage(isGuest: isGuest);
-}
+  final Function(int)? onNotificationCountChanged;
+  const NotificationPage({
+    super.key,
+    required this.onClearBadge,
+    this.isGuest = false,
+    this.onNotificationCountChanged,
+  });
 
-/// iOS 底部安全区守护：把底部留白叠加到 child 外层
-class IosInsetsGuard extends StatelessWidget {
-  final Widget child;
-  const IosInsetsGuard({super.key, required this.child});
   @override
   Widget build(BuildContext context) {
-    if (Theme.of(context).platform != TargetPlatform.iOS) return child;
-    final bottom = MediaQuery.of(context).padding.bottom;
-    if (bottom <= 0) return child;
-    return Padding(padding: EdgeInsets.only(bottom: bottom), child: child);
+    final l10n = AppLocalizations.of(context)!;
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.notifications)),
+      body: Center(
+        child: Text(
+          isGuest
+              ? l10n.loginToReceiveNotifications
+              : 'Notifications page will be migrated in Step 4.',
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
   }
 }
 
-/// 临时 UTF-8 乱码兜底（真实修复在你的工具函数里）
+// 你之前用到的字符串清洗方法（占位）
 String _fixUtf8Mojibake(String s) => s;

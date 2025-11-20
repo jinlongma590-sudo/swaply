@@ -1,11 +1,7 @@
-﻿import 'package:flutter/foundation.dart';
-import 'package:swaply/router/nav_throttler.dart';
 import 'package:swaply/services/oauth_entry.dart';
 // lib/auth/google_signin.dart
 import 'package:flutter/material.dart';
-import 'package:swaply/services/oauth_entry.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:swaply/services/oauth_entry.dart';
 // for LaunchMode
 
 const String _kIOSRedirect = 'cc.swaply.app://login-callback';

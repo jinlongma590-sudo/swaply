@@ -1,4 +1,4 @@
-﻿// lib/services/oauth_entry.dart
+// lib/services/oauth_entry.dart
 //
 // 统一的 OAuth 入口与“全局唯一开关”防重入实现：
 // - 调用前立即上锁（_inFlight=true），杜绝并发重复触发导致的“双弹窗”
@@ -14,7 +14,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:url_launcher/url_launcher.dart' show LaunchMode;
 
 class OAuthEntry {
   OAuthEntry._();

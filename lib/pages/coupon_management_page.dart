@@ -1,4 +1,3 @@
-﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/pages/coupon_management_page.dart - iOS 头部对齐 + 顶部蓝色范围缩小 + Facebook 蓝统一 + WidgetBuilder 修正 + 防循环（30s TTL）
 import 'dart:async';
 import 'package:flutter/foundation.dart'; // kIsWeb / defaultTargetPlatform

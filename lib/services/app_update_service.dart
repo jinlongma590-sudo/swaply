@@ -1,4 +1,3 @@
-﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/services/app_update_service.dart
 import 'dart:convert';
 import 'dart:io' show Platform;
@@ -30,12 +29,12 @@ class AppUpdateInfo {
   });
 
   factory AppUpdateInfo.fromJson(Map<String, dynamic> json) {
-    int _toInt(dynamic v) => int.tryParse(v?.toString() ?? '') ?? 0;
+    int toInt(dynamic v) => int.tryParse(v?.toString() ?? '') ?? 0;
 
     return AppUpdateInfo(
       latestVersion: (json['latest_version'] ?? '').toString(),
-      latestBuild: _toInt(json['latest_build']),
-      minSupportedBuild: _toInt(json['min_supported_build']),
+      latestBuild: toInt(json['latest_build']),
+      minSupportedBuild: toInt(json['min_supported_build']),
       androidApkUrl: json['android_apk_url']?.toString(),
       iosStoreUrl: json['ios_store_url']?.toString(),
       changelog: json['changelog']?.toString(),

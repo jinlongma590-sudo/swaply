@@ -2,12 +2,11 @@
 
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-// —— 你项目里的依赖（根据你当前代码确定这些是用到的）——
+// 鈥斺€?浣犻」鐩噷鐨勪緷璧栵紙鏍规嵁浣犲綋鍓嶄唬鐮佺‘瀹氳繖浜涙槸鐢ㄥ埌鐨勶級鈥斺€?
 import 'package:swaply/router/safe_navigator.dart';
 import 'package:swaply/models/verification_types.dart' as vt;
 
@@ -17,8 +16,6 @@ import 'package:swaply/services/reward_service.dart';
 import 'package:swaply/utils/verification_utils.dart' as vutils;
 
 import 'package:swaply/widgets/verified_avatar.dart';
-import 'package:swaply/widgets/verification_badge.dart' as vb;
-import 'package:swaply/widgets/verification_badge_mini.dart';
 import 'package:swaply/widgets/my_rewards_tile.dart';
 
 import 'package:swaply/pages/my_listings_page.dart';
@@ -28,22 +25,21 @@ import 'package:swaply/pages/coupon_management_page.dart';
 import 'package:swaply/pages/account_settings_page.dart';
 import 'package:swaply/pages/verification_page.dart';
 // ==== required after moving ProfilePage out of main.dart ====
-import 'dart:io';
 import 'package:flutter/foundation.dart' show kDebugMode; // for kDebugMode
 import 'package:provider/provider.dart';                  // for Provider<T>
 
-// 临时从 main.dart 引用本地化与语言 Provider（后面再抽到独立文件更优）
+// 涓存椂浠?main.dart 寮曠敤鏈湴鍖栦笌璇█ Provider锛堝悗闈㈠啀鎶藉埌鐙珛鏂囦欢鏇翠紭锛?
 import 'package:swaply/core/l10n/app_localizations.dart';
-import 'package:swaply/providers/language_provider.dart'; // 如果你有这个文件
+import 'package:swaply/providers/language_provider.dart'; // 濡傛灉浣犳湁杩欎釜鏂囦欢
 
-// ✅ 这些常量在 main.dart 里用过；为避免循环依赖，这里先内联一份
+// 鉁?杩欎簺甯搁噺鍦?main.dart 閲岀敤杩囷紱涓洪伩鍏嶅惊鐜緷璧栵紝杩欓噷鍏堝唴鑱斾竴浠?
 const _kPrivacyUrl = 'https://www.swaply.cc/privacy';
 const _kDeleteUrl  = 'https://www.swaply.cc/delete';
 
-// ✅ 兜底版 l10n（避免从 main.dart 引 AppLocalizations 造成循环依赖）
-//    这样你文件里原本的 l10n.xxx 写法无需改动，只把 “获取 l10n 的那一行” 改成：
+// 鉁?鍏滃簳鐗?l10n锛堥伩鍏嶄粠 main.dart 寮?AppLocalizations 閫犳垚寰幆渚濊禆锛?
+//    杩欐牱浣犳枃浠堕噷鍘熸湰鐨?l10n.xxx 鍐欐硶鏃犻渶鏀瑰姩锛屽彧鎶?鈥滆幏鍙?l10n 鐨勯偅涓€琛屸€?鏀规垚锛?
 //      final l10n = const _L10n();
-//    后面我会告诉你改哪一行。
+//    鍚庨潰鎴戜細鍛婅瘔浣犳敼鍝竴琛屻€?
 class _L10n {
   const _L10n();
   String get helpSupport => 'Help & Support';
@@ -55,10 +51,10 @@ class _L10n {
   String get editProfile => 'Edit Profile';
   String get logout => 'Logout';
 }
-/* ---------------- Profile Page 涓汉璧勬枡椤?---------------- */
+/* ---------------- Profile Page 娑擃亙姹夌挧鍕灐妞?---------------- */
 class ProfilePage extends StatefulWidget {
   final bool isGuest;
-  const ProfilePage({Key? key, this.isGuest = false}) : super(key: key);
+  const ProfilePage({super.key, this.isGuest = false});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -68,15 +64,15 @@ class _ProfilePageState extends State<ProfilePage>
     with SingleTickerProviderStateMixin {
   bool _loading = true;
 
-  /// 鍩虹璧勬枡锛堟樉绀哄悕/澶村儚/鏃堕棿绛夛級
+  /// 閸╄櫣顢呯挧鍕灐閿涘牊妯夌粈鍝勬倳/婢舵潙鍎?閺冨爼妫跨粵澶涚礆
   Map<String, dynamic>? _profile;
 
-  /// 鍙鐨?profiles 琛岋紙浠呭惈 verification_type 绛夛級
+  /// 閸欘亣顕伴惃?profiles 鐞涘矉绱欐禒鍛儓 verification_type 缁涘绱?
   Map<String, dynamic>? _profileRow;
 
   final _svc = ProfileService();
 
-  // 鉁?鏂板锛氳璇佹湇鍔′笌鐘舵€侊紙浠呯湅 user_verifications锛?
+  // 閴?閺傛澘顤冮敍姘愁吇鐠囦焦婀囬崝鈥茬瑢閻樿埖鈧緤绱欐禒鍛箙 user_verifications閿?
   final _verifySvc = EmailVerificationService();
   bool _verified = false;
   vt.VerificationBadgeType _badge = vt.VerificationBadgeType.none;
@@ -96,14 +92,14 @@ class _ProfilePageState extends State<ProfilePage>
     _fadeAnimation =
         CurvedAnimation(parent: _animationController, curve: Curves.easeInOut);
 
-    // 鍩虹璧勬枡
+    // 閸╄櫣顢呯挧鍕灐
     if (!widget.isGuest) {
       _load();
     } else {
       _animationController.forward();
     }
 
-    // 鉁?棣栨杩涘叆鎷夊彇璁よ瘉鐘舵€?& 鐩戝惉鐧诲綍鎬佸彉鍖栬嚜鍔ㄥ埛鏂?
+    // 閴?妫ｆ牗顐兼潻娑樺弳閹峰褰囩拋銈堢槈閻樿埖鈧?& 閻╂垵鎯夐惂璇茬秿閹礁褰夐崠鏍殰閸斻劌鍩涢弬?
     _reloadUserVerificationStatus();
     Supabase.instance.client.auth.onAuthStateChange.listen((event) {
       _reloadUserVerificationStatus();
@@ -116,10 +112,10 @@ class _ProfilePageState extends State<ProfilePage>
     super.dispose();
   }
 
-  /// 鉁?鍙鍔犺浇锛氫粎鍔犺浇璧勬枡锛堢敤浜庢樉绀猴級锛屼笉鍐嶇敤 profiles/appMetadata 璁＄畻璁よ瘉
+  /// 閴?閸欘亣顕伴崝鐘烘祰閿涙矮绮庨崝鐘烘祰鐠у嫭鏋￠敍鍫㈡暏娴滃孩妯夌粈鐚寸礆閿涘奔绗夐崘宥囨暏 profiles/appMetadata 鐠侊紕鐣荤拋銈堢槈
   Future<void> _load() async {
     try {
-      // 鍩虹璧勬枡鐢ㄤ簬椤甸潰鏄剧ず锛堝悕瀛?澶村儚/鏃堕棿绛夛級
+      // 閸╄櫣顢呯挧鍕灐閻劋绨い鐢告桨閺勫墽銇氶敍鍫濇倳鐎?婢舵潙鍎?閺冨爼妫跨粵澶涚礆
       final base = await _svc.getUserProfile();
       final map =
       base == null ? <String, dynamic>{} : Map<String, dynamic>.from(base);
@@ -142,12 +138,12 @@ class _ProfilePageState extends State<ProfilePage>
     }
   }
 
-  // 鉁?浠呮煡 user_verifications锛屼竴娆℃€ц绠?_verified/_badge锛屽苟鏇存柊鍒扮姸鎬?
+  // 閴?娴犲懏鐓?user_verifications閿涘奔绔村▎鈩冣偓褑顓哥粻?_verified/_badge閿涘苯鑻熼弴瀛樻煀閸掓壆濮搁幀?
   Future<void> _reloadUserVerificationStatus() async {
     setState(() => _verifyLoading = true);
 
     final row =
-    await _verifySvc.fetchVerificationRow(); // 浠呮煡 user_verifications
+    await _verifySvc.fetchVerificationRow(); // 娴犲懏鐓?user_verifications
     final user = Supabase.instance.client.auth.currentUser;
 
     final verified = vutils.computeIsVerified(verificationRow: row, user: user);
@@ -312,8 +308,8 @@ class _ProfilePageState extends State<ProfilePage>
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
-              children: const [
+            content: const Row(
+              children: [
                 Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
                 SizedBox(width: 8),
                 Text('Profile updated successfully',
@@ -390,8 +386,8 @@ class _ProfilePageState extends State<ProfilePage>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Row(
-            children: const [
+          content: const Row(
+            children: [
               Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
               SizedBox(width: 8),
               Text('Avatar updated successfully',
@@ -433,7 +429,7 @@ class _ProfilePageState extends State<ProfilePage>
 
   @override
   Widget build(BuildContext context) {
-    final l10n = const _L10n();
+    const l10n = _L10n();
     final languageProvider = Provider.of<LanguageProvider>(context);
 
     final media = MediaQuery.of(context);
@@ -542,7 +538,7 @@ class _ProfilePageState extends State<ProfilePage>
                           ? avatarUrl
                           : null,
                       memberSince: memberSinceText,
-                      // 鉁?澶村儚鍙犲姞寰界珷锛氫粎鍦?verified 鏃朵紶鍏ワ紝鍚﹀垯浼?none锛堟湭楠岃瘉灏变笉鏄剧ず锛?
+                      // 閴?婢舵潙鍎氶崣鐘插瀵扮晫鐝烽敍姘矌閸?verified 閺冩湹绱堕崗銉礉閸氾箑鍨导?none閿涘牊婀宀冪槈鐏忓彉绗夐弰鍓с仛閿?
                       verificationType:
                       _verified ? _badge : vt.VerificationBadgeType.none,
                     ),
@@ -570,16 +566,16 @@ class _ProfilePageState extends State<ProfilePage>
                             ),
                             const SizedBox(height: 14),
 
-                            // 鉁?璁よ瘉鍏ュ彛锛氬浘鏍?鏂囨缁戝畾 _verified锛涚偣鍑昏繘鍏ラ獙璇佸苟杩斿洖鍚庛€愭€绘槸銆戝埛鏂?
+                            // 閴?鐠併倛鐦夐崗銉ュ經閿涙艾娴橀弽?閺傚洦顢嶇紒鎴濈暰 _verified閿涙稓鍋ｉ崙鏄忕箻閸忋儵鐛欑拠浣歌嫙鏉╂柨娲栭崥搴涒偓鎰偓缁樻Ц閵嗘垵鍩涢弬?
                             _VerificationTileCard(
                               isVerified: _verified,
-                              isLoading: _verifyLoading, // 鉁?鏂板锛氬埛鏂版椂缁欏嚭鍙嶉
+                              isLoading: _verifyLoading, // 閴?閺傛澘顤冮敍姘煕閺傜増妞傜紒娆忓毉閸欏秹顩?
                               onTap: () async {
                                 await SafeNavigator.push<bool>(
                                   MaterialPageRoute(
                                       builder: (_) => const VerificationPage()),
                                 );
-                                // 鉁?鏃犳潯浠跺埛鏂帮紙閬垮厤楠岃瘉椤垫湭 pop(true) 鐨勬儏鍐碉級
+                                // 閴?閺冪姵娼禒璺哄煕閺傚府绱欓柆鍨帳妤犲矁鐦夋い鍨弓 pop(true) 閻ㄥ嫭鍎忛崘纰夌礆
                                 await _reloadUserVerificationStatus();
                               },
                             ),
@@ -649,7 +645,7 @@ class _ProfilePageState extends State<ProfilePage>
                               onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (_) => CouponManagementPage()),
+                                    builder: (_) => const CouponManagementPage()),
                               ),
                             ),
                             const SizedBox(height: 28),
@@ -661,7 +657,7 @@ class _ProfilePageState extends State<ProfilePage>
                                     letterSpacing: 0.5)),
                             const SizedBox(height: 14),
 
-                            // 鉁?鏂板锛欰ccount 鍏ュ彛锛堝厛鍒拌处鎴疯缃〉锛屽啀鍚垹闄よ处鍙风瓑锛?
+                            // 閴?閺傛澘顤冮敍娆癱count 閸忋儱褰涢敍鍫濆帥閸掓媽澶勯幋鐤啎缂冾噣銆夐敍灞藉晙閸氼偄鍨归梽銈堝閸欓鐡戦敍?
                             _ProfileOptionEnhanced(
                               icon: Icons.manage_accounts,
                               title: 'Account',
@@ -676,7 +672,7 @@ class _ProfilePageState extends State<ProfilePage>
                             ),
                             const SizedBox(height: 14),
 
-                            // 鉁?鏂板锛氶殣绉佹斂绛栧閾?
+                            // 閴?閺傛澘顤冮敍姘舵缁変焦鏂傜粵鏍ь樆闁?
                             _ProfileOptionEnhanced(
                               icon: Icons.privacy_tip_outlined,
                               title: 'Privacy Policy',
@@ -687,7 +683,7 @@ class _ProfilePageState extends State<ProfilePage>
                             ),
                             const SizedBox(height: 14),
 
-                            // 鉁?鏂板锛氭暟鎹垹闄よ鏄庡閾?
+                            // 閴?閺傛澘顤冮敍姘殶閹诡喖鍨归梽銈堫嚛閺勫骸顦婚柧?
                             _ProfileOptionEnhanced(
                               icon: Icons.delete_outline,
                               title: 'Data Deletion / How to delete my account',
@@ -705,7 +701,7 @@ class _ProfilePageState extends State<ProfilePage>
                               onTap: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (_) => HelpSupportPage())),
+                                      builder: (_) => const HelpSupportPage())),
                             ),
                             const SizedBox(height: 14),
                             _ProfileOptionEnhanced(
@@ -715,7 +711,7 @@ class _ProfilePageState extends State<ProfilePage>
                               onTap: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                      builder: (_) => AboutPage())),
+                                      builder: (_) => const AboutPage())),
                             ),
                             const SizedBox(height: 28),
                             _ProfileOptionEnhanced(
@@ -855,7 +851,7 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  // 澶村儚鍖哄煙锛氭湭淇敼锛堢敤浣犳彁渚涚殑鍘熷浠ｇ爜锛?
+  // 婢舵潙鍎氶崠鍝勭厵閿涙碍婀穱顔芥暭閿涘牏鏁ゆ担鐘冲絹娓氭稓娈戦崢鐔奉潗娴狅絿鐖滈敍?
   Widget _buildEnhancedHeader({
     required bool isGuest,
     required String name,
@@ -901,8 +897,8 @@ class _ProfilePageState extends State<ProfilePage>
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      // VerifiedAvatar 鍐呴儴浼氭牴鎹?verificationType==none 鍐冲畾鏄惁灞曠ず瑙掓爣
-                      VerifiedAvatar(/* ---------------- 鍏叡锛氭棤杈圭紭鍏夋檿婊氬姩 & UI 鍩哄骇 ---------------- */
+                      // VerifiedAvatar 閸愬懘鍎存导姘壌閹?verificationType==none 閸愬啿鐣鹃弰顖氭儊鐏炴洜銇氱憴鎺撶垼
+                      VerifiedAvatar(/* ---------------- 閸忣剙鍙￠敍姘￥鏉堝湱绱崗澶嬫濠婃艾濮?& UI 閸╁搫楠?---------------- */
 
                         avatarUrl: avatarUrl,
                         radius: 45,
@@ -990,15 +986,15 @@ class _ProfilePageState extends State<ProfilePage>
   }
 }
 
-/* ---------------- Verification Tile锛堢簿绠€鐗堬細鐏?缁?+ chevron锛?---------------- */
+/* ---------------- Verification Tile閿涘牏绨跨粻鈧悧鍫窗閻?缂?+ chevron閿?---------------- */
 class _VerificationTileCard extends StatelessWidget {
   final bool isVerified;
-  final bool isLoading; // 鉁?鏂板锛氬埛鏂颁腑鐨勫彲瑙嗗弽棣?
+  final bool isLoading; // 閴?閺傛澘顤冮敍姘煕閺傞鑵戦惃鍕讲鐟欏棗寮芥＃?
   final VoidCallback? onTap;
 
   const _VerificationTileCard({
     required this.isVerified,
-    required this.isLoading, // 鉁?鏂板
+    required this.isLoading, // 閴?閺傛澘顤?
     this.onTap,
   });
 
@@ -1012,7 +1008,7 @@ class _VerificationTileCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          // 涓庡叾瀹冮€氱敤椤逛繚鎸佷竴鑷寸殑鍐呰竟璺濅笌闃村奖
+          // 娑撳骸鍙剧€瑰啴鈧氨鏁ゆい閫涚箽閹镐椒绔撮懛瀵告畱閸愬懓绔熺捄婵呯瑢闂冩潙濂?
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -1027,7 +1023,7 @@ class _VerificationTileCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // 鉁?宸︿晶涓庡叾瀹冮」瀹屽叏涓€鑷寸殑鈥滃僵鑹插渾瑙掓柟鍧椻€?
+              // 閴?瀹革缚鏅舵稉搴″従鐎瑰啴銆嶇€瑰苯鍙忔稉鈧懛瀵告畱閳ユ粌鍍甸懝鎻掓妇鐟欐帗鏌熼崸妞烩偓?
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -1037,7 +1033,7 @@ class _VerificationTileCard extends StatelessWidget {
                 child: Icon(Icons.verified, color: badgeColor, size: 26),
               ),
               const SizedBox(width: 18),
-              // 鏂囨
+              // 閺傚洦顢?
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1056,7 +1052,7 @@ class _VerificationTileCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              // 鍙充晶涓庡叾瀹冮」缁熶竴锛氬姞杞藉湀/灏忎笁瑙?
+              // 閸欏厖鏅舵稉搴″従鐎瑰啴銆嶇紒鐔剁閿涙艾濮炴潪钘夋箑/鐏忓繋绗佺憴?
               isLoading
                   ? const SizedBox(
                 width: 18,
@@ -1073,7 +1069,7 @@ class _VerificationTileCard extends StatelessWidget {
   }
 }
 
-/* ---------------- 閫氱敤鍒楄〃椤癸紙鍏朵綑椤逛粛鐢ㄤ綘鐨勫崱鐗囨牱寮忥紱涓嶅啀娓叉煋浠讳何灏忓窘绔狶級 ---------------- */
+/* ---------------- 闁氨鏁ら崚妤勩€冩い鐧哥礄閸忔湹缍戞い閫涚矝閻劋缍橀惃鍕幢閻楀洦鐗卞蹇ョ幢娑撳秴鍟€濞撳弶鐓嬫禒璁充綍鐏忓繐绐樼粩鐙剁礆 ---------------- */
 class _ProfileOptionEnhanced extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -1144,7 +1140,7 @@ class _ProfileOptionEnhanced extends StatelessWidget {
   }
 }
 
-/* ---------------- Guest 閫夐」锛堢畝鐗堬級 ---------------- */
+/* ---------------- Guest 闁銆嶉敍鍫㈢暆閻楀牞绱?---------------- */
 class _GuestSimpleOptions extends StatelessWidget {
   const _GuestSimpleOptions();
 
@@ -1158,7 +1154,7 @@ class _GuestSimpleOptions extends StatelessWidget {
           title: l10n.helpSupport,
           color: Colors.blue,
           onTap: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => HelpSupportPage())),
+              context, MaterialPageRoute(builder: (_) => const HelpSupportPage())),
         ),
         const SizedBox(height: 12),
         _ProfileOptionEnhanced(
@@ -1166,7 +1162,7 @@ class _GuestSimpleOptions extends StatelessWidget {
           title: l10n.about,
           color: Colors.indigo,
           onTap: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => AboutPage())),
+              context, MaterialPageRoute(builder: (_) => const AboutPage())),
         ),
       ],
     );
@@ -1175,6 +1171,8 @@ class _GuestSimpleOptions extends StatelessWidget {
 
 /* ---------------- Help & Support Page ---------------- */
 class HelpSupportPage extends StatelessWidget {
+  const HelpSupportPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -1312,6 +1310,8 @@ class HelpSupportPage extends StatelessWidget {
 
 /* ---------------- About Page ---------------- */
 class AboutPage extends StatelessWidget {
+  const AboutPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1337,8 +1337,8 @@ class AboutPage extends StatelessWidget {
                       offset: const Offset(0, 4))
                 ],
               ),
-              child: Column(
-                children: const [
+              child: const Column(
+                children: [
                   Text('Trade What You Have\nFor What You Need',
                       textAlign: TextAlign.center,
                       style: TextStyle(
@@ -1386,3 +1386,7 @@ class AboutPage extends StatelessWidget {
     );
   }
 }
+
+
+
+

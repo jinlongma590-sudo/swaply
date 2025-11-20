@@ -1,10 +1,10 @@
-﻿// lib/auth/welcome_screen.dart
+// lib/auth/welcome_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/router/root_nav.dart';
-import 'package:swaply/services/deep_link_service.dart'; // 深链服务
+// 深链服务
 import 'login_screen.dart';
 import 'register_screen.dart';
 
@@ -677,3 +677,5 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     );
   }
 }
+
+

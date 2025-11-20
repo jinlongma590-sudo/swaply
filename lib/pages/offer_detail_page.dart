@@ -1,4 +1,3 @@
-﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/pages/offer_detail_page.dart
 //
 // Unified to “Facebook Blue” top bar with SOLID backgroundColor.

@@ -1,5 +1,3 @@
-﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/config/auth_config.dart
-/// 缁熶竴鐨?OAuth / Email 楠岃瘉 绛夊洖璺冲湴鍧€锛堜笌 AndroidManifest / iOS URL Types 淇濇寔涓€鑷达級
-const String kAuthRedirectUri = 'cc.swaply.app://login-callback';
-
+/// 统一的 OAuth / Email 验证 等回跳地址（与 AndroidManifest / iOS URL Types 保持一致）
+const String kAuthRedirectUri = 'swaply://login-callback';

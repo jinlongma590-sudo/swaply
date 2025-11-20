@@ -1,4 +1,3 @@
-﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/pages/seller_profile_page.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';

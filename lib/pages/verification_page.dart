@@ -1,4 +1,3 @@
-﻿import 'package:swaply/router/nav_throttler.dart';
 // lib/pages/verification_page.dart
 // ✅ 不刷新会话；不对 profiles 做任何写操作
 // ✅ 最小可用流程：输入验证码 → 调服务 → 读表 → 刷新本页 UI → Navigator.pop(true)
@@ -516,7 +515,7 @@ class _VerificationPageState extends State<VerificationPage>
             decoration: InputDecoration(
               labelText: 'Email Address',
               hintText: 'Enter your email address',
-              prefixIcon: Icon(Icons.email_outlined, color: Color(0xFF667EEA), size: 18.w),
+              prefixIcon: Icon(Icons.email_outlined, color: const Color(0xFF667EEA), size: 18.w),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14.r),
                 borderSide: BorderSide(color: Colors.grey.shade300),
@@ -527,7 +526,7 @@ class _VerificationPageState extends State<VerificationPage>
               ),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14.r),
-                borderSide: BorderSide(color: Color(0xFF667EEA), width: 2.w),
+                borderSide: BorderSide(color: const Color(0xFF667EEA), width: 2.w),
               ),
               filled: true,
               fillColor: Colors.grey.shade50,
@@ -557,7 +556,7 @@ class _VerificationPageState extends State<VerificationPage>
                       ? SizedBox(
                     height: 20.h,
                     width: 20.w,
-                    child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                    child: const CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
                   )
                       : Text(
                     _resendCountdown > 0
@@ -586,7 +585,7 @@ class _VerificationPageState extends State<VerificationPage>
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(14.r)),
               focusedBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14.r),
-                borderSide: BorderSide(color: Color(0xFF667EEA), width: 2.w),
+                borderSide: BorderSide(color: const Color(0xFF667EEA), width: 2.w),
               ),
               filled: true,
               fillColor: Colors.grey.shade50,
@@ -615,7 +614,7 @@ class _VerificationPageState extends State<VerificationPage>
                       ? SizedBox(
                     height: 20.h,
                     width: 20.w,
-                    child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                    child: const CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
                   )
                       : Text('Verify Code', style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600, color: Colors.white)),
                 ),
@@ -728,7 +727,7 @@ class _VerificationPageState extends State<VerificationPage>
       padding: EdgeInsets.only(bottom: 6.h),
       child: Row(
         children: [
-          Icon(Icons.check_circle_rounded, color: Color(0xFF1877F2), size: 16.w),
+          Icon(Icons.check_circle_rounded, color: const Color(0xFF1877F2), size: 16.w),
           SizedBox(width: 10.w),
           Expanded(child: Text(text, style: TextStyle(fontSize: 12.sp, height: 1.3))),
         ],

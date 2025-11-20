@@ -1,35 +1,40 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:swaply/core/l10n/app_localizations.dart';
 
 class SavedPage extends StatelessWidget {
   final bool isGuest;
   final VoidCallback? onNavigateToHome;
-
-  const SavedPage({
-    Key? key,
-    this.isGuest = false,
-    this.onNavigateToHome,
-  }) : super(key: key);
+  const SavedPage({super.key, this.isGuest = false, this.onNavigateToHome});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (isGuest) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.bookmark_outline, size: 48),
-            const SizedBox(height: 8),
-            const Text('Please login to view Saved items'),
-            const SizedBox(height: 12),
-            ElevatedButton(
-              onPressed: onNavigateToHome,
-              child: const Text('Go Home'),
-            ),
+            Text(l10n.loginToSaveFavorites, textAlign: TextAlign.center),
+            SizedBox(height: 12.h),
+            ElevatedButton(onPressed: onNavigateToHome, child: Text(l10n.loginNow)),
           ],
         ),
       );
     }
-    // 临时占位：后续 Step 3 会替换为真正的 Saved 三页签实现
-    return const Center(child: Text('SavedPage (placeholder)'));
+    return const _SavedScaffoldPlaceholder();
+  }
+}
+
+class _SavedScaffoldPlaceholder extends StatelessWidget {
+  const _SavedScaffoldPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(child: Text('${l10n.saved} — TODO: migrate real UI')),
+    );
   }
 }
