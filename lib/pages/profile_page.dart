@@ -33,7 +33,8 @@ import 'package:flutter/foundation.dart' show kDebugMode; // for kDebugMode
 import 'package:provider/provider.dart';                  // for Provider<T>
 
 // 临时从 main.dart 引用本地化与语言 Provider（后面再抽到独立文件更优）
-import 'package:swaply/main.dart' show AppLocalizations, LanguageProvider;
+import 'package:swaply/core/l10n/app_localizations.dart';
+import 'package:swaply/providers/language_provider.dart'; // 如果你有这个文件
 
 // ✅ 这些常量在 main.dart 里用过；为避免循环依赖，这里先内联一份
 const _kPrivacyUrl = 'https://www.swaply.cc/privacy';
