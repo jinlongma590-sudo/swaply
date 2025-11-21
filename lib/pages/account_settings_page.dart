@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/auth_service.dart'; // ✅ 新增：统一走 AuthService 登出
+import 'package:swaply/services/auth_flow_observer.dart'; // ✅ 新增 Observer
 
 class AccountSettingsPage extends StatefulWidget {
   const AccountSettingsPage({super.key});
@@ -170,8 +171,13 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
           _logoutAfterDeletionOnce = true;
           try {
             // 统一从 AuthService 登出，并打印调用栈，便于追踪来源
-            debugPrint('[[SIGNOUT-TRACE]] account_settings_page -> direct signOut');
+            debugPrint(
+                '[[SIGNOUT-TRACE]] account_settings_page -> direct signOut');
             debugPrint(StackTrace.current.toString());
+
+            // ✅ 1) 标记快车道
+            AuthFlowObserver.I.markManualSignOut();
+            // ✅ 2) 执行登出
             await AuthService().signOut();
           } catch (_) {/* 闈欓粯 */}
         }
@@ -245,7 +251,8 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
             borderRadius: BorderRadius.circular(10),
           ),
           alignment: Alignment.center,
-          child: const Icon(Icons.arrow_back_ios_new, size: 18, color: Colors.white),
+          child: const Icon(Icons.arrow_back_ios_new,
+              size: 18, color: Colors.white),
         ),
       ),
     );

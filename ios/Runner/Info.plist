@@ -45,20 +45,21 @@
     <key>UILaunchStoryboardName</key>
     <string>LaunchScreen</string>
 
-    <!-- iPhone 方向（保留 3 向） -->
+    <!-- 只保留竖屏，减少横屏适配审核成本 -->
     <key>UISupportedInterfaceOrientations</key>
     <array>
       <string>UIInterfaceOrientationPortrait</string>
-      <string>UIInterfaceOrientationLandscapeLeft</string>
-      <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
 
+    <!-- iPad 不是目标平台，这里不需要 UISupportedInterfaceOrientations~ipad -->
+
+    <!-- 性能/输入 -->
     <key>CADisableMinimumFrameDurationOnPhone</key>
     <true/>
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
 
-    <!-- 状态栏由页面控制 -->
+    <!-- 状态栏由页面控制；全面屏（避免 split view） -->
     <key>UIStatusBarHidden</key>
     <false/>
     <key>UIViewControllerBasedStatusBarAppearance</key>
@@ -66,7 +67,7 @@
     <key>UIRequiresFullScreen</key>
     <true/>
 
-    <!-- 隐私权限 -->
+    <!-- 隐私权限（拍摄/读写照片） -->
     <key>NSCameraUsageDescription</key>
     <string>This app needs camera access to take photos for your listing.</string>
     <key>NSPhotoLibraryUsageDescription</key>
@@ -74,7 +75,7 @@
     <key>NSPhotoLibraryAddUsageDescription</key>
     <string>This app needs permission to save photos to your library when you save or export images.</string>
 
-    <!-- 若只用标准 HTTPS，可设为 false -->
+    <!-- 若仅使用标准 HTTPS，保持为 false -->
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
 
@@ -98,26 +99,29 @@
         <string>swaply.custom</string>
         <key>CFBundleURLSchemes</key>
         <array>
+          <!-- 统一用 cc.swaply.app，与代码/AndroidManifest 保持一致 -->
           <string>cc.swaply.app</string>
         </array>
       </dict>
     </array>
 
-    <!-- 可打开的外部 App scheme -->
+    <!-- 允许打开的外部 App Scheme（Facebook 登录 & 常用分享）-->
     <key>LSApplicationQueriesSchemes</key>
     <array>
+      <!-- Facebook 登录所需（按最小集） -->
+      <string>fbapi</string>
+      <string>fbauth2</string>
+      <string>fb-messenger-share-api</string>
+      <string>facebook</string>
+      <!-- 常用拨号/邮件 -->
+      <string>tel</string>
+      <string>mailto</string>
+      <!-- 如需 WhatsApp / Telegram，再按需解注释
       <string>whatsapp</string>
       <string>whatsapp-business</string>
       <string>tg</string>
       <string>telegram</string>
-      <string>fb</string>
-      <string>fbapi</string>
-      <string>fbauth2</string>
-      <string>fb-messenger</string>
-      <string>fb-messenger-share-api</string>
-      <string>facebook</string>
-      <string>tel</string>
-      <string>mailto</string>
+      -->
     </array>
   </dict>
 </plist>

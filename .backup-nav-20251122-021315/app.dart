@@ -1,28 +1,28 @@
-﻿// lib/core/app.dart
+// lib/core/app.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
-import 'package:swaply/core/navigation/app_router.dart'; // 涓昏矾鐢?
+import 'package:swaply/core/navigation/app_router.dart'; // 主路由
 import 'package:swaply/router/root_nav.dart';
 
 import 'package:swaply/core/l10n/app_localizations.dart';
 import 'package:swaply/providers/language_provider.dart';
 
-// === 鍏滃簳鐩磋繛鐨勪笁涓〉闈?===
+// === 兜底直连的三个页面 ===
 import 'package:swaply/pages/sell_form_page.dart';
 import 'package:swaply/pages/product_detail_page.dart';
 import 'package:swaply/auth/welcome_screen.dart';
 
-// === 鏂板锛氱櫥褰曢〉 & 棣栭〉锛堢敤浜?/login /home 鍛藉悕璺敱锛?===
+// === 新增：登录页 & 首页（用于 /login /home 命名路由） ===
 import 'package:swaply/auth/login_screen.dart';
 import 'package:swaply/pages/home_page.dart';
 
-// === 鍏ㄥ眬閴存潈瑙傚療鑰?+ 娣遍摼鎺㈤拡 ===
+// === 全局鉴权观察者 + 深链探针 ===
 import 'package:swaply/services/auth_flow_observer.dart';
 import 'package:swaply/debug/recovery_probe.dart';
-import 'package:swaply/services/deep_link_service.dart'; // 鉁?娣遍摼鏈嶅姟锛堟敞鎰忔柊澧烇級
+import 'package:swaply/services/deep_link_service.dart'; // ✅ 深链服务（注意新增）
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -44,14 +44,14 @@ class _AppBootState extends State<_AppBoot> {
   @override
   void initState() {
     super.initState();
-    // 鍚姩鍏ㄥ眬閴存潈瑙傚療鑰?& 娣遍摼鎺㈤拡
+    // 启动全局鉴权观察者 & 深链探针
     AuthFlowObserver.I.start();
     RecoveryProbe.attach();
 
-    // 鉁?姝ｇ‘鍚姩娣遍摼锛氶甯у悗鍐嶅惎鍔紙DeepLinkService 瀵瑰鏂规硶鏄?bootstrap锛?
+    // ✅ 正确启动深链：首帧后再启动（DeepLinkService 对外方法是 bootstrap）
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await DeepLinkService.instance.bootstrap();
-      // 杞诲井寤舵椂锛岀‘淇濊矾鐢辨爲鍙敤鍚庡啀澶勭悊浠讳綍娼滃湪闃熷垪锛堝彲閫夛級
+      // 轻微延时，确保路由树可用后再处理任何潜在队列（可选）
       Future.delayed(const Duration(milliseconds: 100), () {
         DeepLinkService.instance.flushQueue();
       });
@@ -60,13 +60,13 @@ class _AppBootState extends State<_AppBoot> {
 
   @override
   void dispose() {
-    // 鏈€灏忔敼鍔細涓嶅啀璋冪敤 stop()锛堣鏂规硶涓嶅瓨鍦級
+    // 最小改动：不再调用 stop()（该方法不存在）
     try {
       RecoveryProbe.dispose();
     } catch (_) {}
 
-    // 鍙€夛細濡傛灉浣犻渶瑕佸湪搴旂敤鐢熷懡鍛ㄦ湡鍐呭交搴曢噴鏀炬繁閾剧洃鍚?
-    //锛堜竴鑸笉蹇咃紝闄ら潪浣犲湪鐑噸鍚?鍒囨崲Profile绛夊満鏅墜鍔ㄦ帶鍒讹級
+    // 可选：如果你需要在应用生命周期内彻底释放深链监听
+    //（一般不必，除非你在热重启/切换Profile等场景手动控制）
     // DeepLinkService.instance.dispose();
 
     super.dispose();
@@ -91,16 +91,16 @@ class _AppBootState extends State<_AppBoot> {
                 title: 'Swaply',
                 debugShowCheckedModeBanner: false,
 
-                // 涓?root 瀵艰埅淇濇寔涓€鑷?
+                // 与 root 导航保持一致
                 navigatorKey: rootNavKey,
 
-                // 鉁?鍛藉悕璺敱锛堢粰 navReplaceAll('/login' | '/home') 鐢級
+                // ✅ 命名路由（给 navReplaceAll('/login' | '/home') 用）
                 routes: {
                   '/login': (_) => const LoginScreen(),
                   '/welcome': (_) => const WelcomeScreen(),
                 },
 
-                // 鍏朵綑鏈湪 routes 涓殑鍛藉悕璺敱锛岃蛋 AppRouter 鎴栧唴鑱斿厹搴?
+                // 其余未在 routes 中的命名路由，走 AppRouter 或内联兜底
                 onGenerateRoute: (RouteSettings settings) {
                   switch (settings.name) {
                     case '/sell-form':
@@ -109,7 +109,7 @@ class _AppBootState extends State<_AppBoot> {
                         settings: settings,
                       );
                     case '/listing':
-                    // 绾﹀畾锛歯avPush('/listing', arguments: {'id': <listingId>});
+                    // 约定：navPush('/listing', arguments: {'id': <listingId>});
                       final args = settings.arguments as Map<String, dynamic>?;
                       final id = args?['id']?.toString();
                       return MaterialPageRoute(
@@ -120,10 +120,10 @@ class _AppBootState extends State<_AppBoot> {
                   return AppRouter.onGenerateRoute(settings);
                 },
 
-                // 鉁?鏂规A锛氶灞忚繘鍏ョ櫥褰曢〉锛堝凡鐧诲綍浼氱敱 AuthFlowObserver 绔嬪埢璺?/home锛?
-                initialRoute: '/',
+                // ✅ 方案A：首屏进入登录页（已登录会由 AuthFlowObserver 立刻跳 /home）
+                initialRoute: '/login',
 
-                // 澶氳瑷€
+                // 多语言
                 locale: locale,
                 localizationsDelegates: const [
                   AppLocalizations.delegate,
@@ -135,7 +135,7 @@ class _AppBootState extends State<_AppBoot> {
                   Locale('en'),
                 ],
 
-                // 涓婚
+                // 主题
                 theme: ThemeData(
                   useMaterial3: false,
                   colorScheme: ColorScheme.fromSeed(
@@ -150,4 +150,3 @@ class _AppBootState extends State<_AppBoot> {
     );
   }
 }
-

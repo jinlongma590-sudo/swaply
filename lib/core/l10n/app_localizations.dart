@@ -10,6 +10,11 @@ class AppLocalizations {
     return AppLocalizations(const Locale('en'));
   }
 
+  // ✅ 新增：maybeOf，兼容调用方
+  static AppLocalizations? maybeOf(BuildContext context) {
+    return AppLocalizations.of(context);
+  }
+
   static const LocalizationsDelegate<AppLocalizations> delegate =
   _AppLocalizationsDelegate();
 

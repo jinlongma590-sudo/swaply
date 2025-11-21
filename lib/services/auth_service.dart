@@ -12,6 +12,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/config/auth_config.dart';
 import 'package:swaply/services/profile_service.dart'; // 统一创建 profile / 欢迎弹窗
 import 'package:swaply/services/oauth_entry.dart';     // OAuthEntry 封装
+import 'package:swaply/services/auth_flow_observer.dart'; // ✅ 引入 Observer
 
 // 统一移动端回调（已在 iOS Info.plist / Android Manifest 配好）
 const String _kMobileRedirect = 'cc.swaply.app://login-callback';
@@ -367,6 +368,8 @@ class AuthService {
   /// 默认 LOCAL 登出，避免误伤其它设备会话；
   /// 仅在“设置→退出登录(所有设备)”等场景传 global=true。
   Future<void> signOut({bool global = false, String reason = ''}) async {
+    AuthFlowObserver.I.markManualSignOut(); // ✅ 标记手动登出，触发快车道
+
     if (_signingOut) {
       debugPrint('[[SIGNOUT-TRACE]] AuthService.signOut skipped (inflight) reason=$reason');
       return;

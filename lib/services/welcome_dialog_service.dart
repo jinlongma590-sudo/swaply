@@ -10,13 +10,6 @@
 //   4) 与 main.dart 新逻辑联动：优先读取 `new_user_welcome_pending_<uid>` 决定是否弹窗，
 //      这个 pending 位由 `RewardService.ensureWelcomeForCurrentUser()` 计算并在登录时写入。
 //   5) 提供 scheduleCheck(context) 便于首帧后触发，降低与首页首帧竞争。
-//
-// 依赖：
-//   shared_preferences: ^2.0.0+
-//   supabase_flutter: any
-//
-// 可选 UI 依赖（你已有）：
-//   import 'package:swaply/widgets/welcome_coupon_dialog.dart';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -94,8 +87,6 @@ class WelcomeDialogService {
     }
 
     // —— 3) 与 main.dart 联动的 pending 位
-    // main.dart 的 wireAuthHook 在 signedIn/initialSession 时会调用
-    // RewardService.ensureWelcomeForCurrentUser()，当 shouldPopup=true 就置位此 pending。
     final hasPending = prefs.getBool(_pendingKey(uid)) == true;
 
     if (!force && !hasPending) {
@@ -117,6 +108,7 @@ class WelcomeDialogService {
       )
           .eq('user_id', uid)
           .eq('type', 'welcome')
+          .eq('status', 'active') // 建议：仅展示激活状态的欢迎券
           .limit(1);
       if (rows.isEmpty) {
         if (kDebugMode) {
@@ -141,45 +133,46 @@ class WelcomeDialogService {
     if (_isShowing) return;
     _isShowing = true;
 
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    // （根据你的 Flutter 版本，如果不支持 context.mounted，可以删掉此判断）
-    // ignore: use_build_context_synchronously
-    // （你的工程之前使用过此写法，说明版本已支持）
-    if (!(context.mounted)) {
-      _isShowing = false;
-      return;
-    }
-
-    if (kDebugMode) {
-      // ignore: avoid_print
-      print('[WelcomeDialog] found welcome coupon -> showing dialog');
-    }
-
-    // —— 6) 真正弹出；关闭后再写已展示
-    // ignore: use_build_context_synchronously
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (_) => WelcomeCouponDialog(
-        couponData: rows.first,
-      ),
-    );
-
-    // 关闭后落盘：两种历史键都写，保证向后兼容
-    await prefs.setBool(_shownGiftKey(uid), true);
-    await prefs.setBool(_shownDialogKey(uid), true);
-
-    // 清掉 pending（只弹一次）
-    await prefs.setBool(_pendingKey(uid), false);
-
-    _shownForUid[uid] = true;
-    _isShowing = false;
-
-    // —— 7) 保险：若你希望“确保券一定存在”，也可在此补一次无害 Ensure（可选）
     try {
-      await RewardService.ensureWelcomeGiftFor(uid);
-    } catch (_) {
-      // 忽略，保证 UI 不受影响
+      await Future<void>.delayed(const Duration(milliseconds: 300));
+
+      // ignore: use_build_context_synchronously
+      if (!(context.mounted)) {
+        return;
+      }
+
+      if (kDebugMode) {
+        // ignore: avoid_print
+        print('[WelcomeDialog] found welcome coupon -> showing dialog');
+      }
+
+      // —— 6) 真正弹出；关闭后再写已展示
+      // ignore: use_build_context_synchronously
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        builder: (_) => WelcomeCouponDialog(
+          couponData: rows.first,
+        ),
+      );
+
+      // 关闭后落盘：两种历史键都写，保证向后兼容
+      await prefs.setBool(_shownGiftKey(uid), true);
+      await prefs.setBool(_shownDialogKey(uid), true);
+
+      // 清掉 pending（只弹一次）
+      await prefs.setBool(_pendingKey(uid), false);
+
+      _shownForUid[uid] = true;
+
+      // —— 7) 保险：若你希望“确保券一定存在”，也可在此补一次无害 Ensure（可选）
+      try {
+        await RewardService.ensureWelcomeGiftFor(uid);
+      } catch (_) {
+        // 忽略，保证 UI 不受影响
+      }
+    } finally {
+      _isShowing = false;
     }
   }
 

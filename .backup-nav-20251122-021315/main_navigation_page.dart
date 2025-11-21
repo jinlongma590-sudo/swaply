@@ -1,5 +1,3 @@
-﻿import 'package:swaply/pages/saved_page.dart' as real_saved;
-import 'package:swaply/pages/notification_page.dart' as real_notif;
 // lib/pages/main_navigation_page.dart
 import 'dart:io' show Platform;
 
@@ -14,26 +12,26 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 // l10n
 import 'package:swaply/core/l10n/app_localizations.dart';
 
-// 鉁?浠呬繚鐣?root_nav锛堢粺涓€瀵艰埅閫氶亾锛?
+// ✅ 仅保留 root_nav（统一导航通道）
 import 'package:swaply/router/root_nav.dart';
 
-// 璇█鎻愪緵鍣?
+// 语言提供器
 import 'package:swaply/providers/language_provider.dart';
 
-// 涓氬姟椤甸潰锛堟寜浣犵殑鐪熷疄璺緞锛屾湁鍑哄叆灏辨敼锛?
-// HomePage 鎴戜滑鐢ㄥ埆鍚嶄互閬垮厤姝т箟
+// 业务页面（按你的真实路径，有出入就改）
+// HomePage 我们用别名以避免歧义
 import 'package:swaply/pages/home_page.dart' as swaply;
-import 'package:swaply/pages/sell_page.dart';               // 鉁?Sell 鏍归〉锛堝叆鍙ｉ〉锛?
+import 'package:swaply/pages/sell_page.dart';               // ✅ Sell 根页（入口页）
 import 'package:swaply/pages/profile_page.dart';            // ProfilePage
 // CouponManagementPage
 // pd.ProductDetailPage
 
-// 猸?鏂板锛氭杩庡脊绐楁湇鍔★紙涓€娆℃€цЕ鍙戯級
+// ⭐ 新增：欢迎弹窗服务（一次性触发）
 import 'package:swaply/services/welcome_dialog_service.dart';
 
-// ========================= 涓婚甯搁噺 =========================
+// ========================= 主题常量 =========================
 const Color _PRIMARY_BLUE = Color(0xFF1877F2);
-// 浣犻椤靛畾鍒剁殑椤堕儴楂樺害锛堟湁闇€瑕佸啀鐢紱鏆傛湭浣跨敤锛?
+// 你首页定制的顶部高度（有需要再用；暂未使用）
 const double _CUSTOM_HEADER_HEIGHT = 110.0;
 
 // ---------------- MainNavigationPage ----------------
@@ -52,19 +50,19 @@ class _MainNavigationPageState extends State<MainNavigationPage>
   late AnimationController _sellButtonController;
   late Animation<double> _sellButtonAnimation;
 
-  // 鉁?淇锛氱粰鍑洪粯璁ゅ€硷紝閬垮厤 LateInitializationError
+  // ✅ 修复：给出默认值，避免 LateInitializationError
   bool _splitScreenMode = false;
 
   static bool _welcomeGiftChecked = false;
 
-  // 猸?鏂板锛氫竴娆℃€ф杩庡脊绐楃殑妫€鏌ヤ綅
+  // ⭐ 新增：一次性欢迎弹窗的检查位
   bool _welcomeChecked = false;
 
   @override
   void initState() {
     super.initState();
 
-    // 猸?鏂板锛氶甯у悗鍙Е鍙戜竴娆℃杩庡脊绐楋紙缁熶竴鍏ュ彛锛岄伩鍏嶅澶勯噸澶嶅脊锛?
+    // ⭐ 新增：首帧后只触发一次欢迎弹窗（统一入口，避免多处重复弹）
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted || _welcomeChecked) return;
       _welcomeChecked = true;
@@ -166,7 +164,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
             ),
             SizedBox(height: 12.h),
             Text(
-              _fixUtf8Mojibake('Welcome gift 馃巵'),
+              _fixUtf8Mojibake('Welcome gift 🎁'),
               style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w700),
             ),
             SizedBox(height: 6.h),
@@ -215,7 +213,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
   }
 
   void _showWelcomeGiftDialog() {
-    // 绠€鍖栵細鏃犺繙绔暟鎹椂鐩存帴缁欐彁绀?
+    // 简化：无远端数据时直接给提示
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -239,7 +237,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     final isGuest = Supabase.instance.client.auth.currentSession == null;
     if (!isGuest) {
       try {
-        // 浣犺嚜宸辩殑缁熻閫昏緫锛涙殏鏃犳湇鍔″氨鍏堢疆 0
+        // 你自己的统计逻辑；暂无服务就先置 0
         const count = 0;
         if (mounted) setState(() => _notificationCount = count);
       } catch (e) {
@@ -248,7 +246,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     }
   }
 
-  // 鐗╃悊杩斿洖閿細Tab 鍐呭洖閫€ -> 鍒囧洖棣栭〉 -> 纭閫€鍑猴紙Android锛?
+  // 物理返回键：Tab 内回退 -> 切回首页 -> 确认退出（Android）
   void _onPopInvokedWithResult(bool didPop, Object? result) async {
     if (didPop) return;
 
@@ -341,7 +339,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
               ),
               child: TextButton(
                 onPressed: () {
-                  // 鉁?鏀逛负 rootNav 缁熶竴瀵艰埅
+                  // ✅ 改为 rootNav 统一导航
                   navReplaceAll('/welcome');
                 },
                 child: Text(
@@ -746,7 +744,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
 }
 
 /* ------------------------------------------------ */
-/* =========== ROOT WIDGETS (Tab 瀹瑰櫒) =========== */
+/* =========== ROOT WIDGETS (Tab 容器) =========== */
 /* ------------------------------------------------ */
 
 class _HomeRoot extends StatelessWidget {
@@ -762,7 +760,7 @@ class _SavedRoot extends StatelessWidget {
   const _SavedRoot({this.isGuest = false, this.onNavigateToHome});
 
   @override
-  Widget build(BuildContext context) => real_saved.SavedPage(
+  Widget build(BuildContext context) => SavedPage(
     isGuest: isGuest,
     onNavigateToHome: onNavigateToHome,
   );
@@ -773,7 +771,7 @@ class _SellRoot extends StatelessWidget {
   const _SellRoot({this.isGuest = false});
 
   @override
-  Widget build(BuildContext context) => SellPage(isGuest: isGuest); // 鉁?鎸囧悜鍏ュ彛椤?
+  Widget build(BuildContext context) => SellPage(isGuest: isGuest); // ✅ 指向入口页
 }
 
 class _NotifRoot extends StatelessWidget {
@@ -788,7 +786,7 @@ class _NotifRoot extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => real_notif.NotificationPage(
+  Widget build(BuildContext context) => NotificationPage(
     onClearBadge: onClearBadge,
     isGuest: isGuest,
     onNotificationCountChanged: onNotificationCountChanged,
@@ -803,9 +801,9 @@ class _ProfileRoot extends StatelessWidget {
   Widget build(BuildContext context) => ProfilePage(isGuest: isGuest);
 }
 
-// ========================= 杈呭姪/鍗犱綅 =========================
+// ========================= 辅助/占位 =========================
 
-// 鍗犱綅锛歩OS 椤堕儴瀹夊叏鍖哄畧鎶わ紙鍚庣画濡傛灉浣犳湁鐪熷疄瀹炵幇锛屽啀鏇挎崲锛?
+// 占位：iOS 顶部安全区守护（后续如果你有真实实现，再替换）
 class IosInsetsGuard extends StatelessWidget {
   final Widget child;
   const IosInsetsGuard({super.key, required this.child});
@@ -813,7 +811,7 @@ class IosInsetsGuard extends StatelessWidget {
   Widget build(BuildContext context) => child;
 }
 
-// 鍗犱綅锛歋avedPage / NotificationPage锛圫tep 3/4 浼氭浛鎹负鐪熸椤甸潰锛?
+// 占位：SavedPage / NotificationPage（Step 3/4 会替换为真正页面）
 class SavedPage extends StatelessWidget {
   final bool isGuest;
   final VoidCallback? onNavigateToHome;
@@ -864,6 +862,5 @@ class NotificationPage extends StatelessWidget {
   }
 }
 
-// 浣犱箣鍓嶇敤鍒扮殑瀛楃涓叉竻娲楁柟娉曪紙鍗犱綅锛?
+// 你之前用到的字符串清洗方法（占位）
 String _fixUtf8Mojibake(String s) => s;
-

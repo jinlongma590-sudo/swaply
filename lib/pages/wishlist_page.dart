@@ -1,13 +1,19 @@
-// lib/pages/wishlist_page.dart
+﻿// lib/pages/wishlist_page.dart
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+// ✅ 顶部 import 修正
 import 'package:swaply/services/dual_favorites_service.dart';
 import 'package:swaply/services/favorites_update_service.dart';
-import 'package:swaply/pages/product_detail_page.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
+
+// === 全局路由 & 常量 & API ===
+import 'package:swaply/router/root_nav.dart';       // navPush / navReplaceAll
+import 'package:swaply/theme/constants.dart';       // kPrimaryBlue / kCustomHeaderHeight
+import 'package:swaply/listing_api.dart';           // 保留用于其他可能的引用，主要逻辑已切回 DualFavoritesService
 
 class WishlistPage extends StatefulWidget {
   const WishlistPage({super.key});
@@ -16,244 +22,108 @@ class WishlistPage extends StatefulWidget {
   State<WishlistPage> createState() => _WishlistPageState();
 }
 
-class _WishlistPageState extends State<WishlistPage>
-    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
+class _WishlistPageState extends State<WishlistPage> {
   List<Map<String, dynamic>> _wishlistItems = [];
   bool _isLoading = true;
   bool _isRefreshing = false;
   String? _errorMessage;
-  Timer? _autoRefreshTimer;
-  StreamSubscription<FavoriteUpdateEvent>? _favoritesSubscription;
 
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
+  // ✅ 新增：收藏变更订阅（与 SavedPage 对齐）
+  StreamSubscription<dynamic>? _favSub;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    );
-
-    _loadWishlist();
-    // 启动自动刷新定时器（每30秒检查一次）
-    _startAutoRefresh();
-    // 设置收藏更新监听
     _setupFavoritesListener();
+    _loadWishlist();
   }
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _autoRefreshTimer?.cancel();
-    _animationController.dispose();
-    _favoritesSubscription?.cancel();
+    _favSub?.cancel();
     super.dispose();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && mounted) {
-      // 应用重新激活时刷新数据
-      _loadWishlist();
-    }
-  }
-
-  /// 设置收藏更新监听
+  // ✅ 新增：实时监听收藏变化（详情页操作后本地同步）
   void _setupFavoritesListener() {
-    _favoritesSubscription = FavoritesUpdateService().favoritesStream.listen(
-          (event) {
-        if (!mounted) return;
-
-        if (kDebugMode) {
-          print(
-              'WishlistPage received favorite update: ${event.listingId}, added: ${event.isAdded}');
-        }
-
-        if (event.isAdded && event.listingData != null) {
-          // 添加到收藏：立即添加到本地列表
-          _addToLocalWishlist(event.listingData!);
-        } else if (!event.isAdded) {
-          // 从收藏移除：立即从本地列表移除
-          _removeFromLocalWishlist(event.listingId);
-        }
-      },
-      onError: (error) {
-        if (kDebugMode) print('Error in favorites stream: $error');
-      },
-    );
-  }
-
-  /// 立即添加到本地心愿单列表
-  void _addToLocalWishlist(Map<String, dynamic> listingData) {
-    try {
-      // 检查是否已存在
-      final listingId = listingData['id']?.toString();
-      if (listingId == null) return;
-
-      final exists = _wishlistItems.any((item) =>
-      item['listing_id']?.toString() == listingId ||
-          item['listing']?['id']?.toString() == listingId);
-
-      if (!exists) {
-        // 构造符合心愿单格式的数据
-        final wishlistItem = {
-          'listing_id': listingId,
-          'listing': _safeMapConvert(listingData),
-          'created_at': DateTime.now().toIso8601String(),
-        };
-
-        setState(() {
-          _wishlistItems.insert(0, wishlistItem); // 插入到列表开头
-        });
-
-        if (kDebugMode) {
-          print('Added item to local wishlist: $listingId');
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) print('Error adding to local wishlist: $e');
-    }
-  }
-
-  /// 立即从本地心愿单列表移除
-  void _removeFromLocalWishlist(String listingId) {
-    try {
-      final initialLength = _wishlistItems.length;
-
-      setState(() {
-        _wishlistItems.removeWhere((item) =>
-        item['listing_id']?.toString() == listingId ||
-            item['listing']?['id']?.toString() == listingId);
-      });
-
-      if (_wishlistItems.length < initialLength) {
-        if (kDebugMode) {
-          print('Removed item from local wishlist: $listingId');
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) print('Error removing from local wishlist: $e');
-    }
-  }
-
-  /// 启动自动刷新定时器
-  void _startAutoRefresh() {
-    _autoRefreshTimer?.cancel();
-    _autoRefreshTimer =
-        Timer.periodic(const Duration(seconds: 30), (timer) {
-          if (mounted && !_isRefreshing) {
-            if (kDebugMode) print('自动刷新心愿单列表...');
-            _loadWishlist();
-          }
-        });
-  }
-
-  /// 安全的类型转换方法
-  Map<String, dynamic> _safeMapConvert(dynamic input) {
-    if (input == null) return <String, dynamic>{};
-
-    if (input is Map<String, dynamic>) {
-      return input;
-    } else if (input is Map) {
+    _favSub = FavoritesUpdateService().favoritesStream.listen((event) async {
+      if (!mounted) return;
       try {
-        return Map<String, dynamic>.from(input);
-      } catch (e) {
-        if (kDebugMode) print('类型转换失败: $e');
-        return <String, dynamic>{};
+        final id = (event as dynamic).listingId?.toString();
+        final isAdd = (event as dynamic).isAdded == true;
+        if (isAdd) {
+          // 详情页添加 → 直接整体刷新（保持与服务端一致）
+          await _loadWishlist();
+        } else {
+          // 详情页取消 → 本地移除
+          if (id != null) {
+            setState(() {
+              _wishlistItems.removeWhere((x) =>
+              x['listing_id']?.toString() == id ||
+                  x['listing']?['id']?.toString() == id);
+            });
+          }
+        }
+      } catch (_) {
+        // 静默忽略解析异常
       }
-    }
-
-    return <String, dynamic>{};
+    }, onError: (e) {
+      if (kDebugMode) debugPrint('favoritesStream error: $e');
+    });
   }
 
-  /// 加载收藏列表
+  /// 加载心愿单数据
+  // ✅ 按照要求完全替换逻辑
   Future<void> _loadWishlist() async {
-    final user = Supabase.instance.client.auth.currentUser;
-    if (user == null) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Please login to view your wishlist';
-      });
-      return;
-    }
-
-    try {
+    if (mounted) {
       setState(() {
         _isLoading = true;
         _errorMessage = null;
       });
+    }
 
-      if (kDebugMode) {
-        print('Loading wishlist for user: ${user.id}');
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+      if (user == null) {
+        // 保持统一的游客跳转逻辑
+        await navReplaceAll('/welcome');
+        return;
       }
 
-      // 修复：使用 DualFavoritesService 获取心愿单列表
-      final rawItems = await DualFavoritesService.getUserWishlist(
+      // ⚠️ 用真正的“心愿单” API
+      final results = await DualFavoritesService.getUserWishlist(
         userId: user.id,
         limit: 100,
+        offset: 0,
       );
 
-      if (mounted) {
-        // 安全转换数据
-        final safeItems = <Map<String, dynamic>>[];
-        for (final item in rawItems) {
-          final safeItem = _safeMapConvert(item);
-          if (safeItem.isNotEmpty) {
-            // 确保 listing 数据也是安全转换的
-            if (safeItem.containsKey('listing')) {
-              safeItem['listing'] = _safeMapConvert(safeItem['listing']);
-            }
-            safeItems.add(safeItem);
-          }
-        }
+      if (!mounted) return;
 
-        setState(() {
-          _wishlistItems = safeItems;
-          _isLoading = false;
-        });
-
-        _animationController.forward();
-
-        if (kDebugMode) {
-          print('Loaded ${_wishlistItems.length} wishlist items');
-        }
-      }
+      setState(() {
+        _wishlistItems = results; // 直接用它，里面的 listing 已经是 Map
+        _isLoading = false;
+      });
     } catch (e) {
-      if (kDebugMode) {
-        print('Error loading wishlist: $e');
-      }
-
       if (mounted) {
         setState(() {
+          _errorMessage = e.toString();
           _isLoading = false;
-          _errorMessage = 'Failed to load wishlist. Please try again.';
         });
       }
     }
   }
 
-  /// 刷新收藏列表
   Future<void> _refreshWishlist() async {
     setState(() => _isRefreshing = true);
     await _loadWishlist();
-    setState(() => _isRefreshing = false);
+    if (mounted) setState(() => _isRefreshing = false);
   }
 
-  /// 从收藏夹移除商品
   Future<void> _removeFromWishlist(String listingId, int index) async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
     try {
-      // 修复：使用 DualFavoritesService 同步移除
       final success = await DualFavoritesService.removeFromFavorites(
         userId: user.id,
         listingId: listingId,
@@ -264,432 +134,344 @@ class _WishlistPageState extends State<WishlistPage>
           _wishlistItems.removeAt(index);
         });
 
-        // 发送实时更新通知
-        FavoritesUpdateService().notifyFavoriteChanged(
-          listingId: listingId,
-          isAdded: false,
-        );
-
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
                 Icon(Icons.check_circle_rounded,
-                    color: Colors.white, size: 12.sp),
+                    color: Colors.white, size: 16.w),
                 SizedBox(width: 6.w),
-                Text('Removed from favorites and wishlist',
-                    style: TextStyle(fontSize: 10.sp)),
+                const Text('Removed from wishlist and favorites'),
               ],
             ),
-            backgroundColor: Colors.green.shade600,
+            backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.r)),
-            margin: EdgeInsets.all(8.w),
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.w)),
+            margin: EdgeInsets.all(12.w),
           ),
         );
       } else {
         throw Exception('Failed to remove from wishlist');
       }
     } catch (e) {
-      if (kDebugMode) {
-        print('Error removing from wishlist: $e');
-      }
+      if (kDebugMode) {}
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
               Icon(Icons.error_outline_rounded,
-                  color: Colors.white, size: 12.sp),
+                  color: Colors.white, size: 16.w),
               SizedBox(width: 6.w),
-              Expanded(
-                child: Text(
-                  'Failed to remove item. Please try again.',
-                  style: TextStyle(fontSize: 10.sp),
-                ),
-              ),
+              const Text('Failed to remove item. Please try again.'),
             ],
           ),
-          backgroundColor: Colors.red.shade600,
+          backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
           shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
-          margin: EdgeInsets.all(8.w),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.w)),
+          margin: EdgeInsets.all(12.w),
         ),
       );
     }
   }
 
-  /// 获取商品图片 - 安全版本
   String _getListingImage(Map<String, dynamic> listing) {
-    try {
-      final images = listing['images'] ?? listing['image_urls'];
-      if (images is List && images.isNotEmpty) {
-        return images.first.toString();
-      }
-    } catch (e) {
-      if (kDebugMode) print('Error getting listing image: $e');
+    final images = listing['images'] ?? listing['image_urls'];
+    if (images is List && images.isNotEmpty) {
+      return images.first.toString();
     }
     return 'assets/images/placeholder.jpg';
   }
 
-  /// 格式化价格 - 安全版本
   String _formatPrice(dynamic price) {
     if (price == null) return 'Price not available';
-
-    try {
-      final priceStr = price.toString();
-      if (priceStr.startsWith('\$')) return priceStr;
-
-      final numPrice = double.tryParse(priceStr);
-      if (numPrice != null) {
-        return '\$${numPrice.toStringAsFixed(0)}';
-      }
-
-      return priceStr.isNotEmpty ? priceStr : 'Price not available';
-    } catch (e) {
-      if (kDebugMode) print('Error formatting price: $e');
-      return 'Price not available';
+    final priceStr = price.toString();
+    if (priceStr.startsWith('\$')) return priceStr;
+    final numPrice = double.tryParse(priceStr);
+    if (numPrice != null) {
+      return '\$${numPrice.toStringAsFixed(0)}';
     }
+    return priceStr;
   }
 
-  /// 安全获取字符串值
-  String _safeGetString(Map<String, dynamic> map, String key,
-      {String defaultValue = ''}) {
-    try {
-      return map[key]?.toString() ?? defaultValue;
-    } catch (e) {
-      if (kDebugMode) print('Error getting string for key $key: $e');
-      return defaultValue;
-    }
-  }
+  Widget _buildWishlistCard(Map<String, dynamic> item, int index) {
+    // 数据解析兼容处理
+    final listing = (item['listing'] ?? {}) as Map<String, dynamic>;
+    final listingId =
+        item['listing_id']?.toString() ?? listing['id']?.toString() ?? '';
+    final title = listing['title']?.toString() ?? 'Unknown Item';
+    final price = _formatPrice(listing['price']);
+    final city = listing['city']?.toString() ?? '';
+    final imageUrl = _getListingImage(listing);
+    final createdAt = item['created_at']?.toString() ?? '';
+    final timeAdded = DualFavoritesService.formatSavedTime(createdAt);
 
-  /// 构建商品卡片 - 修复版本
-  Widget _buildListingCard(Map<String, dynamic> item, int index) {
-    try {
-      // 安全的类型转换 - 统一使用 'listing' 键
-      final safeListing =
-      _safeMapConvert(item['listing'] ?? item['listings'] ?? {});
-      final safeItem = _safeMapConvert(item);
-
-      final listingId = _safeGetString(safeItem, 'listing_id');
-      if (listingId.isEmpty) {
-        if (kDebugMode) {
-          print('Warning: Empty listing ID for item at index $index');
-        }
-        return const SizedBox.shrink();
-      }
-
-      final title =
-      _safeGetString(safeListing, 'title', defaultValue: 'Unknown Item');
-      final price = _formatPrice(safeListing['price']);
-      final city = _safeGetString(safeListing, 'city');
-      final imageUrl = _getListingImage(safeListing);
-      final createdAt = _safeGetString(safeItem, 'created_at');
-
-      // 格式化收藏时间
-      String timeAdded = 'Recently';
-      if (createdAt.isNotEmpty) {
-        try {
-          final date = DateTime.parse(createdAt);
-          final now = DateTime.now();
-          final difference = now.difference(date);
-
-          if (difference.inMinutes < 60) {
-            timeAdded = '${difference.inMinutes}m ago';
-          } else if (difference.inHours < 24) {
-            timeAdded = '${difference.inHours}h ago';
-          } else if (difference.inDays < 7) {
-            timeAdded = '${difference.inDays}d ago';
-          } else {
-            timeAdded = '${date.day}/${date.month}/${date.year}';
-          }
-        } catch (e) {
-          timeAdded = 'Recently';
-        }
-      }
-
-      return Container(
-        margin: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 12.r,
-              offset: Offset(0, 2.h),
-            ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () {
-              if (listingId.isNotEmpty) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ProductDetailPage(
-                      productId: listingId,
-                      productData: safeListing,
-                    ),
-                  ),
-                ).then((_) {
-                  // 从商品详情页返回后刷新列表
-                  _loadWishlist();
-                });
-              }
-            },
-            borderRadius: BorderRadius.circular(12.r),
-            child: Padding(
-              padding: EdgeInsets.all(8.w),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 商品图片 - 缩小
-                  Hero(
-                    tag: 'wishlist_image_$listingId',
+    return Card(
+      margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.w)),
+      color: Colors.white,
+      child: InkWell(
+        onTap: () async {
+          if (listingId.isEmpty) return;
+          // ✅ 统一全局命名路由；返回后刷新
+          await navPush('/listing', arguments: listingId);
+          await _loadWishlist();
+        },
+        borderRadius: BorderRadius.circular(12.w),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12.w),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 6.w,
+                offset: Offset(0, 1.h),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(12.w),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 缩略图
+                Hero(
+                  tag: 'wishlist_image_$listingId',
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8.w),
                     child: Container(
-                      width: 50.w,
-                      height: 50.h,
+                      width: 65.w,
+                      height: 65.w,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8.r),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
-                            blurRadius: 3.r,
-                            offset: Offset(0, 1.h),
-                          ),
-                        ],
+                        color: kPrimaryBlue.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(8.w),
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8.r),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                Colors.grey.shade50,
-                                Colors.grey.shade100
-                              ],
+                      child: imageUrl.startsWith('http')
+                          ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        loadingBuilder:
+                            (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: SizedBox(
+                              width: 15.w,
+                              height: 15.w,
+                              child: CircularProgressIndicator(
+                                value: loadingProgress
+                                    .expectedTotalBytes !=
+                                    null
+                                    ? loadingProgress
+                                    .cumulativeBytesLoaded /
+                                    loadingProgress
+                                        .expectedTotalBytes!
+                                    : null,
+                                strokeWidth: 1.5.w,
+                                valueColor:
+                                AlwaysStoppedAnimation<Color>(
+                                    kPrimaryBlue),
+                              ),
                             ),
-                          ),
-                          child: imageUrl.startsWith('http')
-                              ? Image.network(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Icon(
-                                Icons.image_not_supported_rounded,
-                                color: Colors.grey.shade400,
-                                size: 20.w,
-                              );
-                            },
-                          )
-                              : Image.asset(
-                            imageUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Icon(
-                                Icons.image_not_supported_rounded,
-                                color: Colors.grey.shade400,
-                                size: 20.w,
-                              );
-                            },
-                          ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: kPrimaryBlue.withOpacity(0.06),
+                              borderRadius: BorderRadius.circular(8.w),
+                            ),
+                            child: Icon(
+                              Icons.image_not_supported_rounded,
+                              color: kPrimaryBlue.withOpacity(0.5),
+                              size: 24.w,
+                            ),
+                          );
+                        },
+                      )
+                          : Container(
+                        decoration: BoxDecoration(
+                          color: kPrimaryBlue.withOpacity(0.06),
+                          borderRadius: BorderRadius.circular(8.w),
+                        ),
+                        child: Icon(
+                          Icons.image_not_supported_rounded,
+                          color: kPrimaryBlue.withOpacity(0.5),
+                          size: 24.w,
                         ),
                       ),
                     ),
                   ),
-                  SizedBox(width: 8.w),
+                ),
+                SizedBox(width: 12.w),
 
-                  // 商品信息 - 缩小字体
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
+                // 文本
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                          height: 1.3,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: 4.h),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 6.w, vertical: 2.h),
+                        decoration: BoxDecoration(
+                          color: kPrimaryBlue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6.w),
+                        ),
+                        child: Text(
+                          price,
                           style: TextStyle(
-                            fontSize: 11.sp,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.grey.shade800,
-                            height: 1.2,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        SizedBox(height: 2.h),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 6.w, vertical: 2.h),
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-                            ),
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          child: Text(
-                            price,
-                            style: TextStyle(
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.bold,
+                            color: kPrimaryBlue,
                           ),
                         ),
-                        SizedBox(height: 3.h),
-                        if (city.isNotEmpty)
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.location_on_rounded,
-                                size: 10.w,
-                                color: Colors.grey.shade500,
-                              ),
-                              SizedBox(width: 2.w),
-                              Expanded(
-                                child: Text(
-                                  city,
-                                  style: TextStyle(
-                                    fontSize: 9.sp,
-                                    color: Colors.grey.shade600,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        SizedBox(height: 1.h),
+                      ),
+                      SizedBox(height: 6.h),
+                      if (city.isNotEmpty)
                         Row(
                           children: [
                             Icon(
-                              Icons.schedule_rounded,
-                              size: 9.w,
-                              color: Colors.grey.shade400,
+                              Icons.location_on_rounded,
+                              size: 11.w,
+                              color: Colors.grey[500],
                             ),
-                            SizedBox(width: 2.w),
-                            Text(
-                              'Added $timeAdded',
-                              style: TextStyle(
-                                fontSize: 8.sp,
-                                color: Colors.grey.shade500,
+                            SizedBox(width: 3.w),
+                            Expanded(
+                              child: Text(
+                                city,
+                                style: TextStyle(
+                                  fontSize: 11.sp,
+                                  color: Colors.grey[600],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-
-                  // 移除按钮 - 缩小
-                  Container(
-                    width: 26.w,
-                    height: 26.h,
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(6.r),
-                    ),
-                    child: IconButton(
-                      icon: Icon(
-                        Icons.favorite_rounded,
-                        color: Colors.red.shade400,
-                        size: 14.w,
+                      SizedBox(height: 3.h),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.access_time_rounded,
+                            size: 10.w,
+                            color: Colors.grey[400],
+                          ),
+                          SizedBox(width: 3.w),
+                          Text(
+                            'Added $timeAdded',
+                            style: TextStyle(
+                              fontSize: 9.sp,
+                              color: Colors.grey[500],
+                            ),
+                          ),
+                        ],
                       ),
-                      padding: EdgeInsets.zero,
-                      onPressed: () =>
-                          _showRemoveDialog(listingId, title, index),
-                      tooltip: 'Remove from wishlist',
+                    ],
+                  ),
+                ),
+
+                // 移除按钮
+                Container(
+                  margin: EdgeInsets.only(left: 6.w),
+                  decoration: BoxDecoration(
+                    color: kPrimaryBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8.w),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => _showRemoveDialog(listingId, title, index),
+                      borderRadius: BorderRadius.circular(8.w),
+                      child: Padding(
+                        padding: EdgeInsets.all(8.w),
+                        child: Icon(
+                          Icons.favorite_rounded,
+                          color: kPrimaryBlue,
+                          size: 18.w,
+                        ),
+                      ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
-      );
-    } catch (e, stackTrace) {
-      if (kDebugMode) {
-        print('Error building listing card at index $index: $e');
-        print('Stack trace: $stackTrace');
-        print('Item data: $item');
-      }
-      // 返回错误卡片而不是崩溃
-      return Container(
-        margin: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
-        padding: EdgeInsets.all(16.w),
-        decoration: BoxDecoration(
-          color: Colors.red.shade50,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: Colors.red.shade200),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.error_outline, color: Colors.red.shade400, size: 20.w),
-            SizedBox(width: 8.w),
-            Expanded(
-              child: Text(
-                'Error loading item',
-                style: TextStyle(
-                  fontSize: 11.sp,
-                  color: Colors.red.shade700,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+      ),
+    );
   }
 
-  /// 显示移除确认对话框
   void _showRemoveDialog(String listingId, String title, int index) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-          title: Text(
-            'Remove from Wishlist',
-            style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.bold),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
+          title: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(6.w),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6.w),
+                ),
+                child: Icon(Icons.delete_outline_rounded,
+                    color: Colors.red, size: 16.w),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Text(
+                  'Remove from Wishlist',
+                  style:
+                  TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
           ),
           content: Text(
             'Are you sure you want to remove "$title" from your wishlist and favorites?',
-            style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 13.sp, height: 1.4),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
-              ),
-              child: Text(
-                'Cancel',
-                style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade600),
-              ),
+              child: Text('Cancel',
+                  style: TextStyle(fontSize: 13.sp, color: Colors.grey[600])),
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _removeFromWishlist(listingId, index);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade500,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8.r)),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(6.w),
               ),
-              child: Text(
-                'Remove',
-                style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600),
+              child: TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _removeFromWishlist(listingId, index);
+                },
+                child: Text(
+                  'Remove',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
           ],
@@ -698,78 +480,94 @@ class _WishlistPageState extends State<WishlistPage>
     );
   }
 
-  /// 构建空状态 - 紧凑版
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
-        padding: EdgeInsets.all(16.w),
+        padding: EdgeInsets.all(24.w),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: EdgeInsets.all(16.w),
+              width: 100.w,
+              height: 100.w,
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.grey.shade50, Colors.grey.shade100],
+                  colors: [
+                    kPrimaryBlue.withOpacity(0.10),
+                    const Color(0xFF1E88E5).withOpacity(0.06),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                shape: BoxShape.circle,
+                borderRadius: BorderRadius.circular(50.w),
+                border: Border.all(
+                  color: kPrimaryBlue.withOpacity(0.2),
+                  width: 1.5.w,
+                ),
               ),
               child: Icon(
-                Icons.favorite_border_rounded,
-                size: 48.w,
-                color: Colors.grey.shade400,
+                Icons.favorite_outline_rounded,
+                size: 50.w,
+                color: kPrimaryBlue,
               ),
             ),
-            SizedBox(height: 14.h),
+            SizedBox(height: 24.h),
             Text(
-              'Your Wishlist is Empty',
+              'No Wishlist Items Yet',
               style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
+                fontSize: 20.sp,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
+                letterSpacing: -0.3,
               ),
             ),
-            SizedBox(height: 6.h),
-            Text(
-              'Start adding items you like to your wishlist by tapping the heart icon on any listing.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 11.sp,
-                color: Colors.grey.shade600,
-                height: 1.3,
+            SizedBox(height: 8.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.w),
+              child: Text(
+                'Start adding items you like to your wishlist by tapping the bookmark icon on any listing.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  color: Colors.grey[600],
+                  height: 1.4,
+                ),
               ),
             ),
-            SizedBox(height: 16.h),
+            SizedBox(height: 30.h),
             Container(
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+                  colors: [Color(0xFF2196F3), Color(0xFF1E88E5)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
                 ),
-                borderRadius: BorderRadius.circular(8.r),
+                borderRadius: BorderRadius.circular(12.w),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF667EEA).withOpacity(0.3),
-                    blurRadius: 8.r,
-                    offset: Offset(0, 2.h),
+                    color: kPrimaryBlue.withOpacity(0.25),
+                    blurRadius: 10.w,
+                    offset: Offset(0, 4.h),
                   ),
                 ],
               ),
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                },
+              child: ElevatedButton.icon(
+                onPressed: () => Navigator.of(context).pop(),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
                   padding:
-                  EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                  EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.r)),
+                    borderRadius: BorderRadius.circular(12.w),
+                  ),
                 ),
-                child: Text(
+                icon:
+                Icon(Icons.explore_rounded, size: 16.w, color: Colors.white),
+                label: Text(
                   'Browse Items',
                   style: TextStyle(
-                    fontSize: 11.sp,
+                    fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),
@@ -782,59 +580,70 @@ class _WishlistPageState extends State<WishlistPage>
     );
   }
 
-  /// 构建错误状态 - 紧凑版
   Widget _buildErrorState() {
     return Center(
       child: Padding(
-        padding: EdgeInsets.all(16.w),
+        padding: EdgeInsets.all(24.w),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              padding: EdgeInsets.all(16.w),
+              width: 90.w,
+              height: 90.w,
               decoration: BoxDecoration(
-                color: Colors.red.shade50,
-                shape: BoxShape.circle,
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(45.w),
               ),
               child: Icon(
                 Icons.error_outline_rounded,
-                size: 48.w,
-                color: Colors.red.shade400,
+                size: 45.w,
+                color: Colors.red[400],
               ),
             ),
-            SizedBox(height: 14.h),
+            SizedBox(height: 20.h),
             Text(
               'Something went wrong',
               style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey.shade800,
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
               ),
             ),
-            SizedBox(height: 6.h),
+            SizedBox(height: 8.h),
             Text(
               _errorMessage ?? 'Failed to load your wishlist.',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 11.sp,
-                color: Colors.grey.shade600,
-                height: 1.3,
+                fontSize: 13.sp,
+                color: Colors.grey[600],
+                height: 1.4,
               ),
             ),
-            SizedBox(height: 16.h),
-            ElevatedButton(
-              onPressed: _loadWishlist,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF667EEA),
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8.r)),
-                elevation: 2.r,
+            SizedBox(height: 24.h),
+            Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF2196F3), Color(0xFF1E88E5)],
+                ),
+                borderRadius: BorderRadius.circular(10.w),
               ),
-              child: Text(
-                'Try Again',
-                style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600),
+              child: ElevatedButton.icon(
+                onPressed: _loadWishlist,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  padding:
+                  EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.w),
+                  ),
+                ),
+                icon: Icon(Icons.refresh_rounded, size: 16.w),
+                label: Text(
+                  'Try Again',
+                  style:
+                  TextStyle(fontSize: 13.sp, fontWeight: FontWeight.w600),
+                ),
               ),
             ),
           ],
@@ -845,155 +654,151 @@ class _WishlistPageState extends State<WishlistPage>
 
   @override
   Widget build(BuildContext context) {
-    // ✅ 仅 iOS 调整顶部高度；安卓保持默认
-    final double statusBar = MediaQuery.of(context).padding.top;
-    final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-
-    // ✅ [MODIFIED] 与 sell / 通知 / saved 对齐：缩小顶部背景范围
-    final double? iosToolbarHeight =
-    isIOS ? (statusBar + 38.0) : null; // ✅ 修正为 38.0
-
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        // ✅ 仅 iOS 生效，安卓 null = 默认高度（不改）
-        toolbarHeight: iosToolbarHeight,
-        systemOverlayStyle: SystemUiOverlayStyle.light,
-        titleSpacing: isIOS ? 12.w : null, // 与基准页保持一致感
+        backgroundColor: kPrimaryBlue,
+        toolbarHeight: kCustomHeaderHeight, // ✅ 与全局头一致
         title: Text(
           'My Wishlist (${_wishlistItems.length})',
           style: TextStyle(
             color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 14.sp,
-          ),
-        ),
-        backgroundColor: Colors.transparent, // 不改颜色，仅控制范围
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            // ✅ 颜色与渐变保持原样
-            gradient: LinearGradient(
-              colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w600,
           ),
         ),
         elevation: 0,
-        iconTheme: IconThemeData(
-          color: Colors.white,
-          size: isIOS ? 16.w : 16.w, // 安卓不动；iOS与基准页一致
-        ),
-        actionsIconTheme: IconThemeData(
-          color: Colors.white,
-          size: isIOS ? 16.w : 16.w,
-        ),
+        leading: const BackButton(color: Colors.white),
         actions: [
           if (_wishlistItems.isNotEmpty && !_isLoading)
-            Padding(
-              padding: EdgeInsets.only(right: isIOS ? 6.w : 0),
-              child: PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert_rounded,
-                    color: Colors.white, size: isIOS ? 16.w : 16.w),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8.r)),
-                onSelected: (value) {
-                  if (value == 'clear_all') {
-                    _showClearAllDialog();
-                  }
-                },
-                itemBuilder: (BuildContext context) => [
-                  PopupMenuItem(
-                    value: 'clear_all',
-                    child: Row(
-                      children: [
-                        Icon(Icons.clear_all_rounded,
-                            color: Colors.red, size: 14.w),
-                        SizedBox(width: 8.w),
-                        Text('Clear All', style: TextStyle(fontSize: 11.sp)),
-                      ],
-                    ),
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert_rounded,
+                  color: Colors.white, size: 20.w),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.w)),
+              onSelected: (value) {
+                if (value == 'clear_all') {
+                  _showClearAllDialog();
+                }
+              },
+              itemBuilder: (BuildContext context) => [
+                PopupMenuItem(
+                  value: 'clear_all',
+                  child: Row(
+                    children: [
+                      Icon(Icons.clear_all_rounded,
+                          color: Colors.red, size: 16.w),
+                      SizedBox(width: 10.w),
+                      Text('Clear All', style: TextStyle(fontSize: 13.sp)),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
         ],
       ),
       body: _isLoading
           ? Center(
-        child: CircularProgressIndicator(
-          valueColor:
-          const AlwaysStoppedAnimation<Color>(Color(0xFF667EEA)),
-          strokeWidth: 2.w,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 30.w,
+              height: 30.w,
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(kPrimaryBlue),
+                strokeWidth: 2.5.w,
+              ),
+            ),
+            SizedBox(height: 12.h),
+            Text(
+              'Loading wishlist...',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 13.sp,
+              ),
+            ),
+          ],
         ),
       )
           : _errorMessage != null
           ? _buildErrorState()
           : _wishlistItems.isEmpty
-          ? FadeTransition(
-        opacity: _fadeAnimation,
-        child: _buildEmptyState(),
-      )
+          ? _buildEmptyState()
           : RefreshIndicator(
         onRefresh: _refreshWishlist,
-        color: const Color(0xFF667EEA),
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: ListView.builder(
-            padding: EdgeInsets.symmetric(vertical: 8.h),
-            itemCount: _wishlistItems.length,
-            itemBuilder: (context, index) {
-              return _buildListingCard(
-                  _wishlistItems[index], index);
-            },
-          ),
+        color: kPrimaryBlue,
+        backgroundColor: Colors.white,
+        strokeWidth: 2.w,
+        child: ListView.builder(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.symmetric(vertical: 8.h),
+          itemCount: _wishlistItems.length,
+          itemBuilder: (context, index) {
+            return _buildWishlistCard(
+                _wishlistItems[index], index);
+          },
         ),
       ),
     );
   }
 
-  /// 显示清空所有确认对话框
   void _showClearAllDialog() {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
           shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
-          title: Text(
-            'Clear Wishlist',
-            style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.bold),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.w)),
+          title: Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(6.w),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6.w),
+                ),
+                child:
+                Icon(Icons.warning_outlined, color: Colors.red, size: 16.w),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Text(
+                  'Clear All Wishlist',
+                  style:
+                  TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
           ),
           content: Text(
             'Are you sure you want to remove all items from your wishlist and favorites? This action cannot be undone.',
-            style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade700),
+            style: TextStyle(fontSize: 13.sp, height: 1.4),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              style: TextButton.styleFrom(
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
-              ),
-              child: Text(
-                'Cancel',
-                style: TextStyle(fontSize: 11.sp, color: Colors.grey.shade600),
-              ),
+              child: Text('Cancel',
+                  style: TextStyle(fontSize: 13.sp, color: Colors.grey[600])),
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _clearAllWishlist();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.shade500,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8.r)),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(6.w),
               ),
-              child: Text(
-                'Clear All',
-                style: TextStyle(fontSize: 11.sp, fontWeight: FontWeight.w600),
+              child: TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _clearAllWishlist();
+                },
+                child: Text(
+                  'Clear All',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
           ],
@@ -1002,13 +807,11 @@ class _WishlistPageState extends State<WishlistPage>
     );
   }
 
-  /// 清空所有收藏
   Future<void> _clearAllWishlist() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) return;
 
     try {
-      // 修复：使用 DualFavoritesService 同步清空
       final success =
       await DualFavoritesService.clearUserFavorites(userId: user.id);
 
@@ -1017,53 +820,44 @@ class _WishlistPageState extends State<WishlistPage>
           _wishlistItems.clear();
         });
 
-        // 发送实时清空通知（清空后 _wishlistItems 已空，这里不再广播逐条）
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
                 Icon(Icons.check_circle_rounded,
-                    color: Colors.white, size: 12.sp),
+                    color: Colors.white, size: 16.w),
                 SizedBox(width: 6.w),
-                Text('Wishlist and favorites cleared successfully',
-                    style: TextStyle(fontSize: 10.sp)),
+                const Text('All wishlist and favorites cleared successfully'),
               ],
             ),
-            backgroundColor: Colors.green.shade600,
+            backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.r)),
-            margin: EdgeInsets.all(8.w),
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.w)),
+            margin: EdgeInsets.all(12.w),
           ),
         );
       } else {
         throw Exception('Failed to clear wishlist');
       }
     } catch (e) {
-      if (kDebugMode) {
-        print('Error clearing wishlist: $e');
-      }
+      if (kDebugMode) {}
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
               Icon(Icons.error_outline_rounded,
-                  color: Colors.white, size: 12.sp),
+                  color: Colors.white, size: 16.w),
               SizedBox(width: 6.w),
-              Expanded(
-                child: Text(
-                  'Failed to clear wishlist. Please try again.',
-                  style: TextStyle(fontSize: 10.sp),
-                ),
-              ),
+              const Text('Failed to clear wishlist. Please try again.'),
             ],
           ),
-          backgroundColor: Colors.red.shade600,
+          backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
           shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.r)),
-          margin: EdgeInsets.all(8.w),
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.w)),
+          margin: EdgeInsets.all(12.w),
         ),
       );
     }

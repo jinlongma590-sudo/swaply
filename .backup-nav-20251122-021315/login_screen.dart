@@ -1,7 +1,8 @@
-﻿import 'package:swaply/router/root_nav.dart';
-// lib/auth/login_screen.dart
+﻿// lib/auth/login_screen.dart
 import 'package:swaply/services/oauth_entry.dart';
-import 'package:swaply/router/safe_navigator.dart';
+// ❌ 移除 SafeNavigator
+// import 'package:swaply/router/safe_navigator.dart';
+import 'package:swaply/router/root_nav.dart';
 
 import 'package:flutter/foundation.dart'
     show kIsWeb, defaultTargetPlatform, TargetPlatform;
@@ -19,7 +20,8 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+// ✅ (1) State 增加生命周期监听
+class _LoginScreenState extends State<LoginScreen> with WidgetsBindingObserver {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -28,45 +30,68 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _rememberMe = false;
   bool _busy = false;
 
+  // ✅ (2) initState 增加观察者注册 & 监听登录成功
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
+    // ✅ B) 一次性监听：成功登录后只做收尾，不做导航（交给 AuthGate）
+    Supabase.instance.client.auth.onAuthStateChange.firstWhere(
+          (e) => e.event == AuthChangeEvent.signedIn,
+    ).then((_) {
+      // 收尾清理（停止 inFlight，确保按钮可点）
+      OAuthEntry.finish();
+      if (mounted) setState(() => _busy = false);
+
+      // ⚠️ 不在这里导航！让你的 AuthGate/路由守卫基于 session 自动切到主界面/欢迎弹窗
+      // 如果你没有 AuthGate，才在这里做一次性导航（按你项目路由名自行放开）：
+      // rootNavKey.currentState?.pushNamedAndRemoveUntil('/main', (_) => false);
+    });
+  }
+
+  // ✅ (3) dispose 增加观察者注销
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
+  // ✅ (4) 增加生命周期状态回调
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // 回到前台：无论 OAuth 成功/取消，都先解锁 & 解除 busy
+      OAuthEntry.finish(); // ✅ 强制清除 inFlight，防止按钮被全局锁住
+      if (mounted) setState(() => _busy = false);
+
+      // 兜底：把可能残留的外层路由/遮罩全部弹掉，确保界面可交互
+      final nav = Navigator.of(context, rootNavigator: true);
+      while (nav.canPop()) {
+        nav.pop();
+      }
+    }
+  }
+
   /// 统一 OAuth 入口（Google/Facebook/Apple 共用）
+  /// ⛔ 已移除 scopes 参数；让 OAuthEntry 内部按 provider 自行决定 scope
   Future<void> _oauthSignIn(
       OAuthProvider provider, {
-        String? scopes,
         Map<String, String>? queryParams,
       }) async {
-    // ✅ 双重防抖：全局 OAuth 流程进行中 或 本页正忙 都不再触发
-    if (OAuthEntry.inFlight || _busy) {
-      debugPrint(
-        '[OAuth GUARD][login] ignore duplicate: provider=$provider '
-            'busy=$_busy inFlight=${OAuthEntry.inFlight}\n${StackTrace.current}',
-      );
-      return;
-    }
-
-    debugPrint('[OAuth START][login] provider=$provider inFlight=${OAuthEntry.inFlight}');
+    if (_busy) return;
     setState(() => _busy = true);
-    try {
-      await OAuthEntry.signIn(
-        provider,
-        scopes: scopes,
-        queryParams: queryParams,
-      );
-      // 回调由 Supabase onAuthStateChange/深链处理，这里无需额外跳转
-    } on AuthException catch (e) {
-      _showError(e.message);
-    } catch (e, st) {
-      debugPrint('[OAuth ERROR][login] provider=$provider error=$e\n$st');
-      _showError('Sign-in failed. Please try again.');
-    } finally {
+
+    // 只启动 OAuth，不做任何导航！
+    await OAuthEntry.signIn(
+      provider,
+      queryParams: queryParams ?? const {'display': 'popup'},
+    ).whenComplete(() {
+      // WebView 被关闭（取消/返回）也要兜底清 busy
       if (mounted) setState(() => _busy = false);
-    }
+    });
   }
 
   Future<void> _loginEmailPassword() async {
@@ -99,20 +124,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleFacebookLogin() async {
     if (_busy || OAuthEntry.inFlight) return;
-    // 精简 FB 权限，并使用 popup 显示样式
+    // ⛔ 不再传 scopes，完全交给 OAuthEntry 自动判断
     await _oauthSignIn(
       OAuthProvider.facebook,
-      scopes: 'public_profile,email',
       queryParams: const {'display': 'popup'},
     );
   }
 
   Future<void> _handleAppleLogin() async {
     if (_busy || OAuthEntry.inFlight) return;
-    await _oauthSignIn(
-      OAuthProvider.apple,
-      scopes: 'name email',
-    );
+    // ⛔ 不再传 scopes，完全交给 OAuthEntry 自动判断
+    await _oauthSignIn(OAuthProvider.apple);
   }
 
   void _showError(String msg) {
@@ -129,8 +151,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool showApple =
-        !kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS);
+    final bool showApple = !kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS);
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -196,8 +217,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: Colors.grey[500],
                       size: 18.r,
                     ),
-                    onPressed: () =>
-                        setState(() => _isPasswordVisible = !_isPasswordVisible),
+                    onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
                   ),
                   validator: (v) {
                     if (v == null || v.isEmpty) {
@@ -221,8 +241,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             width: 18.r,
                             child: Checkbox(
                               value: _rememberMe,
-                              onChanged: (v) =>
-                                  setState(() => _rememberMe = v ?? false),
+                              onChanged: (v) => setState(() => _rememberMe = v ?? false),
                               activeColor: const Color(0xFF2196F3),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(3.r),
@@ -233,8 +252,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           Flexible(
                             child: Text(
                               'Remember me',
-                              style: TextStyle(
-                                  fontSize: 12.sp, color: Colors.grey[700]),
+                              style: TextStyle(fontSize: 12.sp, color: Colors.grey[700]),
                             ),
                           ),
                         ],
@@ -243,11 +261,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     Flexible(
                       child: GestureDetector(
                         onTap: () {
-                          SafeNavigator.push(
-                            MaterialPageRoute(
-                              builder: (_) => const ForgotPasswordScreen(),
-                            ),
-                          );
+                          // ❗ 改为 rootNav 命名路由
+                          navPush('/forgot-password');
                         },
                         child: Text(
                           'Forgot Password?',
@@ -359,12 +374,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(color: Colors.grey[600], fontSize: 12.sp),
                     ),
                     GestureDetector(
-                      onTap: () => Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const RegisterScreen(),
-                        ),
-                      ),
+                      onTap: () {
+                        // ❗ 不再用 Navigator.pushReplacement + MaterialPageRoute
+                        navPush('/register');
+                      },
                       child: Text(
                         'Sign Up',
                         style: TextStyle(
@@ -463,8 +476,7 @@ class _LoginScreenState extends State<LoginScreen> {
             borderRadius: BorderRadius.all(Radius.circular(12)),
             borderSide: BorderSide(color: Colors.red, width: 1.5),
           ),
-          contentPadding:
-          EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+          contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
         ),
         validator: validator,
       ),
@@ -519,4 +531,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-

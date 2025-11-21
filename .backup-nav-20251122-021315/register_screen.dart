@@ -1,11 +1,6 @@
-﻿import 'package:swaply/router/root_nav.dart';
-// lib/auth/register_screen.dart —— 统一回调到 cc.swaply.app://login-callback
-// - 与 login_screen.dart 一致：OAuth 单入口 + 防重入
-// - Facebook 精简权限 + display=popup（减少二次确认）
-// - Apple 使用 OAuth + scopes: name email
-// - 注册后同步一次 profile，并尝试绑定邀请码
-
+﻿// lib/auth/register_screen.dart —— 统一回调到 cc.swaply.app://login-callback
 import 'package:swaply/services/oauth_entry.dart';
+import 'package:swaply/router/root_nav.dart'; // ✅ 新架构导航
 
 import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
@@ -13,7 +8,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:swaply/services/reward_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/config/auth_config.dart';
-import 'login_screen.dart';
 import 'package:swaply/services/profile_service.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -27,7 +21,7 @@ class RegisterScreen extends StatefulWidget {
   static void clearPendingCode() => pendingInvitationCode = null;
 }
 
-class _RegisterScreenState extends State<RegisterScreen> {
+class _RegisterScreenState extends State<RegisterScreen> with WidgetsBindingObserver {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -42,19 +36,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _agreeToTerms = false;
   bool _showInvitationCode = false;
 
-  // ✅ 防重入：避免多次触发 OAuth 导致重复弹窗
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final code = widget.invitationCode;
     if (code != null && code.isNotEmpty) {
       _invitationCodeController.text = code;
       _showInvitationCode = true;
     }
+
+    // ✅ 2) 一次性监听：成功登录后只做收尾，不做导航（交给 AuthGate）
+    Supabase.instance.client.auth.onAuthStateChange.firstWhere(
+          (e) => e.event == AuthChangeEvent.signedIn,
+    ).then((_) async {
+      OAuthEntry.finish(); // 收尾
+      if (mounted) setState(() => _isLoading = false);
+
+      // 尝试绑定邀请码 (Best Effort)
+      final pending = _pickCodeFromUI();
+      await _maybeBindInviteCode(pending);
+
+      // 主动同步一次 Profile
+      await ProfileService.syncProfileFromAuthUser();
+
+      // ⚠️ 不在这里导航！让你的 AuthGate/路由守卫基于 session 自动跳转
+    });
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -64,37 +76,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // ✅ 与 login_screen.dart 一致的统一 OAuth 入口（补齐早退+日志）
+  // ✅ 生命周期监听：从浏览器/后台返回时复位
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      OAuthEntry.finish(); // 强制清除 inFlight
+      if (mounted) setState(() => _isLoading = false);
+
+      // 兜底：清理所有可能的遮罩/外层路由
+      final nav = Navigator.of(context, rootNavigator: true);
+      while (nav.canPop()) {
+        nav.pop();
+      }
+    }
+  }
+
+  // ✅ 1) 统一 OAuth 入口（整段替换：只启动，不导航）
+  // ⛔ 已移除 scopes 参数；让 OAuthEntry 内部按 provider 自行决定 scope
   Future<void> _oauthSignIn(
       OAuthProvider provider, {
-        String? scopes,
         Map<String, String>? queryParams,
       }) async {
-    if (OAuthEntry.inFlight || _isLoading) {
-      debugPrint(
-        '[OAuth GUARD][register] ignore duplicate: provider=$provider '
-            'loading=$_isLoading inFlight=${OAuthEntry.inFlight}\n${StackTrace.current}',
-      );
-      return;
-    }
-
-    debugPrint('[OAuth START][register] provider=$provider inFlight=${OAuthEntry.inFlight}');
+    if (_isLoading) return;
     setState(() => _isLoading = true);
-    try {
-      await OAuthEntry.signIn(
-        provider,
-        scopes: scopes,
-        queryParams: queryParams,
-      );
-      // 回调由 Supabase/通用深链处理；此处不做导航
-    } on AuthException catch (e) {
-      _showError(e.message);
-    } catch (e, st) {
-      debugPrint('[OAuth ERROR][register] provider=$provider error=$e\n$st');
-      _showError('Sign-in failed. Please try again.');
-    } finally {
+
+    // 尝试先记录邀请码，以便登录后绑定
+    final code = _pickCodeFromUI();
+    if (code != null) RegisterScreen.pendingInvitationCode = code;
+
+    // 启动 OAuth
+    await OAuthEntry.signIn(
+      provider,
+      queryParams: queryParams ?? const {'display': 'popup'},
+    ).whenComplete(() {
+      // WebView 被关闭（取消/返回）也要兜底清 busy
       if (mounted) setState(() => _isLoading = false);
-    }
+    });
   }
 
   Future<void> _maybeBindInviteCode(String? code) async {
@@ -108,7 +125,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         await RewardService.submitInviteCode(normalized);
         RegisterScreen.clearPendingCode();
       } catch (_) {
-        // ignore：等 signedIn 后再重试
+        // ignore: 失败则等下次
       }
     }
   }
@@ -135,7 +152,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
     try {
       final code = _pickCodeFromUI();
-      await _maybeBindInviteCode(code);
+      // 注册前记录 Pending
+      if (code != null) RegisterScreen.pendingInvitationCode = code;
 
       final fullName = _nameController.text.trim();
       final phone = _phoneController.text.trim();
@@ -147,136 +165,52 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final res = await supa.auth.signUp(
         email: email,
         password: password,
-        emailRedirectTo: kAuthRedirectUri, // 来自 config/auth_config.dart
+        emailRedirectTo: kAuthRedirectUri, // config/auth_config.dart
         data: {
           'full_name': fullName,
           'phone': phone,
         },
       );
 
-      debugPrint('[Register] signUp user: ${res.user?.id}');
-      debugPrint('[Register] user metadata: ${res.user?.userMetadata}');
-
-      // 主动同步一次 profile
-      await ProfileService.syncProfileFromAuthUser();
-
-      if (res.session != null) {
-        _showInfo('Account created.');
-        await _maybeBindInviteCode(code);
-      } else {
+      // 如果 session != null，onAuthStateChange 会触发 signedIn -> initState 会处理同步和绑定
+      // 如果 session == null，说明需要邮箱验证
+      if (res.session == null) {
         _showInfo('Verification email sent. Please check your inbox.');
+      } else {
+        _showInfo('Account created.');
+        // initState 里的监听器会处理后续
       }
     } on AuthException catch (e) {
       _showError(e.message);
-    } catch (e, st) {
-      debugPrint('[Register] error: $e\n$st');
-      if (!mounted) return;
+    } catch (e) {
       _showError('Register failed: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  // ✅ 3) OAuth 按钮点击改为调用 _oauthSignIn (Google) —— 不再传 scopes
   Future<void> _googleRegister() async {
     if (_isLoading || OAuthEntry.inFlight) return;
-    setState(() => _isLoading = true);
-    try {
-      final code = _pickCodeFromUI();
-      await _maybeBindInviteCode(code);
-
-      await _oauthSignIn(
-        OAuthProvider.google,
-        // 便于切换账号
-        queryParams: const {'prompt': 'select_account'},
-      );
-
-      await _maybeBindInviteCode(code);
-    } on AuthException catch (e) {
-      final msg = e.message.toLowerCase();
-      if (msg.contains('cancel') ||
-          msg.contains('canceled') ||
-          msg.contains('popup_closed')) {
-        // 用户取消，忽略
-      } else {
-        _showError('Google sign-in error: ${e.message}');
-      }
-    } catch (_) {
-      Future.delayed(const Duration(seconds: 1), () {
-        final user = Supabase.instance.client.auth.currentUser;
-        if (mounted && user == null) {
-          _showError('Failed to start Google sign-in. Please try again.');
-        }
-      });
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
+    await _oauthSignIn(
+      OAuthProvider.google,
+      queryParams: const {'prompt': 'select_account'},
+    );
   }
 
+  // ✅ 3) OAuth 按钮点击改为调用 _oauthSignIn (Facebook) —— 不再传 scopes
   Future<void> _facebookRegister() async {
     if (_isLoading || OAuthEntry.inFlight) return;
-    setState(() => _isLoading = true);
-    try {
-      final code = _pickCodeFromUI();
-      await _maybeBindInviteCode(code);
-
-      // 与登录页一致：精简 scopes + 样式 popup，减少二次确认
-      await _oauthSignIn(
-        OAuthProvider.facebook,
-        scopes: 'public_profile,email',
-        queryParams: const {'display': 'popup'},
-      );
-
-      await _maybeBindInviteCode(code);
-    } on AuthException catch (e) {
-      _showError(e.message);
-    } catch (_) {
-      _showError('Facebook sign-in failed. Please try again later.');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
+    await _oauthSignIn(
+      OAuthProvider.facebook,
+      queryParams: const {'display': 'popup'},
+    );
   }
 
+  // ✅ 3) OAuth 按钮点击改为调用 _oauthSignIn (Apple) —— 不再传 scopes
   Future<void> _appleRegister() async {
     if (_isLoading || OAuthEntry.inFlight) return;
-    setState(() => _isLoading = true);
-    try {
-      final code = _pickCodeFromUI();
-      await _maybeBindInviteCode(code);
-
-      await _oauthSignIn(
-        OAuthProvider.apple,
-        scopes: 'name email',
-      );
-
-      await _maybeBindInviteCode(code);
-    } on AuthException catch (e) {
-      _showError(e.message);
-    } catch (_) {
-      _showError('Apple sign-in failed. Please try again later.');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> verifyEmailOtp({
-    required String email,
-    required String code,
-  }) async {
-    setState(() => _isLoading = true);
-    try {
-      await Supabase.instance.client.auth.verifyOTP(
-        email: email,
-        token: code,
-        type: OtpType.email,
-      );
-      _showInfo('Email verified.');
-    } on AuthException catch (e) {
-      _showError(e.message);
-    } catch (_) {
-      _showError('Verification failed. Please try again.');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
+    await _oauthSignIn(OAuthProvider.apple);
   }
 
   void _showError(String msg) {
@@ -577,12 +511,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: TextStyle(color: Colors.grey[600], fontSize: 12.sp),
                     ),
                     GestureDetector(
-                      onTap: () => Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LoginScreen(),
-                        ),
-                      ),
+                      // ✅ 新架构跳转：不再直接 push 组件，改为命名路由
+                      onTap: () => navReplaceAll('/login'),
                       child: Text(
                         'Sign In',
                         style: TextStyle(
@@ -850,4 +780,3 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 }
-

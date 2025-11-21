@@ -1,5 +1,6 @@
 // lib/pages/profile_page.dart
 
+import 'dart:async'; // ✅ 用于 StreamSubscription, unawaited
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,6 +9,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 // 鈥斺€?浣犻」鐩噷鐨勪緷璧栵紙鏍规嵁浣犲綋鍓嶄唬鐮佺‘瀹氳繖浜涙槸鐢ㄥ埌鐨勶級鈥斺€?
 import 'package:swaply/router/safe_navigator.dart';
+import 'package:swaply/router/root_nav.dart'; // ✅ 新增导航
+import 'package:swaply/services/auth_flow_observer.dart'; // ✅ 新增 Observer
 import 'package:swaply/models/verification_types.dart' as vt;
 
 import 'package:swaply/services/profile_service.dart';
@@ -37,9 +40,6 @@ const _kPrivacyUrl = 'https://www.swaply.cc/privacy';
 const _kDeleteUrl  = 'https://www.swaply.cc/delete';
 
 // 鉁?鍏滃簳鐗?l10n锛堥伩鍏嶄粠 main.dart 寮?AppLocalizations 閫犳垚寰幆渚濊禆锛?
-//    杩欐牱浣犳枃浠堕噷鍘熸湰鐨?l10n.xxx 鍐欐硶鏃犻渶鏀瑰姩锛屽彧鎶?鈥滆幏鍙?l10n 鐨勯偅涓€琛屸€?鏀规垚锛?
-//      final l10n = const _L10n();
-//    鍚庨潰鎴戜細鍛婅瘔浣犳敼鍝竴琛屻€?
 class _L10n {
   const _L10n();
   String get helpSupport => 'Help & Support';
@@ -51,6 +51,7 @@ class _L10n {
   String get editProfile => 'Edit Profile';
   String get logout => 'Logout';
 }
+
 /* ---------------- Profile Page 娑擃亙姹夌挧鍕灐妞?---------------- */
 class ProfilePage extends StatefulWidget {
   final bool isGuest;
@@ -62,6 +63,11 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage>
     with SingleTickerProviderStateMixin {
+  // ✅ A. 标记销毁状态
+  bool _dead = false;
+  // ✅ 订阅句柄，用于在 dispose 时取消
+  StreamSubscription<AuthState>? _authSubscription;
+
   bool _loading = true;
 
   /// 閸╄櫣顢呯挧鍕灐閿涘牊妯夌粈鍝勬倳/婢舵潙鍎?閺冨爼妫跨粵澶涚礆
@@ -84,6 +90,12 @@ class _ProfilePageState extends State<ProfilePage>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
 
+  // ✅ B. 安全 setState 包装 (State after dispose 护栏)
+  void _safeSetState(VoidCallback fn) {
+    if (!mounted || _dead) return;
+    setState(fn);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -101,13 +113,19 @@ class _ProfilePageState extends State<ProfilePage>
 
     // 閴?妫ｆ牗顐兼潻娑樺弳閹峰褰囩拋銈堢槈閻樿埖鈧?& 閻╂垵鎯夐惂璇茬秿閹礁褰夐崠鏍殰閸斻劌鍩涢弬?
     _reloadUserVerificationStatus();
-    Supabase.instance.client.auth.onAuthStateChange.listen((event) {
+    // ✅ 记录订阅，防止内存泄漏
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((event) {
+      // 回调里也要防止已销毁
+      if (!mounted || _dead) return;
       _reloadUserVerificationStatus();
     });
   }
 
+  // ✅ D. dispose 里彻底清理
   @override
   void dispose() {
+    _dead = true; // 标记死亡
+    _authSubscription?.cancel(); // 取消监听
     _animationController.dispose();
     super.dispose();
   }
@@ -117,11 +135,15 @@ class _ProfilePageState extends State<ProfilePage>
     try {
       // 閸╄櫣顢呯挧鍕灐閻劋绨い鐢告桨閺勫墽銇氶敍鍫濇倳鐎?婢舵潙鍎?閺冨爼妫跨粵澶涚礆
       final base = await _svc.getUserProfile();
+
+      // ✅ C. await 后立即判断
+      if (!mounted || _dead) return;
+
       final map =
       base == null ? <String, dynamic>{} : Map<String, dynamic>.from(base);
 
-      if (!mounted) return;
-      setState(() {
+      // ✅ B. 使用 _safeSetState
+      _safeSetState(() {
         _profile = map;
         _loading = false;
       });
@@ -132,25 +154,28 @@ class _ProfilePageState extends State<ProfilePage>
       }
     } catch (e) {
       if (kDebugMode) debugPrint('Error loading profile: $e');
-      if (!mounted) return;
-      setState(() => _loading = false);
+      if (!mounted || _dead) return;
+      _safeSetState(() => _loading = false);
       _animationController.forward();
     }
   }
 
   // 閴?娴犲懏鐓?user_verifications閿涘奔绔村▎鈩冣偓褑顓哥粻?_verified/_badge閿涘苯鑻熼弴瀛樻煀閸掓壆濮搁幀?
   Future<void> _reloadUserVerificationStatus() async {
-    setState(() => _verifyLoading = true);
+    _safeSetState(() => _verifyLoading = true);
 
-    final row =
-    await _verifySvc.fetchVerificationRow(); // 娴犲懏鐓?user_verifications
+    final row = await _verifySvc.fetchVerificationRow(); // 娴犲懏鐓?user_verifications
+
+    // ✅ C. await 后立即判断
+    if (!mounted || _dead) return;
+
     final user = Supabase.instance.client.auth.currentUser;
 
     final verified = vutils.computeIsVerified(verificationRow: row, user: user);
     final badge = vutils.computeBadgeType(verificationRow: row, user: user);
 
-    if (!mounted) return;
-    setState(() {
+    // ✅ B. 使用 _safeSetState
+    _safeSetState(() {
       _verificationRow = row;
       _verified = verified;
       _badge = badge;
@@ -169,13 +194,20 @@ class _ProfilePageState extends State<ProfilePage>
 
     try {
       final p = await ProfileService.instance.getUserProfile();
+      // ✅ await 后判断
+      if (!mounted || _dead) {
+        nameCtrl.dispose();
+        phoneCtrl.dispose();
+        return;
+      }
+
       if (p != null) {
         nameCtrl.text = (p['display_name'] ?? p['full_name'] ?? '').toString();
         phoneCtrl.text = (p['phone'] ?? '').toString();
       }
     } catch (_) {}
 
-    if (!mounted) {
+    if (!mounted || _dead) {
       nameCtrl.dispose();
       phoneCtrl.dispose();
       return;
@@ -299,13 +331,16 @@ class _ProfilePageState extends State<ProfilePage>
       },
     );
 
-    if (result == true && mounted) {
+    // ✅ 这里也要判断
+    if (result == true && mounted && !_dead) {
       try {
         await ProfileService.instance.updateUserProfile(
           fullName: nameCtrl.text.trim().isEmpty ? null : nameCtrl.text.trim(),
           phone: phoneCtrl.text.trim().isEmpty ? null : phoneCtrl.text.trim(),
         );
-        if (!mounted) return;
+
+        if (!mounted || _dead) return;
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Row(
@@ -325,7 +360,7 @@ class _ProfilePageState extends State<ProfilePage>
         );
         await _load();
       } catch (e) {
-        if (!mounted) return;
+        if (!mounted || _dead) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -353,8 +388,8 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   Future<void> _uploadAvatarSimple() async {
-    if (!mounted) return;
-    setState(() => _uploadingAvatar = true);
+    if (!mounted || _dead) return;
+    _safeSetState(() => _uploadingAvatar = true);
 
     try {
       final picker = ImagePicker();
@@ -364,12 +399,18 @@ class _ProfilePageState extends State<ProfilePage>
         maxHeight: 512,
         imageQuality: 80,
       );
+
+      // await 后判断
+      if (!mounted || _dead) return;
       if (image == null) return;
 
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) throw Exception('User not authenticated');
 
       final bytes = await File(image.path).readAsBytes();
+      // await 后判断
+      if (!mounted || _dead) return;
+
       final ext = image.path.split('.').last;
       final path =
           '${user.id}/avatar_${DateTime.now().millisecondsSinceEpoch}.$ext';
@@ -378,12 +419,19 @@ class _ProfilePageState extends State<ProfilePage>
           path, bytes,
           fileOptions: const FileOptions(upsert: true));
 
+      // await 后判断
+      if (!mounted || _dead) return;
+
       final publicUrl =
       Supabase.instance.client.storage.from('avatars').getPublicUrl(path);
       await ProfileService.instance.updateUserProfile(avatarUrl: publicUrl);
 
+      // await 后判断
+      if (!mounted || _dead) return;
+
       await _load();
-      if (!mounted) return;
+
+      if (!mounted || _dead) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Row(
@@ -402,7 +450,7 @@ class _ProfilePageState extends State<ProfilePage>
         ),
       );
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || _dead) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -423,7 +471,7 @@ class _ProfilePageState extends State<ProfilePage>
         ),
       );
     } finally {
-      if (mounted) setState(() => _uploadingAvatar = false);
+      _safeSetState(() => _uploadingAvatar = false);
     }
   }
 
@@ -645,7 +693,8 @@ class _ProfilePageState extends State<ProfilePage>
                               onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (_) => const CouponManagementPage()),
+                                    builder: (_) =>
+                                    const CouponManagementPage()),
                               ),
                             ),
                             const SizedBox(height: 28),
@@ -777,37 +826,18 @@ class _ProfilePageState extends State<ProfilePage>
                                   ),
                                 );
                                 if (confirmed == true) {
-                                  try {
-                                    await Supabase.instance.client.auth
-                                        .signOut();
-                                    RewardService.clearCache();
-                                  } catch (e) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Row(
-                                            children: [
-                                              const Icon(
-                                                  Icons.error_outline_rounded,
-                                                  color: Colors.white,
-                                                  size: 18),
-                                              const SizedBox(width: 8),
-                                              Text('Logout failed: $e',
-                                                  style: const TextStyle(
-                                                      fontSize: 14)),
-                                            ],
-                                          ),
-                                          backgroundColor: Colors.red,
-                                          behavior: SnackBarBehavior.floating,
-                                          shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                              BorderRadius.circular(10)),
-                                          margin: const EdgeInsets.all(16),
-                                        ),
-                                      );
-                                    }
-                                  }
+                                  // 1) 标记“手动登出”
+                                  AuthFlowObserver.I.markManualSignOut();
+
+                                  // 2) 先切换到登录页
+                                  navReplaceAll('/login');
+
+                                  // 3) 清理本地缓存
+                                  RewardService.clearCache();
+
+                                  // 4) 后台发起 signOut（无须 await，避免阻塞 UI）
+                                  unawaited(Supabase.instance.client.auth
+                                      .signOut(scope: SignOutScope.global));
                                 }
                               },
                             ),
@@ -1386,7 +1416,3 @@ class AboutPage extends StatelessWidget {
     );
   }
 }
-
-
-
-

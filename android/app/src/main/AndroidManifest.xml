@@ -29,6 +29,16 @@
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
+            <!-- 自定义 scheme deep link：cc.swaply.app://login-callback -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="cc.swaply.app"
+                    android:host="login-callback" />
+            </intent-filter>
 
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"

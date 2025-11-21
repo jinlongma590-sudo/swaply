@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/router/root_nav.dart';
-import 'package:swaply/services/deep_link_service.dart'; // 深链服务
+// 深链服务
 import 'login_screen.dart';
 import 'register_screen.dart';
 
@@ -16,7 +16,7 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _animationController;
   late AnimationController _floatController;
   late Animation<double> _fadeAnimation;
@@ -27,9 +27,15 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   // 页面层做导航，避免顶层 GlobalKey 冲突
   StreamSubscription<AuthState>? _authSub;
 
+  // 用于外部返回时的本页忙碌复位（与 Login/Register 行为一致）
+  bool _busy = false;
+
   @override
   void initState() {
     super.initState();
+
+    // 监听应用前后台，便于从外部浏览器返回时复位本页状态
+    WidgetsBinding.instance.addObserver(this);
 
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1500),
@@ -97,8 +103,19 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     }
   }
 
+  /// 从外部浏览器/应用返回时复位自身 busy 与清理可能残留的上层路由
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      setState(() => _busy = false);
+      // 兜底：清理 rootNavigator 上可能残留的 overlay/路由，避免“点击被吃掉”
+      Navigator.of(context, rootNavigator: true).popUntil((r) => r.isFirst);
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _animationController.dispose();
     _floatController.dispose();
     _authSub?.cancel();
@@ -494,14 +511,23 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                         child: Material(
                                           color: Colors.transparent,
                                           child: InkWell(
-                                            onTap: () {
+                                            onTap: _busy
+                                                ? null
+                                                : () {
+                                              setState(() =>
+                                              _busy = true);
                                               Navigator.push(
                                                 context,
                                                 MaterialPageRoute(
                                                   builder: (context) =>
                                                   const RegisterScreen(),
                                                 ),
-                                              );
+                                              ).whenComplete(() {
+                                                if (mounted) {
+                                                  setState(() =>
+                                                  _busy = false);
+                                                }
+                                              });
                                             },
                                             borderRadius:
                                             BorderRadius.circular(16.r),
@@ -550,14 +576,23 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                         child: Material(
                                           color: Colors.transparent,
                                           child: InkWell(
-                                            onTap: () {
+                                            onTap: _busy
+                                                ? null
+                                                : () {
+                                              setState(() =>
+                                              _busy = true);
                                               Navigator.push(
                                                 context,
                                                 MaterialPageRoute(
                                                   builder: (context) =>
                                                   const LoginScreen(),
                                                 ),
-                                              );
+                                              ).whenComplete(() {
+                                                if (mounted) {
+                                                  setState(() =>
+                                                  _busy = false);
+                                                }
+                                              });
                                             },
                                             borderRadius:
                                             BorderRadius.circular(16.r),
@@ -576,7 +611,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                       ),
                                       SizedBox(height: 16.h),
                                       TextButton(
-                                        onPressed: _continueAsGuest,
+                                        onPressed: _busy ? null : _continueAsGuest,
                                         style: TextButton.styleFrom(
                                           padding: EdgeInsets.symmetric(
                                               horizontal: 20.w, vertical: 12.h),
@@ -677,4 +712,3 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     );
   }
 }
-

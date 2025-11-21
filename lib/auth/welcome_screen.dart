@@ -1,4 +1,4 @@
-// lib/auth/welcome_screen.dart
+﻿// lib/auth/welcome_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -16,7 +16,7 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _animationController;
   late AnimationController _floatController;
   late Animation<double> _fadeAnimation;
@@ -27,9 +27,15 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   // 页面层做导航，避免顶层 GlobalKey 冲突
   StreamSubscription<AuthState>? _authSub;
 
+  // 用于外部返回时的本页忙碌复位（与 Login/Register 行为一致）
+  bool _busy = false;
+
   @override
   void initState() {
     super.initState();
+
+    // 监听应用前后台，便于从外部浏览器返回时复位本页状态
+    WidgetsBinding.instance.addObserver(this);
 
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1500),
@@ -81,7 +87,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       if (!mounted) return;
       if (data.event == AuthChangeEvent.signedIn &&
           data.session?.user != null) {
-        navReplaceAll('/home'); // ✅ 不再传 context
+        // [patched] centralized by AuthFlowObserver：此处不再二次导航
       }
     });
 
@@ -97,8 +103,19 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     }
   }
 
+  /// 从外部浏览器/应用返回时复位自身 busy 与清理可能残留的上层路由
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      setState(() => _busy = false);
+      // 兜底：清理 rootNavigator 上可能残留的 overlay/路由，避免“点击被吃掉”
+      Navigator.of(context, rootNavigator: true).popUntil((r) => r.isFirst);
+    }
+  }
+
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _animationController.dispose();
     _floatController.dispose();
     _authSub?.cancel();
@@ -230,7 +247,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           onPressed: () async {
                             Navigator.of(context).pop();
                             // 游客模式不触发 onAuthStateChange，使用 root_nav 助手导航
-                            await navReplaceAll('/home'); // ✅ 不再传 context
+                            // [patched] centralized by AuthFlowObserver：此处不再二次导航
                           },
                           style: TextButton.styleFrom(
                             padding: EdgeInsets.symmetric(vertical: 12.h),
@@ -494,14 +511,23 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                         child: Material(
                                           color: Colors.transparent,
                                           child: InkWell(
-                                            onTap: () {
+                                            onTap: _busy
+                                                ? null
+                                                : () {
+                                              setState(() =>
+                                              _busy = true);
                                               Navigator.push(
                                                 context,
                                                 MaterialPageRoute(
                                                   builder: (context) =>
                                                   const RegisterScreen(),
                                                 ),
-                                              );
+                                              ).whenComplete(() {
+                                                if (mounted) {
+                                                  setState(() =>
+                                                  _busy = false);
+                                                }
+                                              });
                                             },
                                             borderRadius:
                                             BorderRadius.circular(16.r),
@@ -550,14 +576,23 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                         child: Material(
                                           color: Colors.transparent,
                                           child: InkWell(
-                                            onTap: () {
+                                            onTap: _busy
+                                                ? null
+                                                : () {
+                                              setState(() =>
+                                              _busy = true);
                                               Navigator.push(
                                                 context,
                                                 MaterialPageRoute(
                                                   builder: (context) =>
                                                   const LoginScreen(),
                                                 ),
-                                              );
+                                              ).whenComplete(() {
+                                                if (mounted) {
+                                                  setState(() =>
+                                                  _busy = false);
+                                                }
+                                              });
                                             },
                                             borderRadius:
                                             BorderRadius.circular(16.r),
@@ -576,7 +611,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                       ),
                                       SizedBox(height: 16.h),
                                       TextButton(
-                                        onPressed: _continueAsGuest,
+                                        onPressed: _busy ? null : _continueAsGuest,
                                         style: TextButton.styleFrom(
                                           padding: EdgeInsets.symmetric(
                                               horizontal: 20.w, vertical: 12.h),
@@ -677,5 +712,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     );
   }
 }
+
 
 
