@@ -1,0 +1,43 @@
+﻿
+  lib\auth\login_screen.dart:63:        Map<String, String>? queryParams,
+  lib\auth\login_screen.dart:64:      }) async {
+> lib\auth\login_screen.dart:65:    if (_busy) return;
+  lib\auth\login_screen.dart:66:    setState(() => _busy = true);
+  lib\auth\login_screen.dart:67:
+  lib\auth\login_screen.dart:68:    await OAuthEntry.signIn(
+  lib\auth\login_screen.dart:69:      provider,
+  lib\auth\login_screen.dart:76:  Future<void> _loginEmailPassword() async {
+  lib\auth\login_screen.dart:77:    final valid = _formKey.currentState?.validate() ?? false;
+> lib\auth\login_screen.dart:78:    if (!valid || _busy || OAuthEntry.inFlight) return;
+  lib\auth\login_screen.dart:79:
+  lib\auth\login_screen.dart:80:    setState(() => _busy = true);
+  lib\auth\login_screen.dart:81:    try {
+  lib\auth\login_screen.dart:82:      await Supabase.instance.client.auth.signInWithPassword(
+  lib\auth\login_screen.dart:94:
+  lib\auth\login_screen.dart:95:  Future<void> _handleGoogleLogin() async {
+> lib\auth\login_screen.dart:96:    if (_busy || OAuthEntry.inFlight) return;
+  lib\auth\login_screen.dart:97:    await _oauthSignIn(
+  lib\auth\login_screen.dart:98:      OAuthProvider.google,
+  lib\auth\login_screen.dart:99:      queryParams: const {'prompt': 'select_account'},
+  lib\auth\login_screen.dart:100:    );
+  lib\auth\login_screen.dart:102:
+  lib\auth\login_screen.dart:103:  Future<void> _handleFacebookLogin() async {
+> lib\auth\login_screen.dart:104:    if (_busy || OAuthEntry.inFlight) return;
+  lib\auth\login_screen.dart:105:    await _oauthSignIn(
+  lib\auth\login_screen.dart:106:      OAuthProvider.facebook,
+  lib\auth\login_screen.dart:107:      queryParams: const {'display': 'popup'},
+  lib\auth\login_screen.dart:108:    );
+  lib\auth\login_screen.dart:110:
+  lib\auth\login_screen.dart:111:  Future<void> _handleAppleLogin() async {
+> lib\auth\login_screen.dart:112:    if (_busy || OAuthEntry.inFlight) return;
+  lib\auth\login_screen.dart:113:    await _oauthSignIn(OAuthProvider.apple);
+  lib\auth\login_screen.dart:114:  }
+  lib\auth\login_screen.dart:115:
+  lib\auth\login_screen.dart:116:  void _showError(String msg) {
+> lib\auth\login_screen.dart:117:    if (!mounted) return;
+  lib\auth\login_screen.dart:118:    ScaffoldMessenger.of(context).showSnackBar(
+  lib\auth\login_screen.dart:119:      SnackBar(
+  lib\auth\login_screen.dart:120:        content: Text(msg),
+  lib\auth\login_screen.dart:121:        backgroundColor: Colors.red[400],
+
+

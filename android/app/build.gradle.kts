@@ -8,24 +8,28 @@ plugins {
 }
 
 android {
-    // ✅ 改为你的正式包名
+    // ✅ 保持你的正式包名
     namespace = "cc.swaply.app"
 
-    // ✅ 提升到 36，满足各插件与 AndroidX 1.10/1.16 的要求（仅影响编译期，不改变旧机型行为）
+    // ✅ 保持 36
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
+    // ✅ 关键改动：开启 desugaring，并把 Java 版本提升到 17
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        // ★ 必开：支持 Java 8+/java.time 等 API（flutter_local_notifications 依赖）
+        isCoreLibraryDesugaringEnabled = true
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
+    // ✅ 同步把 Kotlin 目标版本设为 17
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     defaultConfig {
-        // ✅ 改为你的正式 applicationId（决定 Play 商店唯一性）
+        // ✅ 你的正式 applicationId
         applicationId = "cc.swaply.app"
 
         // 保持与工程一致
@@ -51,5 +55,11 @@ flutter {
 }
 
 dependencies {
+    // ✅ 新增：desugaring 运行时库（版本按你给的建议）
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:1.2.2")
+
+    // （可选但安全）Kotlin JDK8 扩展，Kotlin DSL 写法：
+    implementation(kotlin("stdlib-jdk8"))
+
     implementation("androidx.core:core-splashscreen:1.0.1")
 }

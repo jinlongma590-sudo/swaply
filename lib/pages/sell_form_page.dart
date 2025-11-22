@@ -1016,7 +1016,7 @@ class _SellFormPageState extends State<SellFormPage>
       );
     }
 
-    const double kNavBarHeight = 44.0;
+    const double kNavBarHeight = 52.0;
     const double kButtonSize = 32.0;
     const double kSidePadding = 16.0;
     const double kButtonSpacing = 12.0;

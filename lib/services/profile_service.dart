@@ -302,26 +302,122 @@ class ProfileService {
   Future<Map<String, dynamic>?> getUserProfile() => getMyProfile();
 
   Future<Map<String, dynamic>?> getMyProfile() async {
+    if (kDebugMode) {
+      print('[ProfileService] ==================== getMyProfile START ====================');
+    }
+
     final id = uid;
-    if (id == null) return null;
+
+    if (kDebugMode) {
+      print('[ProfileService] User ID: $id');
+      print('[ProfileService] Auth session: ${_sb.auth.currentSession != null}');
+      print('[ProfileService] Current user: ${_sb.auth.currentUser?.email}');
+    }
+
+    if (id == null) {
+      if (kDebugMode) {
+        print('[ProfileService] ❌ User ID is null! Returning null.');
+        print('[ProfileService] ==================== getMyProfile END (NO USER) ====================');
+      }
+      return null;
+    }
 
     // 先看本地缓存
     final cached = _cache[id];
-    if (cached != null) return Map<String, dynamic>.from(cached);
+    if (cached != null) {
+      if (kDebugMode) {
+        print('[ProfileService] ✅ Returning CACHED profile');
+        print('[ProfileService] ==================== getMyProfile END (CACHED) ====================');
+      }
+      return Map<String, dynamic>.from(cached);
+    }
 
     try {
-      final data = await _sb
+      if (kDebugMode) print('[ProfileService] 🔍 Querying database for profile...');
+
+      var data = await _sb
           .from('profiles')
           .select('*, verification_type')
           .eq('id', id)
           .maybeSingle();
 
-      if (data == null) return null;
+      if (kDebugMode) {
+        print('[ProfileService] Query completed');
+        print('[ProfileService] Result: ${data != null ? "✅ FOUND" : "❌ NULL"}');
+        if (data != null) {
+          print('[ProfileService] Profile data: $data');
+        }
+      }
+
+      // ✅ 如果没有记录，自动创建
+      if (data == null) {
+        if (kDebugMode) print('[ProfileService] ⚠️ No profile found, attempting to create default...');
+
+        try {
+          final user = _sb.auth.currentUser;
+          final now = DateTime.now().toUtc().toIso8601String();
+
+          if (kDebugMode) print('[ProfileService] Inserting new profile record...');
+
+          await _sb.from('profiles').insert({
+            'id': id,
+            'full_name': 'User',
+            'email': user?.email ?? '',
+            'phone': user?.phone ?? '',
+            'avatar_url': null,
+            'welcome_reward_granted': false,
+            'is_official': false,
+            'created_at': now,
+            'updated_at': now,
+          });
+
+          if (kDebugMode) print('[ProfileService] ✅ Default profile created, re-querying...');
+
+          data = await _sb
+              .from('profiles')
+              .select('*, verification_type')
+              .eq('id', id)
+              .maybeSingle();
+
+          if (kDebugMode) {
+            print('[ProfileService] Re-query result: ${data != null ? "✅ FOUND" : "❌ NULL"}');
+            if (data != null) {
+              print('[ProfileService] New profile data: $data');
+            }
+          }
+        } catch (createError) {
+          if (kDebugMode) {
+            print('[ProfileService] ❌ Failed to create profile: $createError');
+          }
+        }
+      }
+
+      if (data == null) {
+        if (kDebugMode) {
+          print('[ProfileService] ❌ Still no profile after all attempts!');
+          print('[ProfileService] ==================== getMyProfile END (FAILED) ====================');
+        }
+        return null;
+      }
+
       final map = Map<String, dynamic>.from(data as Map);
       _cache[id] = map;
+
+      if (kDebugMode) {
+        print('[ProfileService] ✅ Profile loaded successfully');
+        print('[ProfileService] Name: ${map['full_name']}');
+        print('[ProfileService] Email: ${map['email']}');
+        print('[ProfileService] ==================== getMyProfile END (SUCCESS) ====================');
+      }
+
       return Map<String, dynamic>.from(map);
-    } catch (e) {
-      if (kDebugMode) print('Error in getMyProfile: $e');
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        print('[ProfileService] ==================== getMyProfile ERROR ====================');
+        print('[ProfileService] ❌ Error: $e');
+        print('[ProfileService] Stack trace: $stackTrace');
+        print('[ProfileService] ==================== getMyProfile END (ERROR) ====================');
+      }
       return null;
     }
   }

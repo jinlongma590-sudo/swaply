@@ -1,0 +1,12 @@
+﻿
+  lib\auth\login_screen.dart:174:                      return 'Please enter your email';
+  lib\auth\login_screen.dart:175:                    }
+> lib\auth\login_screen.dart:176:                    if (!RegExp(r'^[\w\.-]+@[\w\.-]+\.\w{2,}$').hasMatch(v)) {
+  lib\auth\login_screen.dart:177:                      return 'Please enter a valid email';
+  lib\auth\login_screen.dart:178:                    }
+  lib\auth\login_screen.dart:179:                    return null;
+  lib\auth\login_screen.dart:180:                  },
+  lib\auth\login_screen.dart:181:                ),
+  lib\auth\login_screen.dart:182:
+
+

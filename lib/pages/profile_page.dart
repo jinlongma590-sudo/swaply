@@ -17,6 +17,7 @@ import 'package:swaply/services/profile_service.dart';
 import 'package:swaply/services/email_verification_service.dart';
 import 'package:swaply/services/reward_service.dart';
 import 'package:swaply/utils/verification_utils.dart' as vutils;
+import 'package:swaply/services/auth_service.dart'; // ✅ 补丁1：统一登出入口所需
 
 import 'package:swaply/widgets/verified_avatar.dart';
 import 'package:swaply/widgets/my_rewards_tile.dart';
@@ -65,10 +66,14 @@ class _ProfilePageState extends State<ProfilePage>
     with SingleTickerProviderStateMixin {
   // ✅ A. 标记销毁状态
   bool _dead = false;
-  // ✅ 订阅句柄，用于在 dispose 时取消
-  StreamSubscription<AuthState>? _authSubscription;
+  // ✅ 订阅句柄（补丁3：使用 late final）
+  late final StreamSubscription<AuthState> _authSubscription;
 
   bool _loading = true;
+
+  /// 实时登录状态（补丁A：用会话判断，而不是 widget.isGuest）
+  bool get _signedIn =>
+      Supabase.instance.client.auth.currentUser != null;
 
   /// 閸╄櫣顢呯挧鍕灐閿涘牊妯夌粈鍝勬倳/婢舵潙鍎?閺冨爼妫跨粵澶涚礆
   Map<String, dynamic>? _profile;
@@ -99,24 +104,41 @@ class _ProfilePageState extends State<ProfilePage>
   @override
   void initState() {
     super.initState();
+
+    // ✅ 调试日志
+    if (kDebugMode) {
+      print('[ProfilePage] ==================== initState ====================');
+      print('[ProfilePage] isGuest: ${widget.isGuest}');
+      print('[ProfilePage] currentUser: ${Supabase.instance.client.auth.currentUser?.id}');
+      print('[ProfilePage] signedIn(now): $_signedIn');
+    }
+
     _animationController = AnimationController(
         duration: const Duration(milliseconds: 800), vsync: this);
     _fadeAnimation =
         CurvedAnimation(parent: _animationController, curve: Curves.easeInOut);
 
-    // 閸╄櫣顢呯挧鍕灐
-    if (!widget.isGuest) {
-      _load();
-    } else {
-      _animationController.forward();
-    }
+    // ✅ 强制调用 _load（无论是否 guest）
+    if (kDebugMode) print('[ProfilePage] Calling _load()...');
+    _load();
 
     // 閴?妫ｆ牗顐兼潻娑樺弳閹峰褰囩拋銈堢槈閻樿埖鈧?& 閻╂垵鎯夐惂璇茬秿閹礁褰夐崠鏍殰閸斻劌鍩涢弬?
     _reloadUserVerificationStatus();
-    // ✅ 记录订阅，防止内存泄漏
-    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((event) {
-      // 回调里也要防止已销毁
+
+    // ✅ 补丁3：订阅 auth 事件，符合三条件时强制 reload
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       if (!mounted || _dead) return;
+
+      debugPrint('[ProfilePage] onAuthStateChange '
+          'event=${data.event} user=${data.session?.user.id}');
+
+      if (data.event == AuthChangeEvent.signedIn ||
+          (data.event == AuthChangeEvent.initialSession && data.session?.user != null) ||
+          data.event == AuthChangeEvent.userUpdated) {
+        _load(); // ✅ 登录/恢复/资料更新时刷新 Profile
+      }
+
+      // 无论如何，校验徽章状态
       _reloadUserVerificationStatus();
     });
   }
@@ -125,37 +147,93 @@ class _ProfilePageState extends State<ProfilePage>
   @override
   void dispose() {
     _dead = true; // 标记死亡
-    _authSubscription?.cancel(); // 取消监听
+    try { _authSubscription.cancel(); } catch (_) {} // ✅ 补丁3：安全取消
     _animationController.dispose();
     super.dispose();
   }
 
   /// 閴?閸欘亣顕伴崝鐘烘祰閿涙矮绮庨崝鐘烘祰鐠у嫭鏋￠敍鍫㈡暏娴滃孩妯夌粈鐚寸礆閿涘奔绗夐崘宥囨暏 profiles/appMetadata 鐠侊紕鐣荤拋銈堢槈
   Future<void> _load() async {
+    if (kDebugMode) {
+      print('[ProfilePage] ==================== _load START ====================');
+      print('[ProfilePage] _loading: $_loading');
+      print('[ProfilePage] _dead: $_dead');
+      print('[ProfilePage] mounted: $mounted');
+    }
+
     try {
-      // 閸╄櫣顢呯挧鍕灐閻劋绨い鐢告桨閺勫墽銇氶敍鍫濇倳鐎?婢舵潙鍎?閺冨爼妫跨粵澶涚礆
+      if (kDebugMode) print('[ProfilePage] Calling getUserProfile()...');
+
+      // 閸╄櫣顢呯挧鍕灐閻劋绨い鐢告桨閺勫墽銇氶敍鍫濇倳鐎?婢舵潙鍎?閺冨爼妫跨粵澶涚礆
       final base = await _svc.getUserProfile();
 
-      // ✅ C. await 后立即判断
-      if (!mounted || _dead) return;
+      if (kDebugMode) {
+        print('[ProfilePage] getUserProfile() returned: ${base != null ? "✅ DATA" : "❌ NULL"}');
+        if (base != null) {
+          print('[ProfilePage] Data keys: ${base.keys}');
+          print('[ProfilePage] full_name: ${base['full_name']}');
+        }
+      }
 
-      final map =
-      base == null ? <String, dynamic>{} : Map<String, dynamic>.from(base);
+      // ✅ C. await 后立即判断
+      if (!mounted || _dead) {
+        if (kDebugMode) print('[ProfilePage] ⚠️ Widget unmounted after await, aborting');
+        return;
+      }
+
+      // ✅ 即使 base 为 null，也提供默认数据
+      final map = base == null
+          ? <String, dynamic>{
+        'full_name': 'User',
+        'email': Supabase.instance.client.auth.currentUser?.email ?? '',
+        'phone': Supabase.instance.client.auth.currentUser?.phone ?? '',
+      }
+          : Map<String, dynamic>.from(base);
+
+      if (kDebugMode) {
+        print('[ProfilePage] Prepared map: $map');
+        print('[ProfilePage] Setting _loading = false...');
+      }
 
       // ✅ B. 使用 _safeSetState
       _safeSetState(() {
         _profile = map;
         _loading = false;
       });
+
+      if (kDebugMode) {
+        print('[ProfilePage] setState called, _loading is now: $_loading');
+      }
+
       _animationController.forward();
 
       if (kDebugMode) {
-        debugPrint('[Profile] load: base loaded');
+        debugPrint('[ProfilePage] ✅ load: base loaded SUCCESSFULLY');
+        print('[ProfilePage] ==================== _load END ====================');
       }
-    } catch (e) {
-      if (kDebugMode) debugPrint('Error loading profile: $e');
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        print('[ProfilePage] ==================== _load ERROR ====================');
+        debugPrint('[ProfilePage] ❌ Error loading profile: $e');
+        debugPrint('[ProfilePage] Stack trace: $stackTrace');
+      }
+
       if (!mounted || _dead) return;
-      _safeSetState(() => _loading = false);
+
+      // ✅ 错误时也要设置 _loading = false
+      _safeSetState(() {
+        _profile = <String, dynamic>{
+          'full_name': 'User',
+          'email': Supabase.instance.client.auth.currentUser?.email ?? '',
+        };
+        _loading = false;
+      });
+
+      if (kDebugMode) {
+        print('[ProfilePage] Error path: _loading set to false');
+        print('[ProfilePage] ==================== _load END (ERROR) ====================');
+      }
+
       _animationController.forward();
     }
   }
@@ -483,8 +561,8 @@ class _ProfilePageState extends State<ProfilePage>
     final media = MediaQuery.of(context);
     final clamp = media.copyWith(textScaler: const TextScaler.linear(1.0));
 
-    // Guest user interface
-    if (widget.isGuest) {
+    // Guest user interface（用实时会话而不是构造参数）
+    if (!_signedIn) {
       return MediaQuery(
         data: clamp,
         child: Scaffold(
@@ -617,7 +695,8 @@ class _ProfilePageState extends State<ProfilePage>
                             // 閴?鐠併倛鐦夐崗銉ュ經閿涙艾娴橀弽?閺傚洦顢嶇紒鎴濈暰 _verified閿涙稓鍋ｉ崙鏄忕箻閸忋儵鐛欑拠浣歌嫙鏉╂柨娲栭崥搴涒偓鎰偓缁樻Ц閵嗘垵鍩涢弬?
                             _VerificationTileCard(
                               isVerified: _verified,
-                              isLoading: _verifyLoading, // 閴?閺傛澘顤冮敍姘煕閺傜増妞傜紒娆忓毉閸欏秹顩?
+                              isLoading:
+                              _verifyLoading, // 閴?閺傛澘顤冮敍姘煕閺傜増妞傜紒娆忓毉閸欏秹顩?
                               onTap: () async {
                                 await SafeNavigator.push<bool>(
                                   MaterialPageRoute(
@@ -744,7 +823,8 @@ class _ProfilePageState extends State<ProfilePage>
                               color: Colors.teal,
                               onTap: () => SafeNavigator.push(
                                   MaterialPageRoute(
-                                      builder: (_) => const HelpSupportPage())),
+                                      builder: (_) =>
+                                      const HelpSupportPage())),
                             ),
                             const SizedBox(height: 14),
                             _ProfileOptionEnhanced(
@@ -828,9 +908,9 @@ class _ProfilePageState extends State<ProfilePage>
                                   // 3) 清理本地缓存
                                   RewardService.clearCache();
 
-                                  // 4) 后台发起 signOut（无须 await，避免阻塞 UI）
-                                  unawaited(Supabase.instance.client.auth
-                                      .signOut(scope: SignOutScope.global));
+                                  // 4) ✅ 统一走业务封装（补丁1），不再直接调 supabase
+                                  unawaited(AuthService()
+                                      .signOut(global: true, reason: 'user-tap-profile-logout'));
                                 }
                               },
                             ),
@@ -1176,14 +1256,16 @@ class _GuestSimpleOptions extends StatelessWidget {
           icon: Icons.help_outline_rounded,
           title: l10n.helpSupport,
           color: Colors.blue,
-          onTap: () => SafeNavigator.push( MaterialPageRoute(builder: (_) => const HelpSupportPage())),
+          onTap: () => SafeNavigator.push(
+              MaterialPageRoute(builder: (_) => const HelpSupportPage())),
         ),
         const SizedBox(height: 12),
         _ProfileOptionEnhanced(
           icon: Icons.info_outline_rounded,
           title: l10n.about,
           color: Colors.indigo,
-          onTap: () => SafeNavigator.push( MaterialPageRoute(builder: (_) => const AboutPage())),
+          onTap: () => SafeNavigator.push(
+              MaterialPageRoute(builder: (_) => const AboutPage())),
         ),
       ],
     );

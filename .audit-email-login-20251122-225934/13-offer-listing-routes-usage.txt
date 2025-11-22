@@ -1,0 +1,58 @@
+﻿
+Path                                                    LineNumber Line                                                                   
+----                                                    ---------- ----                                                                   
+C:\Apps\swaply\lib\core\navigation\app_router.dart              21 /// ✔ 修复所有路由冲突：/home /welcome /login /sell-form /listing               
+C:\Apps\swaply\lib\core\navigation\app_router.dart              70        * - 支持：navPush('/listing', arguments: {'id': xxx})              
+C:\Apps\swaply\lib\core\navigation\app_router.dart              71        * - 支持：navPush('/listing', arguments: 'xxx')                    
+C:\Apps\swaply\lib\core\navigation\app_router.dart              73       case '/listing': {                                               
+C:\Apps\swaply\lib\core\navigation\app_router.dart              85           '/listing',                                                  
+C:\Apps\swaply\lib\data\listing_repo.dart                        1 // lib/data/listing_repo.dart                                          
+C:\Apps\swaply\lib\models\listing_store.dart                     1 // lib/models/listing_store.dart                                       
+C:\Apps\swaply\lib\models\offer.dart                             1 // lib/models/offer.dart                                               
+C:\Apps\swaply\lib\pages\category_products_page.dart            10 import 'package:swaply/listing_api.dart';                              
+C:\Apps\swaply\lib\pages\home_page.dart                         19 import 'package:swaply/listing_api.dart';                              
+C:\Apps\swaply\lib\pages\home_page.dart                         21 import 'package:swaply/services/listing_events_bus.dart'; // ✅ 功能保留    
+C:\Apps\swaply\lib\pages\my_listings_page.dart                   7 import 'package:swaply/services/listing_service.dart';                 
+C:\Apps\swaply\lib\pages\my_listings_page.dart                   8 import 'package:swaply/services/offer_service.dart';                   
+C:\Apps\swaply\lib\pages\my_listings_page.dart                  11 import 'package:swaply/models/offer.dart';                             
+C:\Apps\swaply\lib\pages\notification_page.dart                403           await navPush('/listing', arguments: listingId);             
+C:\Apps\swaply\lib\pages\notification_page.dart                412           await navPush('/listing', arguments: listingId);             
+C:\Apps\swaply\lib\pages\notification_page.dart                422           await navPush('/listing', arguments: listingId);             
+C:\Apps\swaply\lib\pages\offer_detail_page.dart                  1 // lib/pages/offer_detail_page.dart                                    
+C:\Apps\swaply\lib\pages\offer_detail_page.dart                 13 import 'package:swaply/services/offer_service.dart';                   
+C:\Apps\swaply\lib\pages\offer_detail_page.dart                 14 import 'package:swaply/models/offer.dart';                             
+C:\Apps\swaply\lib\pages\product_detail_page.dart               20 import 'package:swaply/models/listing_store.dart';                     
+C:\Apps\swaply\lib\pages\product_detail_page.dart               24 import 'package:swaply/services/offer_service.dart';                   
+C:\Apps\swaply\lib\pages\saved_page.dart                       661             await navPush('/listing', arguments: listingId);           
+C:\Apps\swaply\lib\pages\search_results_page.dart                5 import 'package:swaply/services/listing_service.dart';                 
+C:\Apps\swaply\lib\pages\sell_form_page.dart                    14 import 'package:swaply/listing_api.dart';                              
+C:\Apps\swaply\lib\pages\sell_form_page.dart                    16 import 'package:swaply/models/listing_store.dart';                     
+C:\Apps\swaply\lib\pages\sell_form_page.dart                    20 import 'package:swaply/services/listing_events_bus.dart';              
+C:\Apps\swaply\lib\pages\sell_form_page.dart                   676         await navReplaceAll('/listing', arguments: newId);             
+C:\Apps\swaply\lib\pages\sell_page.dart                        490           onTap: () => navPush('/listing', arguments: {'id': item['i...
+C:\Apps\swaply\lib\pages\sell_page.dart                        609         navPush('/listing', arguments: {'id': item['id'], 'prefetch'...
+C:\Apps\swaply\lib\pages\wishlist_page.dart                     16 import 'package:swaply/listing_api.dart';           // 保留用于其他可能的引用，主...
+C:\Apps\swaply\lib\pages\wishlist_page.dart                    220           await navPush('/listing', arguments: listingId);             
+C:\Apps\swaply\lib\services\deep_link_service.dart              59   /// 支持传入字符串 payload（如 'swaply://offer?offer_id=xxx&listing_id=yyy'）  
+C:\Apps\swaply\lib\services\deep_link_service.dart             137     // ----------- 2) Offer 深链：swaply://offer?offer_id=xxx&listing_i...
+C:\Apps\swaply\lib\services\deep_link_service.dart             138     // 也兼容：https://swaply.cc/offer?offer_id=xxx...                     
+C:\Apps\swaply\lib\services\deep_link_service.dart             140     final isOfferByPath = path.contains('/offer');                     
+C:\Apps\swaply\lib\services\deep_link_service.dart             151           navPush('/offer-detail', arguments: {                        
+C:\Apps\swaply\lib\services\deep_link_service.dart             160     // ----------- 3) Listing 深链：swaply://listing?listing_id=xxx ---...
+C:\Apps\swaply\lib\services\deep_link_service.dart             161     // 兼容历史：/listing?id=xxx 以及 https://swaply.cc/listing?id=xxx        
+C:\Apps\swaply\lib\services\deep_link_service.dart             163     final isListingByPath = path.contains('/listing');                 
+C:\Apps\swaply\lib\services\listing_events_bus.dart              1 // lib/services/listing_events_bus.dart                                
+C:\Apps\swaply\lib\services\listing_service.dart                 1 // lib/services/listing_service.dart                                   
+C:\Apps\swaply\lib\services\listing_service.dart                10 //   import 'package:swaply/listing_api.dart';  // 你的 ListingApi（已对齐...
+C:\Apps\swaply\lib\services\listing_service.dart                15 import 'package:swaply/listing_api.dart';                              
+C:\Apps\swaply\lib\services\listing_service.dart               214   ///   publicUrl: https://xyz.supabase.co/storage/v1/object/public/...
+C:\Apps\swaply\lib\services\notification_service.dart           34       'swaply://offer?offer_id=$offerId&listing_id=$listingId';        
+C:\Apps\swaply\lib\services\notification_service.dart           40       'swaply://listing?listing_id=$listingId';                        
+C:\Apps\swaply\lib\services\offer_service.dart                   1 // lib/services/offer_service.dart                                     
+C:\Apps\swaply\lib\services\offer_service.dart                   6 import 'package:swaply/models/offer.dart';                             
+C:\Apps\swaply\lib\widgets\remote_listings_section.dart          4 import 'package:swaply/listing_api.dart';                              
+C:\Apps\swaply\lib\widgets\remote_listings_section.dart        255     // 使用集中路由 /listing（navPush: (String routeName, {Object? argument...
+C:\Apps\swaply\lib\widgets\remote_listings_section.dart        256     await navPush('/listing', arguments: item['id']);                  
+C:\Apps\swaply\lib\listing_api.dart                              1 // lib/listing_api.dart —— 兼容你项目 & 旧版 supabase_dart，修复 eq<T> 推断与三元类型...
+
+

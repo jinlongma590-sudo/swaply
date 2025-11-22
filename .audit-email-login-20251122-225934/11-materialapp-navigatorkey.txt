@@ -1,0 +1,12 @@
+﻿
+  lib\core\app.dart:87:          create: (_) => LanguageProvider(),
+> lib\core\app.dart:88:          child: MaterialApp(
+  lib\core\app.dart:89:            title: 'Swaply',
+  lib\core\app.dart:90:            debugShowCheckedModeBanner: false,
+> lib\core\app.dart:91:            navigatorKey: rootNavKey, // 全 app 唯一 navigator
+  lib\core\app.dart:92:            onGenerateRoute: AppRouter.onGenerateRoute,
+  lib\core\app.dart:93:            initialRoute: '/',
+  lib\core\app.dart:94:            theme: ThemeData(
+  lib\core\app.dart:95:              primaryColor: const Color(0xFF1877F2),
+
+

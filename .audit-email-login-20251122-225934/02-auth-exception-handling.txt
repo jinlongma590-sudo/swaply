@@ -1,0 +1,186 @@
+﻿
+  lib\auth\forgot_password_screen.dart:51:        ),
+  lib\auth\forgot_password_screen.dart:52:      );
+> lib\auth\forgot_password_screen.dart:53:    } on AuthException catch (e) {
+  lib\auth\forgot_password_screen.dart:54:      if (!mounted) return;
+  lib\auth\forgot_password_screen.dart:55:      setState(() => _isLoading = false);
+  lib\auth\forgot_password_screen.dart:56:      ScaffoldMessenger.of(context).showSnackBar(
+  lib\auth\forgot_password_screen.dart:57:        SnackBar(
+  lib\auth\forgot_password_screen.dart:58:          content: Text(e.message),
+  lib\auth\forgot_password_screen.dart:59:          backgroundColor: Colors.red[400],
+  lib\auth\forgot_password_screen.dart:60:          behavior: SnackBarBehavior.floating,
+  lib\auth\forgot_password_screen.dart:61:        ),
+  lib\auth\login_screen.dart:84:        password: _passwordController.text,
+  lib\auth\login_screen.dart:85:      );
+> lib\auth\login_screen.dart:86:    } on AuthException catch (e) {
+  lib\auth\login_screen.dart:87:      _showError(e.message);
+  lib\auth\login_screen.dart:88:    } catch (_) {
+  lib\auth\login_screen.dart:89:      _showError('Login failed. Please try again.');
+  lib\auth\login_screen.dart:90:    } finally {
+  lib\auth\login_screen.dart:91:      if (mounted) setState(() => _busy = false);
+  lib\auth\login_screen.dart:92:    }
+  lib\auth\login_screen.dart:93:  }
+  lib\auth\login_screen.dart:94:
+  lib\auth\register_screen.dart:167:        _showInfo('Account created.');
+  lib\auth\register_screen.dart:168:      }
+> lib\auth\register_screen.dart:169:    } on AuthException catch (e) {
+  lib\auth\register_screen.dart:170:      _showError(e.message);
+  lib\auth\register_screen.dart:171:    } catch (e) {
+  lib\auth\register_screen.dart:172:      _showError('Register failed: $e');
+  lib\auth\register_screen.dart:173:    } finally {
+  lib\auth\register_screen.dart:174:      if (mounted) setState(() => _isLoading = false);
+  lib\auth\register_screen.dart:175:    }
+  lib\auth\register_screen.dart:176:  }
+  lib\auth\register_screen.dart:177:
+  lib\auth\reset_password_page.dart:78:      // 成功后回登录页（统一走 root_nav 助手）
+  lib\auth\reset_password_page.dart:79:      await navReplaceAll('/login'); // ✅ 不要传 context
+> lib\auth\reset_password_page.dart:80:    } on AuthException catch (e) {
+  lib\auth\reset_password_page.dart:81:      if (!mounted) return;
+  lib\auth\reset_password_page.dart:82:      _toast(e.message);
+  lib\auth\reset_password_page.dart:83:    } catch (_) {
+  lib\auth\reset_password_page.dart:84:      if (!mounted) return;
+  lib\auth\reset_password_page.dart:85:      _toast('Failed to update password. Please try again.');
+  lib\auth\reset_password_page.dart:86:    } finally {
+  lib\auth\reset_password_page.dart:87:      if (mounted) setState(() => _busy = false);
+  lib\auth\reset_password_page.dart:88:    }
+  lib\services\auth_service.dart:45:      await supabase.auth.signInWithPassword(email: email, password: password);
+  lib\services\auth_service.dart:46:      final user = supabase.auth.currentUser;
+> lib\services\auth_service.dart:47:      if (user == null) throw const AuthException('Login failed');
+  lib\services\auth_service.dart:48:
+  lib\services\auth_service.dart:49:      // 判断是否新用户（以 profiles 是否存在为准）
+  lib\services\auth_service.dart:50:      final existing = await supabase
+  lib\services\auth_service.dart:51:          .from('profiles')
+  lib\services\auth_service.dart:52:          .select('id')
+  lib\services\auth_service.dart:53:          .eq('id', user.id)
+  lib\services\auth_service.dart:54:          .maybeSingle();
+  lib\services\auth_service.dart:55:      final isNew = existing == null;
+  lib\services\auth_service.dart:64:
+  lib\services\auth_service.dart:65:      return isNew;
+> lib\services\auth_service.dart:66:    } on AuthException catch (e) {
+  lib\services\auth_service.dart:67:      throw Exception('Login failed: ${e.message}');
+  lib\services\auth_service.dart:68:    } catch (e) {
+  lib\services\auth_service.dart:69:      throw Exception('Login failed: $e');
+  lib\services\auth_service.dart:70:    }
+  lib\services\auth_service.dart:71:  }
+  lib\services\auth_service.dart:72:
+  lib\services\auth_service.dart:73:  Future<bool> signUpWithEmailPassword({
+  lib\services\auth_service.dart:74:    required String email,
+  lib\services\auth_service.dart:90:
+  lib\services\auth_service.dart:91:      final user = supabase.auth.currentUser;
+> lib\services\auth_service.dart:92:      if (user == null) throw const AuthException('Registration failed');
+  lib\services\auth_service.dart:93:
+  lib\services\auth_service.dart:94:      // 新注册用户：初始化 profile + 欢迎弹窗（验证字段仍由 DB 处理）
+  lib\services\auth_service.dart:95:      await ProfileService.instance.ensureProfileAndWelcome(
+  lib\services\auth_service.dart:96:        userId: user.id,
+  lib\services\auth_service.dart:97:        email: email.trim().toLowerCase(),
+  lib\services\auth_service.dart:98:        fullName: fullName,
+  lib\services\auth_service.dart:99:        avatarUrl: user.userMetadata?['avatar_url'],
+  lib\services\auth_service.dart:100:      );
+  lib\services\auth_service.dart:101:
+  lib\services\auth_service.dart:102:      return true;
+> lib\services\auth_service.dart:103:    } on AuthException catch (e) {
+  lib\services\auth_service.dart:104:      throw Exception('Registration failed: ${e.message}');
+  lib\services\auth_service.dart:105:    } catch (e) {
+  lib\services\auth_service.dart:106:      throw Exception('Registration failed: $e');
+  lib\services\auth_service.dart:107:    }
+  lib\services\auth_service.dart:108:  }
+  lib\services\auth_service.dart:109:
+  lib\services\auth_service.dart:110:  // --- 直接使用 Supabase OAuth（iOS/Android/Web 统一回调）---
+  lib\services\auth_service.dart:111:
+  lib\services\auth_service.dart:167:
+  lib\services\auth_service.dart:168:      return isNew;
+> lib\services\auth_service.dart:169:    } on AuthException catch (e) {
+  lib\services\auth_service.dart:170:      throw Exception('Facebook login failed: ${e.message}');
+  lib\services\auth_service.dart:171:    } catch (e) {
+  lib\services\auth_service.dart:172:      throw Exception('Facebook login failed: $e');
+  lib\services\auth_service.dart:173:    }
+  lib\services\auth_service.dart:174:  }
+  lib\services\auth_service.dart:175:
+  lib\services\auth_service.dart:176:  // —— 可复用的 profile 写入工具（不写验证相关字段） —— //
+  lib\services\auth_service.dart:177:  Future<void> _createOrUpdateUserProfileForNewUser({
+  lib\services\auth_service.dart:292:        throw Exception('Anonymous login failed');
+  lib\services\auth_service.dart:293:      }
+> lib\services\auth_service.dart:294:    } on AuthException catch (e) {
+  lib\services\auth_service.dart:295:      throw Exception('Anonymous login failed: ${e.message}');
+  lib\services\auth_service.dart:296:    }
+  lib\services\auth_service.dart:297:  }
+  lib\services\auth_service.dart:298:
+  lib\services\auth_service.dart:299:  // 统一回调 URI 的重置邮件
+  lib\services\auth_service.dart:300:  Future<void> resetPassword(String email) async {
+  lib\services\auth_service.dart:301:    try {
+  lib\services\auth_service.dart:302:      await supabase.auth.resetPasswordForEmail(
+  lib\services\auth_service.dart:304:        redirectTo: kIsWeb ? 'https://swaply.cc/auth/callback' : _kMobileRedirect,
+  lib\services\auth_service.dart:305:      );
+> lib\services\auth_service.dart:306:    } on AuthException catch (e) {
+  lib\services\auth_service.dart:307:      throw Exception('Password reset failed: ${e.message}');
+  lib\services\auth_service.dart:308:    }
+  lib\services\auth_service.dart:309:  }
+  lib\services\auth_service.dart:310:
+  lib\services\auth_service.dart:311:  Future<void> updatePassword(String newPassword) async {
+  lib\services\auth_service.dart:312:    try {
+  lib\services\auth_service.dart:313:      await supabase.auth.updateUser(UserAttributes(password: newPassword));
+> lib\services\auth_service.dart:314:    } on AuthException catch (e) {
+  lib\services\auth_service.dart:315:      throw Exception('Password update failed: ${e.message}');
+  lib\services\auth_service.dart:316:    }
+  lib\services\auth_service.dart:317:  }
+  lib\services\auth_service.dart:318:
+  lib\services\auth_service.dart:319:  Future<void> updateUserData({
+  lib\services\auth_service.dart:320:    String? email,
+  lib\services\auth_service.dart:321:    String? fullName,
+  lib\services\auth_service.dart:322:    String? phone,
+  lib\services\auth_service.dart:356:        await supabase.from('profiles').upsert(patch, onConflict: 'id');
+  lib\services\auth_service.dart:357:      }
+> lib\services\auth_service.dart:358:    } on AuthException catch (e) {
+  lib\services\auth_service.dart:359:      throw Exception('User update failed: ${e.message}');
+  lib\services\auth_service.dart:360:    } catch (e) {
+  lib\services\auth_service.dart:361:      throw Exception('User update failed: $e');
+  lib\services\auth_service.dart:362:    }
+  lib\services\auth_service.dart:363:  }
+  lib\services\auth_service.dart:364:
+  lib\services\auth_service.dart:365:  // ====== 防重登出 ======
+  lib\services\auth_service.dart:366:  static bool _signingOut = false;
+  lib\services\oauth_entry.dart:105:      );
+  lib\services\oauth_entry.dart:106:      // 成功登录的情况：由 deep link / onAuthStateChange 去 clear（幂等）
+> lib\services\oauth_entry.dart:107:    } on AuthException catch (e, st) {
+> lib\services\oauth_entry.dart:108:      debugPrint('[OAuthEntry] signIn error(AuthException): $e\n$st');
+  lib\services\oauth_entry.dart:109:      _clear(ticket, reason: 'error');
+  lib\services\oauth_entry.dart:110:      rethrow;
+  lib\services\oauth_entry.dart:111:    } catch (e, st) {
+  lib\services\oauth_entry.dart:112:      debugPrint('[OAuthEntry] signIn error: $e\n$st');
+  lib\services\oauth_entry.dart:113:      _clear(ticket, reason: 'error');
+  lib\services\oauth_entry.dart:114:      rethrow;
+  lib\services\oauth_entry.dart:115:    }
+  lib\services\oauth_entry.dart:116:  }
+  lib\utils\error_handler.dart:72:
+  lib\utils\error_handler.dart:73:    if (error is AppException) return error;
+> lib\utils\error_handler.dart:74:    if (error is AuthException) return _handleAuthException(error);
+  lib\utils\error_handler.dart:75:    if (error is PostgrestException) return _handlePostgrestException(error);
+  lib\utils\error_handler.dart:76:    if (error is StorageException) return _handleStorageException(error);
+  lib\utils\error_handler.dart:77:
+  lib\utils\error_handler.dart:78:    // 其他类型的错误
+  lib\utils\error_handler.dart:79:    return AppException.system(
+  lib\utils\error_handler.dart:80:      _getGenericErrorMessage(error),
+  lib\utils\error_handler.dart:81:      stackTrace: stackTrace,
+  lib\utils\error_handler.dart:82:    );
+  lib\utils\error_handler.dart:84:
+  lib\utils\error_handler.dart:85:  /// 处理认证异常
+> lib\utils\error_handler.dart:86:  static AppException _handleAuthException(AuthException error) {
+  lib\utils\error_handler.dart:87:    final code = error.statusCode;
+  lib\utils\error_handler.dart:88:    final msg = error.message.toLowerCase();
+  lib\utils\error_handler.dart:89:
+  lib\utils\error_handler.dart:90:    String message;
+  lib\utils\error_handler.dart:91:    switch (msg) {
+> lib\utils\error_handler.dart:92:      case 'invalid login credentials':
+  lib\utils\error_handler.dart:93:        message = '登录凭证无效，请检查邮箱和密码';
+  lib\utils\error_handler.dart:94:        break;
+> lib\utils\error_handler.dart:95:      case 'email not confirmed':
+  lib\utils\error_handler.dart:96:        message = '请先验证邮箱后再登录';
+  lib\utils\error_handler.dart:97:        break;
+  lib\utils\error_handler.dart:98:      case 'signup disabled':
+  lib\utils\error_handler.dart:99:        message = '注册功能暂时关闭，请稍后再试';
+  lib\utils\error_handler.dart:100:        break;
+  lib\utils\error_handler.dart:101:      case 'user not found':
+  lib\utils\error_handler.dart:102:        message = '用户不存在';
+  lib\utils\error_handler.dart:103:        break;
+
+

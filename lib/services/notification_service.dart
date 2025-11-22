@@ -25,6 +25,49 @@ class NotificationService {
   static final SupabaseClient _client = Supabase.instance.client;
   static const String _tableName = 'notifications';
 
+  // ======= ✅ 新增：统一深链 payload 构造器 =======
+  /// 报价通知 → 直达 OfferDetailPage
+  static String buildOfferPayload({
+    required String offerId,
+    required String listingId,
+  }) =>
+      'swaply://offer?offer_id=$offerId&listing_id=$listingId';
+
+  /// 商品通知 / 收藏 / 点赞 → 直达 ProductDetailPage
+  static String buildListingPayload({
+    required String listingId,
+  }) =>
+      'swaply://listing?listing_id=$listingId';
+
+  // 可选：从一条通知记录里尽最大可能推导 payload（没有就返回 null）
+  static String? derivePayloadFromRecord(Map<String, dynamic> record) {
+    try {
+      final type = (record['type'] ?? '').toString();
+      final meta = (record['metadata'] ?? {}) as Map<String, dynamic>;
+      final fromMeta = (meta['payload'] ??
+          meta['deep_link'] ??
+          meta['deeplink'] ??
+          meta['link'])
+          ?.toString();
+
+      if (fromMeta != null && fromMeta.isNotEmpty) return fromMeta;
+
+      final listingId = (record['listing_id'] ?? meta['listing_id'])?.toString();
+      final offerId = (record['offer_id'] ?? meta['offer_id'])?.toString();
+
+      if (type == 'offer' && offerId != null && listingId != null) {
+        return buildOfferPayload(offerId: offerId, listingId: listingId);
+      }
+      if (listingId != null) {
+        return buildListingPayload(listingId: listingId);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+  // ==============================================
+
   // ===== Realtime 通道状态 =====
   static String? _currentUserId;
   static RealtimeChannel? _channel;
@@ -142,11 +185,11 @@ class NotificationService {
   ///
   /// 如你的后端暂时仍是 `notify_favorite(uuid)`，需要先按上述签名升级函数。
   static Future<bool> notifyFavorite({
-    required String sellerId,      // 被通知的卖家
-    required String listingId,     // 商品ID
-    required String listingTitle,  // 商品标题
-    String? likerId,               // 收藏者 ID
-    String? likerName,             // 收藏者显示名
+    required String sellerId, // 被通知的卖家
+    required String listingId, // 商品ID
+    required String listingTitle, // 商品标题
+    String? likerId, // 收藏者 ID
+    String? likerName, // 收藏者显示名
   }) async {
     try {
       final currentUser = _client.auth.currentUser;
@@ -162,6 +205,9 @@ class NotificationService {
         return true;
       }
 
+      // ✅ 将深链一并写入 metadata（payload / deep_link 两个 key 都写）
+      final String payload = buildListingPayload(listingId: listingId);
+
       final res = await _client.rpc(
         'notify_favorite',
         params: {
@@ -175,6 +221,8 @@ class NotificationService {
           'p_metadata': {
             'listing_title': listingTitle,
             'liker_name': safeName,
+            'payload': payload, // ← 本地通知/点击可直接使用
+            'deep_link': payload, // ← 备用字段，便于前端读取
           },
         },
       );
@@ -183,7 +231,7 @@ class NotificationService {
       if (kDebugMode) {
         // ignore: avoid_print
         print(ok
-            ? '[NotificationService] Favorite RPC sent: $listingId -> $sellerId'
+            ? '[NotificationService] Favorite RPC sent: $listingId -> $sellerId (payload=$payload)'
             : '[NotificationService] Favorite RPC failed (returned null/false)');
       }
       return ok;
@@ -238,6 +286,9 @@ class NotificationService {
     String? message,
   }) async {
     // 需要时可新增 notify_offer RPC
+    // 提示：若你在别处弹本地通知，请用：
+    // final payload = buildOfferPayload(offerId: '<O_ID>', listingId: listingId);
+    // 然后把 payload 传给 flutter_local_notifications 的 show(..., payload: payload)
     _debugPrint('createOfferNotification skipped (RPC not implemented)');
     return true;
   }

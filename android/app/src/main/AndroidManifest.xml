@@ -24,17 +24,17 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:launchMode="singleTask"
+            android:launchMode="singleTop"
             android:theme="@style/LaunchTheme"
             android:configChanges="keyboard|keyboardHidden|orientation|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
+
             <!-- 自定义 scheme deep link：cc.swaply.app://login-callback -->
             <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-
                 <data
                     android:scheme="cc.swaply.app"
                     android:host="login-callback" />
@@ -50,6 +50,33 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- ✅ 统一深链入口（App Links / 自定义 scheme） -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- 自定义应用内 scheme：swaply://... -->
+                <data android:scheme="swaply" />
+                <!-- 网站深链：https://swaply.cc/... -->
+                <data android:scheme="https" android:host="swaply.cc" />
+            </intent-filter>
+
+            <!-- ✅ 新增：出价详情深链 swaply://offer?... -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="swaply" android:host="offer" />
+            </intent-filter>
+
+            <!-- ✅ 新增：商品详情深链 swaply://listing?... -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="swaply" android:host="listing" />
+            </intent-filter>
+
             <!-- Supabase 默认 OAuth 回调：io.supabase.flutter://callback -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -58,7 +85,7 @@
                 <data android:scheme="io.supabase.flutter" android:host="callback" />
             </intent-filter>
 
-            <!-- 自定义深链 -->
+            <!-- 自定义深链（原有） -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

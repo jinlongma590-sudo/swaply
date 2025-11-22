@@ -11,10 +11,8 @@ import 'package:swaply/core/l10n/app_localizations.dart';
 import 'package:swaply/services/dual_favorites_service.dart';
 import 'package:swaply/services/favorites_update_service.dart';
 
-// === 全局路由 & 常量 & API ===
-import 'package:swaply/router/root_nav.dart';       // navPush / navReplaceAll
-import 'package:swaply/theme/constants.dart';       // kPrimaryBlue / kCustomHeaderHeight
-import 'package:swaply/listing_api.dart';           // Keep for potential utility usage
+// === 全局常量 ===
+import 'package:swaply/theme/constants.dart'; // kPrimaryBlue
 
 class SavedPage extends StatefulWidget {
   final bool isGuest;
@@ -33,6 +31,12 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   String? _errorMessage;
   Timer? _autoRefreshTimer;
   StreamSubscription<dynamic>? _favoritesSubscription;
+
+  // === 与通知页保持一致：头部高度 = 状态栏 + 52 ===
+  double _headerBarHeight(BuildContext context) {
+    final top = MediaQuery.of(context).padding.top;
+    return top + 52.h;
+  }
 
   @override
   void initState() {
@@ -63,64 +67,70 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  // ========== 顶部自定义头 ==========
+  // ========== 顶部自定义头（防溢出、尺寸统一） ==========
   Widget _buildCustomHeader(String title, {bool hasMenu = true}) {
+    final safeTop = MediaQuery.of(context).padding.top;
     return Container(
+      height: _headerBarHeight(context),
       color: kPrimaryBlue,
-      child: SafeArea(
-        bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 16.h),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24.sp,
-                        fontWeight: FontWeight.w600,
-                        height: 1.2,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+      padding: EdgeInsets.only(top: safeTop),
+      child: SizedBox(
+        height: 52.h,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16.w),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20.sp, // 原 24 -> 20，更紧凑
+                    fontWeight: FontWeight.w700,
+                    height: 1.2,
                   ),
-                  if (hasMenu && _favoriteItems.isNotEmpty && !_isLoading)
-                    PopupMenuButton<String>(
-                      icon: Icon(Icons.more_vert_rounded,
-                          color: Colors.white, size: 16.w),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (hasMenu && _favoriteItems.isNotEmpty && !_isLoading)
+                ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: 36.w, minHeight: 36.w),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: PopupMenuButton<String>(
+                      tooltip: 'More',
+                      padding: EdgeInsets.zero,
+                      icon: Icon(Icons.more_horiz_rounded,
+                          color: Colors.white, size: 20.r),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.w),
+                        borderRadius: BorderRadius.circular(8.r),
                       ),
+                      elevation: 6,
                       onSelected: (value) {
                         if (value == 'clear_all') _showClearAllDialog();
                       },
                       itemBuilder: (context) => [
                         PopupMenuItem(
                           value: 'clear_all',
+                          height: 36.h,
                           child: Row(
                             children: [
                               Icon(Icons.clear_all_rounded,
-                                  color: Colors.red, size: 12.w),
+                                  color: Colors.red, size: 16.r),
                               SizedBox(width: 8.w),
                               Text('Clear All',
-                                  style: TextStyle(fontSize: 11.sp)),
+                                  style: TextStyle(fontSize: 12.sp)),
                             ],
                           ),
                         ),
                       ],
                     ),
-                ],
-              ),
-            ),
-            SizedBox(height: 16.h),
-          ],
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -136,6 +146,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
             final isAdded = (event as dynamic).isAdded == true;
             final listingId = (event as dynamic).listingId?.toString();
             final data = (event as dynamic).listingData as Map<String, dynamic>?;
+
             if (isAdded && data != null) {
               _addToLocalFavorites(data);
             } else if (!isAdded && listingId != null) {
@@ -242,7 +253,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  // ========== 数据加载 (✅ 已按要求修改) ==========
+  // ========== 数据加载 ==========
   Future<void> _loadFavorites() async {
     if (mounted) {
       setState(() {
@@ -258,8 +269,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         return;
       }
 
-      // ⚠️ 用真正的“收藏” API
-      final results = await DualFavoritesService.getUserFavorites(
+      // ✅ 与 Wishlist 对齐：拉取 wishlist 源
+      final results = await DualFavoritesService.getUserWishlist(
         userId: user.id,
         limit: 100,
         offset: 0,
@@ -268,7 +279,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
       if (!mounted) return;
 
       setState(() {
-        _favoriteItems = results;  // results 结构与 wishlist 一致，直接赋值
+        _favoriteItems = results;
         _isLoading = false;
       });
     } catch (e) {
@@ -417,15 +428,14 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  // ✅ 新增：清空确认弹窗
+  // ✅ 清空确认弹窗
   void _showClearAllDialog() {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         title: const Text('Clear All'),
-        content:
-        const Text('Are you sure you want to clear all favorites?'),
+        content: const Text('Are you sure you want to clear all favorites?'),
         actions: [
           TextButton(
             onPressed: () => navPop(),
@@ -532,8 +542,8 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                     borderRadius: BorderRadius.circular(8.w),
                   ),
                 ),
-                icon: Icon(Icons.explore_rounded,
-                    size: 12.w, color: Colors.white),
+                icon:
+                Icon(Icons.explore_rounded, size: 12.w, color: Colors.white),
                 label: Text(
                   'Browse Items',
                   style: TextStyle(
@@ -648,7 +658,6 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         child: InkWell(
           onTap: () async {
             if (listingId.isEmpty) return;
-            // ✅ 修正: 确保使用全局路由 navPush 和 arguments 传递 ID
             await navPush('/listing', arguments: listingId);
             _loadFavorites(); // 返回后刷新
           },
@@ -658,7 +667,6 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 图
                 ClipRRect(
                   borderRadius: BorderRadius.circular(6.w),
                   child: Container(
@@ -682,7 +690,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                                   : null,
                               strokeWidth: 1.w,
                               valueColor:
-                              AlwaysStoppedAnimation<Color>(
+                              const AlwaysStoppedAnimation<Color>(
                                   kPrimaryBlue),
                             ),
                           ),
@@ -962,7 +970,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                 ),
                 child: ElevatedButton.icon(
                   onPressed: () async {
-                    await navReplaceAll('/welcome'); // ✅ 统一全局导航
+                    await navReplaceAll('/welcome'); // 统一全局导航
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
@@ -994,7 +1002,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(kCustomHeaderHeight),
+        preferredSize: Size.fromHeight(_headerBarHeight(context)),
         child: _buildCustomHeader('My Favorites (${_favoriteItems.length})'),
       ),
       body: _isLoading
@@ -1006,16 +1014,16 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
               width: 24.w,
               height: 24.w,
               child: CircularProgressIndicator(
-                valueColor:
-                AlwaysStoppedAnimation<Color>(kPrimaryBlue),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                    kPrimaryBlue),
                 strokeWidth: 2,
               ),
             ),
             SizedBox(height: 8.h),
             Text(
               'Loading favorites...',
-              style: TextStyle(
-                  color: Colors.grey[600], fontSize: 11.sp),
+              style:
+              TextStyle(color: Colors.grey[600], fontSize: 11.sp),
             ),
           ],
         ),

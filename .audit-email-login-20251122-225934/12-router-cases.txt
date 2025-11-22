@@ -1,0 +1,13 @@
+﻿
+lib\core\navigation\app_router.dart:34:      case '/':
+lib\core\navigation\app_router.dart:43:      case '/home':
+lib\core\navigation\app_router.dart:47:      case '/welcome':
+lib\core\navigation\app_router.dart:50:      case '/login':
+lib\core\navigation\app_router.dart:53:      case '/register':
+lib\core\navigation\app_router.dart:56:      case '/forgot-password':
+lib\core\navigation\app_router.dart:57:      case '/reset-password':
+lib\core\navigation\app_router.dart:61:      case '/coupons':
+lib\core\navigation\app_router.dart:65:      case '/sell-form':
+lib\core\navigation\app_router.dart:73:      case '/listing': {
+
+

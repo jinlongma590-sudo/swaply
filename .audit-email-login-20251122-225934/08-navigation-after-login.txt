@@ -1,0 +1,1249 @@
+﻿
+  lib\admin\admin_coupon_management.dart:880:                      title: Text(user['email'] ?? 'No email'),
+  lib\admin\admin_coupon_management.dart:881:                      subtitle: Text(user['id'] ?? ''),
+> lib\admin\admin_coupon_management.dart:882:                      onTap: () => Navigator.of(ctx).pop(user['id']),
+  lib\admin\admin_coupon_management.dart:883:                    );
+  lib\admin\admin_coupon_management.dart:884:                  },
+  lib\admin\admin_coupon_management.dart:885:                ),
+  lib\admin\admin_coupon_management.dart:886:        ),
+  lib\admin\admin_coupon_management.dart:887:        actions: [
+  lib\admin\admin_coupon_management.dart:888:          TextButton(
+> lib\admin\admin_coupon_management.dart:889:            onPressed: () => Navigator.of(ctx).pop(),
+  lib\admin\admin_coupon_management.dart:890:            child: const Text('Cancel'),
+  lib\admin\admin_coupon_management.dart:891:          ),
+  lib\admin\admin_coupon_management.dart:892:        ],
+  lib\admin\admin_coupon_management.dart:893:      ),
+  lib\admin\admin_coupon_management.dart:894:    );
+  lib\admin\admin_coupon_management.dart:895:  }
+  lib\admin\admin_coupon_management.dart:903:        actions: [
+  lib\admin\admin_coupon_management.dart:904:          TextButton(
+> lib\admin\admin_coupon_management.dart:905:            onPressed: () => Navigator.of(ctx).pop(false),
+  lib\admin\admin_coupon_management.dart:906:            child: const Text('Cancel'),
+  lib\admin\admin_coupon_management.dart:907:          ),
+  lib\admin\admin_coupon_management.dart:908:          FilledButton(
+> lib\admin\admin_coupon_management.dart:909:            onPressed: () => Navigator.of(ctx).pop(true),
+  lib\admin\admin_coupon_management.dart:910:            child: const Text('Confirm'),
+  lib\admin\admin_coupon_management.dart:911:          ),
+  lib\admin\admin_coupon_management.dart:912:        ],
+  lib\admin\admin_coupon_management.dart:913:      ),
+  lib\admin\admin_coupon_management.dart:914:    );
+  lib\admin\admin_coupon_management.dart:915:    return result ?? false;
+  lib\auth\forgot_password_screen.dart:98:            icon: Icon(Icons.arrow_back_ios_rounded,
+  lib\auth\forgot_password_screen.dart:99:                color: Colors.black87, size: 20.r),
+> lib\auth\forgot_password_screen.dart:100:            onPressed: () => Navigator.pop(context),
+  lib\auth\forgot_password_screen.dart:101:          ),
+  lib\auth\forgot_password_screen.dart:102:        ),
+  lib\auth\forgot_password_screen.dart:103:      ),
+  lib\auth\forgot_password_screen.dart:104:      body: SafeArea(
+  lib\auth\forgot_password_screen.dart:105:        child: SingleChildScrollView(
+  lib\auth\forgot_password_screen.dart:106:          physics: const BouncingScrollPhysics(),
+  lib\auth\forgot_password_screen.dart:298:          Center(
+  lib\auth\forgot_password_screen.dart:299:            child: TextButton(
+> lib\auth\forgot_password_screen.dart:300:              onPressed: () => Navigator.pop(context),
+  lib\auth\forgot_password_screen.dart:301:              child: Text(
+  lib\auth\forgot_password_screen.dart:302:                'Back to Login',
+  lib\auth\forgot_password_screen.dart:303:                style: TextStyle(
+  lib\auth\forgot_password_screen.dart:304:                  color: const Color(0xFF2196F3),
+  lib\auth\forgot_password_screen.dart:305:                  fontSize: 14.sp,
+  lib\auth\forgot_password_screen.dart:306:                  fontWeight: FontWeight.w500,
+  lib\auth\forgot_password_screen.dart:383:            color: Colors.transparent,
+  lib\auth\forgot_password_screen.dart:384:            child: InkWell(
+> lib\auth\forgot_password_screen.dart:385:              onTap: () => Navigator.pop(context),
+  lib\auth\forgot_password_screen.dart:386:              borderRadius: BorderRadius.circular(16.r),
+  lib\auth\forgot_password_screen.dart:387:              child: Center(
+  lib\auth\forgot_password_screen.dart:388:                child: Text(
+  lib\auth\forgot_password_screen.dart:389:                  'Back to Login',
+  lib\auth\forgot_password_screen.dart:390:                  style: TextStyle(
+  lib\auth\forgot_password_screen.dart:391:                    color: Colors.white,
+  lib\auth\login_screen.dart:232:
+  lib\auth\login_screen.dart:233:                    GestureDetector(
+> lib\auth\login_screen.dart:234:                      onTap: () => navPush('/forgot-password'),
+  lib\auth\login_screen.dart:235:                      child: Text(
+  lib\auth\login_screen.dart:236:                        'Forgot Password?',
+  lib\auth\login_screen.dart:237:                        style: TextStyle(
+  lib\auth\login_screen.dart:238:                          color: const Color(0xFF2196F3),
+  lib\auth\login_screen.dart:239:                          fontWeight: FontWeight.w600,
+  lib\auth\login_screen.dart:240:                          fontSize: 12.sp,
+  lib\auth\login_screen.dart:325:                    ),
+  lib\auth\login_screen.dart:326:                    GestureDetector(
+> lib\auth\login_screen.dart:327:                      onTap: () => navPush('/register'),
+  lib\auth\login_screen.dart:328:                      child: Text(
+  lib\auth\login_screen.dart:329:                        'Sign Up',
+  lib\auth\login_screen.dart:330:                        style: TextStyle(
+  lib\auth\login_screen.dart:331:                          color: const Color(0xFF2196F3),
+  lib\auth\login_screen.dart:332:                          fontWeight: FontWeight.w700,
+  lib\auth\login_screen.dart:333:                          fontSize: 12.sp,
+  lib\auth\register_screen.dart:500:                    ),
+  lib\auth\register_screen.dart:501:                    GestureDetector(
+> lib\auth\register_screen.dart:502:                      onTap: () => navReplaceAll('/login'),
+  lib\auth\register_screen.dart:503:                      child: Text(
+  lib\auth\register_screen.dart:504:                        'Sign In',
+  lib\auth\register_screen.dart:505:                        style: TextStyle(
+  lib\auth\register_screen.dart:506:                          color: const Color(0xFF2196F3),
+  lib\auth\register_screen.dart:507:                          fontWeight: FontWeight.w700,
+  lib\auth\register_screen.dart:508:                          fontSize: 12.sp,
+  lib\auth\reset_password_page.dart:77:
+  lib\auth\reset_password_page.dart:78:      // 成功后回登录页（统一走 root_nav 助手）
+> lib\auth\reset_password_page.dart:79:      await navReplaceAll('/login'); // ✅ 不要传 context
+  lib\auth\reset_password_page.dart:80:    } on AuthException catch (e) {
+  lib\auth\reset_password_page.dart:81:      if (!mounted) return;
+  lib\auth\reset_password_page.dart:82:      _toast(e.message);
+  lib\auth\reset_password_page.dart:83:    } catch (_) {
+  lib\auth\reset_password_page.dart:84:      if (!mounted) return;
+  lib\auth\reset_password_page.dart:85:      _toast('Failed to update password. Please try again.');
+  lib\auth\reset_password_page.dart:138:                        ? null
+  lib\auth\reset_password_page.dart:139:                        : () async {
+> lib\auth\reset_password_page.dart:140:                      await navReplaceAll('/login'); // ✅ 不要传 context
+  lib\auth\reset_password_page.dart:141:                    },
+  lib\auth\reset_password_page.dart:142:                    child: const Text('Back to Login'),
+  lib\auth\reset_password_page.dart:143:                  ),
+  lib\auth\reset_password_page.dart:144:                ),
+  lib\auth\reset_password_page.dart:145:                SizedBox(height: 20.h),
+  lib\auth\reset_password_page.dart:146:              ],
+  lib\auth\welcome_screen.dart:192:                    Expanded(
+  lib\auth\welcome_screen.dart:193:                      child: TextButton(
+> lib\auth\welcome_screen.dart:194:                        onPressed: () => Navigator.of(context).pop(),
+  lib\auth\welcome_screen.dart:195:                        style: TextButton.styleFrom(
+  lib\auth\welcome_screen.dart:196:                          padding: EdgeInsets.symmetric(vertical: 12.h),
+  lib\auth\welcome_screen.dart:197:                          shape: RoundedRectangleBorder(
+  lib\auth\welcome_screen.dart:198:                            borderRadius: BorderRadius.circular(12.r),
+  lib\auth\welcome_screen.dart:199:                            side: BorderSide(color: Colors.grey[300]!),
+  lib\auth\welcome_screen.dart:200:                          ),
+  lib\auth\welcome_screen.dart:228:                        child: TextButton(
+  lib\auth\welcome_screen.dart:229:                          onPressed: () async {
+> lib\auth\welcome_screen.dart:230:                            Navigator.of(context).pop();
+  lib\auth\welcome_screen.dart:231:                            // 游客模式不跳转，由逻辑中心控制
+  lib\auth\welcome_screen.dart:232:                          },
+  lib\auth\welcome_screen.dart:233:                          child: Text(
+  lib\auth\welcome_screen.dart:234:                            'Continue',
+  lib\auth\welcome_screen.dart:235:                            style: TextStyle(
+  lib\auth\welcome_screen.dart:236:                              color: Colors.white,
+  lib\auth\welcome_screen.dart:493:                                              setState(
+  lib\auth\welcome_screen.dart:494:                                                      () => _busy = true);
+> lib\auth\welcome_screen.dart:495:                                              navPush('/register')
+  lib\auth\welcome_screen.dart:496:                                                  .whenComplete(() {
+  lib\auth\welcome_screen.dart:497:                                                if (mounted) {
+  lib\auth\welcome_screen.dart:498:                                                  setState(() =>
+  lib\auth\welcome_screen.dart:499:                                                  _busy = false);
+  lib\auth\welcome_screen.dart:500:                                                }
+  lib\auth\welcome_screen.dart:501:                                              });
+  lib\auth\welcome_screen.dart:557:                                              setState(
+  lib\auth\welcome_screen.dart:558:                                                      () => _busy = true);
+> lib\auth\welcome_screen.dart:559:                                              navPush('/login')
+  lib\auth\welcome_screen.dart:560:                                                  .whenComplete(() {
+  lib\auth\welcome_screen.dart:561:                                                if (mounted) {
+  lib\auth\welcome_screen.dart:562:                                                  setState(() =>
+  lib\auth\welcome_screen.dart:563:                                                  _busy = false);
+  lib\auth\welcome_screen.dart:564:                                                }
+  lib\auth\welcome_screen.dart:565:                                              });
+  lib\core\navigation\app_router.dart:68:    /* ============================================================
+  lib\core\navigation\app_router.dart:69:       * 商品详情页
+> lib\core\navigation\app_router.dart:70:       * - 支持：navPush('/listing', arguments: {'id': xxx})
+> lib\core\navigation\app_router.dart:71:       * - 支持：navPush('/listing', arguments: 'xxx')
+  lib\core\navigation\app_router.dart:72:       * ============================================================ */
+  lib\core\navigation\app_router.dart:73:      case '/listing': {
+  lib\core\navigation\app_router.dart:74:        final args = settings.arguments;
+  lib\core\navigation\app_router.dart:75:        String productId = '';
+  lib\core\navigation\app_router.dart:76:
+  lib\core\navigation\app_router.dart:77:        if (args is String) {
+  lib\pages\account_settings_page.dart:118:            actions: [
+  lib\pages\account_settings_page.dart:119:              TextButton(
+> lib\pages\account_settings_page.dart:120:                onPressed: () => Navigator.pop(ctx, false),
+  lib\pages\account_settings_page.dart:121:                child: const Text('Cancel', style: TextStyle(fontSize: 16)),
+  lib\pages\account_settings_page.dart:122:              ),
+  lib\pages\account_settings_page.dart:123:              ElevatedButton(
+> lib\pages\account_settings_page.dart:124:                onPressed: canConfirm ? () => Navigator.pop(ctx, true) : null,
+  lib\pages\account_settings_page.dart:125:                style: ElevatedButton.styleFrom(
+  lib\pages\account_settings_page.dart:126:                  backgroundColor: Colors.red,
+  lib\pages\account_settings_page.dart:127:                  textStyle: const TextStyle(
+  lib\pages\account_settings_page.dart:128:                    fontSize: 16,
+  lib\pages\account_settings_page.dart:129:                    fontWeight: FontWeight.w600,
+  lib\pages\account_settings_page.dart:130:                  ),
+  lib\pages\account_settings_page.dart:184:
+  lib\pages\account_settings_page.dart:185:        if (!mounted) return;
+> lib\pages\account_settings_page.dart:186:        // 鍥炲埌鏍硅矾鐢憋紙鎴栨寜浣犻」鐩敼涓?SafeNavigator.pushNamedAndRemoveUntil('/welcome', (_) => false)锛
+?
+  lib\pages\account_settings_page.dart:187:        rootNavKey.currentState?.popUntil((r) => r.isFirst);
+  lib\pages\account_settings_page.dart:188:        return;
+  lib\pages\account_settings_page.dart:189:      } else {
+  lib\pages\account_settings_page.dart:190:        final msg = (data['error'] ?? 'Delete failed').toString();
+  lib\pages\account_settings_page.dart:191:        throw Exception(msg);
+  lib\pages\account_settings_page.dart:192:      }
+  lib\pages\account_settings_page.dart:230:        leading: IconButton(
+  lib\pages\account_settings_page.dart:231:          icon: const Icon(Icons.arrow_back, color: Colors.white),
+> lib\pages\account_settings_page.dart:232:          onPressed: () => Navigator.pop(context),
+  lib\pages\account_settings_page.dart:233:        ),
+  lib\pages\account_settings_page.dart:234:      );
+  lib\pages\account_settings_page.dart:235:    }
+  lib\pages\account_settings_page.dart:236:
+  lib\pages\account_settings_page.dart:237:    // iOS锛?4pt 鑷畾涔夊鑸爮
+  lib\pages\account_settings_page.dart:238:    const double kNavBarHeight = 44.0;
+  lib\pages\account_settings_page.dart:245:      height: kButtonSize,
+  lib\pages\account_settings_page.dart:246:      child: GestureDetector(
+> lib\pages\account_settings_page.dart:247:        onTap: () => Navigator.pop(context),
+  lib\pages\account_settings_page.dart:248:        child: Container(
+  lib\pages\account_settings_page.dart:249:          decoration: BoxDecoration(
+  lib\pages\account_settings_page.dart:250:            color: Colors.white.withOpacity(0.15),
+  lib\pages\account_settings_page.dart:251:            borderRadius: BorderRadius.circular(10),
+  lib\pages\account_settings_page.dart:252:          ),
+  lib\pages\account_settings_page.dart:253:          alignment: Alignment.center,
+  lib\pages\category_products_page.dart:390:      onTap: () {
+  lib\pages\category_products_page.dart:391:        setState(() => _selectedSort = value);
+> lib\pages\category_products_page.dart:392:        Navigator.pop(context);
+  lib\pages\category_products_page.dart:393:        _sortInMemory();
+  lib\pages\category_products_page.dart:394:      },
+  lib\pages\category_products_page.dart:395:    );
+  lib\pages\category_products_page.dart:396:  }
+  lib\pages\category_products_page.dart:397:
+  lib\pages\category_products_page.dart:398:  void _openLocationSheet() {
+  lib\pages\category_products_page.dart:452:                    onTap: () {
+  lib\pages\category_products_page.dart:453:                      setState(() => _selectedLocation = loc);
+> lib\pages\category_products_page.dart:454:                      Navigator.pop(context);
+  lib\pages\category_products_page.dart:455:                      _loadInitial();
+  lib\pages\category_products_page.dart:456:                      _loadPinnedAds();
+  lib\pages\category_products_page.dart:457:                    },
+  lib\pages\category_products_page.dart:458:                  );
+  lib\pages\category_products_page.dart:459:                },
+  lib\pages\category_products_page.dart:460:              ),
+  lib\pages\category_products_page.dart:515:        leading: IconButton(
+  lib\pages\category_products_page.dart:516:          icon: Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 18.sp),
+> lib\pages\category_products_page.dart:517:          onPressed: () => Navigator.pop(context),
+  lib\pages\category_products_page.dart:518:        ),
+  lib\pages\category_products_page.dart:519:        actions: [
+  lib\pages\category_products_page.dart:520:          IconButton(
+  lib\pages\category_products_page.dart:521:            icon: Icon(Icons.search, color: Colors.white, size: 20.sp),
+  lib\pages\category_products_page.dart:522:            onPressed: () {
+  lib\pages\category_products_page.dart:523:              /* TODO: search */
+  lib\pages\category_products_page.dart:540:      height: kButtonSize,
+  lib\pages\category_products_page.dart:541:      child: GestureDetector(
+> lib\pages\category_products_page.dart:542:        onTap: () => Navigator.pop(context),
+  lib\pages\category_products_page.dart:543:        child: Container(
+  lib\pages\category_products_page.dart:544:          decoration: BoxDecoration(
+  lib\pages\category_products_page.dart:545:            color: Colors.white.withOpacity(0.15),
+  lib\pages\category_products_page.dart:546:            borderRadius: BorderRadius.circular(10), // 保持原圆角
+  lib\pages\category_products_page.dart:547:          ),
+  lib\pages\category_products_page.dart:548:          alignment: Alignment.center,
+  lib\pages\category_products_page.dart:1155:      'category': full['category'] ?? '',
+  lib\pages\category_products_page.dart:1156:    };
+> lib\pages\category_products_page.dart:1157:    SafeNavigator.push(
+  lib\pages\category_products_page.dart:1158:      MaterialPageRoute(
+  lib\pages\category_products_page.dart:1159:        builder: (_) => ProductDetailPage(
+  lib\pages\category_products_page.dart:1160:          productId: item['id']?.toString(),
+  lib\pages\category_products_page.dart:1161:          productData: pdData,
+  lib\pages\category_products_page.dart:1162:        ),
+  lib\pages\category_products_page.dart:1163:      ),
+  lib\pages\coupon_management_page.dart:333:    // 左侧返回
+  lib\pages\coupon_management_page.dart:334:    final Widget backButton = GestureDetector(
+> lib\pages\coupon_management_page.dart:335:      onTap: () => Navigator.pop(context),
+  lib\pages\coupon_management_page.dart:336:      child: Container(
+  lib\pages\coupon_management_page.dart:337:        padding: const EdgeInsets.all(8), // 34x34（8+18+8）
+  lib\pages\coupon_management_page.dart:338:        decoration: BoxDecoration(
+  lib\pages\coupon_management_page.dart:339:          color: Colors.white.withOpacity(0.15),
+  lib\pages\coupon_management_page.dart:340:          borderRadius: BorderRadius.circular(10),
+  lib\pages\coupon_management_page.dart:341:        ),
+  lib\pages\coupon_management_page.dart:1147:  void _onUseNow(CouponModel coupon) {
+  lib\pages\coupon_management_page.dart:1148:    if (coupon.canPin) {
+> lib\pages\coupon_management_page.dart:1149:      SafeNavigator.push(
+  lib\pages\coupon_management_page.dart:1150:        MaterialPageRoute(
+  lib\pages\coupon_management_page.dart:1151:          builder: (context) => const SellFormPage(), // ✅ 正确：WidgetBuilder
+  lib\pages\coupon_management_page.dart:1152:          settings: RouteSettings(arguments: {'couponId': coupon.id}),
+  lib\pages\coupon_management_page.dart:1153:        ),
+  lib\pages\coupon_management_page.dart:1154:      );
+  lib\pages\coupon_management_page.dart:1155:      _showSnackBar(
+  lib\pages\coupon_management_page.dart:1212:        actions: [
+  lib\pages\coupon_management_page.dart:1213:          TextButton(
+> lib\pages\coupon_management_page.dart:1214:              onPressed: () => Navigator.pop(context),
+  lib\pages\coupon_management_page.dart:1215:              child: const Text('Close')),
+  lib\pages\coupon_management_page.dart:1216:          if (coupon.canPin)
+  lib\pages\coupon_management_page.dart:1217:            ElevatedButton.icon(
+  lib\pages\coupon_management_page.dart:1218:              onPressed: () {
+> lib\pages\coupon_management_page.dart:1219:                Navigator.pop(context);
+> lib\pages\coupon_management_page.dart:1220:                SafeNavigator.push(
+  lib\pages\coupon_management_page.dart:1221:                  MaterialPageRoute(
+  lib\pages\coupon_management_page.dart:1222:                    builder: (context) =>
+  lib\pages\coupon_management_page.dart:1223:                    const SellFormPage(), // ✅ 正确：WidgetBuilder
+  lib\pages\coupon_management_page.dart:1224:                    settings: RouteSettings(arguments: {'couponId': coupon.id}),
+  lib\pages\coupon_management_page.dart:1225:                  ),
+  lib\pages\coupon_management_page.dart:1226:                );
+  lib\pages\coupon_management_page.dart:1298:        actions: [
+  lib\pages\coupon_management_page.dart:1299:          TextButton(
+> lib\pages\coupon_management_page.dart:1300:              onPressed: () => Navigator.pop(context),
+  lib\pages\coupon_management_page.dart:1301:              child: const Text('Got it'))
+  lib\pages\coupon_management_page.dart:1302:        ],
+  lib\pages\coupon_management_page.dart:1303:      ),
+  lib\pages\coupon_management_page.dart:1304:    );
+  lib\pages\coupon_management_page.dart:1305:  }
+  lib\pages\coupon_management_page.dart:1306:
+  lib\pages\edit_profile_page.dart:291:
+  lib\pages\edit_profile_page.dart:292:      // 返回并告知“有更新”，上层按 result==true 触发刷新
+> lib\pages\edit_profile_page.dart:293:      Navigator.pop(context, true);
+  lib\pages\edit_profile_page.dart:294:    } catch (e) {
+  lib\pages\edit_profile_page.dart:295:      if (mounted) {
+  lib\pages\edit_profile_page.dart:296:        ScaffoldMessenger.of(context).showSnackBar(
+  lib\pages\edit_profile_page.dart:297:          SnackBar(
+  lib\pages\edit_profile_page.dart:298:            content: Text('Error updating profile: $e', style: TextStyle(fontSize: 14.sp)),
+  lib\pages\edit_profile_page.dart:299:            backgroundColor: Colors.red.shade600,
+  lib\pages\edit_profile_page.dart:505:        leading: IconButton(
+  lib\pages\edit_profile_page.dart:506:          icon: Icon(Icons.arrow_back_rounded, color: Colors.white, size: 24.w),
+> lib\pages\edit_profile_page.dart:507:          onPressed: () => Navigator.of(context).pop(),
+  lib\pages\edit_profile_page.dart:508:        ),
+  lib\pages\edit_profile_page.dart:509:        actions: [
+  lib\pages\edit_profile_page.dart:510:          if (!_loading)
+  lib\pages\edit_profile_page.dart:511:            Container(
+  lib\pages\edit_profile_page.dart:512:              margin: EdgeInsets.only(right: 16.w),
+  lib\pages\edit_profile_page.dart:513:              child: TextButton(
+  lib\pages\home_page.dart:271:      _scrollToTrending();
+  lib\pages\home_page.dart:272:    } else {
+> lib\pages\home_page.dart:273:      SafeNavigator.push(
+  lib\pages\home_page.dart:274:        MaterialPageRoute(
+  lib\pages\home_page.dart:275:          builder: (_) => CategoryProductsPage(
+  lib\pages\home_page.dart:276:            categoryId: categoryId,
+  lib\pages\home_page.dart:277:            categoryName: categoryName,
+  lib\pages\home_page.dart:278:          ),
+  lib\pages\home_page.dart:279:        ),
+  lib\pages\home_page.dart:283:
+  lib\pages\home_page.dart:284:  void _navigateToProductDetail(String productId) {
+> lib\pages\home_page.dart:285:    SafeNavigator.push(
+  lib\pages\home_page.dart:286:      MaterialPageRoute(
+  lib\pages\home_page.dart:287:          builder: (_) => ProductDetailPage(productId: productId)),
+  lib\pages\home_page.dart:288:    );
+  lib\pages\home_page.dart:289:  }
+  lib\pages\home_page.dart:290:
+  lib\pages\home_page.dart:291:  void _scrollToTrending() {
+  lib\pages\home_page.dart:303:    final keyword = _searchCtrl.text.trim();
+  lib\pages\home_page.dart:304:    if (keyword.isEmpty) return;
+> lib\pages\home_page.dart:305:    SafeNavigator.push(
+  lib\pages\home_page.dart:306:      MaterialPageRoute(
+  lib\pages\home_page.dart:307:        builder: (_) =>
+  lib\pages\home_page.dart:308:            SearchResultsPage(keyword: keyword, location: _selectedLocation),
+  lib\pages\home_page.dart:309:      ),
+  lib\pages\home_page.dart:310:    );
+  lib\pages\home_page.dart:311:  }
+  lib\pages\home_page.dart:324:          actions: [
+  lib\pages\home_page.dart:325:            TextButton(
+> lib\pages\home_page.dart:326:                onPressed: () => Navigator.of(ctx).pop(false),
+  lib\pages\home_page.dart:327:                child: const Text('Cancel')),
+  lib\pages\home_page.dart:328:            FilledButton(
+> lib\pages\home_page.dart:329:                onPressed: () => Navigator.of(ctx).pop(true),
+  lib\pages\home_page.dart:330:                child: const Text('Login')),
+  lib\pages\home_page.dart:331:          ],
+  lib\pages\home_page.dart:332:        ),
+  lib\pages\home_page.dart:333:      );
+  lib\pages\home_page.dart:334:      if (goLogin == true && mounted) {
+> lib\pages\home_page.dart:335:        await SafeNavigator.pushNamed('/login');
+  lib\pages\home_page.dart:336:      }
+  lib\pages\home_page.dart:337:      if (Supabase.instance.client.auth.currentUser == null) return;
+  lib\pages\home_page.dart:338:    }
+  lib\pages\home_page.dart:339:    if (!mounted) return;
+> lib\pages\home_page.dart:340:    final ok = await SafeNavigator.push(
+  lib\pages\home_page.dart:341:      MaterialPageRoute(builder: (_) => const SellFormPage()),
+  lib\pages\home_page.dart:342:    );
+  lib\pages\home_page.dart:343:    if (ok == true && mounted) {
+  lib\pages\home_page.dart:344:      await _loadTrending(bypassCache: true);
+  lib\pages\home_page.dart:345:      _scrollToTrending();
+  lib\pages\home_page.dart:346:      setState(() {});
+  lib\pages\invite_friends_page.dart:295:          toolbarHeight: null, // Android 默认
+  lib\pages\invite_friends_page.dart:296:          leading: IconButton(
+> lib\pages\invite_friends_page.dart:297:            onPressed: () => Navigator.pop(context),
+  lib\pages\invite_friends_page.dart:298:            icon: Icon(Icons.arrow_back_ios_new, size: 20.r),
+  lib\pages\invite_friends_page.dart:299:          ),
+  lib\pages\invite_friends_page.dart:300:          title: Text(
+  lib\pages\invite_friends_page.dart:301:            'Invite Friends',
+  lib\pages\invite_friends_page.dart:302:            style: TextStyle(
+  lib\pages\invite_friends_page.dart:303:              fontSize: 20.sp,
+  lib\pages\invite_friends_page.dart:340:                height: 32,
+  lib\pages\invite_friends_page.dart:341:                child: GestureDetector(
+> lib\pages\invite_friends_page.dart:342:                  onTap: () => Navigator.pop(context),
+  lib\pages\invite_friends_page.dart:343:                  child: Container(
+  lib\pages\invite_friends_page.dart:344:                    decoration: BoxDecoration(
+  lib\pages\invite_friends_page.dart:345:                      color: Colors.white.withOpacity(0.15),
+  lib\pages\invite_friends_page.dart:346:                      borderRadius: BorderRadius.circular(10), // 匹配圆角
+  lib\pages\invite_friends_page.dart:347:                    ),
+  lib\pages\invite_friends_page.dart:348:                    alignment: Alignment.center,
+  lib\pages\main_navigation_page.dart:111:      final ok = await _confirmExit(context);
+  lib\pages\main_navigation_page.dart:112:      if (ok == true) {
+> lib\pages\main_navigation_page.dart:113:        SystemNavigator.pop();
+  lib\pages\main_navigation_page.dart:114:      }
+  lib\pages\main_navigation_page.dart:115:    }
+  lib\pages\main_navigation_page.dart:116:  }
+  lib\pages\main_navigation_page.dart:117:
+  lib\pages\main_navigation_page.dart:118:  Future<bool> _confirmExit(BuildContext context) async {
+  lib\pages\main_navigation_page.dart:119:    return await showDialog<bool>(
+  lib\pages\main_navigation_page.dart:135:          actions: [
+  lib\pages\main_navigation_page.dart:136:            TextButton(
+> lib\pages\main_navigation_page.dart:137:              onPressed: () => Navigator.of(dialogCtx).maybePop(false),
+  lib\pages\main_navigation_page.dart:138:              child: Text('Stay',
+  lib\pages\main_navigation_page.dart:139:                  style:
+  lib\pages\main_navigation_page.dart:140:                  TextStyle(fontSize: 13.sp, color: Colors.grey[700])),
+  lib\pages\main_navigation_page.dart:141:            ),
+  lib\pages\main_navigation_page.dart:142:            ElevatedButton(
+> lib\pages\main_navigation_page.dart:143:              onPressed: () => Navigator.of(dialogCtx).maybePop(true),
+  lib\pages\main_navigation_page.dart:144:              style: ElevatedButton.styleFrom(
+  lib\pages\main_navigation_page.dart:145:                backgroundColor: _PRIMARY_BLUE,
+  lib\pages\main_navigation_page.dart:146:                foregroundColor: Colors.white,
+  lib\pages\main_navigation_page.dart:147:              ),
+  lib\pages\main_navigation_page.dart:148:              child: Text('Exit', style: TextStyle(fontSize: 13.sp)),
+  lib\pages\main_navigation_page.dart:149:            ),
+  lib\pages\main_navigation_page.dart:193:                onPressed: () {
+  lib\pages\main_navigation_page.dart:194:                  // 🌟 改为 rootNav 统一导航
+> lib\pages\main_navigation_page.dart:195:                  navReplaceAll('/welcome');
+  lib\pages\main_navigation_page.dart:196:                },
+  lib\pages\main_navigation_page.dart:197:                child: Text(
+  lib\pages\main_navigation_page.dart:198:                  l10n.login,
+  lib\pages\main_navigation_page.dart:199:                  style: const TextStyle(
+  lib\pages\main_navigation_page.dart:200:                    color: Colors.white,
+  lib\pages\main_navigation_page.dart:201:                    fontWeight: FontWeight.w600,
+  lib\pages\my_listings_page.dart:308:          actions: [
+  lib\pages\my_listings_page.dart:309:            TextButton(
+> lib\pages\my_listings_page.dart:310:              onPressed: () => Navigator.pop(context),
+  lib\pages\my_listings_page.dart:311:              child: Text('Cancel',
+  lib\pages\my_listings_page.dart:312:                  style: TextStyle(fontSize: 14.sp, color: Colors.grey[600])),
+  lib\pages\my_listings_page.dart:313:            ),
+  lib\pages\my_listings_page.dart:314:            Container(
+  lib\pages\my_listings_page.dart:315:              decoration: BoxDecoration(
+  lib\pages\my_listings_page.dart:316:                  color: Colors.red, borderRadius: BorderRadius.circular(6.r)),
+  lib\pages\my_listings_page.dart:317:              child: TextButton(
+  lib\pages\my_listings_page.dart:318:                onPressed: () {
+> lib\pages\my_listings_page.dart:319:                  Navigator.pop(context);
+  lib\pages\my_listings_page.dart:320:                  _deleteListing(listing, index);
+  lib\pages\my_listings_page.dart:321:                },
+  lib\pages\my_listings_page.dart:322:                child: const Text('Delete',
+  lib\pages\my_listings_page.dart:323:                    style: TextStyle(
+  lib\pages\my_listings_page.dart:324:                        color: Colors.white,
+  lib\pages\my_listings_page.dart:325:                        fontSize: 14,
+  lib\pages\my_listings_page.dart:542:        height: kButtonSize,
+  lib\pages\my_listings_page.dart:543:        child: GestureDetector(
+> lib\pages\my_listings_page.dart:544:          onTap: () => Navigator.pop(context),
+  lib\pages\my_listings_page.dart:545:          child: Container(
+  lib\pages\my_listings_page.dart:546:            decoration: BoxDecoration(
+  lib\pages\my_listings_page.dart:547:              color: Colors.white.withOpacity(0.15),
+  lib\pages\my_listings_page.dart:548:              borderRadius: BorderRadius.circular(10),
+  lib\pages\my_listings_page.dart:549:            ),
+  lib\pages\my_listings_page.dart:550:            alignment: Alignment.center,
+  lib\pages\my_listings_page.dart:619:    } // ===== Android/Web：保持你原来的实现（安全区域 + Column） =====
+  lib\pages\my_listings_page.dart:620:    final Widget backButton = GestureDetector(
+> lib\pages\my_listings_page.dart:621:      onTap: () => Navigator.pop(context),
+  lib\pages\my_listings_page.dart:622:      child: Container(
+  lib\pages\my_listings_page.dart:623:        width: 36,
+  lib\pages\my_listings_page.dart:624:        height: 36,
+  lib\pages\my_listings_page.dart:625:        padding: const EdgeInsets.all(8),
+  lib\pages\my_listings_page.dart:626:        decoration: BoxDecoration(
+  lib\pages\my_listings_page.dart:627:          color: Colors.white.withOpacity(0.15),
+  lib\pages\my_listings_page.dart:896:                              switch (value) {
+  lib\pages\my_listings_page.dart:897:                                case 'edit':
+> lib\pages\my_listings_page.dart:898:                                  SafeNavigator.push(
+  lib\pages\my_listings_page.dart:899:                                    MaterialPageRoute(
+  lib\pages\my_listings_page.dart:900:                                      builder: (context) =>
+  lib\pages\my_listings_page.dart:901:                                      const SellFormPage(),
+  lib\pages\my_listings_page.dart:902:                                    ),
+  lib\pages\my_listings_page.dart:903:                                  );
+  lib\pages\my_listings_page.dart:904:                                  break;
+  lib\pages\my_listings_page.dart:966:                            child: GestureDetector(
+  lib\pages\my_listings_page.dart:967:                              onTap: () {
+> lib\pages\my_listings_page.dart:968:                                SafeNavigator.push(
+  lib\pages\my_listings_page.dart:969:                                  MaterialPageRoute(
+  lib\pages\my_listings_page.dart:970:                                    builder: (context) => ProductDetailPage(
+  lib\pages\my_listings_page.dart:971:                                      productId: listing['id']?.toString(),
+  lib\pages\my_listings_page.dart:972:                                      productData: listing,
+  lib\pages\my_listings_page.dart:973:                                    ),
+  lib\pages\my_listings_page.dart:974:                                  ),
+  lib\pages\my_listings_page.dart:1271:                      ),
+  lib\pages\my_listings_page.dart:1272:                      child: TextButton(
+> lib\pages\my_listings_page.dart:1273:                        onPressed: () => Navigator.pop(context),
+  lib\pages\my_listings_page.dart:1274:                        child: Text(
+  lib\pages\my_listings_page.dart:1275:                          'Close',
+  lib\pages\my_listings_page.dart:1276:                          style: TextStyle(
+  lib\pages\my_listings_page.dart:1277:                            fontSize: 13.sp,
+  lib\pages\my_listings_page.dart:1278:                            color: Colors.white,
+  lib\pages\my_listings_page.dart:1279:                            fontWeight: FontWeight.w600,
+  lib\pages\my_listings_page.dart:1740:              child: ElevatedButton.icon(
+  lib\pages\my_listings_page.dart:1741:                onPressed: () {
+> lib\pages\my_listings_page.dart:1742:                  SafeNavigator.push(
+  lib\pages\my_listings_page.dart:1743:                    MaterialPageRoute(
+  lib\pages\my_listings_page.dart:1744:                        builder: (context) => const SellFormPage()),
+  lib\pages\my_listings_page.dart:1745:                  );
+  lib\pages\my_listings_page.dart:1746:                },
+  lib\pages\my_listings_page.dart:1747:                icon: Icon(Icons.add, color: Colors.white, size: 16.r),
+  lib\pages\my_listings_page.dart:1748:                label: Text('Create Your First Listing',
+  lib\pages\notification_page.dart:401:      case 'message':
+  lib\pages\notification_page.dart:402:        if (listingId != null && listingId.isNotEmpty) {
+> lib\pages\notification_page.dart:403:          await navPush('/listing', arguments: listingId);
+  lib\pages\notification_page.dart:404:        } else {
+  lib\pages\notification_page.dart:405:          _showSnack('Cannot open message: missing listing ID', isError: true);
+  lib\pages\notification_page.dart:406:        }
+  lib\pages\notification_page.dart:407:        break;
+  lib\pages\notification_page.dart:408:
+  lib\pages\notification_page.dart:409:      case 'offer':
+  lib\pages\notification_page.dart:410:      case 'system':
+  lib\pages\notification_page.dart:411:        if (listingId != null && listingId.isNotEmpty) {
+> lib\pages\notification_page.dart:412:          await navPush('/listing', arguments: listingId);
+  lib\pages\notification_page.dart:413:        } else {
+  lib\pages\notification_page.dart:414:          _showSnack('Cannot open notification: missing listing ID', isError: true);
+  lib\pages\notification_page.dart:415:        }
+  lib\pages\notification_page.dart:416:        break;
+  lib\pages\notification_page.dart:417:
+  lib\pages\notification_page.dart:418:      case 'wishlist':
+  lib\pages\notification_page.dart:420:      default:
+  lib\pages\notification_page.dart:421:        if (listingId != null && listingId.isNotEmpty) {
+> lib\pages\notification_page.dart:422:          await navPush('/listing', arguments: listingId);
+  lib\pages\notification_page.dart:423:        } else {
+  lib\pages\notification_page.dart:424:          _showSnack('Cannot open notification: missing listing ID', isError: true);
+  lib\pages\notification_page.dart:425:        }
+  lib\pages\notification_page.dart:426:        break;
+  lib\pages\notification_page.dart:427:    }
+  lib\pages\notification_page.dart:428:  }
+  lib\pages\notification_page.dart:504:                child: ElevatedButton.icon(
+  lib\pages\notification_page.dart:505:                  onPressed: () async {
+> lib\pages\notification_page.dart:506:                    await navReplaceAll('/welcome'); // 统一路由
+  lib\pages\notification_page.dart:507:                  },
+  lib\pages\notification_page.dart:508:                  style: ElevatedButton.styleFrom(
+  lib\pages\notification_page.dart:509:                    backgroundColor: Colors.transparent,
+  lib\pages\notification_page.dart:510:                    shadowColor: Colors.transparent,
+  lib\pages\notification_page.dart:511:                    padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+  lib\pages\notification_page.dart:512:                    shape: RoundedRectangleBorder(
+  lib\pages\offer_detail_page.dart:468:                      listingId: _offerDetails?['listing_id'] as String?,
+  lib\pages\offer_detail_page.dart:469:                    );
+> lib\pages\offer_detail_page.dart:470:                    Navigator.of(ctx).pop();
+  lib\pages\offer_detail_page.dart:471:                    if (ok) {
+  lib\pages\offer_detail_page.dart:472:                      _showSnackBar(
+  lib\pages\offer_detail_page.dart:473:                          'Report submitted. Thank you for keeping the community safe.');
+  lib\pages\offer_detail_page.dart:474:                    } else {
+  lib\pages\offer_detail_page.dart:475:                      _showSnackBar('Failed to submit report', isError: true);
+  lib\pages\offer_detail_page.dart:476:                    }
+  lib\pages\product_detail_page.dart:293:
+  lib\pages\product_detail_page.dart:294:    if (sellerId != null) {
+> lib\pages\product_detail_page.dart:295:      SafeNavigator.push(
+  lib\pages\product_detail_page.dart:296:        MaterialPageRoute(
+  lib\pages\product_detail_page.dart:297:          builder: (context) => SellerProfileViewPage(
+  lib\pages\product_detail_page.dart:298:            sellerId: sellerId,
+  lib\pages\product_detail_page.dart:299:            initialSellerData: sellerInfo,
+  lib\pages\product_detail_page.dart:300:            verificationType: _sellerBadge, // ✅ [CORRECT] 传递正确的徽章枚举
+  lib\pages\product_detail_page.dart:301:          ),
+  lib\pages\product_detail_page.dart:542:        actions: [
+  lib\pages\product_detail_page.dart:543:          TextButton(
+> lib\pages\product_detail_page.dart:544:            onPressed: () => Navigator.pop(ctx),
+  lib\pages\product_detail_page.dart:545:            child: const Text('OK'),
+  lib\pages\product_detail_page.dart:546:          ),
+  lib\pages\product_detail_page.dart:547:        ],
+  lib\pages\product_detail_page.dart:548:      ),
+  lib\pages\product_detail_page.dart:549:    );
+  lib\pages\product_detail_page.dart:550:  }
+  lib\pages\product_detail_page.dart:608:        actions: [
+  lib\pages\product_detail_page.dart:609:          TextButton(
+> lib\pages\product_detail_page.dart:610:              onPressed: () => Navigator.pop(ctx, false),
+  lib\pages\product_detail_page.dart:611:              child: const Text('Cancel')),
+  lib\pages\product_detail_page.dart:612:          ElevatedButton(
+> lib\pages\product_detail_page.dart:613:              onPressed: () => Navigator.pop(ctx, true),
+  lib\pages\product_detail_page.dart:614:              child: Text(confirmText)),
+  lib\pages\product_detail_page.dart:615:        ],
+  lib\pages\product_detail_page.dart:616:      ),
+  lib\pages\product_detail_page.dart:617:    );
+  lib\pages\product_detail_page.dart:618:  }
+  lib\pages\product_detail_page.dart:619:  // ======================================================
+  lib\pages\product_detail_page.dart:908:                  ),
+  lib\pages\product_detail_page.dart:909:                  IconButton(
+> lib\pages\product_detail_page.dart:910:                    onPressed: () => Navigator.pop(sheetCtx), // [✅ 补丁] 使用 sheetCtx
+  lib\pages\product_detail_page.dart:911:                    icon: Container(
+  lib\pages\product_detail_page.dart:912:                      padding: EdgeInsets.all(6.r),
+  lib\pages\product_detail_page.dart:913:                      decoration: BoxDecoration(
+  lib\pages\product_detail_page.dart:914:                        color: Colors.grey[100],
+  lib\pages\product_detail_page.dart:915:                        shape: BoxShape.circle,
+  lib\pages\product_detail_page.dart:916:                      ),
+  lib\pages\product_detail_page.dart:1064:                        return;
+  lib\pages\product_detail_page.dart:1065:                      }
+> lib\pages\product_detail_page.dart:1066:                      Navigator.pop(sheetCtx); // [✅ 补丁] 使用 sheetCtx
+  lib\pages\product_detail_page.dart:1067:                      await _recordInquiry('offer');
+  lib\pages\product_detail_page.dart:1068:                      await _sendOffer(
+  lib\pages\product_detail_page.dart:1069:                        amount,
+  lib\pages\product_detail_page.dart:1070:                        messageController.text.trim().isEmpty
+  lib\pages\product_detail_page.dart:1071:                            ? null
+  lib\pages\product_detail_page.dart:1072:                            : messageController.text.trim(),
+  lib\pages\product_detail_page.dart:1227:              text: 'Share via other apps',
+  lib\pages\product_detail_page.dart:1228:              onTap: () async {
+> lib\pages\product_detail_page.dart:1229:                Navigator.pop(ctx);
+  lib\pages\product_detail_page.dart:1230:                await Share.share(text, subject: 'Swaply: $title');
+  lib\pages\product_detail_page.dart:1231:              },
+  lib\pages\product_detail_page.dart:1232:            ),
+  lib\pages\product_detail_page.dart:1233:            divider,
+  lib\pages\product_detail_page.dart:1234:            _actionTile(
+  lib\pages\product_detail_page.dart:1235:              icon: Icons.link_rounded,
+  lib\pages\product_detail_page.dart:1239:              onTap: () async {
+  lib\pages\product_detail_page.dart:1240:                await Clipboard.setData(ClipboardData(text: url));
+> lib\pages\product_detail_page.dart:1241:                Navigator.pop(ctx);
+  lib\pages\product_detail_page.dart:1242:                _toast('Link copied');
+  lib\pages\product_detail_page.dart:1243:              },
+  lib\pages\product_detail_page.dart:1244:            ),
+  lib\pages\product_detail_page.dart:1245:            divider,
+  lib\pages\product_detail_page.dart:1246:            _actionTile(
+  lib\pages\product_detail_page.dart:1247:              icon: Icons.chat_rounded,
+  lib\pages\product_detail_page.dart:1249:              text: 'Share to WhatsApp',
+  lib\pages\product_detail_page.dart:1250:              onTap: () async {
+> lib\pages\product_detail_page.dart:1251:                Navigator.pop(ctx);
+  lib\pages\product_detail_page.dart:1252:                // ✅ 使用 ShareUtils 统一处理（iOS/Android + 商店回退）
+  lib\pages\product_detail_page.dart:1253:                await ShareUtils.toWhatsApp(text: text);
+  lib\pages\product_detail_page.dart:1254:              },
+  lib\pages\product_detail_page.dart:1255:            ),
+  lib\pages\product_detail_page.dart:1256:            divider,
+  lib\pages\product_detail_page.dart:1257:            _actionTile(
+  lib\pages\product_detail_page.dart:1260:              text: 'Share to Telegram',
+  lib\pages\product_detail_page.dart:1261:              onTap: () async {
+> lib\pages\product_detail_page.dart:1262:                Navigator.pop(ctx);
+  lib\pages\product_detail_page.dart:1263:                await ShareUtils.toTelegram(url: url, text: text);
+  lib\pages\product_detail_page.dart:1264:              },
+  lib\pages\product_detail_page.dart:1265:            ),
+  lib\pages\product_detail_page.dart:1266:            divider,
+  lib\pages\product_detail_page.dart:1267:            _actionTile(
+  lib\pages\product_detail_page.dart:1268:              icon: Icons.public_rounded,
+  lib\pages\product_detail_page.dart:1270:              text: 'Share to Facebook',
+  lib\pages\product_detail_page.dart:1271:              onTap: () async {
+> lib\pages\product_detail_page.dart:1272:                Navigator.pop(ctx);
+  lib\pages\product_detail_page.dart:1273:                await ShareUtils.toFacebook(url: url);
+  lib\pages\product_detail_page.dart:1274:              },
+  lib\pages\product_detail_page.dart:1275:            ),
+  lib\pages\product_detail_page.dart:1276:            SizedBox(height: MediaQuery.of(ctx).padding.bottom + 6),
+  lib\pages\product_detail_page.dart:1277:          ],
+  lib\pages\product_detail_page.dart:1278:        );
+  lib\pages\product_detail_page.dart:1354:            flexibleSpace: FlexibleSpaceBar(background: _buildImageCarousel()),
+  lib\pages\product_detail_page.dart:1355:            leading: IconButton(
+> lib\pages\product_detail_page.dart:1356:              onPressed: () => Navigator.pop(context),
+  lib\pages\product_detail_page.dart:1357:              icon: Icon(Icons.arrow_back, color: Colors.grey[800]),
+  lib\pages\product_detail_page.dart:1358:              iconSize: 22,
+  lib\pages\product_detail_page.dart:1359:              constraints: _topIconConstraints,
+  lib\pages\product_detail_page.dart:1360:              padding: const EdgeInsets.all(10),
+  lib\pages\product_detail_page.dart:1361:            ),
+  lib\pages\product_detail_page.dart:1362:            actions: [
+  lib\pages\product_detail_page.dart:2028:
+  lib\pages\product_detail_page.dart:2029:  void _showImageViewer(int initialIndex) {
+> lib\pages\product_detail_page.dart:2030:    SafeNavigator.push(
+  lib\pages\product_detail_page.dart:2031:      MaterialPageRoute(
+  lib\pages\product_detail_page.dart:2032:        builder: (context) => Scaffold(
+  lib\pages\product_detail_page.dart:2033:          backgroundColor: Colors.black,
+  lib\pages\product_detail_page.dart:2034:          appBar: AppBar(
+  lib\pages\product_detail_page.dart:2035:            backgroundColor: Colors.transparent,
+  lib\pages\product_detail_page.dart:2036:            elevation: 0,
+  lib\pages\product_detail_page.dart:2037:            leading: IconButton(
+  lib\pages\product_detail_page.dart:2038:              icon: const Icon(Icons.close, color: Colors.white),
+> lib\pages\product_detail_page.dart:2039:              onPressed: () => Navigator.pop(context),
+  lib\pages\product_detail_page.dart:2040:            ),
+  lib\pages\product_detail_page.dart:2041:            actions: [
+  lib\pages\product_detail_page.dart:2042:              Container(
+  lib\pages\product_detail_page.dart:2043:                margin: EdgeInsets.all(8.r),
+  lib\pages\product_detail_page.dart:2044:                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+  lib\pages\product_detail_page.dart:2045:                decoration: BoxDecoration(
+  lib\pages\product_detail_page.dart:2173:                itemBuilder: (ctx, i) => ListTile(
+  lib\pages\product_detail_page.dart:2174:                  title: Text(types[i]),
+> lib\pages\product_detail_page.dart:2175:                  onTap: () => Navigator.pop(ctx, types[i]),
+  lib\pages\product_detail_page.dart:2176:                ),
+  lib\pages\product_detail_page.dart:2177:              ),
+  lib\pages\product_detail_page.dart:2178:              // [✅ 补丁] 移除硬编码的SizedBox, SafeArea 会自动处理
+  lib\pages\product_detail_page.dart:2179:            ],
+  lib\pages\product_detail_page.dart:2180:          ),
+  lib\pages\product_detail_page.dart:2181:        );
+  lib\pages\profile_page.dart:372:                  children: [
+  lib\pages\profile_page.dart:373:                    TextButton(
+> lib\pages\profile_page.dart:374:                      onPressed: () => Navigator.of(dialogCtx).maybePop(false),
+  lib\pages\profile_page.dart:375:                      style: TextButton.styleFrom(
+  lib\pages\profile_page.dart:376:                          padding: const EdgeInsets.symmetric(
+  lib\pages\profile_page.dart:377:                              horizontal: 24, vertical: 12)),
+  lib\pages\profile_page.dart:378:                      child:
+  lib\pages\profile_page.dart:379:                      const Text('Cancel', style: TextStyle(fontSize: 15)),
+  lib\pages\profile_page.dart:380:                    ),
+  lib\pages\profile_page.dart:387:                      ),
+  lib\pages\profile_page.dart:388:                      child: ElevatedButton(
+> lib\pages\profile_page.dart:389:                        onPressed: () => Navigator.of(dialogCtx).maybePop(true),
+  lib\pages\profile_page.dart:390:                        style: ElevatedButton.styleFrom(
+  lib\pages\profile_page.dart:391:                          backgroundColor: Colors.transparent,
+  lib\pages\profile_page.dart:392:                          shadowColor: Colors.transparent,
+  lib\pages\profile_page.dart:393:                          padding: const EdgeInsets.symmetric(
+  lib\pages\profile_page.dart:394:                              horizontal: 28, vertical: 12),
+  lib\pages\profile_page.dart:395:                          shape: RoundedRectangleBorder(
+  lib\pages\profile_page.dart:723:                              title: l10n.myListings,
+  lib\pages\profile_page.dart:724:                              color: Colors.indigo,
+> lib\pages\profile_page.dart:725:                              onTap: () => SafeNavigator.push(
+  lib\pages\profile_page.dart:726:                                  MaterialPageRoute(
+  lib\pages\profile_page.dart:727:                                      builder: (_) => const MyListingsPage())),
+  lib\pages\profile_page.dart:728:                            ),
+  lib\pages\profile_page.dart:729:                            const SizedBox(height: 14),
+  lib\pages\profile_page.dart:730:                            _ProfileOptionEnhanced(
+  lib\pages\profile_page.dart:731:                              icon: Icons.favorite_rounded,
+  lib\pages\profile_page.dart:743:                                  return;
+  lib\pages\profile_page.dart:744:                                }
+> lib\pages\profile_page.dart:745:                                SafeNavigator.push(
+  lib\pages\profile_page.dart:746:                                    MaterialPageRoute(
+  lib\pages\profile_page.dart:747:                                        builder: (_) => const WishlistPage()));
+  lib\pages\profile_page.dart:748:                              },
+  lib\pages\profile_page.dart:749:                            ),
+  lib\pages\profile_page.dart:750:                            const SizedBox(height: 14),
+  lib\pages\profile_page.dart:751:
+  lib\pages\profile_page.dart:755:                              subtitle: 'Earn coupons by inviting friends',
+  lib\pages\profile_page.dart:756:                              color: Colors.orange,
+> lib\pages\profile_page.dart:757:                              onTap: () => SafeNavigator.push(
+  lib\pages\profile_page.dart:758:                                MaterialPageRoute(
+  lib\pages\profile_page.dart:759:                                    builder: (_) => const InviteFriendsPage()),
+  lib\pages\profile_page.dart:760:                              ),
+  lib\pages\profile_page.dart:761:                            ),
+  lib\pages\profile_page.dart:762:                            const SizedBox(height: 14),
+  lib\pages\profile_page.dart:763:
+  lib\pages\profile_page.dart:767:                              subtitle: 'View and manage your coupons',
+  lib\pages\profile_page.dart:768:                              color: Colors.purple,
+> lib\pages\profile_page.dart:769:                              onTap: () => SafeNavigator.push(
+  lib\pages\profile_page.dart:770:                                MaterialPageRoute(
+  lib\pages\profile_page.dart:771:                                    builder: (_) =>
+  lib\pages\profile_page.dart:772:                                    const CouponManagementPage()),
+  lib\pages\profile_page.dart:773:                              ),
+  lib\pages\profile_page.dart:774:                            ),
+  lib\pages\profile_page.dart:775:                            const SizedBox(height: 28),
+  lib\pages\profile_page.dart:788:                              subtitle: 'Password, devices, delete',
+  lib\pages\profile_page.dart:789:                              color: Colors.cyan,
+> lib\pages\profile_page.dart:790:                              onTap: () => SafeNavigator.push(
+  lib\pages\profile_page.dart:791:                                MaterialPageRoute(
+  lib\pages\profile_page.dart:792:                                  builder: (_) => const AccountSettingsPage(),
+  lib\pages\profile_page.dart:793:                                ),
+  lib\pages\profile_page.dart:794:                              ),
+  lib\pages\profile_page.dart:795:                            ),
+  lib\pages\profile_page.dart:796:                            const SizedBox(height: 14),
+  lib\pages\profile_page.dart:822:                              title: l10n.helpSupport,
+  lib\pages\profile_page.dart:823:                              color: Colors.teal,
+> lib\pages\profile_page.dart:824:                              onTap: () => SafeNavigator.push(
+  lib\pages\profile_page.dart:825:                                  MaterialPageRoute(
+  lib\pages\profile_page.dart:826:                                      builder: (_) =>
+  lib\pages\profile_page.dart:827:                                      const HelpSupportPage())),
+  lib\pages\profile_page.dart:828:                            ),
+  lib\pages\profile_page.dart:829:                            const SizedBox(height: 14),
+  lib\pages\profile_page.dart:830:                            _ProfileOptionEnhanced(
+  lib\pages\profile_page.dart:832:                              title: l10n.about,
+  lib\pages\profile_page.dart:833:                              color: Colors.blueGrey,
+> lib\pages\profile_page.dart:834:                              onTap: () => SafeNavigator.push(
+  lib\pages\profile_page.dart:835:                                  MaterialPageRoute(
+  lib\pages\profile_page.dart:836:                                      builder: (_) => const AboutPage())),
+  lib\pages\profile_page.dart:837:                            ),
+  lib\pages\profile_page.dart:838:                            const SizedBox(height: 28),
+  lib\pages\profile_page.dart:839:                            _ProfileOptionEnhanced(
+  lib\pages\profile_page.dart:840:                              icon: Icons.logout_rounded,
+  lib\pages\profile_page.dart:876:                                      TextButton(
+  lib\pages\profile_page.dart:877:                                          onPressed: () =>
+> lib\pages\profile_page.dart:878:                                              Navigator.of(ctx).pop(false),
+  lib\pages\profile_page.dart:879:                                          child: Text('Cancel',
+  lib\pages\profile_page.dart:880:                                              style: TextStyle(
+  lib\pages\profile_page.dart:881:                                                  fontSize: 15,
+  lib\pages\profile_page.dart:882:                                                  color: Colors.grey[600]))),
+  lib\pages\profile_page.dart:883:                                      Container(
+  lib\pages\profile_page.dart:884:                                        decoration: BoxDecoration(
+  lib\pages\profile_page.dart:888:                                        child: TextButton(
+  lib\pages\profile_page.dart:889:                                          onPressed: () =>
+> lib\pages\profile_page.dart:890:                                              Navigator.of(ctx).pop(true),
+  lib\pages\profile_page.dart:891:                                          child: const Text('Logout',
+  lib\pages\profile_page.dart:892:                                              style: TextStyle(
+  lib\pages\profile_page.dart:893:                                                  color: Colors.white,
+  lib\pages\profile_page.dart:894:                                                  fontSize: 15,
+  lib\pages\profile_page.dart:895:                                                  fontWeight: FontWeight.w600)),
+  lib\pages\profile_page.dart:896:                                        ),
+  lib\pages\profile_page.dart:904:
+  lib\pages\profile_page.dart:905:                                  // 2) 先切换到登录页
+> lib\pages\profile_page.dart:906:                                  navReplaceAll('/login');
+  lib\pages\profile_page.dart:907:
+  lib\pages\profile_page.dart:908:                                  // 3) 清理本地缓存
+  lib\pages\profile_page.dart:909:                                  RewardService.clearCache();
+  lib\pages\profile_page.dart:910:
+  lib\pages\profile_page.dart:911:                                  // 4) ✅ 统一走业务封装（补丁1），不再直接调 supabase
+  lib\pages\profile_page.dart:912:                                  unawaited(AuthService()
+  lib\pages\profile_page.dart:1257:          title: l10n.helpSupport,
+  lib\pages\profile_page.dart:1258:          color: Colors.blue,
+> lib\pages\profile_page.dart:1259:          onTap: () => SafeNavigator.push(
+  lib\pages\profile_page.dart:1260:              MaterialPageRoute(builder: (_) => const HelpSupportPage())),
+  lib\pages\profile_page.dart:1261:        ),
+  lib\pages\profile_page.dart:1262:        const SizedBox(height: 12),
+  lib\pages\profile_page.dart:1263:        _ProfileOptionEnhanced(
+  lib\pages\profile_page.dart:1264:          icon: Icons.info_outline_rounded,
+  lib\pages\profile_page.dart:1265:          title: l10n.about,
+  lib\pages\profile_page.dart:1266:          color: Colors.indigo,
+> lib\pages\profile_page.dart:1267:          onTap: () => SafeNavigator.push(
+  lib\pages\profile_page.dart:1268:              MaterialPageRoute(builder: (_) => const AboutPage())),
+  lib\pages\profile_page.dart:1269:        ),
+  lib\pages\profile_page.dart:1270:      ],
+  lib\pages\profile_page.dart:1271:    );
+  lib\pages\profile_page.dart:1272:  }
+  lib\pages\profile_page.dart:1273:}
+  lib\pages\saved_page.dart:659:          onTap: () async {
+  lib\pages\saved_page.dart:660:            if (listingId.isEmpty) return;
+> lib\pages\saved_page.dart:661:            await navPush('/listing', arguments: listingId);
+  lib\pages\saved_page.dart:662:            _loadFavorites(); // 返回后刷新
+  lib\pages\saved_page.dart:663:          },
+  lib\pages\saved_page.dart:664:          borderRadius: BorderRadius.circular(8.w),
+  lib\pages\saved_page.dart:665:          child: Padding(
+  lib\pages\saved_page.dart:666:            padding: EdgeInsets.all(8.w),
+  lib\pages\saved_page.dart:667:            child: Row(
+  lib\pages\saved_page.dart:971:                child: ElevatedButton.icon(
+  lib\pages\saved_page.dart:972:                  onPressed: () async {
+> lib\pages\saved_page.dart:973:                    await navReplaceAll('/welcome'); // 统一全局导航
+  lib\pages\saved_page.dart:974:                  },
+  lib\pages\saved_page.dart:975:                  style: ElevatedButton.styleFrom(
+  lib\pages\saved_page.dart:976:                    backgroundColor: Colors.transparent,
+  lib\pages\saved_page.dart:977:                    shadowColor: Colors.transparent,
+  lib\pages\saved_page.dart:978:                    padding:
+  lib\pages\saved_page.dart:979:                    EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+  lib\pages\search_results_page.dart:139:    };
+  lib\pages\search_results_page.dart:140:
+> lib\pages\search_results_page.dart:141:    SafeNavigator.push(
+  lib\pages\search_results_page.dart:142:      MaterialPageRoute(
+  lib\pages\search_results_page.dart:143:        builder: (_) => ProductDetailPage(
+  lib\pages\search_results_page.dart:144:          productId: item['id']?.toString(),
+  lib\pages\search_results_page.dart:145:          productData: pdData,
+  lib\pages\search_results_page.dart:146:        ),
+  lib\pages\search_results_page.dart:147:      ),
+  lib\pages\search_results_page.dart:312:        leading: IconButton(
+  lib\pages\search_results_page.dart:313:          icon: const Icon(Icons.arrow_back, color: Colors.white),
+> lib\pages\search_results_page.dart:314:          onPressed: () => Navigator.pop(context),
+  lib\pages\search_results_page.dart:315:        ),
+  lib\pages\search_results_page.dart:316:        centerTitle: false,
+  lib\pages\search_results_page.dart:317:        elevation: 0,
+  lib\pages\search_results_page.dart:318:      );
+  lib\pages\search_results_page.dart:319:    }
+  lib\pages\search_results_page.dart:320:
+  lib\pages\search_results_page.dart:336:                  width: 32, height: 32,
+  lib\pages\search_results_page.dart:337:                  child: GestureDetector(
+> lib\pages\search_results_page.dart:338:                    onTap: () => Navigator.pop(context),
+  lib\pages\search_results_page.dart:339:                    child: Container(
+  lib\pages\search_results_page.dart:340:                      decoration: BoxDecoration(
+  lib\pages\search_results_page.dart:341:                        color: Colors.white.withOpacity(0.15),
+  lib\pages\search_results_page.dart:342:                        borderRadius: BorderRadius.circular(10),
+  lib\pages\search_results_page.dart:343:                      ),
+  lib\pages\search_results_page.dart:344:                      alignment: Alignment.center,
+  lib\pages\seller_profile_page.dart:210:          leading: IconButton(
+  lib\pages\seller_profile_page.dart:211:            icon: Icon(Icons.arrow_back, color: Colors.grey[800]),
+> lib\pages\seller_profile_page.dart:212:            onPressed: () => Navigator.pop(context),
+  lib\pages\seller_profile_page.dart:213:          ),
+  lib\pages\seller_profile_page.dart:214:        ),
+  lib\pages\seller_profile_page.dart:215:        body: const Center(child: CircularProgressIndicator()),
+  lib\pages\seller_profile_page.dart:216:      );
+  lib\pages\seller_profile_page.dart:217:    }
+  lib\pages\seller_profile_page.dart:218:
+  lib\pages\seller_profile_page.dart:239:            leading: IconButton(
+  lib\pages\seller_profile_page.dart:240:              icon: const Icon(Icons.arrow_back, color: Colors.white),
+> lib\pages\seller_profile_page.dart:241:              onPressed: () => Navigator.pop(context),
+  lib\pages\seller_profile_page.dart:242:            ),
+  lib\pages\seller_profile_page.dart:243:            flexibleSpace: FlexibleSpaceBar(
+  lib\pages\seller_profile_page.dart:244:              collapseMode: CollapseMode.pin,
+  lib\pages\seller_profile_page.dart:245:              background: Container(
+  lib\pages\seller_profile_page.dart:246:                decoration: BoxDecoration(
+  lib\pages\seller_profile_page.dart:247:                  gradient: LinearGradient(
+  lib\pages\seller_profile_page.dart:442:    return InkWell(
+  lib\pages\seller_profile_page.dart:443:      onTap: () {
+> lib\pages\seller_profile_page.dart:444:        SafeNavigator.push(
+  lib\pages\seller_profile_page.dart:445:          MaterialPageRoute(
+  lib\pages\seller_profile_page.dart:446:            builder: (_) => ProductDetailPage(
+  lib\pages\seller_profile_page.dart:447:              productId: listing['id'].toString(),
+  lib\pages\seller_profile_page.dart:448:              productData: listing,
+  lib\pages\seller_profile_page.dart:449:            ),
+  lib\pages\seller_profile_page.dart:450:          ),
+  lib\pages\sell_form_page.dart:515:    _toast('Posted locally (mock data).');
+  lib\pages\sell_form_page.dart:516:    if (!mounted) return;
+> lib\pages\sell_form_page.dart:517:    SafeNavigator.push(
+  lib\pages\sell_form_page.dart:518:      MaterialPageRoute(
+  lib\pages\sell_form_page.dart:519:        builder: (_) =>
+  lib\pages\sell_form_page.dart:520:            pd.ProductDetailPage(productId: id, productData: listing),
+  lib\pages\sell_form_page.dart:521:      ),
+  lib\pages\sell_form_page.dart:522:    );
+  lib\pages\sell_form_page.dart:523:  }
+  lib\pages\sell_form_page.dart:669:      // ① 关闭 loading（如果当前页被 push，maybePop 会关闭它；如果是 Overlay 模式，此操作确保关闭顶层）
+  lib\pages\sell_form_page.dart:670:      if (mounted) {
+> lib\pages\sell_form_page.dart:671:        Navigator.of(context, rootNavigator: true).maybePop();
+  lib\pages\sell_form_page.dart:672:      }
+  lib\pages\sell_form_page.dart:673:
+  lib\pages\sell_form_page.dart:674:      // ② 跳详情（使用 navReplaceAll 清除旧页面，防止返回到表单）
+  lib\pages\sell_form_page.dart:675:      if (newId != null) {
+> lib\pages\sell_form_page.dart:676:        await navReplaceAll('/listing', arguments: newId);
+  lib\pages\sell_form_page.dart:677:      }
+  lib\pages\sell_form_page.dart:678:
+  lib\pages\sell_form_page.dart:679:      // ③ 成功后不写 setState，也不要 finally 块去重置 _submitting
+  lib\pages\sell_form_page.dart:680:
+  lib\pages\sell_form_page.dart:681:    } catch (e) {
+  lib\pages\sell_form_page.dart:682:      if (!mounted) return;
+  lib\pages\sell_form_page.dart:882:                        'Camera',
+  lib\pages\sell_form_page.dart:883:                            () async {
+> lib\pages\sell_form_page.dart:884:                          Navigator.pop(ctx);
+  lib\pages\sell_form_page.dart:885:                          final file = await _cameraPicker.pickImage(
+  lib\pages\sell_form_page.dart:886:                            source: ImageSource.camera,
+  lib\pages\sell_form_page.dart:887:                            imageQuality: 80,
+  lib\pages\sell_form_page.dart:888:                          );
+  lib\pages\sell_form_page.dart:889:                          if (file != null && mounted) {
+  lib\pages\sell_form_page.dart:890:                            if (_images.length >= _maxPhotos) {
+  lib\pages\sell_form_page.dart:910:                        'Gallery',
+  lib\pages\sell_form_page.dart:911:                            () async {
+> lib\pages\sell_form_page.dart:912:                          Navigator.pop(ctx);
+  lib\pages\sell_form_page.dart:913:                          final picked = await pickImageBytes();
+  lib\pages\sell_form_page.dart:914:                          if (picked == null) {
+  lib\pages\sell_form_page.dart:915:                            debugPrint('[Picker] cancelled or failed');
+  lib\pages\sell_form_page.dart:916:                            return;
+  lib\pages\sell_form_page.dart:917:                          }
+  lib\pages\sell_form_page.dart:918:                          if (!mounted) return;
+  lib\pages\sell_form_page.dart:1003:          padding: const EdgeInsets.only(left: 8.0, top: 2.0),
+  lib\pages\sell_form_page.dart:1004:          child: IconButton(
+> lib\pages\sell_form_page.dart:1005:            onPressed: () => Navigator.pop(context),
+  lib\pages\sell_form_page.dart:1006:            icon: const Icon(Icons.arrow_back_ios_new,
+  lib\pages\sell_form_page.dart:1007:                color: Colors.white, size: 20),
+  lib\pages\sell_form_page.dart:1008:          ),
+  lib\pages\sell_form_page.dart:1009:        ),
+  lib\pages\sell_form_page.dart:1010:        title: const Text(
+  lib\pages\sell_form_page.dart:1011:          title,
+  lib\pages\sell_form_page.dart:1026:      height: kButtonSize,
+  lib\pages\sell_form_page.dart:1027:      child: GestureDetector(
+> lib\pages\sell_form_page.dart:1028:        onTap: () => Navigator.pop(context),
+  lib\pages\sell_form_page.dart:1029:        child: Container(
+  lib\pages\sell_form_page.dart:1030:          decoration: BoxDecoration(
+  lib\pages\sell_form_page.dart:1031:            color: Colors.white.withOpacity(0.15),
+  lib\pages\sell_form_page.dart:1032:            borderRadius: BorderRadius.circular(10),
+  lib\pages\sell_form_page.dart:1033:          ),
+  lib\pages\sell_form_page.dart:1034:          alignment: Alignment.center,
+  lib\pages\sell_form_page.dart:1591:                                }
+  lib\pages\sell_form_page.dart:1592:                              });
+> lib\pages\sell_form_page.dart:1593:                              Navigator.pop(ctx);
+  lib\pages\sell_form_page.dart:1594:                            },
+  lib\pages\sell_form_page.dart:1595:                            child: Container(
+  lib\pages\sell_form_page.dart:1596:                              padding: EdgeInsets.symmetric(
+  lib\pages\sell_form_page.dart:1597:                                  horizontal: 12.w, vertical: 10.h),
+  lib\pages\sell_form_page.dart:1598:                              decoration: BoxDecoration(
+  lib\pages\sell_form_page.dart:1599:                                color: Colors.grey.shade50,
+  lib\pages\sell_page.dart:98:                // 右上角小胶囊按钮（更小、完全包住、图标居中）
+  lib\pages\sell_page.dart:99:                _CapsuleIconButton(
+> lib\pages\sell_page.dart:100:                  onTap: () => navPush('/sell-form'),
+  lib\pages\sell_page.dart:101:                  tooltip: 'Add New Listing',
+  lib\pages\sell_page.dart:102:                  icon: Icons.add_rounded,
+  lib\pages\sell_page.dart:103:                ),
+  lib\pages\sell_page.dart:104:              ],
+  lib\pages\sell_page.dart:105:            ),
+  lib\pages\sell_page.dart:106:          ),
+  lib\pages\sell_page.dart:138:                    ),
+  lib\pages\sell_page.dart:139:                    _CapsuleIconButton(
+> lib\pages\sell_page.dart:140:                      onTap: () => navReplaceAll('/welcome'),
+  lib\pages\sell_page.dart:141:                      tooltip: l10n.loginNow,
+  lib\pages\sell_page.dart:142:                      icon: Icons.login_rounded,
+  lib\pages\sell_page.dart:143:                    ),
+  lib\pages\sell_page.dart:144:                  ],
+  lib\pages\sell_page.dart:145:                ),
+  lib\pages\sell_page.dart:146:              ),
+  lib\pages\sell_page.dart:221:                    ),
+  lib\pages\sell_page.dart:222:                    child: ElevatedButton.icon(
+> lib\pages\sell_page.dart:223:                      onPressed: () => navReplaceAll('/welcome'),
+  lib\pages\sell_page.dart:224:                      style: ElevatedButton.styleFrom(
+  lib\pages\sell_page.dart:225:                        backgroundColor: Colors.transparent,
+  lib\pages\sell_page.dart:226:                        shadowColor: Colors.transparent,
+  lib\pages\sell_page.dart:227:                        shape: RoundedRectangleBorder(
+  lib\pages\sell_page.dart:228:                          borderRadius: BorderRadius.circular(14.r),
+  lib\pages\sell_page.dart:229:                        ),
+  lib\pages\sell_page.dart:345:                        ),
+  lib\pages\sell_page.dart:346:                      ),
+> lib\pages\sell_page.dart:347:                      onPressed: () => navPush('/sell-form'),
+  lib\pages\sell_page.dart:348:                      icon: Icon(Icons.add_rounded, color: Colors.white, size: 20.r),
+  lib\pages\sell_page.dart:349:                      label: Text(
+  lib\pages\sell_page.dart:350:                        l10n.postNewAd,
+  lib\pages\sell_page.dart:351:                        style: TextStyle(color: Colors.white, fontSize: 14.sp, fontWeight: FontWeight.w700)
+,
+  lib\pages\sell_page.dart:352:                      ),
+  lib\pages\sell_page.dart:353:                    ),
+  lib\pages\sell_page.dart:428:              ),
+  lib\pages\sell_page.dart:429:              child: GestureDetector(
+> lib\pages\sell_page.dart:430:                onTap: () => navPush('/sell-form'),
+  lib\pages\sell_page.dart:431:                child: Row(mainAxisSize: MainAxisSize.min, children: [
+  lib\pages\sell_page.dart:432:                  Icon(Icons.add_rounded, size: 16.r, color: Colors.white),
+  lib\pages\sell_page.dart:433:                  SizedBox(width: 6.w),
+  lib\pages\sell_page.dart:434:                  Text(l10n.newAd, style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w700, color: Co
+lors.white)),
+  lib\pages\sell_page.dart:435:                ]),
+  lib\pages\sell_page.dart:436:              ),
+  lib\pages\sell_page.dart:488:        borderRadius: BorderRadius.circular(18.r),
+  lib\pages\sell_page.dart:489:        child: InkWell(
+> lib\pages\sell_page.dart:490:          onTap: () => navPush('/listing', arguments: {'id': item['id'], 'prefetch': item}),
+  lib\pages\sell_page.dart:491:          borderRadius: BorderRadius.circular(18.r),
+  lib\pages\sell_page.dart:492:          child: Padding(
+  lib\pages\sell_page.dart:493:            padding: EdgeInsets.all(14.w),
+  lib\pages\sell_page.dart:494:            child: Row(
+  lib\pages\sell_page.dart:495:              children: [
+  lib\pages\sell_page.dart:496:                Container(
+  lib\pages\sell_page.dart:607:    switch (action) {
+  lib\pages\sell_page.dart:608:      case 'view':
+> lib\pages\sell_page.dart:609:        navPush('/listing', arguments: {'id': item['id'], 'prefetch': item});
+  lib\pages\sell_page.dart:610:        break;
+  lib\pages\sell_page.dart:611:      case 'edit':
+> lib\pages\sell_page.dart:612:        navPush('/sell-form', arguments: {'id': item['id']});
+  lib\pages\sell_page.dart:613:        break;
+  lib\pages\sell_page.dart:614:      case 'delete':
+  lib\pages\sell_page.dart:615:        _showDeleteDialog(item, l10n);
+  lib\pages\sell_page.dart:616:        break;
+  lib\pages\sell_page.dart:617:    }
+  lib\pages\sell_page.dart:618:  }
+  lib\pages\sell_page.dart:639:        ),
+  lib\pages\sell_page.dart:640:        actions: [
+> lib\pages\sell_page.dart:641:          TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel', style: TextStyle(fontSi
+ze: 13.sp, color: Colors.grey.shade600))),
+  lib\pages\sell_page.dart:642:          Container(
+  lib\pages\sell_page.dart:643:            decoration: BoxDecoration(
+  lib\pages\sell_page.dart:644:              gradient: LinearGradient(colors: [Colors.red.shade400, Colors.red.shade600]),
+  lib\pages\sell_page.dart:645:              borderRadius: BorderRadius.circular(12.r),
+  lib\pages\sell_page.dart:646:            ),
+  lib\pages\sell_page.dart:647:            child: TextButton(
+  lib\pages\sell_page.dart:648:              onPressed: () {
+> lib\pages\sell_page.dart:649:                Navigator.pop(context);
+  lib\pages\sell_page.dart:650:                _deleteListing(item, l10n);
+  lib\pages\sell_page.dart:651:              },
+  lib\pages\sell_page.dart:652:              child: Text('Delete', style: TextStyle(color: Colors.white, fontSize: 13.sp, fontWeight: Font
+Weight.w700)),
+  lib\pages\sell_page.dart:653:            ),
+  lib\pages\sell_page.dart:654:          ),
+  lib\pages\sell_page.dart:655:        ],
+  lib\pages\task_management_page.dart:527:                icon: Icon(Icons.arrow_back_ios_new,
+  lib\pages\task_management_page.dart:528:                    color: Colors.white, size: 18.w),
+> lib\pages\task_management_page.dart:529:                onPressed: () => Navigator.of(context).pop(),
+  lib\pages\task_management_page.dart:530:              ),
+  lib\pages\task_management_page.dart:531:              actions: [
+  lib\pages\task_management_page.dart:532:                Padding(
+  lib\pages\task_management_page.dart:533:                  padding: EdgeInsets.only(right: 16.w),
+  lib\pages\task_management_page.dart:534:                  child: GestureDetector(
+  lib\pages\task_management_page.dart:535:                    onTap: _isRefreshing ? null : _refreshData,
+  lib\pages\task_management_page.dart:580:      height: kButtonSize,
+  lib\pages\task_management_page.dart:581:      child: GestureDetector(
+> lib\pages\task_management_page.dart:582:        onTap: () => Navigator.pop(context),
+  lib\pages\task_management_page.dart:583:        child: Container(
+  lib\pages\task_management_page.dart:584:          decoration: BoxDecoration(
+  lib\pages\task_management_page.dart:585:            color: Colors.white.withOpacity(0.15),
+  lib\pages\task_management_page.dart:586:            borderRadius: BorderRadius.circular(10),
+  lib\pages\task_management_page.dart:587:          ),
+  lib\pages\task_management_page.dart:588:          alignment: Alignment.center,
+  lib\pages\task_management_page.dart:1341:  void _onUseNowPressed(CouponModel coupon) {
+  lib\pages\task_management_page.dart:1342:    if (!coupon.canPin || !coupon.isUsable) return;
+> lib\pages\task_management_page.dart:1343:    SafeNavigator.push(
+  lib\pages\task_management_page.dart:1344:      MaterialPageRoute(
+  lib\pages\task_management_page.dart:1345:        builder: (context) => const SellFormPage(), // ✅ 正确的 WidgetBuilder
+  lib\pages\task_management_page.dart:1346:        settings: RouteSettings(arguments: {'couponId': coupon.id}),
+  lib\pages\task_management_page.dart:1347:      ),
+  lib\pages\task_management_page.dart:1348:    );
+  lib\pages\task_management_page.dart:1349:  }
+  lib\pages\verification_page.dart:1:// lib/pages/verification_page.dart
+  lib\pages\verification_page.dart:2:// ✅ 不刷新会话；不对 profiles 做任何写操作
+> lib\pages\verification_page.dart:3:// ✅ 最小可用流程：输入验证码 → 调服务 → 读表 → 刷新本页 UI → Navigator.pop(true)
+  lib\pages\verification_page.dart:4:// ✅ 判定是否已认证 / 徽章类型：统一走 utils（基于 user_verifications 行）
+  lib\pages\verification_page.dart:5:// ✅ 本次改动：[DONE] iOS 顶部改为 statusBar + 44pt Row 布局，移除魔法数。
+> lib\pages\verification_page.dart:6:// ✅ 成功后：先 VerificationGuard.invalidateCache()，再 Navigator.pop(true)
+  lib\pages\verification_page.dart:7:
+  lib\pages\verification_page.dart:8:import 'dart:async';
+  lib\pages\verification_page.dart:9:
+  lib\pages\verification_page.dart:10:import 'package:flutter/foundation.dart';
+  lib\pages\verification_page.dart:11:import 'package:flutter/material.dart';
+  lib\pages\verification_page.dart:12:import 'package:flutter/services.dart';
+  lib\pages\verification_page.dart:302:                height: 32,
+  lib\pages\verification_page.dart:303:                child: GestureDetector(
+> lib\pages\verification_page.dart:304:                  onTap: () => Navigator.pop(context),
+  lib\pages\verification_page.dart:305:                  child: Container(
+  lib\pages\verification_page.dart:306:                    decoration: BoxDecoration(
+  lib\pages\verification_page.dart:307:                      color: Colors.white.withOpacity(0.15),
+  lib\pages\verification_page.dart:308:                      borderRadius: BorderRadius.circular(10),
+  lib\pages\verification_page.dart:309:                    ),
+  lib\pages\verification_page.dart:310:                    alignment: Alignment.center,
+  lib\pages\wishlist_page.dart:87:      if (user == null) {
+  lib\pages\wishlist_page.dart:88:        // 保持统一的游客跳转逻辑
+> lib\pages\wishlist_page.dart:89:        await navReplaceAll('/welcome');
+  lib\pages\wishlist_page.dart:90:        return;
+  lib\pages\wishlist_page.dart:91:      }
+  lib\pages\wishlist_page.dart:92:
+  lib\pages\wishlist_page.dart:93:      // ⚠️ 用真正的“心愿单” API
+  lib\pages\wishlist_page.dart:94:      final results = await DualFavoritesService.getUserWishlist(
+  lib\pages\wishlist_page.dart:95:        userId: user.id,
+  lib\pages\wishlist_page.dart:218:          if (listingId.isEmpty) return;
+  lib\pages\wishlist_page.dart:219:          // ✅ 统一全局命名路由；返回后刷新
+> lib\pages\wishlist_page.dart:220:          await navPush('/listing', arguments: listingId);
+  lib\pages\wishlist_page.dart:221:          await _loadWishlist();
+  lib\pages\wishlist_page.dart:222:        },
+  lib\pages\wishlist_page.dart:223:        borderRadius: BorderRadius.circular(12.w),
+  lib\pages\wishlist_page.dart:224:        child: Container(
+  lib\pages\wishlist_page.dart:225:          decoration: BoxDecoration(
+  lib\pages\wishlist_page.dart:226:            borderRadius: BorderRadius.circular(12.w),
+  lib\router\nav_throttler.dart:3:
+  lib\router\nav_throttler.dart:4:NavigatorState _rootNav(BuildContext ctx) =>
+> lib\router\nav_throttler.dart:5:    Navigator.of(ctx, rootNavigator: true);
+  lib\router\nav_throttler.dart:6:
+  lib\router\nav_throttler.dart:7:Future<T?> navPushNamed<T>(
+  lib\router\nav_throttler.dart:8:    BuildContext ctx,
+  lib\router\nav_throttler.dart:9:    String name, {
+  lib\router\nav_throttler.dart:10:      Object? arguments,
+  lib\router\nav_throttler.dart:11:    }) {
+  lib\router\nav_throttler.dart:18:      Object? arguments,
+  lib\router\nav_throttler.dart:19:    }) {
+> lib\router\nav_throttler.dart:20:  return _rootNav(ctx).pushNamedAndRemoveUntil<T>(
+  lib\router\nav_throttler.dart:21:    name,
+  lib\router\nav_throttler.dart:22:        (r) => false,
+  lib\router\nav_throttler.dart:23:    arguments: arguments,
+  lib\router\nav_throttler.dart:24:  );
+  lib\router\nav_throttler.dart:25:}
+  lib\router\nav_throttler.dart:26:
+  lib\router\root_nav.dart:27:  final nav = rootNavKey.currentState;
+  lib\router\root_nav.dart:28:  if (nav == null) return null;
+> lib\router\root_nav.dart:29:  return nav.pushNamedAndRemoveUntil<T>(
+  lib\router\root_nav.dart:30:    routeName,
+  lib\router\root_nav.dart:31:        (r) => false,
+  lib\router\root_nav.dart:32:    arguments: arguments,
+  lib\router\root_nav.dart:33:  );
+  lib\router\root_nav.dart:34:}
+  lib\router\root_nav.dart:35:
+  lib\router\safe_navigator.dart:12:  }
+  lib\router\safe_navigator.dart:13:
+> lib\router\safe_navigator.dart:14:  static Future<T?> pushNamedAndRemoveUntil<T extends Object?>(
+  lib\router\safe_navigator.dart:15:      String route,
+  lib\router\safe_navigator.dart:16:      bool Function(Route<dynamic>) predicate, {Object? args}
+  lib\router\safe_navigator.dart:17:      ) async {
+  lib\router\safe_navigator.dart:18:    await Future.microtask(() {});
+  lib\router\safe_navigator.dart:19:    final nav = rootNavKey.currentState;
+  lib\router\safe_navigator.dart:20:    if (nav == null) return null;
+> lib\router\safe_navigator.dart:21:    return nav.pushNamedAndRemoveUntil<T>(route, predicate, arguments: args);
+  lib\router\safe_navigator.dart:22:  }
+  lib\router\safe_navigator.dart:23:
+  lib\router\safe_navigator.dart:24:  /// 支持直接 push(Route) —— 你项目里大量使用 MaterialPageRoute，需要这个
+  lib\router\safe_navigator.dart:25:  static Future<T?> push<T extends Object?>(Route<T> route) async {
+  lib\router\safe_navigator.dart:26:    await Future.microtask(() {});
+  lib\router\safe_navigator.dart:27:    final nav = rootNavKey.currentState;
+  lib\services\app_update_service.dart:120:              if (!force)
+  lib\services\app_update_service.dart:121:                TextButton(
+> lib\services\app_update_service.dart:122:                  onPressed: () => Navigator.of(ctx).pop(),
+  lib\services\app_update_service.dart:123:                  child: const Text('以后再说'),
+  lib\services\app_update_service.dart:124:                ),
+  lib\services\app_update_service.dart:125:              TextButton(
+  lib\services\app_update_service.dart:126:                onPressed: () async {
+  lib\services\app_update_service.dart:127:                  final String? url = Platform.isAndroid
+  lib\services\app_update_service.dart:128:                      ? info.androidApkUrl
+  lib\services\app_update_service.dart:137:
+  lib\services\app_update_service.dart:138:                  if (!force && ctx.mounted) {
+> lib\services\app_update_service.dart:139:                    Navigator.of(ctx).pop();
+  lib\services\app_update_service.dart:140:                  }
+  lib\services\app_update_service.dart:141:                },
+  lib\services\app_update_service.dart:142:                child: const Text('立即更新'),
+  lib\services\app_update_service.dart:143:              ),
+  lib\services\app_update_service.dart:144:            ],
+  lib\services\app_update_service.dart:145:          ),
+  lib\services\auth_flow_observer.dart:59:
+  lib\services\auth_flow_observer.dart:60:    SchedulerBinding.instance.addPostFrameCallback((_) {
+> lib\services\auth_flow_observer.dart:61:      navReplaceAll(route);
+  lib\services\auth_flow_observer.dart:62:    });
+  lib\services\auth_flow_observer.dart:63:
+  lib\services\auth_flow_observer.dart:64:    await Future.delayed(const Duration(milliseconds: 120));
+  lib\services\auth_flow_observer.dart:65:    _navigating = false;
+  lib\services\auth_flow_observer.dart:66:  }
+  lib\services\auth_flow_observer.dart:67:
+  lib\services\auth_flow_observer.dart:124:          _signOutDebounce?.cancel();
+  lib\services\auth_flow_observer.dart:125:
+> lib\services\auth_flow_observer.dart:126:          // ✅ 如果是“手动登出触发”的这一次，吞掉导航（ProfilePage等处已自行 navReplaceAll('/login')）
+  lib\services\auth_flow_observer.dart:127:          if (_manualSignOutOnce) {
+  lib\services\auth_flow_observer.dart:128:            debugPrint('[AuthFlowObserver] signedOut fast-path (manual). swallow nav once.');
+  lib\services\auth_flow_observer.dart:129:            _manualSignOutOnce = false; // 只生效一次
+  lib\services\auth_flow_observer.dart:130:            // 可选：这里可做轻量清理（若你 elsewhere 已做，这里不重复）
+  lib\services\auth_flow_observer.dart:131:            break;
+  lib\services\auth_flow_observer.dart:132:          }
+  lib\services\deep_link_service.dart:130:
+  lib\services\deep_link_service.dart:131:      Future.delayed(Duration.zero, () {
+> lib\services\deep_link_service.dart:132:        navReplaceAll('/forgot-password', arguments: {'token': token});
+  lib\services\deep_link_service.dart:133:      });
+  lib\services\deep_link_service.dart:134:      return;
+  lib\services\deep_link_service.dart:135:    }
+  lib\services\deep_link_service.dart:136:
+  lib\services\deep_link_service.dart:137:    // ----------- 2) Offer 深链：swaply://offer?offer_id=xxx&listing_id=yyy ----------
+  lib\services\deep_link_service.dart:138:    // 也兼容：https://swaply.cc/offer?offer_id=xxx...
+  lib\services\deep_link_service.dart:149:        }
+  lib\services\deep_link_service.dart:150:        Future.delayed(Duration.zero, () {
+> lib\services\deep_link_service.dart:151:          navPush('/offer-detail', arguments: {
+  lib\services\deep_link_service.dart:152:            'offer_id': offerId,
+  lib\services\deep_link_service.dart:153:            if (listingId != null && listingId.isNotEmpty) 'listing_id': listingId,
+  lib\services\deep_link_service.dart:154:          });
+  lib\services\deep_link_service.dart:155:        });
+  lib\services\deep_link_service.dart:156:        return;
+  lib\services\deep_link_service.dart:157:      }
+  lib\services\deep_link_service.dart:169:        }
+  lib\services\deep_link_service.dart:170:        Future.delayed(Duration.zero, () {
+> lib\services\deep_link_service.dart:171:          navPush('/product-detail', arguments: {'id': listingId});
+  lib\services\deep_link_service.dart:172:        });
+  lib\services\deep_link_service.dart:173:        return;
+  lib\services\deep_link_service.dart:174:      }
+  lib\services\deep_link_service.dart:175:    }
+  lib\services\deep_link_service.dart:176:
+  lib\services\deep_link_service.dart:177:    // ----------- 4) welcome / login / home --------------------
+  lib\services\deep_link_service.dart:179:    final isWelcome = host == 'welcome' || path == '/welcome';
+  lib\services\deep_link_service.dart:180:    if (isWelcome) {
+> lib\services\deep_link_service.dart:181:      Future.delayed(Duration.zero, () => navReplaceAll('/welcome'));
+  lib\services\deep_link_service.dart:182:      return;
+  lib\services\deep_link_service.dart:183:    }
+  lib\services\deep_link_service.dart:184:
+  lib\services\deep_link_service.dart:185:    final isLogin = host == 'login' || path == '/login';
+  lib\services\deep_link_service.dart:186:    if (isLogin) {
+> lib\services\deep_link_service.dart:187:      Future.delayed(Duration.zero, () => navReplaceAll('/login'));
+  lib\services\deep_link_service.dart:188:      return;
+  lib\services\deep_link_service.dart:189:    }
+  lib\services\deep_link_service.dart:190:
+  lib\services\deep_link_service.dart:191:    final isHome = host == 'home' || path == '/home';
+  lib\services\deep_link_service.dart:192:    if (isHome) {
+> lib\services\deep_link_service.dart:193:      Future.delayed(Duration.zero, () => navReplaceAll('/home'));
+  lib\services\deep_link_service.dart:194:      return;
+  lib\services\deep_link_service.dart:195:    }
+  lib\services\deep_link_service.dart:196:
+  lib\services\deep_link_service.dart:197:    // ----------- 5) 默认：不再强制回首页（避免吃掉未知链接、避免循环重建） ----------
+  lib\services\deep_link_service.dart:198:    if (kDebugMode) debugPrint('[DeepLink] unmatched -> ignore: $uri');
+  lib\services\deep_link_service.dart:199:  }
+  lib\services\verification_guard.dart:184:            actions: [
+  lib\services\verification_guard.dart:185:              TextButton(
+> lib\services\verification_guard.dart:186:                onPressed: () => Navigator.of(ctx).pop(false),
+  lib\services\verification_guard.dart:187:                child: Text(laterText),
+  lib\services\verification_guard.dart:188:              ),
+  lib\services\verification_guard.dart:189:              ElevatedButton(
+  lib\services\verification_guard.dart:190:                onPressed: () async {
+> lib\services\verification_guard.dart:191:                  Navigator.of(ctx).pop(false);
+  lib\services\verification_guard.dart:192:                  // 先关弹窗（用对话框自己的 ctx 关，保留即可）
+> lib\services\verification_guard.dart:193:                  Navigator.of(ctx).pop(false);
+  lib\services\verification_guard.dart:194:                  await Future.delayed(Duration.zero);
+  lib\services\verification_guard.dart:195:                  final changed = await SafeNavigator.push<bool>(
+  lib\services\verification_guard.dart:196:                    MaterialPageRoute(
+  lib\services\verification_guard.dart:197:                      builder: (_) => const VerificationPage(),
+  lib\services\verification_guard.dart:198:                      settings: const RouteSettings(name: '/verification'),
+  lib\services\verification_guard.dart:199:                    ),
+  lib\widgets\my_rewards_tile.dart:89:              Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey[400]),
+  lib\widgets\my_rewards_tile.dart:90:          onTap: () {
+> lib\widgets\my_rewards_tile.dart:91:            SafeNavigator.push(
+  lib\widgets\my_rewards_tile.dart:92:                MaterialPageRoute(builder: (_) => const TaskManagementPage()));
+  lib\widgets\my_rewards_tile.dart:93:          },
+  lib\widgets\my_rewards_tile.dart:94:        );
+  lib\widgets\my_rewards_tile.dart:95:      },
+  lib\widgets\my_rewards_tile.dart:96:    );
+  lib\widgets\my_rewards_tile.dart:97:  }
+  lib\widgets\remote_listings_section.dart:242:  void _seeAll() {
+  lib\widgets\remote_listings_section.dart:243:    if (widget.categoryId == null) return;
+> lib\widgets\remote_listings_section.dart:244:    SafeNavigator.push(
+  lib\widgets\remote_listings_section.dart:245:      MaterialPageRoute(
+  lib\widgets\remote_listings_section.dart:246:        builder: (_) => CategoryProductsPage(
+  lib\widgets\remote_listings_section.dart:247:          categoryId: widget.categoryId!,
+  lib\widgets\remote_listings_section.dart:248:          categoryName: widget.title,
+  lib\widgets\remote_listings_section.dart:249:        ),
+  lib\widgets\remote_listings_section.dart:250:      ),
+  lib\widgets\remote_listings_section.dart:254:  Future<void> _openDetail(Map<String, dynamic> item) async {
+  lib\widgets\remote_listings_section.dart:255:    // 使用集中路由 /listing（navPush: (String routeName, {Object? arguments})）
+> lib\widgets\remote_listings_section.dart:256:    await navPush('/listing', arguments: item['id']);
+  lib\widgets\remote_listings_section.dart:257:  }
+  lib\widgets\remote_listings_section.dart:258:
+  lib\widgets\remote_listings_section.dart:259:  /* ---------------- UI ---------------- */
+  lib\widgets\remote_listings_section.dart:260:
+  lib\widgets\remote_listings_section.dart:261:  @override
+  lib\widgets\remote_listings_section.dart:262:  Widget build(BuildContext context) {
+  lib\widgets\welcome_coupon_dialog.dart:317:                                onPressed: () {
+  lib\widgets\welcome_coupon_dialog.dart:318:                                  navMaybePop();
+> lib\widgets\welcome_coupon_dialog.dart:319:                                  navPush('/coupons');
+  lib\widgets\welcome_coupon_dialog.dart:320:                                },
+  lib\widgets\welcome_coupon_dialog.dart:321:                                style: ElevatedButton.styleFrom(
+  lib\widgets\welcome_coupon_dialog.dart:322:                                  backgroundColor: Colors.transparent,
+  lib\widgets\welcome_coupon_dialog.dart:323:                                  shadowColor: Colors.transparent,
+  lib\widgets\welcome_coupon_dialog.dart:324:                                  shape: RoundedRectangleBorder(
+  lib\widgets\welcome_coupon_dialog.dart:325:                                    borderRadius: BorderRadius.circular(10.r),
+  lib\widgets\welcome_coupon_dialog.dart:339:                          SizedBox(height: 6.h),
+  lib\widgets\welcome_coupon_dialog.dart:340:                          TextButton(
+> lib\widgets\welcome_coupon_dialog.dart:341:                            onPressed: () => Navigator.pop(context),
+  lib\widgets\welcome_coupon_dialog.dart:342:                            style: TextButton.styleFrom(
+  lib\widgets\welcome_coupon_dialog.dart:343:                              minimumSize: Size.fromHeight(34.h),
+  lib\widgets\welcome_coupon_dialog.dart:344:                              padding: EdgeInsets.symmetric(vertical: 6.h),
+  lib\widgets\welcome_coupon_dialog.dart:345:                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+  lib\widgets\welcome_coupon_dialog.dart:346:                            ),
+  lib\widgets\welcome_coupon_dialog.dart:347:                            child: Text(
+
+

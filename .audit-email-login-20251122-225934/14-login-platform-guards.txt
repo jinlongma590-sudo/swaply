@@ -1,0 +1,25 @@
+﻿
+  lib\auth\login_screen.dart:4:
+  lib\auth\login_screen.dart:5:import 'package:flutter/foundation.dart'
+> lib\auth\login_screen.dart:6:    show kIsWeb, defaultTargetPlatform, TargetPlatform;
+  lib\auth\login_screen.dart:7:import 'package:flutter/material.dart';
+  lib\auth\login_screen.dart:8:import 'package:flutter_screenutil/flutter_screenutil.dart';
+  lib\auth\login_screen.dart:9:import 'package:supabase_flutter/supabase_flutter.dart';
+  lib\auth\login_screen.dart:10:
+  lib\auth\login_screen.dart:11:import 'register_screen.dart';
+  lib\auth\login_screen.dart:12:import 'forgot_password_screen.dart';
+  lib\auth\login_screen.dart:13:
+  lib\auth\login_screen.dart:14:class LoginScreen extends StatefulWidget {
+  lib\auth\login_screen.dart:127:  Widget build(BuildContext context) {
+  lib\auth\login_screen.dart:128:    final bool showApple =
+> lib\auth\login_screen.dart:129:        !kIsWeb && (defaultTargetPlatform == TargetPlatform.iOS);
+  lib\auth\login_screen.dart:130:
+  lib\auth\login_screen.dart:131:    // UI 保持你原来的，不动。
+  lib\auth\login_screen.dart:132:    return Scaffold(
+  lib\auth\login_screen.dart:133:      backgroundColor: Colors.grey[50],
+  lib\auth\login_screen.dart:134:      extendBodyBehindAppBar: true,
+  lib\auth\login_screen.dart:135:      appBar: AppBar(
+  lib\auth\login_screen.dart:136:        backgroundColor: Colors.transparent,
+  lib\auth\login_screen.dart:137:        elevation: 0,
+
+

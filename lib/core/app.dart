@@ -12,12 +12,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:provider/provider.dart';                          // ✅ 新增
 import 'package:swaply/router/root_nav.dart';
 import 'package:swaply/router/safe_navigator.dart';
 import 'package:swaply/core/navigation/app_router.dart';
 import 'package:swaply/services/deep_link_service.dart';
 import 'package:swaply/services/welcome_dialog_service.dart';
 import 'package:swaply/services/reward_service.dart';
+import 'package:swaply/providers/language_provider.dart';         // ✅ 新增
+import 'package:swaply/services/auth_flow_observer.dart';         // ✅ 新增：全局认证流观察
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -33,6 +36,9 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+
+    // ✅ 启动全局认证流观察与导航
+    AuthFlowObserver.I.start();
 
     // 登录后写 pending 位
     Supabase.instance.client.auth.onAuthStateChange.listen((event) {
@@ -80,16 +86,20 @@ class _MyAppState extends State<MyApp> {
       designSize: const Size(390, 844),
       minTextAdapt: true,
       builder: (_, __) {
-        return MaterialApp(
-          title: 'Swaply',
-          debugShowCheckedModeBanner: false,
-          navigatorKey: rootNavKey, // 全 app 唯一 navigator
-          onGenerateRoute: AppRouter.onGenerateRoute,
-          initialRoute: '/',
-          theme: ThemeData(
-            primaryColor: const Color(0xFF1877F2),
-            useMaterial3: false,
-            scaffoldBackgroundColor: Colors.white,
+        // ✅ 包裹 ChangeNotifierProvider
+        return ChangeNotifierProvider(
+          create: (_) => LanguageProvider(),
+          child: MaterialApp(
+            title: 'Swaply',
+            debugShowCheckedModeBanner: false,
+            navigatorKey: rootNavKey, // 全 app 唯一 navigator
+            onGenerateRoute: AppRouter.onGenerateRoute,
+            initialRoute: '/',
+            theme: ThemeData(
+              primaryColor: const Color(0xFF1877F2),
+              useMaterial3: false,
+              scaffoldBackgroundColor: Colors.white,
+            ),
           ),
         );
       },

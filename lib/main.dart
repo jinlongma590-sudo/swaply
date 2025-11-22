@@ -4,10 +4,62 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+// ✅ 新增：本地通知 & 深链处理
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:swaply/services/deep_link_service.dart';
+
 import 'package:swaply/core/app.dart'; // ← 全局唯一入口
+
+// 全局通知实例
+final FlutterLocalNotificationsPlugin _localNotifications =
+FlutterLocalNotificationsPlugin();
+
+// 后台点击通知的回调（必须是顶层方法）
+@pragma('vm:entry-point')
+void notificationTapBackground(NotificationResponse details) {
+  final payload = details.payload;
+  if (payload != null && payload.isNotEmpty) {
+    // 统一交给 DeepLinkService 解析（会排队，待导航就绪后再跳转）
+    DeepLinkService.instance.handle(payload);
+  }
+}
+
+// 本地通知初始化（最小改动：只注入点击回调）
+Future<void> _initLocalNotifications() async {
+  const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+
+  final iosInit = DarwinInitializationSettings(
+    requestAlertPermission: true,
+    requestBadgePermission: true,
+    requestSoundPermission: true,
+    // iOS 10- 的兜底回调
+    onDidReceiveLocalNotification:
+        (int id, String? title, String? body, String? payload) async {
+      DeepLinkService.instance.handle(payload);
+    },
+  );
+
+  final initSettings =
+  InitializationSettings(android: androidInit, iOS: iosInit);
+
+  await _localNotifications.initialize(
+    initSettings,
+    // ✅ 核心：点击通知 → 把 payload 交给 DeepLinkService
+    onDidReceiveNotificationResponse: (NotificationResponse details) {
+      final payload = details.payload;
+      if (payload != null && payload.isNotEmpty) {
+        DeepLinkService.instance.handle(payload);
+      }
+    },
+    onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
+  );
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ✅ 初始化本地通知（用于“点击通知 → 解析 swaply://...”）
+  await _initLocalNotifications();
 
   // 初始化 Supabase（必须在 runApp 前）
   await Supabase.initialize(

@@ -25,12 +25,18 @@ class AuthFlowObserver {
   String? _lastRoute;
   DateTime? _lastAt;
 
-  // 手动退出（快车道）
+  // 手动退出（一次性标记）
+  bool _manualSignOutOnce = false;
+
+  // 历史快车道逻辑（保留以兼容旧分支）
   DateTime? _manualSignOutAt;
   Timer? _signOutDebounce;
 
   void markManualSignOut() {
+    // ✅ 只标记“一次”手动登出；同时保留时间戳以兼容你原来的 fast-path 逻辑
+    _manualSignOutOnce = true;
     _manualSignOutAt = DateTime.now();
+    debugPrint('[AuthFlowObserver] markManualSignOut=true');
   }
 
   bool _throttle(String route, {int ms = 900}) {
@@ -75,6 +81,9 @@ class AuthFlowObserver {
       switch (data.event) {
       // -------------------- 登录成功 --------------------
         case AuthChangeEvent.signedIn:
+        // ✅ 一旦有会话（登录），清掉“一次性手动登出标记”
+          _manualSignOutOnce = false;
+
           _signOutDebounce?.cancel();
 
           final user = Supabase.instance.client.auth.currentUser;
@@ -89,6 +98,9 @@ class AuthFlowObserver {
 
       // -------------------- 冷启动 --------------------
         case AuthChangeEvent.initialSession:
+        // ✅ 冷启动时也先清标记（以防上次手动登出残留）
+          _manualSignOutOnce = false;
+
           final hasSession =
               Supabase.instance.client.auth.currentSession != null;
 
@@ -99,11 +111,27 @@ class AuthFlowObserver {
           }
           break;
 
+      // -------------------- 资料更新 --------------------
+        case AuthChangeEvent.userUpdated:
+        // ✅ 任何 userUpdated 也清一次标记（确保重新登录后不被误判）
+          _manualSignOutOnce = false;
+          // 其余保持原样（不做导航）
+          break;
+
       // -------------------- 登出 --------------------
         case AuthChangeEvent.signedOut:
         case AuthChangeEvent.userDeleted:
           _signOutDebounce?.cancel();
 
+          // ✅ 如果是“手动登出触发”的这一次，吞掉导航（ProfilePage等处已自行 navReplaceAll('/login')）
+          if (_manualSignOutOnce) {
+            debugPrint('[AuthFlowObserver] signedOut fast-path (manual). swallow nav once.');
+            _manualSignOutOnce = false; // 只生效一次
+            // 可选：这里可做轻量清理（若你 elsewhere 已做，这里不重复）
+            break;
+          }
+
+          // —— 以下是你原有的“非手动”登出逻辑（保留） ——
           final now = DateTime.now();
           final fast = _manualSignOutAt != null &&
               now.difference(_manualSignOutAt!).inSeconds <= 3;
