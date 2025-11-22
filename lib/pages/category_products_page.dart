@@ -10,7 +10,7 @@ import 'package:swaply/pages/product_detail_page.dart';
 import 'package:swaply/listing_api.dart';
 import 'package:swaply/services/coupon_service.dart';
 import 'package:swaply/widgets/pinned_ad_card.dart';
-
+import 'package:swaply/router/safe_navigator.dart';
 class CategoryProductsPage extends StatefulWidget {
   final String categoryId;
   final String categoryName;
@@ -1154,8 +1154,7 @@ class _CategoryProductsPageState extends State<CategoryProductsPage>
       'sellerPhone': full['phone'] ?? '',
       'category': full['category'] ?? '',
     };
-    Navigator.push(
-      context,
+    SafeNavigator.push(
       MaterialPageRoute(
         builder: (_) => ProductDetailPage(
           productId: item['id']?.toString(),

@@ -1,153 +1,98 @@
 ﻿// lib/core/app.dart
+//
+// 全局唯一 App 入口（唯一 MaterialApp）
+// ● 挂 rootNavKey（来自 SafeNavigator）
+// ● 深链 DeepLinkService 单例集中 bootstrap
+// ● 登录后调用 ensureWelcomeForCurrentUser（写 pending flag）
+// ● HomePage / MainNavigationPage 只负责 UI，不负责全局逻辑
+// ● 全工程只有这一个 MaterialApp —— 根本解决黑屏 / GlobalKey 冲突
+//
+
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:provider/provider.dart';
-
-import 'package:swaply/core/navigation/app_router.dart'; // 涓昏矾鐢?
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:swaply/router/root_nav.dart';
+import 'package:swaply/router/safe_navigator.dart';
+import 'package:swaply/core/navigation/app_router.dart';
+import 'package:swaply/services/deep_link_service.dart';
+import 'package:swaply/services/welcome_dialog_service.dart';
+import 'package:swaply/services/reward_service.dart';
 
-import 'package:swaply/core/l10n/app_localizations.dart';
-import 'package:swaply/providers/language_provider.dart';
-
-// === 鍏滃簳鐩磋繛鐨勪笁涓〉闈?===
-import 'package:swaply/pages/sell_form_page.dart';
-import 'package:swaply/pages/product_detail_page.dart';
-import 'package:swaply/auth/welcome_screen.dart';
-
-// === 鏂板锛氱櫥褰曢〉 & 棣栭〉锛堢敤浜?/login /home 鍛藉悕璺敱锛?===
-import 'package:swaply/auth/login_screen.dart';
-import 'package:swaply/pages/home_page.dart';
-
-// === 鍏ㄥ眬閴存潈瑙傚療鑰?+ 娣遍摼鎺㈤拡 ===
-import 'package:swaply/services/auth_flow_observer.dart';
-import 'package:swaply/debug/recovery_probe.dart';
-import 'package:swaply/services/deep_link_service.dart'; // 鉁?娣遍摼鏈嶅姟锛堟敞鎰忔柊澧烇級
-
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const _AppBoot();
-  }
+  State<MyApp> createState() => _MyAppState();
 }
 
-class _AppBoot extends StatefulWidget {
-  const _AppBoot({super.key});
+class _MyAppState extends State<MyApp> {
+  bool _booted = false;
+  bool _welcomeScheduled = false;
 
-  @override
-  State<_AppBoot> createState() => _AppBootState();
-}
-
-class _AppBootState extends State<_AppBoot> {
   @override
   void initState() {
     super.initState();
-    // 鍚姩鍏ㄥ眬閴存潈瑙傚療鑰?& 娣遍摼鎺㈤拡
-    AuthFlowObserver.I.start();
-    RecoveryProbe.attach();
 
-    // 鉁?姝ｇ‘鍚姩娣遍摼锛氶甯у悗鍐嶅惎鍔紙DeepLinkService 瀵瑰鏂规硶鏄?bootstrap锛?
+    // 登录后写 pending 位
+    Supabase.instance.client.auth.onAuthStateChange.listen((event) {
+      final session = event.session;
+
+      if (session != null && session.user != null) {
+        final uid = session.user!.id;
+
+        // 写 pending 位（首次登录用户）
+        RewardService.ensureWelcomeForCurrentUser().then((result) async {
+          if (!mounted) return;
+
+          if (result.shouldPopup) {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool(
+              'new_user_welcome_pending_$uid',
+              true,
+            );
+          }
+        });
+
+        // 登录后触发欢迎弹窗
+        if (!_welcomeScheduled) {
+          _welcomeScheduled = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            WelcomeDialogService.scheduleCheck(context);
+          });
+        }
+      }
+    });
+
+    // 深链监听
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await DeepLinkService.instance.bootstrap();
-      // 杞诲井寤舵椂锛岀‘淇濊矾鐢辨爲鍙敤鍚庡啀澶勭悊浠讳綍娼滃湪闃熷垪锛堝彲閫夛級
-      Future.delayed(const Duration(milliseconds: 100), () {
-        DeepLinkService.instance.flushQueue();
-      });
+      if (!_booted) {
+        _booted = true;
+        await DeepLinkService.instance.bootstrap();
+      }
     });
   }
 
   @override
-  void dispose() {
-    // 鏈€灏忔敼鍔細涓嶅啀璋冪敤 stop()锛堣鏂规硶涓嶅瓨鍦級
-    try {
-      RecoveryProbe.dispose();
-    } catch (_) {}
-
-    // 鍙€夛細濡傛灉浣犻渶瑕佸湪搴旂敤鐢熷懡鍛ㄦ湡鍐呭交搴曢噴鏀炬繁閾剧洃鍚?
-    //锛堜竴鑸笉蹇咃紝闄ら潪浣犲湪鐑噸鍚?鍒囨崲Profile绛夊満鏅墜鍔ㄦ帶鍒讹級
-    // DeepLinkService.instance.dispose();
-
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => LanguageProvider()),
-      ],
-      child: Builder(
-        builder: (ctx) {
-          final locale = ctx.watch<LanguageProvider>().currentLocale;
-
-          return ScreenUtilInit(
-            designSize: const Size(390, 844),
-            minTextAdapt: true,
-            splitScreenMode: true,
-            builder: (_, __) {
-              return MaterialApp(
-                title: 'Swaply',
-                debugShowCheckedModeBanner: false,
-
-                // 涓?root 瀵艰埅淇濇寔涓€鑷?
-                navigatorKey: rootNavKey,
-
-                // 鉁?鍛藉悕璺敱锛堢粰 navReplaceAll('/login' | '/home') 鐢級
-                routes: {
-                  '/login': (_) => const LoginScreen(),
-                  '/welcome': (_) => const WelcomeScreen(),
-                },
-
-                // 鍏朵綑鏈湪 routes 涓殑鍛藉悕璺敱锛岃蛋 AppRouter 鎴栧唴鑱斿厹搴?
-                onGenerateRoute: (RouteSettings settings) {
-                  switch (settings.name) {
-                    case '/sell-form':
-                      return MaterialPageRoute(
-                        builder: (_) => const SellFormPage(),
-                        settings: settings,
-                      );
-                    case '/listing':
-                    // 绾﹀畾锛歯avPush('/listing', arguments: {'id': <listingId>});
-                      final args = settings.arguments as Map<String, dynamic>?;
-                      final id = args?['id']?.toString();
-                      return MaterialPageRoute(
-                        builder: (_) => ProductDetailPage(productId: id),
-                        settings: settings,
-                      );
-                  }
-                  return AppRouter.onGenerateRoute(settings);
-                },
-
-                // 鉁?鏂规A锛氶灞忚繘鍏ョ櫥褰曢〉锛堝凡鐧诲綍浼氱敱 AuthFlowObserver 绔嬪埢璺?/home锛?
-                initialRoute: '/',
-
-                // 澶氳瑷€
-                locale: locale,
-                localizationsDelegates: const [
-                  AppLocalizations.delegate,
-                  GlobalMaterialLocalizations.delegate,
-                  GlobalCupertinoLocalizations.delegate,
-                  GlobalWidgetsLocalizations.delegate,
-                ],
-                supportedLocales: const [
-                  Locale('en'),
-                ],
-
-                // 涓婚
-                theme: ThemeData(
-                  useMaterial3: false,
-                  colorScheme: ColorScheme.fromSeed(
-                    seedColor: const Color(0xFF1877F2),
-                  ),
-                ),
-              );
-            },
-          );
-        },
-      ),
+    return ScreenUtilInit(
+      designSize: const Size(390, 844),
+      minTextAdapt: true,
+      builder: (_, __) {
+        return MaterialApp(
+          title: 'Swaply',
+          debugShowCheckedModeBanner: false,
+          navigatorKey: rootNavKey, // 全 app 唯一 navigator
+          onGenerateRoute: AppRouter.onGenerateRoute,
+          initialRoute: '/',
+          theme: ThemeData(
+            primaryColor: const Color(0xFF1877F2),
+            useMaterial3: false,
+            scaffoldBackgroundColor: Colors.white,
+          ),
+        );
+      },
     );
   }
 }
-

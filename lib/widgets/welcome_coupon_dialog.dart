@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
+import 'package:swaply/router/root_nav.dart';
 class WelcomeCouponDialog extends StatefulWidget {
   final Map<String, dynamic> couponData;
 
@@ -315,8 +315,8 @@ class _WelcomeCouponDialogState extends State<WelcomeCouponDialog>
                               ),
                               child: ElevatedButton(
                                 onPressed: () {
-                                  Navigator.pop(context);
-                                  Navigator.pushNamed(context, '/coupons');
+                                  navMaybePop();
+                                  navPush('/coupons');
                                 },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.transparent,

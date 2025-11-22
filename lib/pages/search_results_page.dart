@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/listing_service.dart';
 import 'package:swaply/pages/product_detail_page.dart';
-
+import 'package:swaply/router/safe_navigator.dart';
 class SearchResultsPage extends StatefulWidget {
   final String keyword; // 由首页传入
   final String? location; // 可选：城市筛选（'All Zimbabwe' 表示不过滤）
@@ -138,8 +138,7 @@ class _SearchResultsPageState extends State<SearchResultsPage> {
       'category': full['category'] ?? '',
     };
 
-    Navigator.push(
-      context,
+    SafeNavigator.push(
       MaterialPageRoute(
         builder: (_) => ProductDetailPage(
           productId: item['id']?.toString(),

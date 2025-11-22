@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/auth_service.dart'; // ✅ 新增：统一走 AuthService 登出
 import 'package:swaply/services/auth_flow_observer.dart'; // ✅ 新增 Observer
-
+import 'package:swaply/router/root_nav.dart';
 class AccountSettingsPage extends StatefulWidget {
   const AccountSettingsPage({super.key});
 
@@ -184,7 +184,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
 
         if (!mounted) return;
         // 鍥炲埌鏍硅矾鐢憋紙鎴栨寜浣犻」鐩敼涓?SafeNavigator.pushNamedAndRemoveUntil('/welcome', (_) => false)锛?
-        Navigator.of(context).popUntil((r) => r.isFirst);
+        rootNavKey.currentState?.popUntil((r) => r.isFirst);
         return;
       } else {
         final msg = (data['error'] ?? 'Delete failed').toString();

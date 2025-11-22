@@ -18,7 +18,7 @@ import 'package:swaply/utils/verification_utils.dart' as vutils;
 import '../models/verification_types.dart' as vt;
 import '../widgets/verification_badge.dart' as vb;
 import 'package:swaply/services/verification_guard.dart';
-
+import 'package:swaply/router/root_nav.dart';
 class VerificationPage extends StatefulWidget {
   const VerificationPage({super.key});
 
@@ -157,7 +157,7 @@ class _VerificationPageState extends State<VerificationPage>
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Email verification successful')),
       );
-      Navigator.of(context).pop(true);
+      navPop(true);
     } catch (e) {
       _showMessage('Verification failed', isError: true);
     } finally {
@@ -270,7 +270,7 @@ class _VerificationPageState extends State<VerificationPage>
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20.w),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => navPop()
         ),
       ),
       body: _buildPageBody(),
@@ -703,7 +703,7 @@ class _VerificationPageState extends State<VerificationPage>
                       style: TextStyle(fontSize: 13.sp, color: Colors.grey.shade700, height: 1.35),
                     ),
                     actions: [
-                      TextButton(onPressed: () => Navigator.of(context).pop(), child: Text('OK', style: TextStyle(fontSize: 13.sp))),
+                      TextButton(onPressed: () => navPop(), child: Text('OK', style: TextStyle(fontSize: 13.sp))),
                     ],
                   ),
                 );

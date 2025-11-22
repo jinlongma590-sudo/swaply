@@ -1,101 +1,135 @@
 ﻿// lib/services/deep_link_service.dart
 import 'dart:async';
-import 'package:app_links/app_links.dart';
 import 'package:flutter/foundation.dart';
-import 'package:swaply/router/safe_navigator.dart';
+import 'package:flutter/scheduler.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:app_links/app_links.dart';
 
-/// 深链服务（单例）
-/// - 只在首帧后启动一次（幂等）
-/// - 解析 listing 链接并跳转到 /listing
-/// - 使用 SafeNavigator，避免 context 依赖
+import 'package:swaply/router/root_nav.dart';
+
+/// =============================================================
+/// DeepLinkService （最终完整版，适配新版 app_links API）
+///
+/// ✔ 支持 Universal Links / App Links / Supabase Magic Link
+/// ✔ 支持 reset-password / listing / welcome / login / home
+/// ✔ 冷启动 + 前台 deep link 全支持
+/// ✔ getInitialLink()（新版 API）
+/// =============================================================
 class DeepLinkService {
   DeepLinkService._();
   static final DeepLinkService instance = DeepLinkService._();
 
-  AppLinks? _links;
-  StreamSubscription<Uri>? _sub;
-  String? _lastSig;        // 最近一次处理的签名（去重）
-  bool _booted = false;    // 是否已经启动
+  final AppLinks _appLinks = AppLinks();
 
-  /// 启动深链监听（可多次调用，但只会初始化一次）
+  final List<Uri> _pending = [];
+
+  bool _bootstrapped = false;
+  bool _flushing = false;
+
+  /// 初始化，AppBoot initState -> addPostFrameCallback 调用
   Future<void> bootstrap() async {
-    if (_booted) return;
-    _booted = true;
+    if (_bootstrapped) return;
+    _bootstrapped = true;
 
-    _links ??= AppLinks();
+    // ------------ 前台深链（APP 打开状态点击链接） ------------
+    _appLinks.uriLinkStream.listen((uri) {
+      if (kDebugMode) debugPrint('[DeepLink] uriLinkStream -> $uri');
+      _handle(uri);
+    }, onError: (err) {
+      if (kDebugMode) debugPrint('[DeepLink] stream error: $err');
+    });
 
-    // 1) 首次启动时的 initial link
+    // ------------ 冷启动深链（APP 未打开 → 点击链接启动） ------------
     try {
-      final initial = await _links!.getInitialLink();
-      if (initial != null) _dispatch(initial);
+      // !!! 新 API：getInitialLink() !!!
+      final initial = await _appLinks.getInitialLink();
+
+      if (initial != null) {
+        if (kDebugMode) {
+          debugPrint('[DeepLink] getInitialLink -> $initial');
+        }
+        _handle(initial, isInitial: true);
+      }
     } catch (e) {
-      debugPrint('[DeepLink] getInitialLink error: $e');
+      if (kDebugMode) debugPrint('[DeepLink] initial link error: $e');
     }
-
-    // 2) 运行期的 link 流（只订阅一次）
-    _sub ??= _links!.uriLinkStream.listen(
-          (uri) => _dispatch(uri),
-      onError: (e, st) => debugPrint('[DeepLink] stream error: $e'),
-      cancelOnError: false,
-    );
   }
 
-  /// 预留接口：若需要“二次触发”或补偿策略，可从 main.dart 的 100ms 延时里调用
-  void flushQueue() {
-    // 目前无需处理；保留以便未来扩展
-  }
-
-  /// 释放（通常不需要调用）
-  Future<void> dispose() async {
-    await _sub?.cancel();
-    _sub = null;
-    _links = null;
-    _booted = false;
-    _lastSig = null;
-  }
-
-  // ---------------- 内部实现 ----------------
-
-  void _dispatch(Uri uri) {
-    final id = _extractListingId(uri);
-    if (id == null) return;
-
-    // 去重：同一 listing 连续触发只响应一次
-    final sig = 'listing:$id';
-    if (_lastSig == sig) {
-      debugPrint('[DeepLink] skip duplicated $sig');
+  /// 所有深链 handler 统一入口
+  void _handle(Uri uri, {bool isInitial = false}) {
+    if (!_isReadyToNavigate()) {
+      _pending.add(uri);
       return;
     }
-    _lastSig = sig;
+    _navigate(uri);
+  }
 
-    // 双延迟：确保 rootNav 可用 & 避免与首屏构建竞争
-    Future.microtask(() {});
-    Future.delayed(const Duration(milliseconds: 100), () {
-      SafeNavigator.pushNamed('/listing', args: id);
+  /// App 是否已经可以安全导航
+  bool _isReadyToNavigate() {
+    return rootNavKey.currentState != null;
+  }
+
+  /// 刷新队列（在 AppBoot postFrame 后自动调用）
+  void flushQueue() {
+    if (_flushing) return;
+    _flushing = true;
+
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      Future.microtask(() {
+        for (final u in List<Uri>.from(_pending)) {
+          _navigate(u);
+        }
+        _pending.clear();
+        _flushing = false;
+      });
     });
   }
 
-  /// 解析：
-  /// - swaply://listing/123
-  /// - https://swaply.cc/listing/123
-  /// - 或 ?listing_id=123 / ?id=123
-  String? _extractListingId(Uri uri) {
-    try {
-      final segments = uri.pathSegments;
-      if (segments.isNotEmpty) {
-        final idx = segments.indexOf('listing');
-        if (idx >= 0 && idx + 1 < segments.length) {
-          final id = segments[idx + 1];
-          if (id.isNotEmpty) return id;
-        }
-      }
+  // ============================================================
+  // 深链路由解析
+  // ============================================================
+  void _navigate(Uri uri) {
+    final path = uri.path.toLowerCase();
 
-      final q = uri.queryParameters['listing_id'] ?? uri.queryParameters['id'];
-      if (q != null && q.isNotEmpty) return q;
+    if (kDebugMode) debugPrint('[DeepLink] navigate -> $uri');
 
-      return null;
-    } catch (_) {
-      return null;
+    // ----------- 1) Supabase Magic Link：reset-password ----------
+    if (path.contains('reset-password')) {
+      final token = uri.queryParameters['token'] ??
+          uri.queryParameters['access_token'] ??
+          uri.queryParameters['token_hash'];
+
+      navReplaceAll('/forgot-password', arguments: {'token': token});
+      return;
     }
+
+    // ----------- 2) Listing 深链：/listing?id=xxx ---------------
+    if (path.contains('/listing')) {
+      final id = uri.queryParameters['id'];
+      if (id != null && id.isNotEmpty) {
+        Future.delayed(Duration.zero,
+                () => navPush('/listing', arguments: {'id': id}));
+        return;
+      }
+    }
+
+    // ----------- 3) welcome / login / home --------------------
+    if (path == '/welcome') {
+      Future.delayed(Duration.zero, () => navReplaceAll('/welcome'));
+      return;
+    }
+
+    if (path == '/login') {
+      Future.delayed(Duration.zero, () => navReplaceAll('/login'));
+      return;
+    }
+
+    if (path == '/home') {
+      Future.delayed(Duration.zero, () => navReplaceAll('/home'));
+      return;
+    }
+
+    // ----------- 4) 所有未匹配的路径 → Home --------------------
+    Future.delayed(Duration.zero, () => navReplaceAll('/home'));
   }
 }

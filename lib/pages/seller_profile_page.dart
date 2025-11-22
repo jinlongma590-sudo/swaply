@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:swaply/router/safe_navigator.dart';
 import 'package:swaply/models/verification_types.dart' as vt;
 import 'package:swaply/pages/product_detail_page.dart';
 import 'package:swaply/widgets/verified_avatar.dart';
@@ -441,8 +441,7 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
 
     return InkWell(
       onTap: () {
-        Navigator.push(
-          context,
+        SafeNavigator.push(
           MaterialPageRoute(
             builder: (_) => ProductDetailPage(
               productId: listing['id'].toString(),

@@ -6,7 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/profile_service.dart';
 import 'package:swaply/services/image_normalizer.dart';
-
+import 'package:swaply/router/root_nav.dart';
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
 
@@ -130,7 +130,7 @@ class EditProfilePageState extends State<EditProfilePage> {
                   icon: Icons.camera_alt_rounded,
                   title: 'Take Photo',
                   onTap: () async {
-                    Navigator.of(context).maybePop();
+                    navMaybePop();
                     final image = await picker.pickImage(
                       source: ImageSource.camera,
                       imageQuality: 70,
@@ -150,7 +150,7 @@ class EditProfilePageState extends State<EditProfilePage> {
                   icon: Icons.photo_library_rounded,
                   title: 'Choose from Gallery',
                   onTap: () async {
-                    Navigator.of(context).maybePop();
+                    navMaybePop();
                     final image = await picker.pickImage(
                       source: ImageSource.gallery,
                       imageQuality: 70,
@@ -171,7 +171,7 @@ class EditProfilePageState extends State<EditProfilePage> {
                     title: 'Remove Photo',
                     isDestructive: true,
                     onTap: () {
-                      Navigator.of(context).maybePop();
+                      navMaybePop();
                       setState(() {
                         _selectedImageBytes = null;
                         _avatarUrl = null;
@@ -181,7 +181,7 @@ class EditProfilePageState extends State<EditProfilePage> {
                 _buildImagePickerOption(
                   icon: Icons.close_rounded,
                   title: 'Cancel',
-                  onTap: () => Navigator.of(context).maybePop(),
+                  onTap: () => navMaybePop(),
                 ),
                 SizedBox(height: 16.h),
               ],

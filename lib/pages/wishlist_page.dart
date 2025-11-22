@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:swaply/router/root_nav.dart';
 // ✅ 顶部 import 修正
 import 'package:swaply/services/dual_favorites_service.dart';
 import 'package:swaply/services/favorites_update_service.dart';
@@ -450,7 +450,7 @@ class _WishlistPageState extends State<WishlistPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => navPop(),
               child: Text('Cancel',
                   style: TextStyle(fontSize: 13.sp, color: Colors.grey[600])),
             ),
@@ -461,7 +461,7 @@ class _WishlistPageState extends State<WishlistPage> {
               ),
               child: TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  navPop();
                   _removeFromWishlist(listingId, index);
                 },
                 child: Text(
@@ -552,7 +552,7 @@ class _WishlistPageState extends State<WishlistPage> {
                 ],
               ),
               child: ElevatedButton.icon(
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () => navPop(),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
                   shadowColor: Colors.transparent,
@@ -777,7 +777,7 @@ class _WishlistPageState extends State<WishlistPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => navPop(),
               child: Text('Cancel',
                   style: TextStyle(fontSize: 13.sp, color: Colors.grey[600])),
             ),
@@ -788,7 +788,7 @@ class _WishlistPageState extends State<WishlistPage> {
               ),
               child: TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  navPop();
                   _clearAllWishlist();
                 },
                 child: Text(

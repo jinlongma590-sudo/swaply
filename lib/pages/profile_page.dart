@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-
+import 'package:swaply/router/safe_navigator.dart';
 // 鈥斺€?浣犻」鐩噷鐨勪緷璧栵紙鏍规嵁浣犲綋鍓嶄唬鐮佺‘瀹氳繖浜涙槸鐢ㄥ埌鐨勶級鈥斺€?
 import 'package:swaply/router/safe_navigator.dart';
 import 'package:swaply/router/root_nav.dart'; // ✅ 新增导航
@@ -643,8 +643,7 @@ class _ProfilePageState extends State<ProfilePage>
                               icon: Icons.inventory_2_rounded,
                               title: l10n.myListings,
                               color: Colors.indigo,
-                              onTap: () => Navigator.push(
-                                  context,
+                              onTap: () => SafeNavigator.push(
                                   MaterialPageRoute(
                                       builder: (_) => const MyListingsPage())),
                             ),
@@ -664,8 +663,7 @@ class _ProfilePageState extends State<ProfilePage>
                                   );
                                   return;
                                 }
-                                Navigator.push(
-                                    context,
+                                SafeNavigator.push(
                                     MaterialPageRoute(
                                         builder: (_) => const WishlistPage()));
                               },
@@ -677,8 +675,7 @@ class _ProfilePageState extends State<ProfilePage>
                               title: 'Invite Friends',
                               subtitle: 'Earn coupons by inviting friends',
                               color: Colors.orange,
-                              onTap: () => Navigator.push(
-                                context,
+                              onTap: () => SafeNavigator.push(
                                 MaterialPageRoute(
                                     builder: (_) => const InviteFriendsPage()),
                               ),
@@ -690,8 +687,7 @@ class _ProfilePageState extends State<ProfilePage>
                               title: 'My Coupons',
                               subtitle: 'View and manage your coupons',
                               color: Colors.purple,
-                              onTap: () => Navigator.push(
-                                context,
+                              onTap: () => SafeNavigator.push(
                                 MaterialPageRoute(
                                     builder: (_) =>
                                     const CouponManagementPage()),
@@ -712,8 +708,7 @@ class _ProfilePageState extends State<ProfilePage>
                               title: 'Account',
                               subtitle: 'Password, devices, delete',
                               color: Colors.cyan,
-                              onTap: () => Navigator.push(
-                                context,
+                              onTap: () => SafeNavigator.push(
                                 MaterialPageRoute(
                                   builder: (_) => const AccountSettingsPage(),
                                 ),
@@ -747,8 +742,7 @@ class _ProfilePageState extends State<ProfilePage>
                               icon: Icons.help_outline_rounded,
                               title: l10n.helpSupport,
                               color: Colors.teal,
-                              onTap: () => Navigator.push(
-                                  context,
+                              onTap: () => SafeNavigator.push(
                                   MaterialPageRoute(
                                       builder: (_) => const HelpSupportPage())),
                             ),
@@ -757,8 +751,7 @@ class _ProfilePageState extends State<ProfilePage>
                               icon: Icons.info_outline_rounded,
                               title: l10n.about,
                               color: Colors.blueGrey,
-                              onTap: () => Navigator.push(
-                                  context,
+                              onTap: () => SafeNavigator.push(
                                   MaterialPageRoute(
                                       builder: (_) => const AboutPage())),
                             ),
@@ -1183,16 +1176,14 @@ class _GuestSimpleOptions extends StatelessWidget {
           icon: Icons.help_outline_rounded,
           title: l10n.helpSupport,
           color: Colors.blue,
-          onTap: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => const HelpSupportPage())),
+          onTap: () => SafeNavigator.push( MaterialPageRoute(builder: (_) => const HelpSupportPage())),
         ),
         const SizedBox(height: 12),
         _ProfileOptionEnhanced(
           icon: Icons.info_outline_rounded,
           title: l10n.about,
           color: Colors.indigo,
-          onTap: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => const AboutPage())),
+          onTap: () => SafeNavigator.push( MaterialPageRoute(builder: (_) => const AboutPage())),
         ),
       ],
     );

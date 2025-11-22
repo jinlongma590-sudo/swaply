@@ -12,7 +12,7 @@ import 'package:swaply/models/offer.dart';
 import 'package:swaply/pages/product_detail_page.dart';
 import 'package:swaply/pages/sell_form_page.dart';
 import 'package:flutter/foundation.dart';
-
+import 'package:swaply/router/safe_navigator.dart';
 class MyListingsPage extends StatefulWidget {
   const MyListingsPage({super.key});
   @override
@@ -895,8 +895,7 @@ class _MyListingsPageState extends State<MyListingsPage>
                             onSelected: (value) async {
                               switch (value) {
                                 case 'edit':
-                                  Navigator.push(
-                                    context,
+                                  SafeNavigator.push(
                                     MaterialPageRoute(
                                       builder: (context) =>
                                       const SellFormPage(),
@@ -966,8 +965,7 @@ class _MyListingsPageState extends State<MyListingsPage>
                           Expanded(
                             child: GestureDetector(
                               onTap: () {
-                                Navigator.push(
-                                  context,
+                                SafeNavigator.push(
                                   MaterialPageRoute(
                                     builder: (context) => ProductDetailPage(
                                       productId: listing['id']?.toString(),
@@ -1741,8 +1739,7 @@ class _MyListingsPageState extends State<MyListingsPage>
               ),
               child: ElevatedButton.icon(
                 onPressed: () {
-                  Navigator.push(
-                    context,
+                  SafeNavigator.push(
                     MaterialPageRoute(
                         builder: (context) => const SellFormPage()),
                   );

@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/reward_service.dart';
 import 'package:swaply/pages/task_management_page.dart';
-
+import 'package:swaply/router/root_nav.dart';
+import 'package:swaply/router/safe_navigator.dart';
 class MyRewardsTile extends StatefulWidget {
   const MyRewardsTile({super.key});
 
@@ -87,7 +88,7 @@ class _MyRewardsTileState extends State<MyRewardsTile> {
           trailing:
               Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey[400]),
           onTap: () {
-            Navigator.push(context,
+            SafeNavigator.push(
                 MaterialPageRoute(builder: (_) => const TaskManagementPage()));
           },
         );

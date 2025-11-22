@@ -5,7 +5,7 @@ import 'package:swaply/listing_api.dart';
 import 'package:swaply/pages/category_products_page.dart';
 // 使用集中路由：引入 root_nav 的 navPush（命名路由）
 import 'package:swaply/router/root_nav.dart';
-
+import 'package:swaply/router/safe_navigator.dart';
 /// 首页/专区用的远端卡片列表区块
 /// - [title] 区块标题
 /// - [categoryId] 传 null 显示所有；否则传首页用的 id，比如 'jobs'、'vehicles'...
@@ -241,8 +241,7 @@ class _RemoteListingsSectionState extends State<RemoteListingsSection> {
 
   void _seeAll() {
     if (widget.categoryId == null) return;
-    Navigator.push(
-      context,
+    SafeNavigator.push(
       MaterialPageRoute(
         builder: (_) => CategoryProductsPage(
           categoryId: widget.categoryId!,

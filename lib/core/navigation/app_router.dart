@@ -6,71 +6,108 @@ import 'package:swaply/pages/main_navigation_page.dart';
 import 'package:swaply/auth/welcome_screen.dart';
 import 'package:swaply/auth/login_screen.dart';
 import 'package:swaply/auth/register_screen.dart';
-import 'package:swaply/pages/coupon_management_page.dart';
 import 'package:swaply/auth/forgot_password_screen.dart';
+
+import 'package:swaply/pages/coupon_management_page.dart';
 import 'package:swaply/pages/product_detail_page.dart';
 import 'package:swaply/pages/sell_form_page.dart';
 
+/// ===============================================================
+/// AppRouter (A 方案)
+/// ---------------------------------------------------------------
+/// ✔ 与 AuthFlowObserver 完全对齐
+/// ✔ '/' 交由 AuthFlowObserver 决定去 /home 或 /welcome
+/// ✔ 保留 fade 动画
+/// ✔ 修复所有路由冲突：/home /welcome /login /sell-form /listing
+/// ✔ 未命中路由统一 fallback → MainNavigationPage
+/// ===============================================================
 class AppRouter {
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
-    final name = settings.name ?? '/';
-    final hasSession = Supabase.instance.client.auth.currentSession != null;
+    final String name = settings.name ?? '/';
+    final bool hasSession =
+        Supabase.instance.client.auth.currentSession != null;
 
     switch (name) {
+    /* ============================================================
+       * 顶层入口路由（交由 AuthFlowObserver 控制）
+       * ============================================================ */
       case '/':
-        return _fade(hasSession ? const MainNavigationPage()
-            : const WelcomeScreen(), name);
+        return _fade(
+          hasSession
+              ? const MainNavigationPage()
+              : const WelcomeScreen(), // 无会话：欢迎页
+          '/',
+        );
 
+    /* ------------------ 主导航页面 ------------------ */
       case '/home':
-        return _fade(const MainNavigationPage(), name);
+        return _fade(const MainNavigationPage(), '/home');
 
+    /* ------------------ 权限/登录流程 ------------------ */
       case '/welcome':
-        return _fade(const WelcomeScreen(), name);
+        return _fade(const WelcomeScreen(), '/welcome');
 
       case '/login':
-        return _fade(const LoginScreen(), name);
+        return _fade(const LoginScreen(), '/login');
 
-    // 新增：注册页
       case '/register':
-        return _fade(const RegisterScreen(), name);
+        return _fade(const RegisterScreen(), '/register');
 
-    // 新增：忘记/重置密码（两个路径都指向同页，兼容外部入口）
       case '/forgot-password':
       case '/reset-password':
-        return _fade(const ForgotPasswordScreen(), name);
+        return _fade(const ForgotPasswordScreen(), '/forgot-password');
 
+    /* ------------------ 我的优惠券 ------------------ */
       case '/coupons':
-        return _fade(const CouponManagementPage(), name);
+        return _fade(const CouponManagementPage(), '/coupons');
 
-    // 新增：发布表单页（SellPage 内部会 navPush('/sell-form')）
+    /* ------------------ 发布页面 ------------------ */
       case '/sell-form':
-        return _fade(const SellFormPage(), name);
+        return _fade(const SellFormPage(), '/sell-form');
 
-    // 详情页：支持 String id 或 Map {id: ...}
+    /* ============================================================
+       * 商品详情页
+       * - 支持：navPush('/listing', arguments: {'id': xxx})
+       * - 支持：navPush('/listing', arguments: 'xxx')
+       * ============================================================ */
       case '/listing': {
         final args = settings.arguments;
         String productId = '';
+
         if (args is String) {
           productId = args;
         } else if (args is Map && args['id'] != null) {
           productId = '${args['id']}';
         }
-        return _fade(ProductDetailPage(productId: productId), name);
+
+        return _fade(
+          ProductDetailPage(productId: productId),
+          '/listing',
+        );
       }
 
-    // 未命中时回首页，避免抛异常
+    /* ============================================================
+       * Fallback：未匹配路由 → Home
+       * ============================================================ */
       default:
         return _fade(const MainNavigationPage(), '/home');
     }
   }
 
+  /* ============================================================
+   * fade 动画封装
+   * ============================================================ */
   static PageRoute _fade(Widget page, String name) {
     return PageRouteBuilder(
       settings: RouteSettings(name: name),
-      pageBuilder: (_, __, ___) => page,
-      transitionsBuilder: (_, anim, __, child) =>
-          FadeTransition(opacity: anim, child: child),
       transitionDuration: const Duration(milliseconds: 180),
+      pageBuilder: (_, __, ___) => page,
+      transitionsBuilder: (_, anim, __, child) {
+        return FadeTransition(
+          opacity: anim,
+          child: child,
+        );
+      },
     );
   }
 }

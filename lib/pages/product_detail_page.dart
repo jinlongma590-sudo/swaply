@@ -25,7 +25,7 @@ import 'package:swaply/services/offer_service.dart';
 import 'package:swaply/services/favorites_update_service.dart';
 import 'package:swaply/pages/seller_profile_page.dart';
 import 'package:swaply/services/verification_guard.dart'; // ✅ 关键操作守卫
-
+import 'package:swaply/router/safe_navigator.dart';
 import 'package:swaply/widgets/verified_avatar.dart';
 
 // ✅ 新增：统一分享工具（iOS/Android 平台分支 + 商店/网页回退）
@@ -292,8 +292,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
         sellerInfo?['id'] ?? product['user_id'] ?? product['seller_id'];
 
     if (sellerId != null) {
-      Navigator.push(
-        context,
+      SafeNavigator.push(
         MaterialPageRoute(
           builder: (context) => SellerProfileViewPage(
             sellerId: sellerId,
@@ -2028,8 +2027,7 @@ class _ProductDetailPageState extends State<ProductDetailPage>
   }
 
   void _showImageViewer(int initialIndex) {
-    Navigator.push(
-      context,
+    SafeNavigator.push(
       MaterialPageRoute(
         builder: (context) => Scaffold(
           backgroundColor: Colors.black,

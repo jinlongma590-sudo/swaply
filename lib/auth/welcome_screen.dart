@@ -3,8 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+// 使用 root nav（全局唯一导航）
 import 'package:swaply/router/root_nav.dart';
-// 深链服务
+
 import 'login_screen.dart';
 import 'register_screen.dart';
 
@@ -24,17 +26,14 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   late Animation<double> _scaleAnimation;
   late Animation<double> _floatAnimation;
 
-  // 页面层做导航，避免顶层 GlobalKey 冲突
   StreamSubscription<AuthState>? _authSub;
 
-  // 用于外部返回时的本页忙碌复位（与 Login/Register 行为一致）
   bool _busy = false;
 
   @override
   void initState() {
     super.initState();
 
-    // 监听应用前后台，便于从外部浏览器返回时复位本页状态
     WidgetsBinding.instance.addObserver(this);
 
     _animationController = AnimationController(
@@ -77,39 +76,22 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
     _animationController.forward();
 
-    // 在 Navigator 树之下启动 deep link（幂等）
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-    });
-
-    // 登录成功 -> 安全导航到 /home
     _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       if (!mounted) return;
       if (data.event == AuthChangeEvent.signedIn &&
           data.session?.user != null) {
-        // [patched] centralized by AuthFlowObserver：此处不再二次导航
+        // 现在由 AuthFlowObserver 负责导航，不要主动 push
       }
     });
 
     _bootAuth();
   }
 
-  /// 仅做提示，不在这里主动跳转；初始路由由 main.dart 的 initialRoute 决定
   Future<void> _bootAuth() async {
     final s = Supabase.instance.client.auth.currentSession;
     if (!mounted) return;
     if (s != null) {
       debugPrint('[Welcome] session exists; initialRoute should be /home');
-    }
-  }
-
-  /// 从外部浏览器/应用返回时复位自身 busy 与清理可能残留的上层路由
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && mounted) {
-      setState(() => _busy = false);
-      // 兜底：清理 rootNavigator 上可能残留的 overlay/路由，避免“点击被吃掉”
-      Navigator.of(context, rootNavigator: true).popUntil((r) => r.isFirst);
     }
   }
 
@@ -246,15 +228,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         child: TextButton(
                           onPressed: () async {
                             Navigator.of(context).pop();
-                            // 游客模式不触发 onAuthStateChange，使用 root_nav 助手导航
-                            // [patched] centralized by AuthFlowObserver：此处不再二次导航
+                            // 游客模式不跳转，由逻辑中心控制
                           },
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: 12.h),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                          ),
                           child: Text(
                             'Continue',
                             style: TextStyle(
@@ -437,7 +412,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                                 Shadow(
                                                   color: Colors.black
                                                       .withOpacity(0.1),
-                                                  offset: const Offset(0, 2),
+                                                  offset:
+                                                  const Offset(0, 2),
                                                   blurRadius: 4,
                                                 ),
                                               ],
@@ -469,8 +445,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                     mainAxisAlignment:
                                     MainAxisAlignment.spaceEvenly,
                                     children: [
-                                      _buildFeature(
-                                          Icons.shopping_cart_rounded,
+                                      _buildFeature(Icons.shopping_cart_rounded,
                                           'Shop Smart'),
                                       _buildFeature(Icons.near_me_rounded,
                                           'Near You'),
@@ -487,6 +462,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                   opacity: _fadeAnimation,
                                   child: Column(
                                     children: [
+                                      // -------- Register Button --------
                                       Container(
                                         width: double.infinity,
                                         height: 52.h,
@@ -514,15 +490,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                             onTap: _busy
                                                 ? null
                                                 : () {
-                                              setState(() =>
-                                              _busy = true);
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                  const RegisterScreen(),
-                                                ),
-                                              ).whenComplete(() {
+                                              setState(
+                                                      () => _busy = true);
+                                              navPush('/register')
+                                                  .whenComplete(() {
                                                 if (mounted) {
                                                   setState(() =>
                                                   _busy = false);
@@ -559,17 +530,21 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                           ),
                                         ),
                                       ),
+
                                       SizedBox(height: 12.h),
+
+                                      // -------- Login Button --------
                                       Container(
                                         width: double.infinity,
                                         height: 52.h,
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.15),
+                                          color:
+                                          Colors.white.withOpacity(0.15),
                                           borderRadius:
                                           BorderRadius.circular(16.r),
                                           border: Border.all(
-                                            color:
-                                            Colors.white.withOpacity(0.3),
+                                            color: Colors.white
+                                                .withOpacity(0.3),
                                             width: 1.5,
                                           ),
                                         ),
@@ -579,15 +554,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                             onTap: _busy
                                                 ? null
                                                 : () {
-                                              setState(() =>
-                                              _busy = true);
-                                              Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                  const LoginScreen(),
-                                                ),
-                                              ).whenComplete(() {
+                                              setState(
+                                                      () => _busy = true);
+                                              navPush('/login')
+                                                  .whenComplete(() {
                                                 if (mounted) {
                                                   setState(() =>
                                                   _busy = false);
@@ -602,19 +572,25 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                                 style: TextStyle(
                                                   color: Colors.white,
                                                   fontSize: 16.sp,
-                                                  fontWeight: FontWeight.w600,
+                                                  fontWeight:
+                                                  FontWeight.w600,
                                                 ),
                                               ),
                                             ),
                                           ),
                                         ),
                                       ),
+
                                       SizedBox(height: 16.h),
+
+                                      // -------- Browse as Guest --------
                                       TextButton(
-                                        onPressed: _busy ? null : _continueAsGuest,
+                                        onPressed:
+                                        _busy ? null : _continueAsGuest,
                                         style: TextButton.styleFrom(
                                           padding: EdgeInsets.symmetric(
-                                              horizontal: 20.w, vertical: 12.h),
+                                              horizontal: 20.w,
+                                              vertical: 12.h),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
@@ -642,12 +618,14 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                   ),
                                 ),
                               ),
+
                               SizedBox(height: 20.h),
+
                               FadeTransition(
                                 opacity: _fadeAnimation,
                                 child: Padding(
-                                  padding:
-                                  EdgeInsets.symmetric(horizontal: 20.w),
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 20.w),
                                   child: Text(
                                     'By continuing, you agree to our\nTerms of Service and Privacy Policy',
                                     textAlign: TextAlign.center,
@@ -659,6 +637,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                   ),
                                 ),
                               ),
+
                               SizedBox(height: 20.h),
                             ],
                           ),
@@ -684,7 +663,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.1 * _fadeAnimation.value),
             borderRadius: BorderRadius.circular(20.r),
-            border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+            border: Border.all(
+                color: Colors.white.withOpacity(0.2), width: 1),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -692,8 +672,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               Container(
                 padding: EdgeInsets.all(8.r),
                 decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.15),
-                    shape: BoxShape.circle),
+                  color: Colors.white.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
                 child: Icon(icon, color: Colors.white, size: 22.r),
               ),
               SizedBox(height: 6.h),
@@ -712,6 +693,3 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     );
   }
 }
-
-
-

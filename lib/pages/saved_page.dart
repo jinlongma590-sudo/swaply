@@ -4,7 +4,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:swaply/router/root_nav.dart';
 import 'package:swaply/core/l10n/app_localizations.dart';
 
 // === 项目内服务 ===
@@ -428,12 +428,12 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         const Text('Are you sure you want to clear all favorites?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => navPop(),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.of(context).pop();
+              navPop();
               await _clearAllFavorites();
             },
             child: const Text('Clear'),
@@ -520,7 +520,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                   if (widget.onNavigateToHome != null) {
                     widget.onNavigateToHome!();
                   } else {
-                    Navigator.of(context).popUntil((r) => r.isFirst);
+                    rootNavKey.currentState?.popUntil((route) => route.isFirst);
                   }
                 },
                 style: ElevatedButton.styleFrom(
@@ -860,7 +860,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () => navPop(),
             child: Text('Cancel',
                 style: TextStyle(fontSize: 11.sp, color: Colors.grey[600])),
           ),
@@ -871,7 +871,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
             ),
             child: TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                navPop();
                 _removeFromFavorites(listingId, index);
               },
               child: Text(

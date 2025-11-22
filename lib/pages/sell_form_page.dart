@@ -9,7 +9,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:swaply/router/safe_navigator.dart';
 import 'package:swaply/config.dart';
 import 'package:swaply/listing_api.dart';
 import 'package:swaply/models/coupon.dart';
@@ -514,8 +514,7 @@ class _SellFormPageState extends State<SellFormPage>
     ListingStore.i.add(listing);
     _toast('Posted locally (mock data).');
     if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
+    SafeNavigator.push(
       MaterialPageRoute(
         builder: (_) =>
             pd.ProductDetailPage(productId: id, productData: listing),
