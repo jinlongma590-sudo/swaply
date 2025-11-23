@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/reward_service.dart';
 import 'package:swaply/pages/task_management_page.dart';
-import 'package:swaply/router/root_nav.dart';
+// import 'package:swaply/router/root_nav.dart'; // 不再需要
 import 'package:swaply/router/safe_navigator.dart';
+
 class MyRewardsTile extends StatefulWidget {
   const MyRewardsTile({super.key});
 
@@ -41,13 +42,14 @@ class _MyRewardsTileState extends State<MyRewardsTile> {
     return FutureBuilder<Map<String, dynamic>>(
       future: _future,
       builder: (context, snap) {
-        // Loading state — show a standard list tile shell
+        // Loading
         if (snap.connectionState == ConnectionState.waiting) {
           return _tileShell(
             iconBg: const Color(0xFF7C3AED).withOpacity(0.10),
             iconColor: const Color(0xFF7C3AED),
             title: 'My Rewards',
-            subtitle: 'Loading…',
+            // ✅ 隐藏副标题
+            subtitle: null,
             trailing: const SizedBox(
               width: 20,
               height: 20,
@@ -57,51 +59,51 @@ class _MyRewardsTileState extends State<MyRewardsTile> {
           );
         }
 
-        // Error state — keep same height/shape as other rows
+        // Error
         if (snap.hasError) {
           return _tileShell(
             iconBg: const Color(0xFF7C3AED).withOpacity(0.10),
             iconColor: const Color(0xFF7C3AED),
             title: 'My Rewards',
-            subtitle: 'Failed to load rewards',
+            // ✅ 隐藏副标题
+            subtitle: null,
             trailing: IconButton(
               tooltip: 'Retry',
-              icon: const Icon(Icons.refresh_rounded,
-                  size: 20, color: Colors.grey),
+              icon: const Icon(Icons.refresh_rounded, size: 20, color: Colors.grey),
               onPressed: _refresh,
             ),
             onTap: _refresh,
           );
         }
 
+        // Normal
+        // 这里虽然仍然计算了 points/coupons，但不再展示
         final data = snap.data ?? const <String, dynamic>{};
-        final points =
-            _pickInt(data, ['points', 'total_points', 'point', 'totalPoints']);
-        final coupons = _pickInt(
-            data, ['coupons', 'couponCount', 'coupon_count', 'total_coupons']);
+        final points = _pickInt(data, ['points', 'total_points', 'point', 'totalPoints']);
+        final coupons = _pickInt(data, ['coupons', 'couponCount', 'coupon_count', 'total_coupons']);
+        // 如果后续想用到 points/coupons，可在这里根据需要拼接文案
 
         return _tileShell(
           iconBg: const Color(0xFF7C3AED).withOpacity(0.10),
           iconColor: const Color(0xFF7C3AED),
           title: 'My Rewards',
-          subtitle: 'Points: $points · Coupons: $coupons',
-          trailing:
-              Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey[400]),
+          // ✅ 隐藏副标题（不再显示 Points/Coupons）
+          subtitle: null,
+          trailing: Icon(Icons.arrow_forward_ios, size: 18, color: Colors.grey[400]),
           onTap: () {
-            SafeNavigator.push(
-                MaterialPageRoute(builder: (_) => const TaskManagementPage()));
+            SafeNavigator.push(MaterialPageRoute(builder: (_) => const TaskManagementPage()));
           },
         );
       },
     );
   }
 
-  /// A shell that matches the look/height of other list items on the Profile page.
+  /// 统一外观的条目容器
   Widget _tileShell({
     required Color iconBg,
     required Color iconColor,
     required String title,
-    required String subtitle,
+    String? subtitle, // ✅ 改为可空；为空时不渲染副标题
     required Widget trailing,
     VoidCallback? onTap,
   }) {
@@ -131,21 +133,21 @@ class _MyRewardsTileState extends State<MyRewardsTile> {
                   color: iconBg,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(Icons.emoji_events_rounded,
-                    color: iconColor, size: 26),
+                child: Icon(Icons.emoji_events_rounded, color: iconColor, size: 26),
               ),
               const SizedBox(width: 18),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title,
-                        style: const TextStyle(
-                            fontSize: 17, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 3),
-                    Text(subtitle,
-                        style:
-                            TextStyle(fontSize: 14, color: Colors.grey[600])),
+                    Text(
+                      title,
+                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                    ),
+                    if (subtitle != null && subtitle.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(subtitle, style: TextStyle(fontSize: 14, color: Colors.grey[600])),
+                    ],
                   ],
                 ),
               ),

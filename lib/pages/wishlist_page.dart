@@ -235,7 +235,7 @@ class _WishlistPageState extends State<WishlistPage> {
           child: Padding(
             padding: EdgeInsets.all(12.w),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center, // ✅ 修改：垂直居中对齐
               children: [
                 // 缩略图
                 Hero(
@@ -385,11 +385,11 @@ class _WishlistPageState extends State<WishlistPage> {
                   ),
                 ),
 
-                // 移除按钮
+                // 移除按钮 (已修改为红色)
                 Container(
                   margin: EdgeInsets.only(left: 6.w),
                   decoration: BoxDecoration(
-                    color: kPrimaryBlue.withOpacity(0.1),
+                    color: Colors.red.withOpacity(0.1), // ❌ 原: kPrimaryBlue.withOpacity(0.1)
                     borderRadius: BorderRadius.circular(8.w),
                   ),
                   child: Material(
@@ -401,7 +401,7 @@ class _WishlistPageState extends State<WishlistPage> {
                         padding: EdgeInsets.all(8.w),
                         child: Icon(
                           Icons.favorite_rounded,
-                          color: kPrimaryBlue,
+                          color: Colors.red, // ❌ 原: kPrimaryBlue
                           size: 18.w,
                         ),
                       ),
@@ -654,11 +654,16 @@ class _WishlistPageState extends State<WishlistPage> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ 与邀请好友页对齐的头部高度策略
+    final bool isIOS =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
         backgroundColor: kPrimaryBlue,
-        toolbarHeight: kCustomHeaderHeight, // ✅ 与全局头一致
+        // ✅ Android：使用默认高度；iOS：44（再叠加状态栏高度）——与邀请好友页一致
+        toolbarHeight: isIOS ? 44 : null,
         title: Text(
           'My Wishlist (${_wishlistItems.length})',
           style: TextStyle(
@@ -671,29 +676,32 @@ class _WishlistPageState extends State<WishlistPage> {
         leading: const BackButton(color: Colors.white),
         actions: [
           if (_wishlistItems.isNotEmpty && !_isLoading)
-            PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert_rounded,
-                  color: Colors.white, size: 20.w),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10.w)),
-              onSelected: (value) {
-                if (value == 'clear_all') {
-                  _showClearAllDialog();
-                }
-              },
-              itemBuilder: (BuildContext context) => [
-                PopupMenuItem(
-                  value: 'clear_all',
-                  child: Row(
-                    children: [
-                      Icon(Icons.clear_all_rounded,
-                          color: Colors.red, size: 16.w),
-                      SizedBox(width: 10.w),
-                      Text('Clear All', style: TextStyle(fontSize: 13.sp)),
-                    ],
+            Padding(
+              padding: EdgeInsets.only(right: 6.w), // ✅ 轻微右边距，居中对齐
+              child: PopupMenuButton<String>(
+                icon: Icon(Icons.more_vert_rounded,
+                    color: Colors.white, size: 20.r),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10.w)),
+                onSelected: (value) {
+                  if (value == 'clear_all') {
+                    _showClearAllDialog();
+                  }
+                },
+                itemBuilder: (BuildContext context) => [
+                  PopupMenuItem(
+                    value: 'clear_all',
+                    child: Row(
+                      children: [
+                        Icon(Icons.clear_all_rounded,
+                            color: Colors.red, size: 16.w),
+                        SizedBox(width: 10.w),
+                        Text('Clear All', style: TextStyle(fontSize: 13.sp)),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
         ],
       ),
@@ -706,7 +714,8 @@ class _WishlistPageState extends State<WishlistPage> {
               width: 30.w,
               height: 30.w,
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(kPrimaryBlue),
+                valueColor:
+                AlwaysStoppedAnimation<Color>(kPrimaryBlue),
                 strokeWidth: 2.5.w,
               ),
             ),

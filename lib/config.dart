@@ -31,9 +31,8 @@ class AppConfig {
   static const String oauthRedirectUrl = authRedirectUri;
 
   // 重置密码回调（如在邮件中使用）
-  static const String resetPasswordRedirectUrl = 'swaply://reset-password';
+  static const String resetPasswordRedirectUrl = 'https://www.swaply.cc/reset-password';
 }
-
 /// 上传配置
 class UploadConfig {
   static const int maxImageSize = 5 * 1024 * 1024; // 5MB

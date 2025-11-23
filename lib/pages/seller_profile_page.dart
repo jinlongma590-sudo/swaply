@@ -40,19 +40,14 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
   List<Map<String, dynamic>> _sellerListings = [];
   int _totalListings = 0;
 
-  /// ✅ [MODIFIED] 新方案状态（来自公开 RPC）
-  // bool _isVerified = false; // 🔴 [REMOVED] 不再使用布尔值
   Map<String, dynamic>? _verifyRow;
-  // ✅ [ADDED] 使用徽章枚举作为唯一数据源
   vt.VerificationBadgeType _sellerBadge = vt.VerificationBadgeType.none;
 
   @override
   void initState() {
     super.initState();
 
-    // ✅ [MODIFIED] 若有上层传来的初始徽章，先用它
     _sellerBadge = widget.verificationType;
-    // 🔴 [REMOVED] _isVerified = widget.verificationType != vt.VerificationBadgeType.none;
 
     if (widget.initialSellerData != null) {
       _fullSellerInfo = widget.initialSellerData;
@@ -66,25 +61,22 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
     });
   }
 
-  /// ✅ [MODIFIED] 仅负责拉取「认证展示字段」，并使用 VerificationBadgeUtil 解析
+  /// 仅负责拉取「认证展示字段」，并使用 VerificationBadgeUtil 解析
   Future<void> _loadSellerVerifyPublic() async {
-    final sellerUserId = widget.sellerId; // 资料页接收到的卖家 user_id
+    final sellerUserId = widget.sellerId;
     if (sellerUserId.isEmpty) return;
 
     try {
       final row = await _verifySvc.fetchPublicVerification(sellerUserId);
-
       // ignore: avoid_print
       print('[SellerProfile] public verify row = $row');
 
-      // ✅ [MODIFIED] 使用新的 VerificationBadgeUtil 解析徽章
       final badge = vt.VerificationBadgeUtil.getVerificationTypeFromUser(row);
 
-      if (!mounted) return; // 避免 setState after dispose
+      if (!mounted) return;
       setState(() {
         _verifyRow = row;
-        _sellerBadge = badge; // ✅ [MODIFIED] 保存徽章枚举
-        // 🔴 [REMOVED] _isVerified = verified;
+        _sellerBadge = badge;
       });
     } catch (e) {
       if (kDebugMode) {
@@ -98,7 +90,6 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
       setState(() => _loading = true);
 
       if (_fullSellerInfo == null) {
-        // ⚠️ 不再 select 旧的认证字段：只拉展示所需
         final profileResponse = await Supabase.instance.client
             .from('profiles')
             .select('id, full_name, avatar_url, created_at')
@@ -122,7 +113,7 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
         listingsResponse.map((e) => Map<String, dynamic>.from(e)),
       );
       _totalListings = _sellerListings.length;
-    
+
       if (mounted) setState(() => _loading = false);
     } catch (e) {
       if (kDebugMode) print('Error loading seller data: $e');
@@ -169,33 +160,22 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
     }
   }
 
-  /// ✅ [MODIFIED] 根据徽章类型，获取“统计卡片”要显示的图标
-  /// (这个逻辑与 lib/widgets/verification_badge.dart 的 iconOf 保持一致)
   IconData _getVerificationIcon(vt.VerificationBadgeType type) {
     switch (type) {
-    // 官方/政府 (蓝色对勾)
       case vt.VerificationBadgeType.official:
       case vt.VerificationBadgeType.government:
         return Icons.verified_rounded;
-
-    // 基础认证 (绿色盾牌)
       case vt.VerificationBadgeType.verified:
       case vt.VerificationBadgeType.blue:
-        return Icons.verified_user_rounded; // ✅ 修正为这个图标
-
-    // 付费/金标 (星星)
+        return Icons.verified_user_rounded;
       case vt.VerificationBadgeType.premium:
       case vt.VerificationBadgeType.gold:
         return Icons.workspace_premium_rounded;
-
-    // 商家 (建筑)
       case vt.VerificationBadgeType.business:
         return Icons.apartment_rounded;
-
-    // 默认/None
       case vt.VerificationBadgeType.none:
       default:
-        return Icons.help_outline; // 默认图标
+        return Icons.help_outline;
     }
   }
 
@@ -220,18 +200,13 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
     final avatarUrl = _fullSellerInfo?['avatar_url'];
     final memberSince = _getMemberSince();
 
-    // ✅ [MODIFIED] 1. 徽章枚举是唯一数据源
     final badgeType = _sellerBadge;
-    // ✅ [MODIFIED] 2. 布尔值由徽章枚举派生
     final bool isVerified = (badgeType != vt.VerificationBadgeType.none);
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: CustomScrollView(
         slivers: [
-          // ✅ 样式不变：仍然是蓝色头部 + 居中头像/姓名/入驻时间
-          // 仅把 flexibleSpace 改为 FlexibleSpaceBar(background: …)
-          // 这样在折叠时会自动裁剪，避免 Column 高度溢出导致的 BOTTOM OVERFLOWED。
           SliverAppBar(
             expandedHeight: 200.h,
             pinned: true,
@@ -276,8 +251,7 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
                             child: VerifiedAvatar(
                               avatarUrl: avatarUrl,
                               radius: 40.r,
-                              verificationType:
-                              badgeType, // ✅ [CORRECT] 现在传递的是正确的枚举
+                              verificationType: badgeType,
                               defaultIcon: Icons.person,
                             ),
                           ),
@@ -340,13 +314,11 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
                     label: 'Listings',
                     value: _totalListings.toString(),
                   ),
-                  // ✅ [CORRECT] 现在使用派生的 _isVerified
                   if (isVerified)
                     _buildStatItem(
-                      icon: _getVerificationIcon(badgeType), // ✅ [MODIFIED] 动态图标
+                      icon: _getVerificationIcon(badgeType),
                       label: 'Status',
                       value: 'Verified',
-                      // ✅ [CORRECT] 颜色来自正确的 badgeType
                       color: _getVerificationColor(badgeType),
                     ),
                 ],
@@ -369,7 +341,7 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
             ),
           ),
 
-          // 列表/网格（保持你的布局与比例不变）
+          // 列表/网格
           if (_sellerListings.isEmpty)
             SliverToBoxAdapter(
               child: SizedBox(
@@ -393,7 +365,8 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
               sliver: SliverGrid(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
-                  childAspectRatio: 0.75,
+                  // ✅ 轻调，卡片更协调
+                  childAspectRatio: 0.78,
                   crossAxisSpacing: 12.w,
                   mainAxisSpacing: 12.w,
                 ),
@@ -434,6 +407,7 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
     );
   }
 
+  // ===================== 卡片（已修正“图片铺满 + 信息区紧凑”） =====================
   Widget _buildListingCard(Map<String, dynamic> listing) {
     final images = listing['images'] ?? listing['image_urls'] ?? [];
     final imageUrl =
@@ -466,82 +440,74 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 图片（保持你的固定高度与 cover）
-            Container(
-              height: 120.h,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
-                color: Colors.grey[200],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
+            // ✅ 顶部图片：等比铺满（cover），统一高度比例
+            ClipRRect(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(12.r)),
+              child: AspectRatio(
+                aspectRatio: 1.25, // 宽:高 ≈ 1.25，更贴近 Jiji 卡片观感
                 child: imageUrl.isNotEmpty
                     ? Image.network(
                   imageUrl,
-                  fit: BoxFit.cover,
+                  fit: BoxFit.cover, // ✅ 关键：铺满裁剪
                   width: double.infinity,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Center(
-                      child: Icon(Icons.image,
-                          size: 32.sp, color: Colors.grey[400]),
-                    );
-                  },
+                  height: double.infinity,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: Colors.grey[200],
+                    child: Icon(Icons.image,
+                        size: 32.sp, color: Colors.grey[400]),
+                  ),
                 )
-                    : Center(
+                    : Container(
+                  color: Colors.grey[200],
                   child: Icon(Icons.image,
                       size: 32.sp, color: Colors.grey[400]),
                 ),
               ),
             ),
-            // 信息（与你原来的布局一致）
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.all(10.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      listing['title']?.toString() ?? 'Untitled',
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[800],
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+
+            // ✅ 信息区：紧凑排列（去掉 spaceBetween 的大白空）
+            Padding(
+              padding: EdgeInsets.all(10.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min, // 只占需要的高度
+                children: [
+                  Text(
+                    listing['title']?.toString() ?? 'Untitled',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[800],
                     ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          listing['price']?.toString() ?? r'$0',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 6.h),
+                  Text(
+                    listing['price']?.toString() ?? r'$0',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.bold,
+                      color: _successGreen,
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Row(
+                    children: [
+                      Icon(Icons.location_on_outlined,
+                          size: 10.sp, color: Colors.grey[600]),
+                      SizedBox(width: 2.w),
+                      Expanded(
+                        child: Text(
+                          listing['city']?.toString() ?? 'Unknown',
                           style: TextStyle(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.bold,
-                            color: _successGreen,
-                          ),
+                              fontSize: 10.sp, color: Colors.grey[600]),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        SizedBox(height: 2.h),
-                        Row(
-                          children: [
-                            Icon(Icons.location_on_outlined,
-                                size: 10.sp, color: Colors.grey[600]),
-                            SizedBox(width: 2.w),
-                            Expanded(
-                              child: Text(
-                                listing['city']?.toString() ?? 'Unknown',
-                                style: TextStyle(
-                                    fontSize: 10.sp, color: Colors.grey[600]),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ],
@@ -549,4 +515,5 @@ class _SellerProfileViewPageState extends State<SellerProfileViewPage> {
       ),
     );
   }
+// =======================================================================
 }

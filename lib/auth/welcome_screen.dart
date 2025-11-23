@@ -1,5 +1,5 @@
 ﻿// lib/auth/welcome_screen.dart
-import 'dart:async';
+// ✅ 删除页面级 onAuthStateChange 监听：并发导航统一交由 AuthFlowObserver 处理
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -25,8 +25,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   late Animation<Offset> _slideAnimation;
   late Animation<double> _scaleAnimation;
   late Animation<double> _floatAnimation;
-
-  StreamSubscription<AuthState>? _authSub;
 
   bool _busy = false;
 
@@ -76,14 +74,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
     _animationController.forward();
 
-    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      if (!mounted) return;
-      if (data.event == AuthChangeEvent.signedIn &&
-          data.session?.user != null) {
-        // 现在由 AuthFlowObserver 负责导航，不要主动 push
-      }
-    });
-
+    // ✅ 不在页面层监听鉴权变化，导航交由全局 AuthFlowObserver
     _bootAuth();
   }
 
@@ -100,7 +91,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     WidgetsBinding.instance.removeObserver(this);
     _animationController.dispose();
     _floatController.dispose();
-    _authSub?.cancel();
     super.dispose();
   }
 
@@ -228,7 +218,20 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         child: TextButton(
                           onPressed: () async {
                             Navigator.of(context).pop();
-                            // 游客模式不跳转，由逻辑中心控制
+                            if (!mounted) return;
+                            // ✅ 最小修复：直接清栈跳转到 /home（游客态由 MainNavigationPage 基于 session==null 判定）
+                            try {
+                              debugPrint('[Welcome] guest -> navReplaceAll(/home)');
+                              await navReplaceAll('/home', arguments: const {'isGuest': true});
+                            } catch (e, st) {
+                              debugPrint('[Welcome] guest nav error: $e');
+                              debugPrint(st.toString());
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Failed to enter guest mode')),
+                                );
+                              }
+                            }
                           },
                           child: Text(
                             'Continue',

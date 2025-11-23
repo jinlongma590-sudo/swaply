@@ -50,7 +50,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
       backgroundColor: const Color(0xFFF8F9FA),
       body: CustomScrollView(
         slivers: [
-          _buildFixedHeader(l10n), // ✅ 固定高度 Header（与通知页一致）
+          _buildFixedHeader(l10n), // ✅ 头部高度与 SavedPage 完全一致
           if (myListings.isEmpty)
             _buildEmptyState(l10n)
           else
@@ -60,93 +60,70 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     );
   }
 
-  // ===================== 固定高度 Header（与通知页一致） =====================
+  // ===================== 修正后的 Header =====================
+  // ✅ 使用 SliverAppBar 标准属性，高度设为 52.h，Flutter 会自动叠加状态栏高度
+  // ✅ 右上角改为 IconButton，与 SavedPage 风格一致且更小
   SliverAppBar _buildFixedHeader(AppLocalizations l10n) {
-    final double h = kCustomHeaderHeight; // 项目内统一的固定高度
     return SliverAppBar(
       pinned: true,
       floating: false,
       automaticallyImplyLeading: false,
-      collapsedHeight: h,
-      expandedHeight: h, // ✅ 固定，不再伸缩
-      toolbarHeight: h,
+      toolbarHeight: 52.h, // 仅内容高度，系统自动处理 SafeTop
+      collapsedHeight: 52.h,
+      expandedHeight: 52.h,
       elevation: 0,
-      backgroundColor: kPrimaryBlue, // ✅ 颜色与通知页一致（纯蓝）
-      flexibleSpace: SafeArea(
-        bottom: false,
-        child: SizedBox(
-          height: h, // ✅ 明确限制高度，避免溢出
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 14.w),
-            child: Row(
-              children: [
-                // 标题（适度缩小）
-                Expanded(
-                  child: Text(
-                    l10n.sellItem,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w700,
-                      height: 1.2,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                ),
-                // 右上角小胶囊按钮（更小、完全包住、图标居中）
-                _CapsuleIconButton(
-                  onTap: () => navPush('/sell-form'),
-                  tooltip: 'Add New Listing',
-                  icon: Icons.add_rounded,
-                ),
-              ],
-            ),
-          ),
+      backgroundColor: kPrimaryBlue,
+      titleSpacing: 16.w, // 与 SavedPage 的 Padding 对齐
+      title: Text(
+        l10n.sellItem,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 20.sp,
+          fontWeight: FontWeight.w700,
+          height: 1.2,
         ),
       ),
+      actions: [
+        // ✅ 改为圆形 IconButton，尺寸适中，与 SavedPage 菜单一致
+        IconButton(
+          onPressed: () => navPush('/sell-form'),
+          icon: Icon(Icons.add_rounded, color: Colors.white, size: 28.r),
+          tooltip: 'Add New Listing',
+          padding: EdgeInsets.all(8.r),
+          constraints: const BoxConstraints(), // 移除默认最小尺寸限制，使其更紧凑
+        ),
+        SizedBox(width: 8.w), // 右侧留白
+      ],
     );
   }
 
-  // ===================== Guest View（同样用固定高度纯蓝头部） =====================
+  // ===================== Guest View =====================
   Widget _buildGuestView(AppLocalizations l10n) {
+    // Guest View 保持使用 Scaffold AppBar 结构，与 SavedPage 保持一致
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(kCustomHeaderHeight),
-        child: Container(
-          color: kPrimaryBlue,
-          child: SafeArea(
-            bottom: false,
-            child: SizedBox(
-              height: kCustomHeaderHeight,
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 14.w),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        l10n.sellItem,
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w700,
-                          height: 1.2,
-                        ),
-                      ),
-                    ),
-                    _CapsuleIconButton(
-                      onTap: () => navReplaceAll('/welcome'),
-                      tooltip: l10n.loginNow,
-                      icon: Icons.login_rounded,
-                    ),
-                  ],
-                ),
-              ),
-            ),
+      appBar: AppBar(
+        backgroundColor: kPrimaryBlue,
+        elevation: 0,
+        toolbarHeight: 52.h,
+        title: Text(
+          l10n.sellItem,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20.sp,
+            fontWeight: FontWeight.w700,
           ),
         ),
+        actions: [
+          IconButton(
+            onPressed: () => navReplaceAll('/welcome'),
+            icon: Icon(Icons.login_rounded, color: Colors.white, size: 24.r),
+            tooltip: l10n.loginNow,
+          ),
+          SizedBox(width: 8.w),
+        ],
       ),
       body: SlideTransition(
         position: _slideAnimation,
@@ -160,7 +137,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                 children: [
                   Container(
                     width: 108.w,
-                    height: 108.w, // ✅ 缩小
+                    height: 108.w,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
@@ -205,7 +182,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                   SizedBox(height: 28.h),
                   Container(
                     width: double.infinity,
-                    height: 50.h, // ✅ 缩小按钮高度
+                    height: 50.h,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [kPrimaryBlue, Color(0xFF1E88E5)],
@@ -248,7 +225,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     );
   }
 
-  // ===================== 空态（整体微缩，避免“顶大底大”） =====================
+  // ===================== 空态 =====================
   Widget _buildEmptyState(AppLocalizations l10n) {
     return SliverFillRemaining(
       hasScrollBody: false,
@@ -264,7 +241,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                 children: [
                   Container(
                     width: 120.w,
-                    height: 120.w, // ✅ 从 140 缩到 120
+                    height: 120.w,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
@@ -291,7 +268,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                     l10n.sellYourItems,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 24.sp, // ✅ 从 28 缩到 24
+                      fontSize: 24.sp,
                       fontWeight: FontWeight.w800,
                       color: Colors.black87,
                       letterSpacing: -0.6,
@@ -305,7 +282,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                   ),
                   SizedBox(height: 18.h),
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 12.h), // ✅ 缩小
+                    padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 12.h),
                     decoration: BoxDecoration(
                       color: kPrimaryBlue.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(14.r),
@@ -324,7 +301,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
                   SizedBox(height: 28.h),
                   Container(
                     width: double.infinity,
-                    height: 50.h, // ✅ 从 56 缩到 50
+                    height: 50.h,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(colors: [kPrimaryBlue, Color(0xFF1E88E5)]),
                       borderRadius: BorderRadius.circular(14.r),
@@ -371,7 +348,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
     );
   }
 
-  // ===================== (预留) 列表与统计区域 =====================
+  // ===================== 列表内容 =====================
   Widget _buildListingsContent(List<Map<String, dynamic>> myListings, AppLocalizations l10n) {
     return SliverList(
       delegate: SliverChildBuilderDelegate(
@@ -400,7 +377,7 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
 
     return Container(
       margin: EdgeInsets.all(14.w),
-      padding: EdgeInsets.all(16.w), // ✅ 略缩
+      padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -671,41 +648,6 @@ class _SellPageState extends State<SellPage> with TickerProviderStateMixin {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
         margin: EdgeInsets.all(14.w),
         duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-}
-
-// 小胶囊按钮（更小、更规整、图标完全居中）
-class _CapsuleIconButton extends StatelessWidget {
-  final VoidCallback onTap;
-  final String? tooltip;
-  final IconData icon;
-
-  const _CapsuleIconButton({
-    required this.onTap,
-    required this.icon,
-    this.tooltip,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip ?? '',
-      child: Material(
-        color: Colors.white.withOpacity(0.20),
-        borderRadius: BorderRadius.circular(12.r),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12.r),
-          child: Container(
-            height: 30.h,      // ✅ 更小
-            width: 34.w,       // ✅ 更小
-            alignment: Alignment.center,
-            margin: EdgeInsets.symmetric(vertical: 8.h, horizontal: 2.w),
-            child: Icon(icon, size: 16.r, color: Colors.white),
-          ),
-        ),
       ),
     );
   }

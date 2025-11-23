@@ -51,8 +51,6 @@
       <string>UIInterfaceOrientationPortrait</string>
     </array>
 
-    <!-- iPad 不是目标平台，这里不需要 UISupportedInterfaceOrientations~ipad -->
-
     <!-- 性能/输入 -->
     <key>CADisableMinimumFrameDurationOnPhone</key>
     <true/>
@@ -122,6 +120,13 @@
       <string>tg</string>
       <string>telegram</string>
       -->
+    </array>
+
+    <!-- Associated Domains：通用链接（使用 www.swaply.cc） -->
+    <key>com.apple.developer.associated-domains</key>
+    <array>
+      <string>applinks:www.swaply.cc</string>
+      <string>applinks:swaply.cc</string>
     </array>
   </dict>
 </plist>

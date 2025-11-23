@@ -7,6 +7,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart'; // kDebugMode
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/services/coupon_service.dart'; // 发放欢迎券
+import 'package:swaply/services/profile_cache.dart'; // ✅ 新增：内存级快取（瞬时渲染）
 
 class ProfileService {
   // ---- 单例：兼容 ProfileService.instance / ProfileService.i / ProfileService() ----
@@ -21,6 +22,26 @@ class ProfileService {
   // ===== 轻量缓存（可选）=====
   final Map<String, Map<String, dynamic>> _cache = {};
   void invalidateCache(String userId) => _cache.remove(userId);
+
+  // ======== ⚡️ 新增：三个小助手（给页面“瞬时渲染”与登录后预取用） ========
+  /// 立即读取当前用户的“内存快照”（命中则可瞬时渲染，避免白屏/闪烁）
+  static Map<String, dynamic>? cached() {
+    return ProfileCache.instance.current;
+  }
+
+  /// 登录成功后调用：预取资料并写入快照缓存（不改变原有查询逻辑）
+  static Future<Map<String, dynamic>?> preloadToCache() async {
+    final data = await ProfileService.instance.getMyProfile();
+    if (data != null) {
+      ProfileCache.instance.setForCurrentUser(data);
+    }
+    return data;
+  }
+
+  /// 当你在页面里静默刷新到新数据时，可手动把最新结果写回快照
+  static void cacheSet(Map<String, dynamic> data) {
+    ProfileCache.instance.setForCurrentUser(data);
+  }
 
   // ========== 登录补丁（推荐对外使用这个而不是 syncProfileFromAuthUser） ==========
   /// 仅用于登录态建立时的“资料兜底”：
@@ -66,13 +87,10 @@ class ProfileService {
       if (kDebugMode) print('[Profile] inserted profile for ${user.id}');
     } else {
       // 已有：只更新不会破坏用户编辑的字段
-      await supa
-          .from('profiles')
-          .update({
+      await supa.from('profiles').update({
         'email': user.email,
         'updated_at': now,
-      })
-          .eq('id', user.id);
+      }).eq('id', user.id);
 
       if (kDebugMode) {
         print('[Profile] touched profile (no overwrite) for ${user.id}');
@@ -96,11 +114,8 @@ class ProfileService {
     final email = (user.email ?? '').trim();
     final fullNameMeta = (meta['full_name'] ?? '').toString().trim();
 
-    final row = await supa
-        .from('profiles')
-        .select()
-        .eq('id', user.id)
-        .maybeSingle();
+    final row =
+    await supa.from('profiles').select().eq('id', user.id).maybeSingle();
 
     final Map<String, dynamic>? rowMap =
     row == null ? null : Map<String, dynamic>.from(row as Map);
@@ -124,13 +139,10 @@ class ProfileService {
         print('[ProfileService] synced (insert) for ${user.id} full_name=$displayName');
       }
     } else {
-      await supa
-          .from('profiles')
-          .update({
+      await supa.from('profiles').update({
         'email': email.isNotEmpty ? email : null,
         'updated_at': now,
-      })
-          .eq('id', user.id);
+      }).eq('id', user.id);
 
       if (kDebugMode) {
         print('[ProfileService] synced (touch only) for ${user.id}');
@@ -180,13 +192,10 @@ class ProfileService {
         if (kDebugMode) print('✅ 新用户档案创建或初始化成功: $userId');
       } else {
         // 已存在：只更新 email / updated_at
-        await supa
-            .from('profiles')
-            .update({
+        await supa.from('profiles').update({
           'email': email,
           'updated_at': nowIso,
-        })
-            .eq('id', userId);
+        }).eq('id', userId);
       }
 
       // 3) 读取欢迎券标记
@@ -216,13 +225,10 @@ class ProfileService {
         }
 
         // 4.3 标记已发券（仅更新欢迎券相关字段）
-        await supa
-            .from('profiles')
-            .update({
+        await supa.from('profiles').update({
           'welcome_reward_granted': true,
           'updated_at': DateTime.now().toUtc().toIso8601String(),
-        })
-            .eq('id', userId);
+        }).eq('id', userId);
 
         grantedNow = true;
         if (kDebugMode) print('🎉 新用户欢迎券发放流程完成: $userId');
@@ -244,11 +250,7 @@ class ProfileService {
 
   // ========== 邀请码：处理唯一冲突并重试 ==========
   Future<void> _ensureInvitationCode(String userId) async {
-    final rec = await _sb
-        .from('invitation_codes')
-        .select('code')
-        .eq('user_id', userId)
-        .maybeSingle();
+    final rec = await _sb.from('invitation_codes').select('code').eq('user_id', userId).maybeSingle();
     if (rec != null) return;
 
     const int maxTries = 6;
@@ -401,7 +403,12 @@ class ProfileService {
       }
 
       final map = Map<String, dynamic>.from(data as Map);
+
+      // 写入 service 级缓存
       _cache[id] = map;
+
+      // ✅ 同步写入“内存快照缓存”，便于 UI 首帧瞬时渲染
+      ProfileCache.instance.setForCurrentUser(map);
 
       if (kDebugMode) {
         print('[ProfileService] ✅ Profile loaded successfully');
@@ -537,13 +544,10 @@ class ProfileService {
     if (currentUser == null) throw Exception('Not authenticated');
 
     try {
-      await _sb
-          .from('profiles')
-          .update({
+      await _sb.from('profiles').update({
         'is_official': isOfficial,
         'updated_at': DateTime.now().toUtc().toIso8601String(),
-      })
-          .eq('id', userId);
+      }).eq('id', userId);
     } catch (e) {
       throw Exception('Failed to set official status: $e');
     }
@@ -603,8 +607,13 @@ class ProfileService {
       }
 
       data['verification_type'] = normalized;
+
       // 写入缓存
       _cache[targetId] = Map<String, dynamic>.from(data);
+
+      // ✅ 同步到内存快照
+      ProfileCache.instance.setForCurrentUser(data);
+
       return data;
     } catch (_) {
       return null;

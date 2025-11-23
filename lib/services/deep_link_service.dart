@@ -26,6 +26,41 @@ class DeepLinkService {
   bool _bootstrapped = false;
   bool _flushing = false;
 
+  /// 解析 URL fragment（形如 #a=1&b=2）为 Map
+  Map<String, String> _parseFragmentParams(String fragment) {
+    final m = <String, String>{};
+    if (fragment.isEmpty) return m;
+    for (final kv in fragment.split('&')) {
+      if (kv.isEmpty) continue;
+      final i = kv.indexOf('=');
+      if (i == -1) {
+        m[Uri.decodeComponent(kv)] = '';
+      } else {
+        final k = Uri.decodeComponent(kv.substring(0, i));
+        final v = Uri.decodeComponent(kv.substring(i + 1));
+        m[k] = v;
+      }
+    }
+    return m;
+  }
+
+  /// 导航就绪检测（统一 rootNavKey）
+  bool _navReady() =>
+      rootNavKey.currentState != null && rootNavKey.currentContext != null;
+
+  /// 等待导航树与会话短暂恢复（避免和全局鉴权/路由抢占导致黑屏/登出错觉）
+  Future<void> _waitUntilReady({Duration max = const Duration(seconds: 2)}) async {
+    final started = DateTime.now();
+    // 1) 等导航树就绪
+    while (!_navReady() && DateTime.now().difference(started) < max) {
+      await Future.delayed(const Duration(milliseconds: 40));
+    }
+    // 2) 给会话恢复一个短暂窗口，避免把“尚未恢复”当成未登录
+    if (Supabase.instance.client.auth.currentSession == null) {
+      await Future.delayed(const Duration(milliseconds: 600));
+    }
+  }
+
   /// 初始化，AppBoot initState -> addPostFrameCallback 调用
   Future<void> bootstrap() async {
     if (_bootstrapped) return;
@@ -70,18 +105,10 @@ class DeepLinkService {
     }
   }
 
-  /// 所有深链 handler 统一入口
+  /// 所有深链 handler 统一入口：只入队，不直接导航
   void _handle(Uri uri, {bool isInitial = false}) {
-    if (!_isReadyToNavigate()) {
-      _pending.add(uri);
-      return;
-    }
-    _navigate(uri);
-  }
-
-  /// App 是否已经可以安全导航
-  bool _isReadyToNavigate() {
-    return rootNavKey.currentState != null;
+    _pending.add(uri);
+    flushQueue();
   }
 
   /// 刷新队列（在 AppBoot postFrame 后自动调用）
@@ -89,27 +116,31 @@ class DeepLinkService {
     if (_flushing) return;
     _flushing = true;
 
-    SchedulerBinding.instance.addPostFrameCallback((_) {
-      Future.microtask(() {
-        for (final u in List<Uri>.from(_pending)) {
-          _navigate(u);
-        }
+    // 采用微任务 + 就绪/会话宽限等待，避免与全局鉴权/导航竞态
+    Future.microtask(() async {
+      try {
+        await _waitUntilReady();
+        final items = List<Uri>.from(_pending);
         _pending.clear();
+        for (final u in items) {
+          await _route(u); // 统一通过 rootNavKey 导航
+        }
+      } finally {
         _flushing = false;
-      });
+      }
     });
   }
 
   // ============================================================
-  // 深链路由解析
+  // 深链路由解析（统一通过 rootNavKey 的 navPush/navReplaceAll）
   // ============================================================
-  void _navigate(Uri uri) {
+  Future<void> _route(Uri uri) async {
     final scheme = (uri.scheme).toLowerCase();
     final host = (uri.host).toLowerCase();
     final path = (uri.path).toLowerCase();
 
     if (kDebugMode) {
-      debugPrint('[DeepLink] navigate -> scheme=$scheme host=$host path=$path | $uri');
+      debugPrint('[DeepLink] route -> scheme=$scheme host=$host path=$path | $uri');
     }
 
     // 0) ✅ 忽略 Supabase 的登录回调（让 Supabase 自己处理）
@@ -124,12 +155,40 @@ class DeepLinkService {
     final isResetByHost = host == 'reset-password';
     final isResetByPath = path.contains('reset-password');
     if (isResetByHost || isResetByPath) {
-      final token = uri.queryParameters['token'] ??
-          uri.queryParameters['access_token'] ??
-          uri.queryParameters['token_hash'];
+      final qp = uri.queryParameters;
+      final fp = _parseFragmentParams(uri.fragment);
+
+      // ✅ 先处理错误分支（邮箱被预读/链接过期会带上 error_code）
+      final err = qp['error'] ?? fp['error'];
+      final errCode = qp['error_code'] ?? fp['error_code'];
+      if (err != null || errCode != null) {
+        if (kDebugMode) {
+          debugPrint('[DeepLink] reset-password error=$errCode msg=${qp['error_description'] ?? fp['error_description']}');
+        }
+        // 直接带回“忘记密码”页，避免进入空 token 的 ResetPasswordPage 导致按钮灰色
+        Future.microtask(() => navReplaceAll('/forgot-password'));
+        return;
+      }
+
+      // ✅ 兼容 query 与 fragment：token / access_token / token_hash
+      final token = qp['token'] ??
+          qp['access_token'] ??
+          qp['token_hash'] ??
+          fp['token'] ??
+          fp['access_token'] ??
+          fp['token_hash'];
+
+      if (kDebugMode) {
+        debugPrint('[DeepLink] reset-password detected '
+            'query.type=${qp['type']} frag.type=${fp['type']} '
+            'token=${token != null ? '***' : 'null'}');
+      }
 
       Future.delayed(Duration.zero, () {
-        navReplaceAll('/forgot-password', arguments: {'token': token});
+        // ✅ 跳转到 /reset-password（而非 /forgot-password）
+        navReplaceAll('/reset-password', arguments: {
+          if (token != null) 'token': token,
+        });
       });
       return;
     }
@@ -168,30 +227,11 @@ class DeepLinkService {
           debugPrint('DeepLink → ProductDetailPage: listing_id=$listingId');
         }
         Future.delayed(Duration.zero, () {
-          navPush('/product-detail', arguments: {'id': listingId});
+          // ✅ 与 AppRouter 对齐：/listing
+          navPush('/listing', arguments: {'id': listingId});
         });
         return;
       }
-    }
-
-    // ----------- 4) welcome / login / home --------------------
-    // 兼容 host 风格（swaply://welcome）与 path 风格（/welcome）
-    final isWelcome = host == 'welcome' || path == '/welcome';
-    if (isWelcome) {
-      Future.delayed(Duration.zero, () => navReplaceAll('/welcome'));
-      return;
-    }
-
-    final isLogin = host == 'login' || path == '/login';
-    if (isLogin) {
-      Future.delayed(Duration.zero, () => navReplaceAll('/login'));
-      return;
-    }
-
-    final isHome = host == 'home' || path == '/home';
-    if (isHome) {
-      Future.delayed(Duration.zero, () => navReplaceAll('/home'));
-      return;
     }
 
     // ----------- 5) 默认：不再强制回首页（避免吃掉未知链接、避免循环重建） ----------

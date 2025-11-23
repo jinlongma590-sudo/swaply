@@ -1,4 +1,6 @@
 ﻿// lib/auth/reset_password_page.dart
+// 完整修复：支持 token 参数 + 不抢导航 + 正常更新密码
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -6,7 +8,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/router/root_nav.dart';
 
 class ResetPasswordPage extends StatefulWidget {
-  const ResetPasswordPage({super.key});
+  final String? token; // 🔥 修复关键：增加 token 参数（AppRouter 要求）
+  const ResetPasswordPage({super.key, this.token});
 
   @override
   State<ResetPasswordPage> createState() => _ResetPasswordPageState();
@@ -27,19 +30,17 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   @override
   void initState() {
     super.initState();
-    // 首次判断是否已有 recovery 会话
+
+    // 是否携带 recovery session（必须有）
     _hasSession = Supabase.instance.client.auth.currentSession != null;
 
-    // 监听会话变化；当用户通过邮件链接进入 App 时，SDK 会发出 passwordRecovery 事件
+    // 日志观察，不做任何导航或状态修改
     _sub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      final has = Supabase.instance.client.auth.currentSession != null;
-
-      // 如果收到 passwordRecovery，确保允许提交
-      if (data.event == AuthChangeEvent.passwordRecovery && mounted) {
-        setState(() => _hasSession = true);
-      } else if (mounted && has != _hasSession) {
-        setState(() => _hasSession = has);
-      }
+      debugPrint(
+        '[ResetPasswordPage] event=${data.event} '
+            'session=${Supabase.instance.client.auth.currentSession != null} '
+            'token_from_router=${widget.token}',
+      );
     });
   }
 
@@ -54,19 +55,21 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    // 必须存在 recovery 会话（通过邮件链接回来 SDK 自动携带）
     if (!_hasSession) {
       _toast('Reset link is invalid or expired. Please request a new one.');
       return;
     }
 
     setState(() => _busy = true);
+
     try {
+      // 🔥 正确的密码更新操作
       await Supabase.instance.client.auth.updateUser(
         UserAttributes(password: _pwd.text),
       );
 
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Password updated. Please sign in again.'),
@@ -75,8 +78,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
         ),
       );
 
-      // 成功后回登录页（统一走 root_nav 助手）
-      await navReplaceAll('/login'); // ✅ 不要传 context
+      // 🔥 完全正确：这里只回登录页，不抢全局 Observer 的导航
+      await navReplaceAll('/login');
     } on AuthException catch (e) {
       if (!mounted) return;
       _toast(e.message);
@@ -134,10 +137,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                 SizedBox(
                   height: 44.h,
                   child: OutlinedButton(
-                    onPressed: _busy
-                        ? null
-                        : () async {
-                      await navReplaceAll('/login'); // ✅ 不要传 context
+                    onPressed: _busy ? null : () async {
+                      await navReplaceAll('/login');
                     },
                     child: const Text('Back to Login'),
                   ),

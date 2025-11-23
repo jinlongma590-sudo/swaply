@@ -9,6 +9,9 @@ import 'package:swaply/router/root_nav.dart'; // navPush / navReplaceAll
 import 'package:swaply/theme/constants.dart'; // kPrimaryBlue
 import 'package:swaply/services/notification_service.dart';
 
+// ⬇️ 统一配置：Offer 详情页的路由名 —— 与 AppRouter 保持一致
+const String _kOfferDetailRoute = '/offer-detail';
+
 class NotificationPage extends StatefulWidget {
   final VoidCallback? onClearBadge;
   final bool isGuest;
@@ -365,6 +368,46 @@ class _NotificationPageState extends State<NotificationPage> {
     );
   }
 
+  // ⬇️ 统一从 notification / payload / metadata 取 ID
+  String? _getId(Map<String, dynamic> n, String key) {
+    // 顶层
+    final v = n[key];
+    if (v != null && v.toString().isNotEmpty) return v.toString();
+
+    // payload
+    final payload = n['payload'];
+    if (payload is Map) {
+      final pv = payload[key];
+      if (pv != null && pv.toString().isNotEmpty) return pv.toString();
+    }
+
+    // metadata
+    final meta = n['metadata'];
+    if (meta is Map) {
+      final mv = meta[key];
+      if (mv != null && mv.toString().isNotEmpty) return mv.toString();
+    }
+    return null;
+  }
+
+  bool _isOfferType(String t) {
+    // 兼容你后台可能的不同命名
+    switch (t) {
+      case 'offer':
+      case 'offer.new':
+      case 'offer_counter':
+      case 'offer.counter':
+      case 'offer.accepted':
+      case 'offer.rejected':
+      case 'offer.canceled':
+      case 'make_offer':
+      case 'new_offer':
+        return true;
+      default:
+        return false;
+    }
+  }
+
   // 点击通知 → 解析并路由（统一根导航）
   void _handleNotificationTap(Map<String, dynamic> notification) async {
     final index = _notifications.indexOf(notification);
@@ -373,40 +416,45 @@ class _NotificationPageState extends State<NotificationPage> {
     }
 
     final type = notification['type']?.toString() ?? '';
-    String? listingId = notification['listing_id']?.toString();
-    String? offerId = notification['offer_id']?.toString();
 
-    final payload = notification['payload'] as Map<String, dynamic>? ?? {};
-    if ((listingId == null || listingId.isEmpty) && payload.isNotEmpty) {
-      listingId = payload['listing_id']?.toString();
-    }
-    if ((offerId == null || offerId.isEmpty) && payload.isNotEmpty) {
-      offerId = payload['offer_id']?.toString();
-    }
-
-    final metadata = notification['metadata'] as Map<String, dynamic>? ?? {};
-    if ((listingId == null || listingId.isEmpty) && metadata.isNotEmpty) {
-      listingId = metadata['listing_id']?.toString();
-    }
-    if ((offerId == null || offerId.isEmpty) && metadata.isNotEmpty) {
-      offerId = metadata['offer_id']?.toString();
-    }
+    // 统一解析 ID
+    String? listingId = _getId(notification, 'listing_id');
+    String? offerId   = _getId(notification, 'offer_id');
 
     if (type.isEmpty) {
       _showSnack('Notification data is incomplete', isError: true);
       return;
     }
 
+    // ① 先处理所有“offer 系列”
+    if (_isOfferType(type)) {
+      if (offerId != null && offerId.isNotEmpty) {
+        await navPush(_kOfferDetailRoute, arguments: {'offerId': offerId});
+        return;
+      }
+      if (listingId != null && listingId.isNotEmpty) {
+        await navPush('/listing', arguments: listingId); // 兜底：至少打开商品
+        return;
+      }
+      _showSnack('Cannot open offer: missing offer ID', isError: true);
+      return;
+    }
+
+    // ② message：优先 offerId（有些“新出价”在你这边被标成 message）
     switch (type) {
       case 'message':
+        if (offerId != null && offerId.isNotEmpty) {
+          await navPush(_kOfferDetailRoute, arguments: {'offerId': offerId});
+          return;
+        }
         if (listingId != null && listingId.isNotEmpty) {
           await navPush('/listing', arguments: listingId);
         } else {
-          _showSnack('Cannot open message: missing listing ID', isError: true);
+          _showSnack('Cannot open message: missing listing ID or offer ID',
+              isError: true);
         }
         break;
 
-      case 'offer':
       case 'system':
         if (listingId != null && listingId.isNotEmpty) {
           await navPush('/listing', arguments: listingId);

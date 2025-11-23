@@ -1,27 +1,30 @@
 // lib/pages/offer_detail_page.dart
 //
-// Unified to “Facebook Blue” top bar with SOLID backgroundColor.
-// Fixes: AppBar background/title not visible under Material 3 overlays
-// by setting backgroundColor directly + disabling surfaceTint & scrolledUnderElevation.
+// OfferDetailPage —— 仅接收 offerId（与 /offer-detail 路由一致）
+// - 顶部栏统一 Facebook Blue 实色
+// - 空 offerId 兜底提示并返回
+// - 加强消息订阅/释放与已读上报
+// - 阻止被屏蔽/屏蔽对方时发送消息
+//
+// ignore_for_file: use_build_context_synchronously
 
-import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'package:swaply/models/offer.dart';
 import 'package:swaply/services/message_service.dart';
 import 'package:swaply/services/offer_service.dart';
-import 'package:swaply/models/offer.dart';
 import 'package:swaply/services/verification_guard.dart';
 
 class OfferDetailPage extends StatefulWidget {
   final String offerId;
-  final Map<String, dynamic>? offerData;
 
   const OfferDetailPage({
     super.key,
     required this.offerId,
-    this.offerData,
   });
 
   @override
@@ -29,14 +32,17 @@ class OfferDetailPage extends StatefulWidget {
 }
 
 class _OfferDetailPageState extends State<OfferDetailPage> {
-  static const Color _FB_BLUE = Color(0xFF1877F2);
+  static const Color _fbBlue = Color(0xFF1877F2);
 
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+
   Map<String, dynamic>? _offerDetails;
+
   List<Map<String, dynamic>> _messages = [];
   bool _isLoadingMessages = true;
   bool _isSendingMessage = false;
+
   String? _currentUserId;
   RealtimeChannel? _messageChannel;
 
@@ -44,9 +50,24 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
   bool _otherBlockedMe = false; // 对方屏蔽了我
   bool get _blockedEitherWay => _iBlockedOther || _otherBlockedMe;
 
+  bool _invalid = false;
+
   @override
   void initState() {
     super.initState();
+
+    // 基本校验：空 offerId 直接返回
+    final id = widget.offerId.trim();
+    if (id.isEmpty) {
+      _invalid = true;
+      // 延迟到首帧后提示，避免 context 未就绪
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showSnackBar('Invalid offer link', isError: true);
+        Navigator.of(context).maybePop();
+      });
+      return;
+    }
+
     _currentUserId = Supabase.instance.client.auth.currentUser?.id;
     _loadOfferDetails();
     _loadMessages();
@@ -63,16 +84,14 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
 
   Future<void> _loadOfferDetails() async {
     try {
-      if (widget.offerData != null) {
-        setState(() => _offerDetails = widget.offerData);
-        _refreshBlockStatus();
-      }
       final details = await OfferService.getOfferDetails(widget.offerId);
       if (details != null && mounted) {
         setState(() => _offerDetails = details);
         _refreshBlockStatus();
       }
-    } catch (_) {}
+    } catch (_) {
+      // 静默失败：UI 会显示基础占位
+    }
   }
 
   Future<void> _loadMessages() async {
@@ -86,12 +105,14 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
         _messages = messages;
         _isLoadingMessages = false;
       });
+
       if (_currentUserId != null) {
         await MessageService.markMessagesAsRead(
           offerId: widget.offerId,
           receiverId: _currentUserId!,
         );
       }
+
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     } catch (_) {
       if (mounted) setState(() => _isLoadingMessages = false);
@@ -117,8 +138,9 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
   }
 
   void _unsubscribeFromMessages() {
-    if (_messageChannel != null) {
-      MessageService.unsubscribeFromMessages(_messageChannel!);
+    final ch = _messageChannel;
+    if (ch != null) {
+      MessageService.unsubscribeFromMessages(ch);
       _messageChannel = null;
     }
   }
@@ -151,6 +173,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
       feature: AppFeature.makeOffer,
     );
     if (!allowed) return;
+
     if (_blockedEitherWay) {
       _showSnackBar(
         _otherBlockedMe
@@ -160,14 +183,17 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
       );
       return;
     }
+
     final message = _messageController.text.trim();
     if (message.isEmpty || _isSendingMessage) return;
     if (_currentUserId == null || _offerDetails == null) return;
+
     setState(() => _isSendingMessage = true);
     try {
       final buyerId = _offerDetails!['buyer_id'];
       final sellerId = _offerDetails!['seller_id'];
       final receiverId = _currentUserId == buyerId ? sellerId : buyerId;
+
       final result = await MessageService.sendMessage(
         offerId: widget.offerId,
         receiverId: receiverId,
@@ -196,15 +222,19 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
       SnackBar(
         content: Row(
           children: [
-            Icon(isError ? Icons.error_outline : Icons.check_circle_rounded,
-                color: Colors.white, size: 16.sp),
+            Icon(
+              isError ? Icons.error_outline : Icons.check_circle_rounded,
+              color: Colors.white,
+              size: 16.sp,
+            ),
             SizedBox(width: 8.w),
             Expanded(child: Text(message, style: TextStyle(fontSize: 13.sp))),
           ],
         ),
         backgroundColor: isError ? Colors.red.shade600 : Colors.green.shade600,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+        shape:
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
         margin: EdgeInsets.all(12.w),
       ),
     );
@@ -218,7 +248,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
           height: 120.h,
           child: Center(
             child: CircularProgressIndicator(
-              valueColor: const AlwaysStoppedAnimation<Color>(_FB_BLUE),
+              valueColor: const AlwaysStoppedAnimation<Color>(_fbBlue),
               strokeWidth: 2.5.w,
             ),
           ),
@@ -261,7 +291,8 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                   ),
                 ),
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  padding:
+                  EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                   decoration: BoxDecoration(
                     color: Color(offerStatus.color).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12.r),
@@ -303,7 +334,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                           style: TextStyle(
                               fontSize: 20.sp,
                               fontWeight: FontWeight.bold,
-                              color: _FB_BLUE)),
+                              color: _fbBlue)),
                     ],
                   ),
                   if (original > 0)
@@ -403,7 +434,8 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
       context: context,
       isScrollControlled: true,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16.r))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16.r)),
+      ),
       builder: (ctx) {
         return Padding(
           padding: EdgeInsets.only(
@@ -432,7 +464,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                   TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w700)),
               SizedBox(height: 12.h),
               DropdownButtonFormField<String>(
-                initialValue: type,
+                value: type,
                 items: const [
                   DropdownMenuItem(value: 'Spam', child: Text('Spam')),
                   DropdownMenuItem(value: 'Scam', child: Text('Scam/Fraud')),
@@ -476,7 +508,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: _FB_BLUE,
+                    backgroundColor: _fbBlue,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12.r)),
@@ -511,7 +543,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
   }
 
   Widget _buildSystemMessage(Map<String, dynamic> message) {
-    final messageText = message['message']?.toString() ?? '';
+    final text = message['message']?.toString() ?? '';
     return Center(
       child: Container(
         margin: EdgeInsets.symmetric(vertical: 8.h),
@@ -522,7 +554,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
           border: Border.all(color: Colors.amber.shade200, width: 1.w),
         ),
         child: Text(
-          messageText,
+          text,
           style: TextStyle(
             fontSize: 12.sp,
             color: Colors.amber.shade800,
@@ -535,7 +567,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
   }
 
   Widget _buildChatMessage(Map<String, dynamic> message, bool isMyMessage) {
-    final messageText = message['message']?.toString() ?? '';
+    final text = message['message']?.toString() ?? '';
     final createdAt = message['created_at']?.toString() ?? '';
 
     String timeText = 'Now';
@@ -543,18 +575,19 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
       try {
         final date = DateTime.parse(createdAt);
         final now = DateTime.now();
-        final difference = now.difference(date);
-        if (difference.inMinutes < 1) {
+        final d = now.difference(date);
+        if (d.inMinutes < 1) {
           timeText = 'Now';
-        } else if (difference.inMinutes < 60) {
-          timeText = '${difference.inMinutes}m';
-        } else if (difference.inHours < 24) {
-          timeText = '${difference.inHours}h';
+        } else if (d.inMinutes < 60) {
+          timeText = '${d.inMinutes}m';
+        } else if (d.inHours < 24) {
+          timeText = '${d.inHours}h';
         } else {
           timeText = '${date.day}/${date.month}';
         }
       } catch (_) {}
     }
+
     return Align(
       alignment: isMyMessage ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -565,17 +598,16 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
           children: [
             Container(
               constraints: BoxConstraints(
-                  maxWidth: MediaQuery.of(context).size.width * 0.75),
+                maxWidth: MediaQuery.of(context).size.width * 0.75,
+              ),
               padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
               decoration: BoxDecoration(
-                color: isMyMessage ? _FB_BLUE : Colors.grey.shade100,
+                color: isMyMessage ? _fbBlue : Colors.grey.shade100,
                 borderRadius: BorderRadius.circular(18.r).copyWith(
-                  bottomRight: isMyMessage
-                      ? Radius.circular(4.r)
-                      : Radius.circular(18.r),
-                  bottomLeft: isMyMessage
-                      ? Radius.circular(18.r)
-                      : Radius.circular(4.r),
+                  bottomRight:
+                  isMyMessage ? Radius.circular(4.r) : Radius.circular(18.r),
+                  bottomLeft:
+                  isMyMessage ? Radius.circular(18.r) : Radius.circular(4.r),
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -586,7 +618,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                 ],
               ),
               child: Text(
-                messageText,
+                text,
                 style: TextStyle(
                   color: isMyMessage ? Colors.white : Colors.grey.shade800,
                   fontSize: 14.sp,
@@ -597,10 +629,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
             SizedBox(height: 2.h),
             Text(
               timeText,
-              style: TextStyle(
-                fontSize: 10.sp,
-                color: Colors.grey.shade500,
-              ),
+              style: TextStyle(fontSize: 10.sp, color: Colors.grey.shade500),
             ),
           ],
         ),
@@ -613,7 +642,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
       return Expanded(
         child: Center(
           child: CircularProgressIndicator(
-            valueColor: const AlwaysStoppedAnimation<Color>(_FB_BLUE),
+            valueColor: const AlwaysStoppedAnimation<Color>(_fbBlue),
             strokeWidth: 2.5.w,
           ),
         ),
@@ -626,7 +655,8 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.chat_bubble_outline, size: 64.w, color: Colors.grey.shade400),
+              Icon(Icons.chat_bubble_outline,
+                  size: 64.w, color: Colors.grey.shade400),
               SizedBox(height: 16.h),
               Text('No messages yet',
                   style: TextStyle(
@@ -635,7 +665,8 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                       fontWeight: FontWeight.w500)),
               SizedBox(height: 8.h),
               Text('Start the conversation!',
-                  style: TextStyle(fontSize: 14.sp, color: Colors.grey.shade500)),
+                  style:
+                  TextStyle(fontSize: 14.sp, color: Colors.grey.shade500)),
             ],
           ),
         ),
@@ -652,11 +683,11 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
           padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
           itemCount: _messages.length,
           itemBuilder: (context, index) {
-            final message = _messages[index];
-            final isMyMessage = message['sender_id'] == _currentUserId;
-            final messageType = message['message_type'] ?? 'text';
-            if (messageType == 'system') return _buildSystemMessage(message);
-            return _buildChatMessage(message, isMyMessage);
+            final m = _messages[index];
+            final isMine = m['sender_id'] == _currentUserId;
+            final type = m['message_type'] ?? 'text';
+            if (type == 'system') return _buildSystemMessage(m);
+            return _buildChatMessage(m, isMine);
           },
         ),
       ),
@@ -695,7 +726,11 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
     final disabled = _blockedEitherWay;
     return Container(
       padding: EdgeInsets.fromLTRB(
-          12.w, 8.h, 12.w, 8.h + MediaQuery.of(context).viewInsets.bottom),
+        12.w,
+        8.h,
+        12.w,
+        8.h + MediaQuery.of(context).viewInsets.bottom,
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -734,8 +769,10 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                       fontSize: 14.sp,
                     ),
                     border: InputBorder.none,
-                    contentPadding:
-                    EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 10.h,
+                    ),
                   ),
                 ),
               ),
@@ -747,7 +784,7 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                 ignoring: disabled,
                 child: Container(
                   decoration: const BoxDecoration(
-                    color: Color(0xFF1877F2),
+                    color: _fbBlue,
                     shape: BoxShape.circle,
                   ),
                   child: Material(
@@ -763,10 +800,13 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
                           padding: EdgeInsets.all(12.w),
                           child: CircularProgressIndicator(
                             strokeWidth: 2.w,
-                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor:
+                            const AlwaysStoppedAnimation<Color>(
+                                Colors.white),
                           ),
                         )
-                            : Icon(Icons.send_rounded, color: Colors.white, size: 24.w),
+                            : Icon(Icons.send_rounded,
+                            color: Colors.white, size: 24.w),
                       ),
                     ),
                   ),
@@ -782,15 +822,37 @@ class _OfferDetailPageState extends State<OfferDetailPage> {
   @override
   Widget build(BuildContext context) {
     final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
-    final double toolbarHeight = isIOS ? 44.0 : kToolbarHeight; // ✅ iOS 固定 44pt，不叠加 statusBar
+    final double toolbarHeight = isIOS ? 44.0 : kToolbarHeight; // iOS 固定 44pt
+
+    if (_invalid) {
+      return Scaffold(
+        appBar: AppBar(
+          centerTitle: true,
+          toolbarHeight: toolbarHeight,
+          backgroundColor: _fbBlue,
+          surfaceTintColor: Colors.transparent,
+          scrolledUnderElevation: 0,
+          elevation: 0,
+          systemOverlayStyle: SystemUiOverlayStyle.light,
+          iconTheme: const IconThemeData(color: Colors.white),
+          title: Text('Offer Details',
+              style: TextStyle(color: Colors.white, fontSize: 18.sp)),
+        ),
+        body: Center(
+          child: Text('Invalid offer link',
+              style:
+              TextStyle(fontSize: 14.sp, color: Colors.grey.shade600)),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         centerTitle: true,
         toolbarHeight: toolbarHeight,
-        backgroundColor: _FB_BLUE,                 // ✅ 直接上实色背景
-        surfaceTintColor: Colors.transparent,      // ✅ 关闭 M3 蒙层
+        backgroundColor: _fbBlue, // 实色背景
+        surfaceTintColor: Colors.transparent,
         scrolledUnderElevation: 0,
         elevation: 0,
         systemOverlayStyle: SystemUiOverlayStyle.light,

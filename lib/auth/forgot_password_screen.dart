@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:swaply/config.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -28,48 +29,60 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _sendResetLink() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    // 成功页没有表单；统一做邮箱格式校验（无论是首次发送还是“Send again”）
+    final email = _emailController.text.trim();
+    final emailOk =
+    RegExp(r'^[\w\-.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+
+    // 表单页希望看到内联红字的话，仍触发表单校验；否则用 snackbar 提示
+    if (!_isEmailSent) {
+      if (!(_formKey.currentState?.validate() ?? false)) return;
+    } else {
+      if (!emailOk) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Please enter a valid email'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ));
+        return;
+      }
+    }
 
     setState(() => _isLoading = true);
     try {
-      // ✅ 使用 redirectTo 指向自定义 Scheme
       await Supabase.instance.client.auth.resetPasswordForEmail(
-        _emailController.text.trim(),
-        redirectTo: kAuthRedirectUri,
+        email,
+        // 由网页 /reset-password 完成恢复 session → 再跳回 App
+        redirectTo: AppConfig.resetPasswordRedirectUrl,
       );
 
       if (!mounted) return;
       setState(() {
         _isLoading = false;
-        _isEmailSent = true;
+        _isEmailSent = true; // 首次或重发都保持为“已发送”状态
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Reset link sent to ${_emailController.text.trim()}'),
-          backgroundColor: Colors.green[600],
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Reset link sent to $email'),
+        backgroundColor: Colors.green[600],
+        behavior: SnackBarBehavior.floating,
+      ));
     } on AuthException catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message),
-          backgroundColor: Colors.red[400],
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(e.message),
+        backgroundColor: Colors.red[400],
+        behavior: SnackBarBehavior.floating,
+      ));
     } catch (_) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to send reset link, please try again.'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Failed to send reset link, please try again.'),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ));
     }
   }
 

@@ -7,6 +7,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/router/root_nav.dart';
 import 'package:swaply/services/notification_service.dart';
 import 'package:swaply/services/oauth_entry.dart';
+import 'package:swaply/services/profile_service.dart'; // ✅ 预热资料缓存
+import 'package:swaply/services/reward_service.dart'; // ✅ 邀请码绑定
+import 'package:swaply/auth/register_screen.dart'; // ✅ 读取/清理 RegisterScreen.pendingInvitationCode
+
+// ✅ 冷启动宽限期起点（全局单例进程级时间点）
+final _appStart = DateTime.now();
 
 class AuthFlowObserver {
   AuthFlowObserver._();
@@ -31,6 +37,9 @@ class AuthFlowObserver {
   // 历史快车道逻辑（保留以兼容旧分支）
   DateTime? _manualSignOutAt;
   Timer? _signOutDebounce;
+
+  // 最近一次登录的用户，用于登出时清理 Profile 缓存
+  String? _lastUserId;
 
   void markManualSignOut() {
     // ✅ 只标记“一次”手动登出；同时保留时间戳以兼容你原来的 fast-path 逻辑
@@ -65,11 +74,28 @@ class AuthFlowObserver {
     _navigating = false;
   }
 
+  /// ✅ 登录后立即预热：创建/触摸 profile + 预取到本地缓存，避免进入 ProfilePage 时空白一瞬
+  void _preheatProfile(User user) {
+    _lastUserId = user.id;
+    // 不阻塞登录流：后台跑
+    unawaited(ProfileService.i.patchProfileOnLogin());
+    unawaited(ProfileService.i.getMyProfile()); // 会把结果写入内部缓存
+  }
+
   void start() {
     if (_started) return;
     _started = true;
 
     _sub = Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
+      // ✅ 冷启动宽限期（1.2s）：忽略“瞬时 signedOut / 空会话”假信号
+      final sinceStart = DateTime.now().difference(_appStart);
+      if (sinceStart < const Duration(milliseconds: 1200) &&
+          (data.event == AuthChangeEvent.signedOut ||
+              Supabase.instance.client.auth.currentSession == null)) {
+        debugPrint('[AuthFlowObserver] grace-window ignore early ${data.event}');
+        return;
+      }
+
       final eventName = data.event.name;
       if (_lastEvent == 'signedIn' && eventName == 'initialSession') return;
       if (_lastEvent == 'initialSession' && eventName == 'signedIn') return;
@@ -89,7 +115,24 @@ class AuthFlowObserver {
           final user = Supabase.instance.client.auth.currentUser;
           if (user != null) {
             try {
+              // 订阅通知
               await NotificationService.subscribeUser(user.id);
+            } catch (_) {}
+            // ✅ 预热 Profile（创建/触摸 + 缓存）
+            _preheatProfile(user);
+
+            // ✅ 邀请码绑定（如果注册页留存了待绑定的 code）
+            try {
+              final code = RegisterScreen.pendingInvitationCode;
+              if (code != null && code.isNotEmpty) {
+                await RewardService.submitInviteCode(code.trim().toUpperCase());
+                RegisterScreen.clearPendingCode();
+              }
+            } catch (_) {}
+
+            // ✅ 同步 Profile（统一搬到这里）
+            try {
+              await ProfileService.syncProfileFromAuthUser();
             } catch (_) {}
           }
 
@@ -105,6 +148,11 @@ class AuthFlowObserver {
               Supabase.instance.client.auth.currentSession != null;
 
           if (hasSession) {
+            // ✅ 冷启动直接预热一次，减少首页→个人页的空窗
+            final user = Supabase.instance.client.auth.currentUser;
+            if (user != null) {
+              _preheatProfile(user);
+            }
             await _goOnce('/home');
           } else {
             OAuthEntry.finish();
@@ -123,11 +171,17 @@ class AuthFlowObserver {
         case AuthChangeEvent.userDeleted:
           _signOutDebounce?.cancel();
 
+          // ✅ 清理上一次用户的 Profile 缓存，避免下一位读到旧值
+          if (_lastUserId != null) {
+            ProfileService.i.invalidateCache(_lastUserId!);
+            _lastUserId = null;
+          }
+
           // ✅ 如果是“手动登出触发”的这一次，吞掉导航（ProfilePage等处已自行 navReplaceAll('/login')）
           if (_manualSignOutOnce) {
-            debugPrint('[AuthFlowObserver] signedOut fast-path (manual). swallow nav once.');
+            debugPrint(
+                '[AuthFlowObserver] signedOut fast-path (manual). swallow nav once.');
             _manualSignOutOnce = false; // 只生效一次
-            // 可选：这里可做轻量清理（若你 elsewhere 已做，这里不重复）
             break;
           }
 

@@ -12,9 +12,10 @@ Future<T?> navPush<T extends Object?>(
     String routeName, {
       Object? arguments,
     }) async {
-  await Future.delayed(Duration.zero);
   final nav = rootNavKey.currentState;
   if (nav == null) return null;
+  // 避免与当前帧动画/首帧竞争
+  await Future<void>.delayed(Duration.zero);
   return nav.pushNamed<T>(routeName, arguments: arguments);
 }
 
@@ -23,21 +24,21 @@ Future<T?> navReplaceAll<T extends Object?>(
     String routeName, {
       Object? arguments,
     }) async {
-  await Future.delayed(Duration.zero);
   final nav = rootNavKey.currentState;
   if (nav == null) return null;
+  await Future<void>.delayed(Duration.zero);
   return nav.pushNamedAndRemoveUntil<T>(
     routeName,
-        (r) => false,
+        (route) => false,
     arguments: arguments,
   );
 }
 
 /// 直接 push 一个 Route（比如 MaterialPageRoute）
 Future<T?> navPushRoute<T extends Object?>(Route<T> route) async {
-  await Future.delayed(Duration.zero);
   final nav = rootNavKey.currentState;
   if (nav == null) return null;
+  await Future<void>.delayed(Duration.zero);
   return nav.push<T>(route);
 }
 
@@ -55,3 +56,4 @@ void navPop<T extends Object?>([T? result]) {
     nav!.pop<T>(result);
   }
 }
+

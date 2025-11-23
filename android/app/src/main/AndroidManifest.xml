@@ -57,11 +57,13 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <!-- 自定义应用内 scheme：swaply://... -->
                 <data android:scheme="swaply" />
-                <!-- 网站深链：https://swaply.cc/... -->
+                <!-- 网站深链（apex） -->
                 <data android:scheme="https" android:host="swaply.cc" />
+                <!-- ✅ 新增：网站深链（www 子域） -->
+                <data android:scheme="https" android:host="www.swaply.cc" />
             </intent-filter>
 
-            <!-- ✅ 新增：出价详情深链 swaply://offer?... -->
+            <!-- ✅ 出价详情深链：swaply://offer?... -->
             <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -69,7 +71,7 @@
                 <data android:scheme="swaply" android:host="offer" />
             </intent-filter>
 
-            <!-- ✅ 新增：商品详情深链 swaply://listing?... -->
+            <!-- ✅ 商品详情深链：swaply://listing?... -->
             <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />

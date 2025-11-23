@@ -1,10 +1,10 @@
-// lib/pages/account_settings_page.dart
-import 'package:flutter/foundation.dart'; // 鉁?For platform check
+﻿// lib/pages/account_settings_page.dart
+import 'package:flutter/foundation.dart'; // 閴?For platform check
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:swaply/services/auth_service.dart'; // ✅ 新增：统一走 AuthService 登出
-import 'package:swaply/services/auth_flow_observer.dart'; // ✅ 新增 Observer
+import 'package:swaply/services/auth_service.dart'; // 鉁?鏂板锛氱粺涓€璧?AuthService 鐧诲嚭
+import 'package:swaply/services/auth_flow_observer.dart'; // 鉁?鏂板 Observer
 import 'package:swaply/router/root_nav.dart';
 class AccountSettingsPage extends StatefulWidget {
   const AccountSettingsPage({super.key});
@@ -18,7 +18,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
   bool _ack = false;
   bool _deleting = false;
 
-  // 鉁?闃叉姈锛氬垹闄ゆ垚鍔熷悗鐨?signOut 鍙厑璁歌Е鍙戜竴娆★紝闃叉鐑噸杞?閲嶅缓瀵艰嚧閲嶅鐧诲嚭
+  // 閴?闂冨弶濮堥敍姘灩闂勩倖鍨氶崝鐔锋倵閻?signOut 閸欘亜鍘戠拋姝屝曢崣鎴滅濞嗏槄绱濋梼鍙夘剾閻戭參鍣告潪?闁插秴缂撶€佃壈鍤ч柌宥咁槻閻ц鍤?
   bool _logoutAfterDeletionOnce = false;
 
   @override
@@ -29,13 +29,13 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
 
   bool get _canSubmit => _ack && _pwdCtrl.text.trim().isNotEmpty && !_deleting;
 
-  // 椤堕儴鏄剧溂閿欒妯箙
+  // 妞ゅ爼鍎撮弰鍓ф簜闁挎瑨顕ゅΟ顏勭畽
   void _showErrorBanner(String message) {
     final messenger = ScaffoldMessenger.of(context);
     messenger.clearSnackBars();
     messenger.hideCurrentMaterialBanner();
 
-    HapticFeedback.heavyImpact(); // 闇囧姩鎻愮ず
+    HapticFeedback.heavyImpact(); // 闂囧洤濮╅幓鎰仛
 
     messenger.showMaterialBanner(
       MaterialBanner(
@@ -59,14 +59,14 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
       ),
     );
 
-    // 4 绉掑悗鑷姩闅愯棌
+    // 4 缁夋帒鎮楅懛顏勫З闂呮劘妫?
     Future.delayed(const Duration(seconds: 4), () {
       if (!mounted) return;
       messenger.hideCurrentMaterialBanner();
     });
   }
 
-  // 鎴愬姛鎻愮ず锛堝簳閮?Snackbar锛?
+  // 閹存劕濮涢幓鎰仛閿涘牆绨抽柈?Snackbar閿?
   void _showSuccessSnack(String message) {
     final messenger = ScaffoldMessenger.of(context);
     messenger.hideCurrentMaterialBanner();
@@ -88,7 +88,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     );
   }
 
-  // 鉁?纭寮圭獥锛氳緭鍏?DELETE 鎵嶈兘缁х画
+  // 閴?绾喛顓诲鍦崶閿涙俺绶崗?DELETE 閹靛秷鍏樼紒褏鐢?
   Future<bool> _finalConfirm() async {
     final ctrl = TextEditingController();
     bool canConfirm = false;
@@ -137,7 +137,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
       },
     );
 
-    // 涓嶆墜鍔?dispose锛岄伩鍏嶈繃娓℃湡鏂█宕╂簝
+    // 娑撳秵澧滈崝?dispose閿涘矂浼╅崗宥堢箖濞撯剝婀￠弬顓♀枅瀹曗晜绨?
     return ok ?? false;
   }
 
@@ -162,7 +162,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
       final ok = data['ok'] == true;
 
       if (ok) {
-        // 鉁?鍏堟彁绀猴紝鍐嶁€滃彧瑙﹀彂涓€娆♀€濈櫥鍑猴紝闅忓悗閫€鍑哄埌鏍癸紙闃绘柇褰撳墠椤甸噸寤哄鑷寸殑閲嶅閫昏緫锛?
+        // 閴?閸忓牊褰佺粈鐚寸礉閸愬秮鈧粌褰х憴锕€褰傛稉鈧▎鈾€鈧繄娅ラ崙鐚寸礉闂呭繐鎮楅柅鈧崙鍝勫煂閺嶇櫢绱欓梼缁樻焽瑜版挸澧犳い鐢稿櫢瀵ゅ搫顕遍懛瀵告畱闁插秴顦查柅鏄忕帆閿?
         if (mounted) {
           _showSuccessSnack('Account deleted.');
         }
@@ -170,21 +170,21 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
         if (!_logoutAfterDeletionOnce) {
           _logoutAfterDeletionOnce = true;
           try {
-            // 统一从 AuthService 登出，并打印调用栈，便于追踪来源
+            // 缁熶竴浠?AuthService 鐧诲嚭锛屽苟鎵撳嵃璋冪敤鏍堬紝渚夸簬杩借釜鏉ユ簮
             debugPrint(
                 '[[SIGNOUT-TRACE]] account_settings_page -> direct signOut');
             debugPrint(StackTrace.current.toString());
 
-            // ✅ 1) 标记快车道
+            // 鉁?1) 鏍囪蹇溅閬?
             AuthFlowObserver.I.markManualSignOut();
-            // ✅ 2) 执行登出
+            // 鉁?2) 鎵ц鐧诲嚭
             await AuthService().signOut();
-          } catch (_) {/* 闈欓粯 */}
+          } catch (_) {/* 闂堟瑩绮?*/}
         }
 
         if (!mounted) return;
-        // 鍥炲埌鏍硅矾鐢憋紙鎴栨寜浣犻」鐩敼涓?SafeNavigator.pushNamedAndRemoveUntil('/welcome', (_) => false)锛?
-        rootNavKey.currentState?.popUntil((r) => r.isFirst);
+        // 閸ョ偛鍩岄弽纭呯熅閻㈡唻绱欓幋鏍ㄥ瘻娴ｇ娀銆嶉惄顔芥暭娑?SafeNavigator.pushNamedAndRemoveUntil('/welcome', (_) => false)閿?
+        navReplaceAll('/welcome');
         return;
       } else {
         final msg = (data['error'] ?? 'Delete failed').toString();
@@ -207,14 +207,14 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     }
   }
 
-  // 鉁?缁熶竴鐨?AppBar 鏋勫缓鍣?(涓庡叾浠栭〉闈㈤鏍间竴鑷?
+  // 閴?缂佺喍绔撮惃?AppBar 閺嬪嫬缂撻崳?(娑撳骸鍙炬禒鏍€夐棃銏ゎ棑閺嶉棿绔撮懛?
   PreferredSizeWidget _buildStandardAppBar(BuildContext context) {
     const String title = 'Account';
     final double statusBar = MediaQuery.of(context).padding.top;
     final bool isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
     const Color kBgColor = Color(0xFF2563EB);
 
-    // Android & 鍏朵粬骞冲彴锛氭爣鍑?AppBar
+    // Android & 閸忔湹绮獮鍐插酱閿涙碍鐖ｉ崙?AppBar
     if (!isIOS) {
       return AppBar(
         title: const Text(
@@ -234,7 +234,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
       );
     }
 
-    // iOS锛?4pt 鑷畾涔夊鑸爮
+    // iOS閿?4pt 閼奉亜鐣炬稊澶婎嚤閼割亝鐖?
     const double kNavBarHeight = 44.0;
     const double kButtonSize = 32.0;
     const double kSidePadding = 16.0;

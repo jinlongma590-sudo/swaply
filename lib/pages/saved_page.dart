@@ -1,4 +1,4 @@
-// lib/pages/saved_page.dart
+﻿// lib/pages/saved_page.dart
 import 'dart:async'; // Timer, StreamSubscription
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
@@ -7,11 +7,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:swaply/router/root_nav.dart';
 import 'package:swaply/core/l10n/app_localizations.dart';
 
-// === 项目内服务 ===
+// === 椤圭洰鍐呮湇鍔?===
 import 'package:swaply/services/dual_favorites_service.dart';
 import 'package:swaply/services/favorites_update_service.dart';
 
-// === 全局常量 ===
+// === 鍏ㄥ眬甯搁噺 ===
 import 'package:swaply/theme/constants.dart'; // kPrimaryBlue
 
 class SavedPage extends StatefulWidget {
@@ -32,7 +32,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
   Timer? _autoRefreshTimer;
   StreamSubscription<dynamic>? _favoritesSubscription;
 
-  // === 与通知页保持一致：头部高度 = 状态栏 + 52 ===
+  // === 涓庨€氱煡椤典繚鎸佷竴鑷达細澶撮儴楂樺害 = 鐘舵€佹爮 + 52 ===
   double _headerBarHeight(BuildContext context) {
     final top = MediaQuery.of(context).padding.top;
     return top + 52.h;
@@ -67,7 +67,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  // ========== 顶部自定义头（防溢出、尺寸统一） ==========
+  // ========== 椤堕儴鑷畾涔夊ご锛堥槻婧㈠嚭銆佸昂瀵哥粺涓€锛?==========
   Widget _buildCustomHeader(String title, {bool hasMenu = true}) {
     final safeTop = MediaQuery.of(context).padding.top;
     return Container(
@@ -86,7 +86,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                   title,
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 20.sp, // 原 24 -> 20，更紧凑
+                    fontSize: 20.sp, // 鍘?24 -> 20锛屾洿绱у噾
                     fontWeight: FontWeight.w700,
                     height: 1.2,
                   ),
@@ -136,7 +136,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  // ========== 订阅收藏变更 ==========
+  // ========== 璁㈤槄鏀惰棌鍙樻洿 ==========
   void _setupFavoritesListener() {
     _favoritesSubscription =
         FavoritesUpdateService().favoritesStream.listen((event) {
@@ -197,7 +197,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  // ========== 周期刷新 ==========
+  // ========== 鍛ㄦ湡鍒锋柊 ==========
   void _startAutoRefresh() {
     _autoRefreshTimer?.cancel();
     _autoRefreshTimer = Timer.periodic(const Duration(seconds: 30), (_) {
@@ -207,7 +207,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     });
   }
 
-  // ========== 工具函数 ==========
+  // ========== 宸ュ叿鍑芥暟 ==========
   Map<String, dynamic> _safeMapConvert(dynamic input) {
     if (input == null) return <String, dynamic>{};
     if (input is Map<String, dynamic>) return input;
@@ -253,7 +253,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  // ========== 数据加载 ==========
+  // ========== 鏁版嵁鍔犺浇 ==========
   Future<void> _loadFavorites() async {
     if (mounted) {
       setState(() {
@@ -269,7 +269,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
         return;
       }
 
-      // ✅ 与 Wishlist 对齐：拉取 wishlist 源
+      // 鉁?涓?Wishlist 瀵归綈锛氭媺鍙?wishlist 婧?
       final results = await DualFavoritesService.getUserWishlist(
         userId: user.id,
         limit: 100,
@@ -428,7 +428,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     }
   }
 
-  // ✅ 清空确认弹窗
+  // 鉁?娓呯┖纭寮圭獥
   void _showClearAllDialog() {
     showDialog(
       context: context,
@@ -453,7 +453,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  // ========== 空态 / 错态 ==========
+  // ========== 绌烘€?/ 閿欐€?==========
   Widget _buildEmptyState() {
     return Center(
       child: Padding(
@@ -530,7 +530,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                   if (widget.onNavigateToHome != null) {
                     widget.onNavigateToHome!();
                   } else {
-                    rootNavKey.currentState?.popUntil((route) => route.isFirst);
+                    navReplaceAll('/welcome');
                   }
                 },
                 style: ElevatedButton.styleFrom(
@@ -632,7 +632,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 
-  // ========== 单卡片 ==========
+  // ========== 鍗曞崱鐗?==========
   Widget _buildFavoriteCard(Map<String, dynamic> item, int index) {
     try {
       final safeListing = _safeMapConvert(item['listing'] ?? {});
@@ -659,7 +659,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
           onTap: () async {
             if (listingId.isEmpty) return;
             await navPush('/listing', arguments: listingId);
-            _loadFavorites(); // 返回后刷新
+            _loadFavorites(); // 杩斿洖鍚庡埛鏂?
           },
           borderRadius: BorderRadius.circular(8.w),
           child: Padding(
@@ -711,7 +711,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                 ),
                 SizedBox(width: 8.w),
 
-                // 文本
+                // 鏂囨湰
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -783,7 +783,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                   ),
                 ),
 
-                // 右侧收藏按钮
+                // 鍙充晶鏀惰棌鎸夐挳
                 Container(
                   margin: EdgeInsets.only(left: 4.w),
                   decoration: BoxDecoration(
@@ -970,7 +970,7 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
                 ),
                 child: ElevatedButton.icon(
                   onPressed: () async {
-                    await navReplaceAll('/welcome'); // 统一全局导航
+                    await navReplaceAll('/welcome'); // 缁熶竴鍏ㄥ眬瀵艰埅
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
@@ -1048,3 +1048,4 @@ class _SavedPageState extends State<SavedPage> with WidgetsBindingObserver {
     );
   }
 }
+

@@ -2,7 +2,7 @@
 // ✅ 不刷新会话；不对 profiles 做任何写操作
 // ✅ 最小可用流程：输入验证码 → 调服务 → 读表 → 刷新本页 UI → Navigator.pop(true)
 // ✅ 判定是否已认证 / 徽章类型：统一走 utils（基于 user_verifications 行）
-// ✅ 本次改动：[DONE] iOS 顶部改为 statusBar + 44pt Row 布局，移除魔法数。
+// ✅ 本次改动：方案A（三态）：_verified 改为 bool?，null=检查中 → 不再闪“未认证”
 // ✅ 成功后：先 VerificationGuard.invalidateCache()，再 Navigator.pop(true)
 
 import 'dart:async';
@@ -19,6 +19,7 @@ import '../models/verification_types.dart' as vt;
 import '../widgets/verification_badge.dart' as vb;
 import 'package:swaply/services/verification_guard.dart';
 import 'package:swaply/router/root_nav.dart';
+
 class VerificationPage extends StatefulWidget {
   const VerificationPage({super.key});
 
@@ -33,7 +34,9 @@ class _VerificationPageState extends State<VerificationPage>
 
   // —— 状态 —— //
   late final EmailVerificationService _svc;
-  bool _verified = false;
+
+  // A 方案：三态。null=检查中，true/false=已确定
+  bool? _verified;
   vt.VerificationBadgeType _badge = vt.VerificationBadgeType.none;
 
   bool _isLoading = false;
@@ -62,6 +65,8 @@ class _VerificationPageState extends State<VerificationPage>
       _emailController.text = u!.email!;
     }
 
+    // 初始即进入“检查中”
+    _verified = null;
     _loadUserVerificationStatus();
     _animationController.forward();
   }
@@ -82,7 +87,7 @@ class _VerificationPageState extends State<VerificationPage>
 
     if (!mounted) return;
     setState(() {
-      _verified = verified;
+      _verified = verified; // true/false
       _badge = badge;
     });
 
@@ -140,6 +145,7 @@ class _VerificationPageState extends State<VerificationPage>
       final ok = await _svc.verifyCode(email: email, code: code);
       if (!ok) throw Exception('Invalid or expired verification code');
 
+      // 验证成功后重新读取实时状态
       final row = await _svc.fetchVerificationRow();
       final verified =
       vutils.computeIsVerified(verificationRow: row, user: null);
@@ -153,7 +159,7 @@ class _VerificationPageState extends State<VerificationPage>
 
       // ✅ 成功后：失效守卫缓存 -> 提示 -> 返回 true
       VerificationGuard.invalidateCache();
-      VerificationGuard.notifyVerifiedChanged(true); // ✅ [PATCH] 遵照要求新增
+      VerificationGuard.notifyVerifiedChanged(true);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Email verification successful')),
       );
@@ -167,7 +173,6 @@ class _VerificationPageState extends State<VerificationPage>
 
   void _startResendCountdown() {
     Future.doWhile(() async {
-      // ✅ 修正：不能 `await const Future.delayed(...)`，应把 const 放到 Duration 上
       await Future.delayed(const Duration(seconds: 1));
       if (!mounted) return false;
       if (_resendCountdown > 0) {
@@ -186,7 +191,11 @@ class _VerificationPageState extends State<VerificationPage>
   }
 
   Future<void> _refreshStatus() async {
-    setState(() => _isLoading = true);
+    // 刷新时也进入“检查中”，避免旧值闪烁
+    setState(() {
+      _isLoading = true;
+      _verified = null;
+    });
     await _loadUserVerificationStatus();
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -209,25 +218,6 @@ class _VerificationPageState extends State<VerificationPage>
   }
 
   // —— UI —— //
-  Color _getVerificationColor(vt.VerificationBadgeType type) {
-    switch (type) {
-      case vt.VerificationBadgeType.none:
-        return Colors.grey;
-      case vt.VerificationBadgeType.verified:
-      case vt.VerificationBadgeType.blue:
-        return const Color(0xFF4CAF50);
-      case vt.VerificationBadgeType.official:
-      case vt.VerificationBadgeType.government:
-        return const Color(0xFF1877F2);
-      case vt.VerificationBadgeType.premium:
-      case vt.VerificationBadgeType.gold:
-      case vt.VerificationBadgeType.business:
-        return Colors.orange;
-      default:
-        return Colors.grey;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isIOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
@@ -270,7 +260,7 @@ class _VerificationPageState extends State<VerificationPage>
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_rounded, color: Colors.white, size: 20.w),
-          onPressed: () => navPop()
+          onPressed: () => navPop(),
         ),
       ),
       body: _buildPageBody(),
@@ -301,7 +291,7 @@ class _VerificationPageState extends State<VerificationPage>
                 width: 32,
                 height: 32,
                 child: GestureDetector(
-                  onTap: () => Navigator.pop(context),
+                  onTap: () => navPop(),
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.15),
@@ -348,9 +338,9 @@ class _VerificationPageState extends State<VerificationPage>
           children: [
             _buildVerificationStatusCard(badge),
             SizedBox(height: 16.h),
-            if (!_verified) _buildEmailVerificationCard(),
+            if (_verified == false) _buildEmailVerificationCard(),
             SizedBox(height: 16.h),
-            if (_verified) _buildOfficialVerificationCard(),
+            if (_verified == true) _buildOfficialVerificationCard(),
             SizedBox(height: 16.h),
             _buildHelpCard(),
             if (_message != null) ...[
@@ -363,13 +353,17 @@ class _VerificationPageState extends State<VerificationPage>
     );
   }
 
-  // ✅ 绿色/橙色状态卡片
+  // ✅ 三态状态卡片：null=Checking…；true=Verified；false=Not Verified
   Widget _buildVerificationStatusCard(vt.VerificationBadgeType badge) {
-    final verified = _verified;
+    final bool isUnknown = _verified == null;
+    final bool isVerified = _verified == true;
 
     Color kStatusColor;
     Color kTextColor;
-    if (verified) {
+    if (isUnknown) {
+      kStatusColor = Colors.blueGrey;
+      kTextColor = Colors.blueGrey.shade700;
+    } else if (isVerified) {
       kStatusColor = Colors.green;
       kTextColor = Colors.green.shade800;
     } else {
@@ -409,8 +403,14 @@ class _VerificationPageState extends State<VerificationPage>
                   color: kStatusColor,
                   borderRadius: BorderRadius.circular(12.r),
                 ),
-                child: Icon(
-                  verified ? Icons.verified_user_rounded : Icons.warning_amber_rounded,
+                child: isUnknown
+                    ? SizedBox(
+                  width: 18.w,
+                  height: 18.w,
+                  child: const CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)),
+                )
+                    : Icon(
+                  isVerified ? Icons.verified_user_rounded : Icons.warning_amber_rounded,
                   color: Colors.white,
                   size: 22.w,
                 ),
@@ -421,14 +421,18 @@ class _VerificationPageState extends State<VerificationPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      verified ? 'Verified Account' : 'Account Not Verified',
+                      isUnknown
+                          ? 'Checking verification status…'
+                          : (isVerified ? 'Verified Account' : 'Account Not Verified'),
                       style: TextStyle(fontSize: 16.5.sp, fontWeight: FontWeight.w700, color: kTextColor),
                     ),
                     SizedBox(height: 4.h),
                     Text(
-                      verified
+                      isUnknown
+                          ? 'Please wait while we confirm your verification status.'
+                          : (isVerified
                           ? 'Your email address has been successfully verified.'
-                          : 'Please verify your email to access all features.',
+                          : 'Please verify your email to access all features.'),
                       style: TextStyle(fontSize: 12.5.sp, color: Colors.grey.shade700, height: 1.35),
                     ),
                   ],
@@ -439,7 +443,7 @@ class _VerificationPageState extends State<VerificationPage>
           SizedBox(height: 14.h),
           Row(
             children: [
-              if (badge != vt.VerificationBadgeType.none)
+              if (!isUnknown && badge != vt.VerificationBadgeType.none)
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.h),
                   decoration: BoxDecoration(
@@ -460,7 +464,7 @@ class _VerificationPageState extends State<VerificationPage>
                 const Spacer(),
               const Spacer(),
               TextButton.icon(
-                onPressed: _refreshStatus,
+                onPressed: isUnknown ? null : _refreshStatus,
                 icon: Icon(Icons.refresh_rounded, size: 16.w),
                 label: Text('Refresh Status', style: TextStyle(fontSize: 12.sp)),
                 style: TextButton.styleFrom(
