@@ -35,29 +35,24 @@
     <key>LSRequiresIPhoneOS</key>
     <true/>
 
-    <!-- 仅支持 iPhone -->
     <key>UIDeviceFamily</key>
     <array>
       <integer>1</integer>
     </array>
 
-    <!-- 启动页（Flutter 模板） -->
     <key>UILaunchStoryboardName</key>
     <string>LaunchScreen</string>
 
-    <!-- 只保留竖屏，减少横屏适配审核成本 -->
     <key>UISupportedInterfaceOrientations</key>
     <array>
       <string>UIInterfaceOrientationPortrait</string>
     </array>
 
-    <!-- 性能/输入 -->
     <key>CADisableMinimumFrameDurationOnPhone</key>
     <true/>
     <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
 
-    <!-- 状态栏由页面控制；全面屏（避免 split view） -->
     <key>UIStatusBarHidden</key>
     <false/>
     <key>UIViewControllerBasedStatusBarAppearance</key>
@@ -65,7 +60,6 @@
     <key>UIRequiresFullScreen</key>
     <true/>
 
-    <!-- 隐私权限（拍摄/读写照片） -->
     <key>NSCameraUsageDescription</key>
     <string>This app needs camera access to take photos for your listing.</string>
     <key>NSPhotoLibraryUsageDescription</key>
@@ -73,15 +67,12 @@
     <key>NSPhotoLibraryAddUsageDescription</key>
     <string>This app needs permission to save photos to your library when you save or export images.</string>
 
-    <!-- 若仅使用标准 HTTPS，保持为 false -->
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
 
-    <!-- Flutter 深链 -->
     <key>FlutterDeepLinkingEnabled</key>
     <true/>
 
-    <!-- URL Schemes（Supabase 回调 + 自定义） -->
     <key>CFBundleURLTypes</key>
     <array>
       <dict>
@@ -97,36 +88,19 @@
         <string>swaply.custom</string>
         <key>CFBundleURLSchemes</key>
         <array>
-          <!-- 统一用 cc.swaply.app，与代码/AndroidManifest 保持一致 -->
           <string>cc.swaply.app</string>
         </array>
       </dict>
     </array>
 
-    <!-- 允许打开的外部 App Scheme（Facebook 登录 & 常用分享）-->
     <key>LSApplicationQueriesSchemes</key>
     <array>
-      <!-- Facebook 登录所需（按最小集） -->
       <string>fbapi</string>
       <string>fbauth2</string>
       <string>fb-messenger-share-api</string>
       <string>facebook</string>
-      <!-- 常用拨号/邮件 -->
       <string>tel</string>
       <string>mailto</string>
-      <!-- 如需 WhatsApp / Telegram，再按需解注释
-      <string>whatsapp</string>
-      <string>whatsapp-business</string>
-      <string>tg</string>
-      <string>telegram</string>
-      -->
-    </array>
-
-    <!-- Associated Domains：通用链接（使用 www.swaply.cc） -->
-    <key>com.apple.developer.associated-domains</key>
-    <array>
-      <string>applinks:www.swaply.cc</string>
-      <string>applinks:swaply.cc</string>
     </array>
   </dict>
 </plist>
