@@ -9,7 +9,7 @@
 //
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb; // ✅ 新增：Web 目标跳过 app_links
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -33,27 +33,28 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   bool _booted = false;
   bool _welcomeScheduled = false;
-  bool _dlBooted = false; // ✅ 新增：深链只启动一次的守卫
+
+  // 确保 DeepLinkService.bootstrap() 全局只运行一次
+  bool _dlBooted = false;
 
   @override
   void initState() {
     super.initState();
 
-    // ✅ 启动全局认证流观察与导航（唯一监听者集中在这里）
+    // 启动全局认证流观察 —— 唯一导航源
     AuthFlowObserver.I.start();
 
-    // ✅ 深链监听放到首帧后，且全局只启动一次（Web 目标跳过）
+    // 深链：必须在首帧之后启动，否则会导致 iOS 黑屏
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted || _dlBooted) return;
       _dlBooted = true;
-      _booted = true; // 保留原有语义
+
       if (!kIsWeb) {
         await DeepLinkService.instance.bootstrap();
       }
-    });
 
-    // ⛔ 移除这里的全局 onAuthStateChange 监听（并发源）
-    // （原先写 pending 位与调度欢迎弹窗的逻辑，已收敛到 AuthFlowObserver）
+      _booted = true;
+    });
   }
 
   @override
@@ -65,9 +66,9 @@ class _MyAppState extends State<MyApp> {
         return ChangeNotifierProvider(
           create: (_) => LanguageProvider(),
           child: MaterialApp(
-            title: 'Swaply',
+            title: 'Swaply ZW',
             debugShowCheckedModeBanner: false,
-            navigatorKey: rootNavKey, // 全 app 唯一 navigator
+            navigatorKey: rootNavKey, // Global Navigator（唯一）
             onGenerateRoute: AppRouter.onGenerateRoute,
             initialRoute: '/',
             theme: ThemeData(
