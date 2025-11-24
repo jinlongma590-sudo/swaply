@@ -6,6 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+// [ADD] 保持原生启动图直到我们手动移除（不改变 UI）
+import 'package:flutter_native_splash/flutter_native_splash.dart';
+
 // 本地通知 & 深链处理
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:swaply/services/deep_link_service.dart';
@@ -52,7 +55,9 @@ Future<void> _initLocalNotifications() async {
 }
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  // [MOD] 捕获 binding，并在其上“焊住”启动图
+  final widgetsBinding = WidgetsFlutterBinding.ensureInitialized(); // (原: WidgetsFlutterBinding.ensureInitialized())
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding); // [ADD]
 
   runZonedGuarded(() async {
     FlutterError.onError = (details) {
@@ -70,7 +75,7 @@ Future<void> main() async {
     await Supabase.initialize(
       url: 'https://rhckybselarzglkmlyqs.supabase.co',
       anonKey:
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6...',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6...', // 保持你的原值
     );
 
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
@@ -81,6 +86,12 @@ Future<void> main() async {
 
     // ❗ 启动 UI
     runApp(const MyApp());
+
+    // [ADD] 安全：首帧完成后移除启动图（避免“闪屏→黑缝”）
+    // 不改任何 UI，只是在第一帧真正渲染后把原生图撤掉
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FlutterNativeSplash.remove();
+    });
 
     // ❗❗ 删除 bootstrap，不要在这里启动 deep link（会黑屏）
     // DeepLinkService.instance.bootstrap();

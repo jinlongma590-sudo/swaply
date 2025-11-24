@@ -1,7 +1,7 @@
 name: swaply
 description: A marketplace app for Zimbabwe
 publish_to: 'none'
-version: 1.0.1+105
+version: 1.0.1+106
 
 environment:
   sdk: '>=3.3.0 <4.0.0'   # 与 supabase_flutter 2.7.x / sign_in_with_apple 7.x 兼容
@@ -45,6 +45,7 @@ dependencies:
   flutter_custom_tabs: ^2.4.0    # 如无使用可后续移除
 
   cross_file: any
+  flutter_native_splash: ^2.4.7
 dev_dependencies:
   flutter_test:
     sdk: flutter

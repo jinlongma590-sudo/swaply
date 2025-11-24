@@ -1,11 +1,18 @@
 ﻿// lib/auth/welcome_screen.dart
-// ✅ 删除页面级 onAuthStateChange 监听：并发导航统一交由 AuthFlowObserver 处理
+// ✅ 页面级 onAuthStateChange 已移除：并发导航统一交由 AuthFlowObserver 处理
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+// ✅ NativeSplash
+import 'package:flutter_native_splash/flutter_native_splash.dart';
+// ✅ 首帧平台判断
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 
 // 使用 root nav（全局唯一导航）
 import 'package:swaply/router/root_nav.dart';
+// ✅ 引入优惠券弹窗（为了 _maybeShowWelcomeDialog）
+import 'package:swaply/services/welcome_dialog_service.dart';
+
 
 import 'login_screen.dart';
 import 'register_screen.dart';
@@ -28,11 +35,24 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   bool _busy = false;
 
+  // ✅ 首帧渲染标记（用于 ShaderMask 首帧无感保护）
+  bool _firstFrameDrawn = false;
+
   @override
   void initState() {
     super.initState();
 
     WidgetsBinding.instance.addObserver(this);
+
+    // ✅ 首帧绘制完成后移除启动图并弹窗；同时标记首帧已绘制
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      FlutterNativeSplash.remove(); // 此时首帧已准备好
+      _maybeShowWelcomeDialog();    // 保留默认半透明遮罩
+      if (mounted) {
+        setState(() => _firstFrameDrawn = true);
+      }
+    });
 
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1500),
@@ -77,6 +97,28 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     // ✅ 不在页面层监听鉴权变化，导航交由全局 AuthFlowObserver
     _bootAuth();
   }
+
+  // ✅ ShaderMask 首帧安全封装：iOS 上首帧跳过，下一帧恢复；视觉无差异
+  Widget _maskFirstFrameSafe({
+    required Widget child,
+    required Shader Function(Rect) shader,
+  }) {
+    if (!_firstFrameDrawn && defaultTargetPlatform == TargetPlatform.iOS) {
+      return child;
+    }
+    return ShaderMask(
+      shaderCallback: shader,
+      blendMode: BlendMode
+          .modulate, // 比 srcATop 更稳，避免极端设备上整层被吃黑的个案
+      child: child,
+    );
+  }
+
+  void _maybeShowWelcomeDialog() {
+    // 统一入口：内部会校验是否应弹、构造 couponData，并处理“已展示去重”
+    WelcomeDialogService.maybeShow(context);
+  }
+
 
   Future<void> _bootAuth() async {
     final s = Supabase.instance.client.auth.currentSession;
@@ -281,6 +323,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // ✅ 首帧兜底白底（不影响视觉，但能掩护极短空窗）
+      backgroundColor: Colors.white,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -326,8 +370,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   return SingleChildScrollView(
                     physics: const ClampingScrollPhysics(),
                     child: ConstrainedBox(
-                      constraints:
-                      BoxConstraints(minHeight: constraints.maxHeight),
+                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
                       child: IntrinsicHeight(
                         child: Padding(
                           padding: EdgeInsets.symmetric(horizontal: 24.w),
@@ -355,37 +398,25 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                             gradient: const LinearGradient(
                                               begin: Alignment.topLeft,
                                               end: Alignment.bottomRight,
-                                              colors: [
-                                                Colors.white,
-                                                Color(0xFFF5F5F5)
-                                              ],
+                                              colors: [Colors.white, Color(0xFFF5F5F5)],
                                             ),
-                                            borderRadius:
-                                            BorderRadius.circular(24.r),
+                                            borderRadius: BorderRadius.circular(24.r),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: Colors.black
-                                                    .withOpacity(0.2),
+                                                color: Colors.black.withOpacity(0.2),
                                                 blurRadius: 20.r,
                                                 offset: Offset(0, 10.h),
                                               ),
                                               BoxShadow(
-                                                color: Colors.white
-                                                    .withOpacity(0.1),
+                                                color: Colors.white.withOpacity(0.1),
                                                 blurRadius: 10.r,
                                                 offset: Offset(-5.w, -5.h),
                                               ),
                                             ],
                                           ),
                                           child: Center(
-                                            child: ShaderMask(
-                                              shaderCallback: (bounds) =>
-                                                  const LinearGradient(
-                                                    colors: [
-                                                      Color(0xFF2196F3),
-                                                      Color(0xFF1565C0)
-                                                    ],
-                                                  ).createShader(bounds),
+                                            // ✅ 首帧安全遮罩（S 图标）
+                                            child: _maskFirstFrameSafe(
                                               child: Text(
                                                 'S',
                                                 style: TextStyle(
@@ -394,16 +425,15 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                                   color: Colors.white,
                                                 ),
                                               ),
+                                              shader: (bounds) => const LinearGradient(
+                                                colors: [Color(0xFF2196F3), Color(0xFF1565C0)],
+                                              ).createShader(bounds),
                                             ),
                                           ),
                                         ),
                                         SizedBox(height: 24.h),
-                                        ShaderMask(
-                                          shaderCallback: (bounds) =>
-                                              const LinearGradient(colors: [
-                                                Colors.white,
-                                                Colors.white70
-                                              ]).createShader(bounds),
+                                        // ✅ 首帧安全遮罩（Swaply 文字）
+                                        _maskFirstFrameSafe(
                                           child: Text(
                                             'Swaply',
                                             style: TextStyle(
@@ -413,23 +443,23 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                               letterSpacing: 1.5,
                                               shadows: [
                                                 Shadow(
-                                                  color: Colors.black
-                                                      .withOpacity(0.1),
-                                                  offset:
-                                                  const Offset(0, 2),
+                                                  color: Colors.black.withOpacity(0.1),
+                                                  offset: const Offset(0, 2),
                                                   blurRadius: 4,
                                                 ),
                                               ],
                                             ),
                                           ),
+                                          shader: (bounds) => const LinearGradient(
+                                            colors: [Colors.white, Colors.white70],
+                                          ).createShader(bounds),
                                         ),
                                         SizedBox(height: 8.h),
                                         Text(
                                           'Buy. Sell. Swap. Locally.',
                                           style: TextStyle(
                                             fontSize: 16.sp,
-                                            color:
-                                            Colors.white.withOpacity(0.95),
+                                            color: Colors.white.withOpacity(0.95),
                                             fontWeight: FontWeight.w500,
                                             letterSpacing: 1.2,
                                           ),
@@ -445,15 +475,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                 child: FadeTransition(
                                   opacity: _fadeAnimation,
                                   child: Row(
-                                    mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                     children: [
-                                      _buildFeature(Icons.shopping_cart_rounded,
-                                          'Shop Smart'),
-                                      _buildFeature(Icons.near_me_rounded,
-                                          'Near You'),
-                                      _buildFeature(Icons.security_rounded,
-                                          'Safe Trade'),
+                                      _buildFeature(Icons.shopping_cart_rounded, 'Shop Smart'),
+                                      _buildFeature(Icons.near_me_rounded, 'Near You'),
+                                      _buildFeature(Icons.security_rounded, 'Safe Trade'),
                                     ],
                                   ),
                                 ),
@@ -471,17 +497,12 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                         height: 52.h,
                                         decoration: BoxDecoration(
                                           gradient: const LinearGradient(
-                                            colors: [
-                                              Colors.white,
-                                              Color(0xFFF8F9FA)
-                                            ],
+                                            colors: [Colors.white, Color(0xFFF8F9FA)],
                                           ),
-                                          borderRadius:
-                                          BorderRadius.circular(16.r),
+                                          borderRadius: BorderRadius.circular(16.r),
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.black
-                                                  .withOpacity(0.15),
+                                              color: Colors.black.withOpacity(0.15),
                                               blurRadius: 12.r,
                                               offset: Offset(0, 6.h),
                                             ),
@@ -493,38 +514,27 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                             onTap: _busy
                                                 ? null
                                                 : () {
-                                              setState(
-                                                      () => _busy = true);
-                                              navPush('/register')
-                                                  .whenComplete(() {
+                                              setState(() => _busy = true);
+                                              navPush('/register').whenComplete(() {
                                                 if (mounted) {
-                                                  setState(() =>
-                                                  _busy = false);
+                                                  setState(() => _busy = false);
                                                 }
                                               });
                                             },
-                                            borderRadius:
-                                            BorderRadius.circular(16.r),
+                                            borderRadius: BorderRadius.circular(16.r),
                                             child: Center(
                                               child: Row(
-                                                mainAxisAlignment:
-                                                MainAxisAlignment.center,
+                                                mainAxisAlignment: MainAxisAlignment.center,
                                                 children: [
-                                                  Icon(
-                                                      Icons
-                                                          .rocket_launch_rounded,
-                                                      color: const Color(
-                                                          0xFF1565C0),
-                                                      size: 20.r),
+                                                  Icon(Icons.rocket_launch_rounded,
+                                                      color: const Color(0xFF1565C0), size: 20.r),
                                                   SizedBox(width: 8.w),
                                                   Text(
                                                     'Get Started',
                                                     style: TextStyle(
-                                                      color: const Color(
-                                                          0xFF1565C0),
+                                                      color: const Color(0xFF1565C0),
                                                       fontSize: 16.sp,
-                                                      fontWeight:
-                                                      FontWeight.bold,
+                                                      fontWeight: FontWeight.bold,
                                                     ),
                                                   ),
                                                 ],
@@ -541,13 +551,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                         width: double.infinity,
                                         height: 52.h,
                                         decoration: BoxDecoration(
-                                          color:
-                                          Colors.white.withOpacity(0.15),
-                                          borderRadius:
-                                          BorderRadius.circular(16.r),
+                                          color: Colors.white.withOpacity(0.15),
+                                          borderRadius: BorderRadius.circular(16.r),
                                           border: Border.all(
-                                            color: Colors.white
-                                                .withOpacity(0.3),
+                                            color: Colors.white.withOpacity(0.3),
                                             width: 1.5,
                                           ),
                                         ),
@@ -557,26 +564,21 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                             onTap: _busy
                                                 ? null
                                                 : () {
-                                              setState(
-                                                      () => _busy = true);
-                                              navPush('/login')
-                                                  .whenComplete(() {
+                                              setState(() => _busy = true);
+                                              navPush('/login').whenComplete(() {
                                                 if (mounted) {
-                                                  setState(() =>
-                                                  _busy = false);
+                                                  setState(() => _busy = false);
                                                 }
                                               });
                                             },
-                                            borderRadius:
-                                            BorderRadius.circular(16.r),
+                                            borderRadius: BorderRadius.circular(16.r),
                                             child: Center(
                                               child: Text(
                                                 'Sign In',
                                                 style: TextStyle(
                                                   color: Colors.white,
                                                   fontSize: 16.sp,
-                                                  fontWeight:
-                                                  FontWeight.w600,
+                                                  fontWeight: FontWeight.w600,
                                                 ),
                                               ),
                                             ),
@@ -588,19 +590,15 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
                                       // -------- Browse as Guest --------
                                       TextButton(
-                                        onPressed:
-                                        _busy ? null : _continueAsGuest,
+                                        onPressed: _busy ? null : _continueAsGuest,
                                         style: TextButton.styleFrom(
-                                          padding: EdgeInsets.symmetric(
-                                              horizontal: 20.w,
-                                              vertical: 12.h),
+                                          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
                                         ),
                                         child: Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
                                             Icon(Icons.visibility_outlined,
-                                                color: Colors.white70,
-                                                size: 18.r),
+                                                color: Colors.white70, size: 18.r),
                                             SizedBox(width: 6.w),
                                             Text(
                                               'Browse as Guest',
@@ -608,10 +606,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                                 color: Colors.white70,
                                                 fontSize: 14.sp,
                                                 fontWeight: FontWeight.w500,
-                                                decoration:
-                                                TextDecoration.underline,
-                                                decorationColor:
-                                                Colors.white30,
+                                                decoration: TextDecoration.underline,
+                                                decorationColor: Colors.white30,
                                               ),
                                             ),
                                           ],
@@ -627,8 +623,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                               FadeTransition(
                                 opacity: _fadeAnimation,
                                 child: Padding(
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: 20.w),
+                                  padding: EdgeInsets.symmetric(horizontal: 20.w),
                                   child: Text(
                                     'By continuing, you agree to our\nTerms of Service and Privacy Policy',
                                     textAlign: TextAlign.center,
@@ -666,8 +661,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.1 * _fadeAnimation.value),
             borderRadius: BorderRadius.circular(20.r),
-            border: Border.all(
-                color: Colors.white.withOpacity(0.2), width: 1),
+            border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
