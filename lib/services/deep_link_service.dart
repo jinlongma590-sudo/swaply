@@ -1,5 +1,6 @@
 ﻿// lib/services/deep_link_service.dart
 import 'dart:async';
+import 'dart:io' show Platform; // ✅ 用于 iOS 烟囱测试早退
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -66,6 +67,12 @@ class DeepLinkService {
   Future<void> bootstrap() async {
     if (_bootstrapped) return;
     _bootstrapped = true;
+
+    // ✅ 10秒二分法：iOS 先禁用 deep link（仅用于定位黑屏根因）
+    if (Platform.isIOS) {
+      if (kDebugMode) debugPrint('[DeepLink] iOS disabled for smoke test');
+      return; // ← 直接早退：不初始化 app_links、不订阅流
+    }
 
     // ------------ 前台深链（APP 打开状态点击链接） ------------
     _appLinks.uriLinkStream.listen((uri) {
