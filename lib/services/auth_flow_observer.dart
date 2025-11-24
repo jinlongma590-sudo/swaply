@@ -11,7 +11,7 @@ import 'package:swaply/services/profile_service.dart'; // ✅ 预热资料缓存
 import 'package:swaply/services/reward_service.dart'; // ✅ 邀请码绑定
 import 'package:swaply/auth/register_screen.dart'; // ✅ 读取/清理 RegisterScreen.pendingInvitationCode
 
-// ✅ 冷启动宽限期起点（全局单例进程级时间点）
+/// ✅ 冷启动宽限期起点（全局单例进程级时间点）
 final _appStart = DateTime.now();
 
 class AuthFlowObserver {
@@ -65,7 +65,9 @@ class AuthFlowObserver {
     if (_throttle(route)) return;
 
     _navigating = true;
+    debugPrint('[AuthFlowObserver] NAV -> $route');
 
+    // 放到下一帧，避免与首帧构建竞争
     SchedulerBinding.instance.addPostFrameCallback((_) {
       navReplaceAll(route);
     });
@@ -87,11 +89,11 @@ class AuthFlowObserver {
     _started = true;
 
     _sub = Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
-      // ✅ 冷启动宽限期（1.2s）：忽略“瞬时 signedOut / 空会话”假信号
+      // ✅ 冷启动“宽限窗口”：只忽略早期的 signedOut 假信号
+      // （不再因为 session==null 而吞掉 initialSession，确保冷启动必然导航）
       final sinceStart = DateTime.now().difference(_appStart);
       if (sinceStart < const Duration(milliseconds: 1200) &&
-          (data.event == AuthChangeEvent.signedOut ||
-              Supabase.instance.client.auth.currentSession == null)) {
+          data.event == AuthChangeEvent.signedOut) {
         debugPrint('[AuthFlowObserver] grace-window ignore early ${data.event}');
         return;
       }
@@ -118,6 +120,7 @@ class AuthFlowObserver {
               // 订阅通知
               await NotificationService.subscribeUser(user.id);
             } catch (_) {}
+
             // ✅ 预热 Profile（创建/触摸 + 缓存）
             _preheatProfile(user);
 
@@ -141,21 +144,27 @@ class AuthFlowObserver {
 
       // -------------------- 冷启动 --------------------
         case AuthChangeEvent.initialSession:
-        // ✅ 冷启动时也先清标记（以防上次手动登出残留）
+        // ✅ 冷启动时清一次标记（以防上次手动登出残留）
           _manualSignOutOnce = false;
 
-          final hasSession =
-              Supabase.instance.client.auth.currentSession != null;
-
-          if (hasSession) {
-            // ✅ 冷启动直接预热一次，减少首页→个人页的空窗
+          // ⬇⬇⬇ 修复根因：先按会话判断导航，再 break；不再提前 break ⬇⬇⬇
+          try {
+            final session = Supabase.instance.client.auth.currentSession;
             final user = Supabase.instance.client.auth.currentUser;
-            if (user != null) {
-              _preheatProfile(user);
+
+            if (session != null && user != null) {
+              // ✅ 有会话 → 预热 Profile 再进首页
+              try {
+                _preheatProfile(user);
+              } catch (_) {}
+              await _goOnce('/home');
+            } else {
+              // ✅ 无会话 → 去欢迎/登录（如需直达登录，把 '/welcome' 改成 '/login'）
+              await _goOnce('/welcome');
             }
-            await _goOnce('/home');
-          } else {
-            OAuthEntry.finish();
+          } catch (e, st) {
+            debugPrint('[AuthFlowObserver] initialSession error: $e\n$st');
+            await _goOnce('/welcome');
           }
           break;
 
