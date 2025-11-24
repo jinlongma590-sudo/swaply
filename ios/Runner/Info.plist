@@ -102,5 +102,8 @@
       <string>tel</string>
       <string>mailto</string>
     </array>
+
+    <key>FLTEnableImpeller</key>
+    <false/>
   </dict>
 </plist>
