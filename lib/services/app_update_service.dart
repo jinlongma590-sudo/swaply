@@ -105,46 +105,58 @@ class AppUpdateService {
       if ((info.changelog ?? '').trim().isNotEmpty) info.changelog!.trim(),
     ].join('\n');
 
-    showDialog(
-      context: context,
-      barrierDismissible: !force,
-      builder: (ctx) {
-        return WillPopScope(
-          onWillPop: () async => !force,
-          child: AlertDialog(
-            title: Text(force ? '必须更新才能继续使用' : '发现新版本'),
-            content: Text(body.isEmpty
-                ? 'Swaply 有新版本，可以前往下载最新安装包。'
-                : body),
-            actions: [
-              if (!force)
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('以后再说'),
-                ),
-              TextButton(
-                onPressed: () async {
-                  final String? url = Platform.isAndroid
-                      ? info.androidApkUrl
-                      : info.iosStoreUrl;
+    // ✅ 改为“非阻塞排队”：让出当前帧，稍作延时，避免与首帧路由/欢迎弹窗/深链竞争
+    if (!context.mounted) return;
+    Future.microtask(() async {
+      if (!context.mounted) return;
+      await Future.delayed(const Duration(milliseconds: 180)); // 120–200ms 皆可
+      if (!context.mounted) return;
 
-                  if (url != null && url.isNotEmpty) {
-                    final uri = Uri.parse(url);
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri, mode: LaunchMode.externalApplication);
-                    }
-                  }
-
-                  if (!force && ctx.mounted) {
-                    Navigator.of(ctx).pop();
-                  }
-                },
-                child: const Text('立即更新'),
+      // 保持原有 UI 与行为不变（不 await；不影响调用方继续执行）
+      // ignore: use_build_context_synchronously
+      showDialog(
+        context: context,
+        barrierDismissible: !force,
+        builder: (ctx) {
+          return WillPopScope(
+            onWillPop: () async => !force,
+            child: AlertDialog(
+              title: Text(force ? '必须更新才能继续使用' : '发现新版本'),
+              content: Text(
+                body.isEmpty
+                    ? 'Swaply 有新版本，可以前往下载最新安装包。'
+                    : body,
               ),
-            ],
-          ),
-        );
-      },
-    );
+              actions: [
+                if (!force)
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('以后再说'),
+                  ),
+                TextButton(
+                  onPressed: () async {
+                    final String? url = Platform.isAndroid
+                        ? info.androidApkUrl
+                        : info.iosStoreUrl;
+
+                    if (url != null && url.isNotEmpty) {
+                      final uri = Uri.parse(url);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    }
+
+                    if (!force && ctx.mounted) {
+                      Navigator.of(ctx).pop();
+                    }
+                  },
+                  child: const Text('立即更新'),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    });
   }
 }

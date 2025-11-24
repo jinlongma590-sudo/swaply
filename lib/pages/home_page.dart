@@ -128,12 +128,6 @@ class _HomePageState extends State<HomePage>
         _loadTrending(bypassCache: true);
       }
     });
-    // ===== [PATCH B] 登录后首帧真正触发一次欢迎弹窗 =====
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted || _welcomeChecked) return;
-      _welcomeChecked = true;
-      await WelcomeDialogService.maybeShow(context);
-    });
   }
 
   @override

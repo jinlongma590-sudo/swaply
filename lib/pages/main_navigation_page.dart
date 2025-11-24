@@ -65,7 +65,7 @@ class _MainNavigationPageState extends State<MainNavigationPage>
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted || _welcomeChecked) return;
       _welcomeChecked = true;
-      await WelcomeDialogService.maybeShow(context);
+      WelcomeDialogService.scheduleCheck(context);
     });
 
     _loadNotificationCount();

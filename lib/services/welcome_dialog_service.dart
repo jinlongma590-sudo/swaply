@@ -24,21 +24,37 @@ class WelcomeDialogService {
   // ===== 会话级去重（当前运行期间只弹一次）=====
   static final Map<String, bool> _shownSession = {};
 
-  // ===== 并发保护 =====
+  // ===== 并发保护（对话框正在展示） =====
   static bool _isShowing = false;
+
+  // ===== 队列 & 反重入控制（新增） =====
+  static bool _scheduled = false;
+  static bool _inFlight = false;
 
   // ===== 本地持久化 Key =====
   static String _shownKey(String uid) => 'welcome_popup_shown_$uid';
 
-  /// 外部统一入口
+  /// 外部统一入口（新增反重入护栏）
   static Future<void> maybeShow(BuildContext context) async {
-    return _showIfNeeded(context, force: false);
+    if (_inFlight) return;
+    _inFlight = true;
+    try {
+      return await _showIfNeeded(context, force: false);
+    } finally {
+      _inFlight = false;
+    }
   }
 
-  /// 首帧后调用（推荐）
-  static void scheduleCheck(BuildContext context) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _showIfNeeded(context, force: false);
+  /// 首帧后调用（推荐）——改为非阻塞排队，避免与首帧导航竞争
+  static Future<void> scheduleCheck(BuildContext context) async {
+    if (_scheduled || _inFlight) return;
+    _scheduled = true;
+    // 让出当前任务队列，再稍等 200ms，避免与首帧导航/深链抢占
+    Future.microtask(() async {
+      await Future.delayed(const Duration(milliseconds: 200));
+      _scheduled = false;
+      // ignore: use_build_context_synchronously
+      await maybeShow(context); // 真正的检查/弹窗仍在 maybeShow 里
     });
   }
 
@@ -154,9 +170,8 @@ class WelcomeDialogService {
 
   static Future<void> resetAll() async {
     final prefs = await SharedPreferences.getInstance();
-    final keys = prefs.getKeys()
-        .where((k) => k.startsWith('welcome_popup_shown_'))
-        .toList();
+    final keys =
+    prefs.getKeys().where((k) => k.startsWith('welcome_popup_shown_')).toList();
     for (final k in keys) {
       await prefs.remove(k);
     }

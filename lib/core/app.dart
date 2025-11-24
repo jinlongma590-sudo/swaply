@@ -22,6 +22,7 @@ import 'package:swaply/services/welcome_dialog_service.dart';
 import 'package:swaply/services/reward_service.dart';
 import 'package:swaply/providers/language_provider.dart';
 import 'package:swaply/services/auth_flow_observer.dart';
+import 'package:swaply/pages/main_navigation_page.dart'; // ✅ 兜底路由所需
 
 class MyApp extends StatefulWidget {
   const MyApp({super.key});
@@ -70,6 +71,8 @@ class _MyAppState extends State<MyApp> {
             debugShowCheckedModeBanner: false,
             navigatorKey: rootNavKey, // Global Navigator（唯一）
             onGenerateRoute: AppRouter.onGenerateRoute,
+            onUnknownRoute: (settings) =>
+                MaterialPageRoute(builder: (_) => const MainNavigationPage()), // ✅ 兜底，防黑屏
             initialRoute: '/',
             theme: ThemeData(
               primaryColor: const Color(0xFF1877F2),

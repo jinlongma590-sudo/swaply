@@ -25,6 +25,7 @@ class DeepLinkService {
 
   bool _bootstrapped = false;
   bool _flushing = false;
+  bool _initialHandled = false; // ✅ 冷启动只处理一次
 
   /// 解析 URL fragment（形如 #a=1&b=2）为 Map
   Map<String, String> _parseFragmentParams(String fragment) {
@@ -79,10 +80,14 @@ class DeepLinkService {
       // !!! 新 API：getInitialLink() !!!
       final initial = await _appLinks.getInitialLink();
 
-      if (initial != null) {
+      if (initial != null && !_initialHandled) {
+        _initialHandled = true;
         if (kDebugMode) {
-          debugPrint('[DeepLink] getInitialLink -> $initial');
+          debugPrint('[DeepLink] getInitialLink -> $initial (deferred)');
         }
+        // ✅ 等首帧结束 + 极短让步，避免与首帧上的弹窗/路由竞争
+        await SchedulerBinding.instance.endOfFrame;
+        await Future.delayed(const Duration(milliseconds: 120));
         _handle(initial, isInitial: true);
       }
     } catch (e) {
