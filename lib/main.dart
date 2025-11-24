@@ -6,14 +6,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// [ADD] 保持原生启动图直到我们手动移除（不改变 UI）
+// ✅ 1. 引入 Native Splash
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 // 本地通知 & 深链处理
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:swaply/services/deep_link_service.dart';
 
-import 'package:swaply/core/app.dart'; // ← 全局唯一入口
+// 引入你的 App 入口 (对应下一步修改 core/app.dart)
+import 'package:swaply/core/app.dart';
 
 final FlutterLocalNotificationsPlugin _localNotifications =
 FlutterLocalNotificationsPlugin();
@@ -55,9 +56,12 @@ Future<void> _initLocalNotifications() async {
 }
 
 Future<void> main() async {
-  // [MOD] 捕获 binding，并在其上“焊住”启动图
-  final widgetsBinding = WidgetsFlutterBinding.ensureInitialized(); // (原: WidgetsFlutterBinding.ensureInitialized())
-  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding); // [ADD]
+  // ✅ 2. 确保绑定初始化
+  final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+
+  // ✅ 3. 【关键】告诉 iOS：“别动启动图！等我代码通知你再消失”
+  // 这行代码能物理屏蔽掉引擎初始化时的黑屏
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   runZonedGuarded(() async {
     FlutterError.onError = (details) {
@@ -72,29 +76,33 @@ Future<void> main() async {
 
     await _initLocalNotifications();
 
+    // 你的 Supabase 初始化 (保持原值)
     await Supabase.initialize(
       url: 'https://rhckybselarzglkmlyqs.supabase.co',
       anonKey:
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6...', // 保持你的原值
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6...',
     );
 
+    // 设置状态栏样式
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
       statusBarBrightness: Brightness.light,
       statusBarIconBrightness: Brightness.light,
       statusBarColor: Colors.transparent,
     ));
 
-    // ❗ 启动 UI
-    runApp(const MyApp());
+    // 强制竖屏 (推荐加上，防止启动旋转黑屏)
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
 
-    // [ADD] 安全：首帧完成后移除启动图（避免“闪屏→黑缝”）
-    // 不改任何 UI，只是在第一帧真正渲染后把原生图撤掉
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      FlutterNativeSplash.remove();
-    });
+    // ❗ 启动 UI (注意：这里改为了 SwaplyApp，请确保下一步修改 core/app.dart)
+    runApp(const SwaplyApp());
 
-    // ❗❗ 删除 bootstrap，不要在这里启动 deep link（会黑屏）
-    // DeepLinkService.instance.bootstrap();
+    // ❌ 【重要】删除了这里的 remove() 和 bootstrap
+    // 原因：如果在这里移除启动图，UI 还没画出来，用户就会看到黑屏。
+    // 我们将在 WelcomeScreen 的 initState 里移除它。
+
   }, (error, stack) {
     debugPrint('[GlobalZoneError] $error\n$stack');
   });

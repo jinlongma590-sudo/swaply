@@ -3,16 +3,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-// ✅ NativeSplash
+// ✅ 引入 Native Splash
 import 'package:flutter_native_splash/flutter_native_splash.dart';
-// ✅ 首帧平台判断
-import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 
 // 使用 root nav（全局唯一导航）
 import 'package:swaply/router/root_nav.dart';
-// ✅ 引入优惠券弹窗（为了 _maybeShowWelcomeDialog）
-import 'package:swaply/services/welcome_dialog_service.dart';
 
+// ✅ 通过 Service 统一处理欢迎优惠券弹窗（内部会构造 couponData / 去重等）
+import 'package:swaply/services/welcome_dialog_service.dart';
 
 import 'login_screen.dart';
 import 'register_screen.dart';
@@ -35,23 +33,22 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   bool _busy = false;
 
-  // ✅ 首帧渲染标记（用于 ShaderMask 首帧无感保护）
-  bool _firstFrameDrawn = false;
-
   @override
   void initState() {
     super.initState();
 
     WidgetsBinding.instance.addObserver(this);
 
-    // ✅ 首帧绘制完成后移除启动图并弹窗；同时标记首帧已绘制
+    // ✅【关键修改】监听第一帧绘制完成 → 移除启动图 → 稍后弹窗
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      FlutterNativeSplash.remove(); // 此时首帧已准备好
-      _maybeShowWelcomeDialog();    // 保留默认半透明遮罩
-      if (mounted) {
-        setState(() => _firstFrameDrawn = true);
-      }
+      // 此时 ScreenUtil 已经准备好，UI 已经上屏（不再是透明的了）
+      FlutterNativeSplash.remove();
+
+      // 稍微延迟，确保先看到背景再弹窗
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) _maybeShowWelcomeDialog();
+      });
     });
 
     _animationController = AnimationController(
@@ -98,27 +95,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     _bootAuth();
   }
 
-  // ✅ ShaderMask 首帧安全封装：iOS 上首帧跳过，下一帧恢复；视觉无差异
-  Widget _maskFirstFrameSafe({
-    required Widget child,
-    required Shader Function(Rect) shader,
-  }) {
-    if (!_firstFrameDrawn && defaultTargetPlatform == TargetPlatform.iOS) {
-      return child;
-    }
-    return ShaderMask(
-      shaderCallback: shader,
-      blendMode: BlendMode
-          .modulate, // 比 srcATop 更稳，避免极端设备上整层被吃黑的个案
-      child: child,
-    );
-  }
-
   void _maybeShowWelcomeDialog() {
-    // 统一入口：内部会校验是否应弹、构造 couponData，并处理“已展示去重”
+    // ✅ 统一入口：内部会校验是否应弹、构造 couponData，并处理“已展示去重”
     WelcomeDialogService.maybeShow(context);
   }
-
 
   Future<void> _bootAuth() async {
     final s = Supabase.instance.client.auth.currentSession;
@@ -391,15 +371,12 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                     opacity: _fadeAnimation,
                                     child: Column(
                                       children: [
+                                        // ✅【暂时替换】Logo 文字（去掉 ShaderMask，纯色）
                                         Container(
                                           width: 90.r,
                                           height: 90.r,
                                           decoration: BoxDecoration(
-                                            gradient: const LinearGradient(
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                              colors: [Colors.white, Color(0xFFF5F5F5)],
-                                            ),
+                                            color: Colors.white,
                                             borderRadius: BorderRadius.circular(24.r),
                                             boxShadow: [
                                               BoxShadow(
@@ -415,44 +392,33 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                             ],
                                           ),
                                           child: Center(
-                                            // ✅ 首帧安全遮罩（S 图标）
-                                            child: _maskFirstFrameSafe(
-                                              child: Text(
-                                                'S',
-                                                style: TextStyle(
-                                                  fontSize: 48.sp,
-                                                  fontWeight: FontWeight.w900,
-                                                  color: Colors.white,
-                                                ),
+                                            child: Text(
+                                              'S',
+                                              style: TextStyle(
+                                                fontSize: 48.sp,
+                                                fontWeight: FontWeight.w900,
+                                                color: const Color(0xFF1565C0), // 纯色
                                               ),
-                                              shader: (bounds) => const LinearGradient(
-                                                colors: [Color(0xFF2196F3), Color(0xFF1565C0)],
-                                              ).createShader(bounds),
                                             ),
                                           ),
                                         ),
                                         SizedBox(height: 24.h),
-                                        // ✅ 首帧安全遮罩（Swaply 文字）
-                                        _maskFirstFrameSafe(
-                                          child: Text(
-                                            'Swaply',
-                                            style: TextStyle(
-                                              fontSize: 40.sp,
-                                              fontWeight: FontWeight.w900,
-                                              color: Colors.white,
-                                              letterSpacing: 1.5,
-                                              shadows: [
-                                                Shadow(
-                                                  color: Colors.black.withOpacity(0.1),
-                                                  offset: const Offset(0, 2),
-                                                  blurRadius: 4,
-                                                ),
-                                              ],
-                                            ),
+                                        // ✅【暂时替换】标题文字（去掉 ShaderMask，纯白）
+                                        Text(
+                                          'Swaply',
+                                          style: TextStyle(
+                                            fontSize: 40.sp,
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.white, // 纯白
+                                            letterSpacing: 1.5,
+                                            shadows: [
+                                              Shadow(
+                                                color: Colors.black.withOpacity(0.1),
+                                                offset: const Offset(0, 2),
+                                                blurRadius: 4,
+                                              ),
+                                            ],
                                           ),
-                                          shader: (bounds) => const LinearGradient(
-                                            colors: [Colors.white, Colors.white70],
-                                          ).createShader(bounds),
                                         ),
                                         SizedBox(height: 8.h),
                                         Text(

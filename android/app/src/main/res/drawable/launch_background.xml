@@ -1,22 +1,6 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-
-    <!-- 背景：Facebook 蓝 -->
     <item>
-        <shape android:shape="rectangle">
-            <solid android:color="#1877F2" />
-        </shape>
+        <bitmap android:gravity="fill" android:src="@drawable/background"/>
     </item>
-
-    <!-- 底部品牌字样：不设宽高，避免拉伸；仅做底部间距和水平居中 -->
-    <item
-        android:gravity="bottom|center_horizontal"
-        android:bottom="28dp">
-        <bitmap
-            android:src="@drawable/splash_brand_text"
-            android:tileMode="disabled"
-            android:antialias="true"
-            android:filter="false" />
-    </item>
-
 </layer-list>

@@ -1,15 +1,6 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <item>
-        <shape android:shape="rectangle">
-            <solid android:color="@color/splash_background"/>
-        </shape>
-    </item>
-
-    <!-- 中间那张开屏图：如果你用的是 @drawable/splash_full 就保持不变 -->
-    <item>
-        <bitmap
-            android:gravity="center"
-            android:src="@drawable/splash_full"/>
+        <bitmap android:gravity="fill" android:src="@drawable/background"/>
     </item>
 </layer-list>

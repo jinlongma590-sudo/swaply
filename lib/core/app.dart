@@ -10,6 +10,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+// ✅ 1. 引入 ScreenUtil
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -24,14 +25,15 @@ import 'package:swaply/providers/language_provider.dart';
 import 'package:swaply/services/auth_flow_observer.dart';
 import 'package:swaply/pages/main_navigation_page.dart'; // ✅ 兜底路由所需
 
-class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+// ✅ 类名修改为 SwaplyApp (匹配 main.dart)
+class SwaplyApp extends StatefulWidget {
+  const SwaplyApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  State<SwaplyApp> createState() => _SwaplyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _SwaplyAppState extends State<SwaplyApp> {
   bool _booted = false;
   bool _welcomeScheduled = false;
 
@@ -54,15 +56,20 @@ class _MyAppState extends State<MyApp> {
         await DeepLinkService.instance.bootstrap();
       }
 
-      _booted = true;
+      setState(() {
+        _booted = true;
+      });
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    // ✅ 2. 必须用 ScreenUtilInit 包裹整个 MaterialApp
     return ScreenUtilInit(
-      designSize: const Size(390, 844),
+      // ⚠️ 调整为 UI 设计稿尺寸 (标准通常是 375x812)
+      designSize: const Size(375, 812),
       minTextAdapt: true,
+      splitScreenMode: true,
       builder: (_, __) {
         return ChangeNotifierProvider(
           create: (_) => LanguageProvider(),
@@ -70,10 +77,13 @@ class _MyAppState extends State<MyApp> {
             title: 'Swaply ZW',
             debugShowCheckedModeBanner: false,
             navigatorKey: rootNavKey, // Global Navigator（唯一）
+
+            // 路由配置 (保持原有逻辑)
             onGenerateRoute: AppRouter.onGenerateRoute,
             onUnknownRoute: (settings) =>
                 MaterialPageRoute(builder: (_) => const MainNavigationPage()), // ✅ 兜底，防黑屏
-            initialRoute: '/',
+            initialRoute: '/', // 由 AuthFlowObserver 接管跳转
+
             theme: ThemeData(
               primaryColor: const Color(0xFF1877F2),
               useMaterial3: false,
