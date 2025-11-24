@@ -11,7 +11,7 @@ import 'package:swaply/services/profile_service.dart'; // ✅ 预热资料缓存
 import 'package:swaply/services/reward_service.dart'; // ✅ 邀请码绑定
 import 'package:swaply/auth/register_screen.dart'; // ✅ 读取/清理 RegisterScreen.pendingInvitationCode
 
-/// ✅ 冷启动宽限期起点（全局单例进程级时间点）
+// ✅ 冷启动宽限期起点（全局单例进程级时间点）
 final _appStart = DateTime.now();
 
 class AuthFlowObserver {
@@ -41,8 +41,11 @@ class AuthFlowObserver {
   // 最近一次登录的用户，用于登出时清理 Profile 缓存
   String? _lastUserId;
 
+  // ✅ 首帧看门狗（2 秒兜底：若还未导航，强制根据会话状态导航）
+  bool _bootWatchdogArmed = false;
+  bool _everNavigated = false;
+
   void markManualSignOut() {
-    // ✅ 只标记“一次”手动登出；同时保留时间戳以兼容你原来的 fast-path 逻辑
     _manualSignOutOnce = true;
     _manualSignOutAt = DateTime.now();
     debugPrint('[AuthFlowObserver] markManualSignOut=true');
@@ -67,13 +70,13 @@ class AuthFlowObserver {
     _navigating = true;
     debugPrint('[AuthFlowObserver] NAV -> $route');
 
-    // 放到下一帧，避免与首帧构建竞争
     SchedulerBinding.instance.addPostFrameCallback((_) {
       navReplaceAll(route);
     });
 
     await Future.delayed(const Duration(milliseconds: 120));
     _navigating = false;
+    _everNavigated = true; // ✅ 记录“已导航”
   }
 
   /// ✅ 登录后立即预热：创建/触摸 profile + 预取到本地缓存，避免进入 ProfilePage 时空白一瞬
@@ -84,17 +87,39 @@ class AuthFlowObserver {
     unawaited(ProfileService.i.getMyProfile()); // 会把结果写入内部缓存
   }
 
+  void _armBootWatchdogOnce() {
+    if (_bootWatchdogArmed) return;
+    _bootWatchdogArmed = true;
+
+    // 2.0 秒后兜底：如果还没导航，则按会话状态强制导航一次
+    Timer(const Duration(seconds: 2), () async {
+      if (_everNavigated) return;
+      final hasSession = Supabase.instance.client.auth.currentSession != null;
+      debugPrint(
+          '[AuthFlowObserver] BOOT-WATCHDOG fired. hasSession=$hasSession');
+      if (hasSession) {
+        await _goOnce('/home');
+      } else {
+        await _goOnce('/welcome');
+      }
+    });
+  }
+
   void start() {
     if (_started) return;
     _started = true;
 
+    _armBootWatchdogOnce(); // ✅ 启动即布防兜底
+
     _sub = Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
-      // ✅ 冷启动“宽限窗口”：只忽略早期的 signedOut 假信号
-      // （不再因为 session==null 而吞掉 initialSession，确保冷启动必然导航）
       final sinceStart = DateTime.now().difference(_appStart);
+
+      // ⛔ 修正：冷启动宽限期只忽略“signedOut”假信号；
+      // 不能因为 currentSession == null 就早退，否则 initialSession(无会话)会被吞掉→不导航→黑屏
       if (sinceStart < const Duration(milliseconds: 1200) &&
           data.event == AuthChangeEvent.signedOut) {
-        debugPrint('[AuthFlowObserver] grace-window ignore early ${data.event}');
+        debugPrint(
+            '[AuthFlowObserver] grace-window ignore early ${data.event}');
         return;
       }
 
@@ -109,22 +134,17 @@ class AuthFlowObserver {
       switch (data.event) {
       // -------------------- 登录成功 --------------------
         case AuthChangeEvent.signedIn:
-        // ✅ 一旦有会话（登录），清掉“一次性手动登出标记”
           _manualSignOutOnce = false;
-
           _signOutDebounce?.cancel();
 
           final user = Supabase.instance.client.auth.currentUser;
           if (user != null) {
             try {
-              // 订阅通知
               await NotificationService.subscribeUser(user.id);
             } catch (_) {}
-
-            // ✅ 预热 Profile（创建/触摸 + 缓存）
             _preheatProfile(user);
 
-            // ✅ 邀请码绑定（如果注册页留存了待绑定的 code）
+            // ✅ 邀请码绑定（若注册页留存了待绑定 code）
             try {
               final code = RegisterScreen.pendingInvitationCode;
               if (code != null && code.isNotEmpty) {
@@ -144,35 +164,28 @@ class AuthFlowObserver {
 
       // -------------------- 冷启动 --------------------
         case AuthChangeEvent.initialSession:
-        // ✅ 冷启动时清一次标记（以防上次手动登出残留）
           _manualSignOutOnce = false;
 
-          // ⬇⬇⬇ 修复根因：先按会话判断导航，再 break；不再提前 break ⬇⬇⬇
-          try {
-            final session = Supabase.instance.client.auth.currentSession;
-            final user = Supabase.instance.client.auth.currentUser;
+          final hasSession =
+              Supabase.instance.client.auth.currentSession != null;
 
-            if (session != null && user != null) {
-              // ✅ 有会话 → 预热 Profile 再进首页
-              try {
-                _preheatProfile(user);
-              } catch (_) {}
-              await _goOnce('/home');
-            } else {
-              // ✅ 无会话 → 去欢迎/登录（如需直达登录，把 '/welcome' 改成 '/login'）
-              await _goOnce('/welcome');
-            }
-          } catch (e, st) {
-            debugPrint('[AuthFlowObserver] initialSession error: $e\n$st');
+          if (hasSession) {
+            // ✅ 冷启动直接预热一次，减少首页→个人页的空窗
+            final user = Supabase.instance.client.auth.currentUser;
+            if (user != null) _preheatProfile(user);
+            await _goOnce('/home');
+          } else {
+            // ✅ 关键修复：无会话必须导航到 welcome/login，而不是只 finish OAuth
+            try {
+              OAuthEntry.finish();
+            } catch (_) {}
             await _goOnce('/welcome');
           }
           break;
 
       // -------------------- 资料更新 --------------------
         case AuthChangeEvent.userUpdated:
-        // ✅ 任何 userUpdated 也清一次标记（确保重新登录后不被误判）
-          _manualSignOutOnce = false;
-          // 其余保持原样（不做导航）
+          _manualSignOutOnce = false; // 避免误判
           break;
 
       // -------------------- 登出 --------------------
@@ -180,13 +193,12 @@ class AuthFlowObserver {
         case AuthChangeEvent.userDeleted:
           _signOutDebounce?.cancel();
 
-          // ✅ 清理上一次用户的 Profile 缓存，避免下一位读到旧值
           if (_lastUserId != null) {
             ProfileService.i.invalidateCache(_lastUserId!);
             _lastUserId = null;
           }
 
-          // ✅ 如果是“手动登出触发”的这一次，吞掉导航（ProfilePage等处已自行 navReplaceAll('/login')）
+          // 如果是“手动登出触发”的这一次，吞掉导航（页面处已自行处理）
           if (_manualSignOutOnce) {
             debugPrint(
                 '[AuthFlowObserver] signedOut fast-path (manual). swallow nav once.');
@@ -194,7 +206,7 @@ class AuthFlowObserver {
             break;
           }
 
-          // —— 以下是你原有的“非手动”登出逻辑（保留） ——
+          // —— 保留你原有的“非手动”登出逻辑 ——
           final now = DateTime.now();
           final fast = _manualSignOutAt != null &&
               now.difference(_manualSignOutAt!).inSeconds <= 3;
@@ -205,9 +217,10 @@ class AuthFlowObserver {
             break;
           }
 
-          _signOutDebounce = Timer(const Duration(milliseconds: 150), () async {
-            await _goOnce('/login');
-          });
+          _signOutDebounce =
+              Timer(const Duration(milliseconds: 150), () async {
+                await _goOnce('/login');
+              });
           break;
 
       // -------------------- 其他事件 --------------------
