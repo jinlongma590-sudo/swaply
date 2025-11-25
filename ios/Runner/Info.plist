@@ -41,7 +41,7 @@
 		<key>UIStatusBarHidden</key>
 		<false/>
 		<key>UIViewControllerBasedStatusBarAppearance</key>
-		<true/>
+        <false/>
 		<key>UIRequiresFullScreen</key>
 		<true/>
 		<key>NSCameraUsageDescription</key>
