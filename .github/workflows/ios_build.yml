@@ -39,49 +39,44 @@ jobs:
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
-          # 导入证书
-          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          # 【🔥 关键修复 1 🔥】下载并导入 Apple WWDR G3 中级证书
+          # 很多时候证书无效就是因为缺了这个
+          curl -o $RUNNER_TEMP/AppleWWDRCAG3.cer https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
+          security import $RUNNER_TEMP/AppleWWDRCAG3.cer -k $KEYCHAIN_PATH -T /usr/bin/codesign
+
+          # 【🔥 关键修复 2 🔥】导入你的 P12
+          # 去掉了 -t cert 参数，确保私钥和公钥都进去
+          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -f pkcs12 -k $KEYCHAIN_PATH
           
-          # 防止签名工具卡住 (关键)
+          # 防止签名工具卡住
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           
-          # 打印一下看看有没有导入成功 (调试用)
-          security find-identity -v -p codesigning
+          # 打印所有证书看看 (调试用)
+          echo "Listing all identities (including invalid):"
+          security find-identity -p codesigning $KEYCHAIN_PATH
+          
+          echo "Listing VALID identities:"
+          security find-identity -v -p codesigning $KEYCHAIN_PATH
 
           # 安装描述文件
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
 
-      # 【🔥 核心修复步骤 🔥】
-      # 自动读取描述文件的 UUID，并暴力修改 Xcode 项目配置
+      # 强制修改 Xcode 签名配置 (保留之前的修复)
       - name: Force Update Xcode Signing
         run: |
-          # 1. 从描述文件中提取 UUID
           PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
           UUID=$(strings "$PP_PATH" | grep -A1 "<key>UUID</key>" | tail -n1 | sed -e 's/.*<string>//' -e 's/<\/string>.*//')
           echo "Found Provisioning Profile UUID: $UUID"
           
-          # 2. 暴力替换项目文件中的配置
           PBX_PATH="ios/Runner.xcodeproj/project.pbxproj"
           
-          # 把 "iPhone Developer" 替换为 "iPhone Distribution"
           sed -i '' 's/iPhone Developer/iPhone Distribution/g' "$PBX_PATH"
           sed -i '' 's/Apple Development/iPhone Distribution/g' "$PBX_PATH"
-          
-          # 强制改为 Manual 签名模式
           sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' "$PBX_PATH"
-          
-          # 强制插入描述文件 UUID (如果没有就替换，如果有一并替换)
-          # 我们直接替换 PROVISIONING_PROFILE_SPECIFIER 的值
           sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = .*/PROVISIONING_PROFILE_SPECIFIER = \"$UUID\";/g" "$PBX_PATH"
-          
-          # 如果原本没有 SPECIFIER，我们在 PRODUCT_NAME 下面硬插一行
           sed -i '' "/PRODUCT_NAME = .*/a\\
           PROVISIONING_PROFILE_SPECIFIER = \"$UUID\";" "$PBX_PATH"
-
-          # 打印一下看看改没改成功
-          grep "PROVISIONING_PROFILE_SPECIFIER" "$PBX_PATH" | head -n 5
-          grep "CODE_SIGN_IDENTITY" "$PBX_PATH" | head -n 5
 
       - name: Install Dependencies
         run: |
@@ -91,7 +86,6 @@ jobs:
 
       - name: Build IPA
         run: |
-          # 这里的 --export-options-plist 可以省略，因为我们在上面已经强制修改了项目文件
           flutter build ipa --release --export-method=app-store --verbose
 
       - name: Upload IPA
