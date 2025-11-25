@@ -25,55 +25,53 @@ jobs:
           BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
           KEYCHAIN_PASSWORD: "temporary_password"
         run: |
-          # 创建相关路径
+          # 创建路径
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
           PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
-          # 解码 Secret 到文件
+          # 解码
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
           echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
 
-          # 创建临时钥匙串
+          # 创建钥匙串
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
-          # 【🔥 关键修复 1 🔥】下载并导入 Apple WWDR G3 中级证书
-          # 很多时候证书无效就是因为缺了这个
+          # 1. 下载 Apple 中级证书 (必须)
           curl -o $RUNNER_TEMP/AppleWWDRCAG3.cer https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
           security import $RUNNER_TEMP/AppleWWDRCAG3.cer -k $KEYCHAIN_PATH -T /usr/bin/codesign
 
-          # 【🔥 关键修复 2 🔥】导入你的 P12
-          # 去掉了 -t cert 参数，确保私钥和公钥都进去
+          # 2. 导入你的 P12
           security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -f pkcs12 -k $KEYCHAIN_PATH
-          
-          # 防止签名工具卡住
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           
-          # 打印所有证书看看 (调试用)
-          echo "Listing all identities (including invalid):"
-          security find-identity -p codesigning $KEYCHAIN_PATH
-          
-          echo "Listing VALID identities:"
+          # 验证
           security find-identity -v -p codesigning $KEYCHAIN_PATH
 
           # 安装描述文件
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
 
-      # 强制修改 Xcode 签名配置 (保留之前的修复)
-      - name: Force Update Xcode Signing
+      # 【修正版】只强制修改签名类型，不改 Bundle ID
+      - name: Fix Xcode Signing Style
         run: |
+          # 提取 UUID
           PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
           UUID=$(strings "$PP_PATH" | grep -A1 "<key>UUID</key>" | tail -n1 | sed -e 's/.*<string>//' -e 's/<\/string>.*//')
-          echo "Found Provisioning Profile UUID: $UUID"
+          echo "Using Official Profile UUID: $UUID"
           
           PBX_PATH="ios/Runner.xcodeproj/project.pbxproj"
           
+          # 1. 强制将 Developer 改为 Distribution
           sed -i '' 's/iPhone Developer/iPhone Distribution/g' "$PBX_PATH"
           sed -i '' 's/Apple Development/iPhone Distribution/g' "$PBX_PATH"
+          
+          # 2. 强制 Manual 签名
           sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' "$PBX_PATH"
+          
+          # 3. 指定 UUID (这一步很关键，保证用刚才下载的那个文件)
           sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = .*/PROVISIONING_PROFILE_SPECIFIER = \"$UUID\";/g" "$PBX_PATH"
           sed -i '' "/PRODUCT_NAME = .*/a\\
           PROVISIONING_PROFILE_SPECIFIER = \"$UUID\";" "$PBX_PATH"
@@ -86,6 +84,7 @@ jobs:
 
       - name: Build IPA
         run: |
+          # 这里的 export-method=app-store 是必须的
           flutter build ipa --release --export-method=app-store --verbose
 
       - name: Upload IPA
