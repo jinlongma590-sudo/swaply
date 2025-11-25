@@ -21,17 +21,19 @@ jobs:
       - name: Install Certificates & Profile
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          BUILD_CERTIFICATE_CER_BASE64: ${{ secrets.BUILD_CERTIFICATE_CER_BASE64 }}
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
           BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
           KEYCHAIN_PASSWORD: "temporary_password"
         run: |
-          # 创建路径
           CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          CERTIFICATE_CER_PATH=$RUNNER_TEMP/build_certificate.cer
           PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
-          # 解码
+          # 解码 Secret 到文件
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+          echo -n "$BUILD_CERTIFICATE_CER_BASE64" | base64 --decode -o $CERTIFICATE_CER_PATH
           echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
 
           # 创建钥匙串
@@ -39,12 +41,15 @@ jobs:
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
-          # 1. 下载 Apple 中级证书 (必须)
+          # 1. 导入 Apple 中级证书
           curl -o $RUNNER_TEMP/AppleWWDRCAG3.cer https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
           security import $RUNNER_TEMP/AppleWWDRCAG3.cer -k $KEYCHAIN_PATH -T /usr/bin/codesign
 
-          # 2. 导入你的 P12
+          # 2. 导入你的 P12 & CER
           security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -f pkcs12 -k $KEYCHAIN_PATH
+          security import $CERTIFICATE_CER_PATH -k $KEYCHAIN_PATH -T /usr/bin/codesign
+
+          # 防止签名工具卡住
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           
           # 验证
@@ -54,13 +59,13 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
 
-      # 【修正版】只强制修改签名类型，不改 Bundle ID
       - name: Fix Xcode Signing Style
         run: |
-          # 提取 UUID
           PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
           UUID=$(strings "$PP_PATH" | grep -A1 "<key>UUID</key>" | tail -n1 | sed -e 's/.*<string>//' -e 's/<\/string>.*//')
+          TEAM_ID=$(strings "$PP_PATH" | grep -A1 "<key>TeamIdentifier</key>" | tail -n2 | grep "string" | sed -e 's/.*<string>//' -e 's/<\/string>.*//')
           echo "Using Official Profile UUID: $UUID"
+          echo "Using Team ID: $TEAM_ID"
           
           PBX_PATH="ios/Runner.xcodeproj/project.pbxproj"
           
@@ -71,10 +76,11 @@ jobs:
           # 2. 强制 Manual 签名
           sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' "$PBX_PATH"
           
-          # 3. 指定 UUID (这一步很关键，保证用刚才下载的那个文件)
+          # 3. 指定 UUID & Team ID
           sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = .*/PROVISIONING_PROFILE_SPECIFIER = \"$UUID\";/g" "$PBX_PATH"
           sed -i '' "/PRODUCT_NAME = .*/a\\
           PROVISIONING_PROFILE_SPECIFIER = \"$UUID\";" "$PBX_PATH"
+          sed -i '' "s/DEVELOPMENT_TEAM = .*/DEVELOPMENT_TEAM = $TEAM_ID;/g" "$PBX_PATH"
 
       - name: Install Dependencies
         run: |
@@ -84,8 +90,9 @@ jobs:
 
       - name: Build IPA
         run: |
-          # 这里的 export-method=app-store 是必须的
-          flutter build ipa --release --export-method=app-store --verbose
+          # 🔥 最终修复：添加强制链接参数 -all_load 和 -ObjC
+          flutter build ipa --release --export-method=app-store --verbose -- \
+            -xcode-build-settings="OTHER_LDFLAGS=-all_load -ObjC"
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
