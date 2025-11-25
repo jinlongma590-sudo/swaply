@@ -21,7 +21,7 @@ jobs:
       - name: Install Certificates & Profile
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}          # p12 (含私钥)
-          BUILD_CERTIFICATE_CER_BASE64: ${{ secrets.BUILD_CERTIFICATE_CER_BASE64 }}  # 可选 .cer（中级/发行证书链）
+          BUILD_CERTIFICATE_CER_BASE64: ${{ secrets.BUILD_CERTIFICATE_CER_BASE64 }}  # 可选 .cer 链
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}                                  # p12 密码
           BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }} # .mobileprovision
           KEYCHAIN_PASSWORD: "temporary_password"
@@ -86,7 +86,7 @@ jobs:
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           cp "$PP_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/"
 
-          # 8) 解析描述文件
+          # 8) 解析描述文件（cms 解包）
           security cms -D -i "$PP_PATH" > "$PROFILE_PLIST"
           UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' "$PROFILE_PLIST")
           NAME=$(/usr/libexec/PlistBuddy -c 'Print Name' "$PROFILE_PLIST")
@@ -94,59 +94,89 @@ jobs:
           APP_ID=$(/usr/libexec/PlistBuddy -c 'Print Entitlements:application-identifier' "$PROFILE_PLIST")
           BUNDLE_ID="${APP_ID#${TEAM_ID}.}"
 
-          echo "Profile UUID: $UUID"
-          echo "Profile Name: $NAME"
-          echo "Team ID: $TEAM_ID"
-          echo "Bundle ID (from profile): $BUNDLE_ID"
+          echo "PP_UUID=$UUID"        >> $GITHUB_ENV
+          echo "PP_NAME=$NAME"        >> $GITHUB_ENV
+          echo "PP_TEAM=$TEAM_ID"     >> $GITHUB_ENV
+          echo "PP_BUNDLE_ID=$BUNDLE_ID" >> $GITHUB_ENV
+          echo "SIGN_KEYCHAIN=$KEYCHAIN_PATH" >> $GITHUB_ENV
 
-          {
-            echo "PP_UUID=$UUID"
-            echo "PP_NAME=$NAME"
-            echo "PP_TEAM=$TEAM_ID"
-            echo "PP_BUNDLE_ID=$BUNDLE_ID"
-          } >> $GITHUB_ENV
-
-      - name: Fix Xcode Signing (Manual + Specifier by Name)
+      - name: Install Dependencies
         shell: bash
         run: |
           set -euo pipefail
-          PBX_PATH="ios/Runner.xcodeproj/project.pbxproj"
-
-          echo "Using TEAM: $PP_TEAM / PROFILE: $PP_NAME (UUID: $PP_UUID) / BUNDLE: $PP_BUNDLE_ID"
-
-          # 1) 强制 Manual
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' "$PBX_PATH"
-
-          # 2) 统一签名身份为 Apple Distribution（Xcode 13+）
-          sed -i '' 's/CODE_SIGN_IDENTITY = "[^"]*";/CODE_SIGN_IDENTITY = "Apple Distribution";/g' "$PBX_PATH"
-          sed -i '' 's/CODE_SIGN_IDENTITY\[sdk=iphoneos\*\] = "[^"]*";/CODE_SIGN_IDENTITY[sdk=iphoneos*] = "Apple Distribution";/g' "$PBX_PATH"
-
-          # 3) 设置团队
-          sed -i '' "s/DEVELOPMENT_TEAM = [A-Z0-9]*/DEVELOPMENT_TEAM = $PP_TEAM/g" "$PBX_PATH"
-
-          # 4) 设置 Specifier（用 Name，而非 UUID；兼容已有/未有两种情况）
-          if grep -q 'PROVISIONING_PROFILE_SPECIFIER = ' "$PBX_PATH"; then
-            sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = \".*\";/PROVISIONING_PROFILE_SPECIFIER = \"$PP_NAME\";/g" "$PBX_PATH"
-          else
-            sed -i '' "/PRODUCT_BUNDLE_IDENTIFIER = ${PP_BUNDLE_ID//./\\.}/a\\
-            PROVISIONING_PROFILE_SPECIFIER = \"$PP_NAME\";" "$PBX_PATH"
-          fi
-
-          # （可选）若还遗留 PROVISIONING_PROFILE（老字段，UUID），同步一下
-          if grep -q 'PROVISIONING_PROFILE = ' "$PBX_PATH"; then
-            sed -i '' "s/PROVISIONING_PROFILE = \".*\";/PROVISIONING_PROFILE = \"$PP_UUID\";/g" "$PBX_PATH"
-          fi
-
-      - name: Install Dependencies
-        run: |
+          flutter clean
           flutter pub get
           cd ios
           pod install --repo-update
 
-      - name: Build IPA
+      # 用 xcodebuild 归档（显式传入签名&钥匙串）
+      - name: Archive (xcodebuild)
+        shell: bash
         run: |
-          # ✅ 修复点：去掉不被 Flutter 支持的 -xcode-build-settings 传参
-          flutter build ipa --release --export-method=app-store --verbose
+          set -euo pipefail
+          ARCHIVE_PATH="$RUNNER_TEMP/Runner.xcarchive"
+          echo "Using TEAM=$PP_TEAM, PROFILE=$PP_NAME, BUNDLE=$PP_BUNDLE_ID"
+
+          xcodebuild -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$ARCHIVE_PATH" \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM="$PP_TEAM" \
+            PRODUCT_BUNDLE_IDENTIFIER="$PP_BUNDLE_ID" \
+            PROVISIONING_PROFILE_SPECIFIER="$PP_NAME" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            OTHER_CODE_SIGN_FLAGS="--keychain $SIGN_KEYCHAIN" \
+            clean archive | xcpretty || { echo "xcodebuild archive failed"; exit 1; }
+
+          # 生成 ExportOptions.plist（App Store）
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store</string>
+            <key>teamID</key><string>__TEAM_ID__</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>signingCertificate</key><string>Apple Distribution</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>__BUNDLE_ID__</key><string>__PROFILE_NAME__</string>
+            </dict>
+            <key>compileBitcode</key><false/>
+            <key>destination</key><string>export</string>
+            <key>stripSwiftSymbols</key><true/>
+            <key>uploadSymbols</key><true/>
+          </dict>
+          </plist>
+          EOF
+          /usr/bin/sed -i '' "s/__TEAM_ID__/$PP_TEAM/g" "$RUNNER_TEMP/ExportOptions.plist"
+          /usr/bin/sed -i '' "s/__BUNDLE_ID__/$PP_BUNDLE_ID/g" "$RUNNER_TEMP/ExportOptions.plist"
+          /usr/bin/sed -i '' "s/__PROFILE_NAME__/$PP_NAME/g" "$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Export IPA (xcodebuild)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARCHIVE_PATH="$RUNNER_TEMP/Runner.xcarchive"
+          EXPORT_PLIST="$RUNNER_TEMP/ExportOptions.plist"
+          EXPORT_DIR="$GITHUB_WORKSPACE/build/ios/ipa"
+          mkdir -p "$EXPORT_DIR"
+
+          xcodebuild -exportArchive \
+            -archivePath "$ARCHIVE_PATH" \
+            -exportOptionsPlist "$EXPORT_PLIST" \
+            -exportPath "$EXPORT_DIR" \
+            OTHER_CODE_SIGN_FLAGS="--keychain $SIGN_KEYCHAIN" | xcpretty || { 
+              echo "xcodebuild exportArchive failed"; 
+              # 打印更详细日志
+              tail -n +1 ~/Library/Logs/gym/* 2>/dev/null || true
+              exit 1; 
+            }
+
+          echo "Exported files:"
+          ls -lah "$EXPORT_DIR"
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
