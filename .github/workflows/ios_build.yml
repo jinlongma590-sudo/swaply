@@ -1,7 +1,7 @@
 name: iOS App Store Build
 
 on:
-  workflow_dispatch: # 允许手动点击按钮开始构建
+  workflow_dispatch:
 
 jobs:
   build_ios:
@@ -9,18 +9,15 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      # 1. 拉取代码
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. 安装 Flutter (使用稳定版)
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: 'stable'
           cache: true
 
-      # 3. 解码证书并导入 (全自动读取你刚才填的 Secrets)
       - name: Install Certificates & Profile
         env:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
@@ -44,26 +41,37 @@ jobs:
 
           # 导入证书
           security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          
+          # 【新增关键修复】防止签名工具访问钥匙串时卡住
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
 
           # 安装描述文件
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
 
-      # 4. 安装依赖
+      # 【新增步骤】强制修改 Xcode 项目配置，匹配你的发布证书
+      - name: Fix Signing Settings
+        run: |
+          # 1. 把 "iPhone Developer" 替换为 "iPhone Distribution"
+          sed -i '' 's/"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = "iPhone Developer";/"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";/g' ios/Runner.xcodeproj/project.pbxproj
+          
+          # 2. 强制把签名模式从 Automatic 改为 Manual (如果存在)
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' ios/Runner.xcodeproj/project.pbxproj
+          
+          # 3. 再次确认替换结果（打印出来看看）
+          grep "CODE_SIGN_IDENTITY" ios/Runner.xcodeproj/project.pbxproj | head -n 5
+
       - name: Install Dependencies
         run: |
           flutter pub get
           cd ios
           pod install --repo-update
 
-      # 5. 构建 IPA (发布模式)
       - name: Build IPA
         run: |
-          # 自动使用我们在第3步安装好的证书进行签名
           flutter build ipa --release --export-method=app-store
 
-      # 6. 上传 IPA 供下载
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
