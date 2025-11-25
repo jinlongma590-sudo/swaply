@@ -23,7 +23,7 @@ jobs:
           BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}            # p12（含私钥）
           BUILD_CERTIFICATE_CER_BASE64: ${{ secrets.BUILD_CERTIFICATE_CER_BASE64 }}    # 可选 .cer
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }} # .mobileprovision（App Store）
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }} # .mobileprovision
           KEYCHAIN_PASSWORD: "temporary_password"
         shell: bash
         run: |
@@ -35,54 +35,79 @@ jobs:
           PROFILE_PLIST="$RUNNER_TEMP/profile.plist"
           KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
 
-          # 还原文件
-          if [ -n "${BUILD_CERTIFICATE_BASE64:-}" ]; then printf "%s" "$BUILD_CERTIFICATE_BASE64" | base64 -D > "$CERTIFICATE_P12_PATH"; fi
-          if [ -n "${BUILD_CERTIFICATE_CER_BASE64:-}" ]; then printf "%s" "$BUILD_CERTIFICATE_CER_BASE64" | base64 -D > "$CERTIFICATE_CER_PATH"; fi
+          # 0) 还原文件（macOS: base64 -D）
+          if [ -n "${BUILD_CERTIFICATE_BASE64:-}" ]; then
+            printf "%s" "$BUILD_CERTIFICATE_BASE64" | base64 -D > "$CERTIFICATE_P12_PATH"
+          fi
+          if [ -n "${BUILD_CERTIFICATE_CER_BASE64:-}" ]; then
+            printf "%s" "$BUILD_CERTIFICATE_CER_BASE64" | base64 -D > "$CERTIFICATE_CER_PATH"
+          fi
           printf "%s" "$BUILD_PROVISION_PROFILE_BASE64" | base64 -D > "$PP_PATH"
 
-          # Keychain
+          # 1) 创建并设置默认钥匙串 + 搜索列表
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security default-keychain -s "$KEYCHAIN_PATH"
           security list-keychains -d user -s "$KEYCHAIN_PATH"
 
-          # 中间证书（可选）
+          # 2) 导入 Apple WWDR（中间证书，可选）
           curl -fsSL -o "$RUNNER_TEMP/AppleWWDRCAG3.cer" https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer || true
           if [ -s "$RUNNER_TEMP/AppleWWDRCAG3.cer" ]; then
             security import "$RUNNER_TEMP/AppleWWDRCAG3.cer" -k "$KEYCHAIN_PATH" -t cert -f der -T /usr/bin/codesign -T /usr/bin/security || true
           fi
+
+          # 3) 导入你提供的 .cer（若有）
           if [ -s "$CERTIFICATE_CER_PATH" ]; then
             security import "$CERTIFICATE_CER_PATH" -k "$KEYCHAIN_PATH" -t cert -f der -T /usr/bin/codesign -T /usr/bin/security || true
           fi
 
-          # 导入 p12（有/无密码都兼容）
+          # 4) 导入 .p12（必须包含私钥）
           if [ -s "$CERTIFICATE_P12_PATH" ]; then
             if [ -z "${P12_PASSWORD:-}" ]; then
-              security import "$CERTIFICATE_P12_PATH" -k "$KEYCHAIN_PATH" -f pkcs12 -A -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/xcodebuild
+              echo "[info] P12_PASSWORD 为空：尝试不带密码导入"
+              security import "$CERTIFICATE_P12_PATH" \
+                -k "$KEYCHAIN_PATH" -f pkcs12 -A \
+                -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/xcodebuild
             else
-              security import "$CERTIFICATE_P12_PATH" -k "$KEYCHAIN_PATH" -f pkcs12 -P "$P12_PASSWORD" -A -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/xcodebuild
+              security import "$CERTIFICATE_P12_PATH" \
+                -k "$KEYCHAIN_PATH" -f pkcs12 -P "$P12_PASSWORD" -A \
+                -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/xcodebuild
             fi
           fi
+
+          # 5) 允许 codesign/xcodebuild 访问私钥
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # 6) 验证 identity（应 >= 1）
           security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
-          # 安装描述文件 + 解析关键信息
+          # 7) 安装描述文件
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           cp "$PP_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/"
 
+          # 8) 解析描述文件（cms 解包）
           security cms -D -i "$PP_PATH" > "$PROFILE_PLIST"
           UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' "$PROFILE_PLIST")
           NAME=$(/usr/libexec/PlistBuddy -c 'Print Name' "$PROFILE_PLIST")
           TEAM_ID=$(/usr/libexec/PlistBuddy -c 'Print TeamIdentifier:0' "$PROFILE_PLIST")
           APP_ID=$(/usr/libexec/PlistBuddy -c 'Print Entitlements:application-identifier' "$PROFILE_PLIST")
           BUNDLE_ID="${APP_ID#${TEAM_ID}.}"
+          GET_TASK_ALLOW=$(/usr/libexec/PlistBuddy -c 'Print Entitlements:get-task-allow' "$PROFILE_PLIST" 2>/dev/null || echo "false")
 
-          echo "PP_UUID=$UUID"               >> $GITHUB_ENV
-          echo "PP_NAME=$NAME"               >> $GITHUB_ENV
-          echo "PP_TEAM=$TEAM_ID"            >> $GITHUB_ENV
-          echo "PP_BUNDLE_ID=$BUNDLE_ID"     >> $GITHUB_ENV
+          echo "PP_UUID=$UUID"            >> $GITHUB_ENV
+          echo "PP_NAME=$NAME"            >> $GITHUB_ENV
+          echo "PP_TEAM=$TEAM_ID"         >> $GITHUB_ENV
+          echo "PP_BUNDLE_ID=$BUNDLE_ID"  >> $GITHUB_ENV
           echo "SIGN_KEYCHAIN=$KEYCHAIN_PATH" >> $GITHUB_ENV
+
+          echo "---- Provisioning Profile Facts ----"
+          echo "Name: $NAME"
+          echo "UUID: $UUID"
+          echo "Team: $TEAM_ID"
+          echo "Bundle: $BUNDLE_ID"
+          echo "get-task-allow (true=开发/false=分发): $GET_TASK_ALLOW"
+          echo "------------------------------------"
 
       - name: Install Dependencies
         shell: bash
@@ -99,9 +124,10 @@ jobs:
           set -euo pipefail
           xcodebuild -list -workspace ios/Runner.xcworkspace
           xcodebuild -showBuildSettings -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release | \
-            /usr/bin/grep -E "PRODUCT_BUNDLE_IDENTIFIER|CODE_SIGN_STYLE|DEVELOPMENT_TEAM|PROVISIONING_PROFILE_SPECIFIER|CODE_SIGN_IDENTITY"
+            /usr/bin/grep -E "PRODUCT_BUNDLE_IDENTIFIER|CODE_SIGN_STYLE|DEVELOPMENT_TEAM|PROVISIONING_PROFILE_SPECIFIER|CODE_SIGN_IDENTITY" || true
 
-      - name: Archive (NO signing for Pods)
+      # ✅ Archive：只传 Team/Keychain，不再传 PROVISIONING_PROFILE_SPECIFIER（避免外溢到 frameworks）
+      - name: Archive (xcodebuild · full log)
         shell: bash
         env:
           NSUnbufferedIO: "YES"
@@ -109,29 +135,49 @@ jobs:
           set -euo pipefail
           ARCHIVE_PATH="$RUNNER_TEMP/Runner.xcarchive"
           LOG_ARCHIVE="$RUNNER_TEMP/xcodebuild-archive.log"
-          echo "Using TEAM=$PP_TEAM, BUNDLE=$PP_BUNDLE_ID"
+          echo "Using TEAM=$PP_TEAM, PROFILE=$PP_NAME, BUNDLE=$PP_BUNDLE_ID"
 
-          # 关键：不让任何目标在编译期签名（Pods 不再触发 Development 证书/账户报错）
           set +e
           xcodebuild -workspace ios/Runner.xcworkspace \
             -scheme Runner \
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$ARCHIVE_PATH" \
-            PRODUCT_BUNDLE_IDENTIFIER="$PP_BUNDLE_ID" \
+            CODE_SIGN_STYLE=Manual \
             DEVELOPMENT_TEAM="$PP_TEAM" \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            PRODUCT_BUNDLE_IDENTIFIER="$PP_BUNDLE_ID" \
             OTHER_CODE_SIGN_FLAGS="--keychain $SIGN_KEYCHAIN" \
+            CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES \
             clean archive | tee "$LOG_ARCHIVE"
           EXIT_CODE=${PIPESTATUS[0]}
           set -e
           if [ $EXIT_CODE -ne 0 ]; then
+            echo "------ xcodebuild archive last 300 lines ------"
             tail -n 300 "$LOG_ARCHIVE" || true
-            /usr/bin/grep -n -i -E "error:|provision|profile|certificate|entitlement|code sign" -n -C 3 "$LOG_ARCHIVE" || true
+            echo "------ grep 'error:' context ------"
+            /usr/bin/grep -n -i -E "error:|no such file|provision|profile|certificate|entitlement|code sign" -n -C 3 "$LOG_ARCHIVE" || true
             exit $EXIT_CODE
           fi
 
-      - name: Export IPA (manual signing with your profile)
+          # 生成 ExportOptions.plist（⚠️ 改为 automatic，避免给 frameworks 套描述文件）
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>teamID</key><string>__TEAM_ID__</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>destination</key><string>export</string>
+            <key>stripSwiftSymbols</key><true/>
+            <key>uploadSymbols</key><true/>
+            <key>compileBitcode</key><false/>
+          </dict>
+          </plist>
+          EOF
+          /usr/bin/sed -i '' "s/__TEAM_ID__/$PP_TEAM/g" "$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Export IPA (xcodebuild)
         shell: bash
         env:
           NSUnbufferedIO: "YES"
@@ -143,30 +189,6 @@ jobs:
           LOG_EXPORT="$RUNNER_TEMP/xcodebuild-export.log"
           mkdir -p "$EXPORT_DIR"
 
-          cat > "$EXPORT_PLIST" <<'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key><string>app-store</string>
-            <key>teamID</key><string>__TEAM_ID__</string>
-            <key>signingStyle</key><string>manual</string>
-            <key>signingCertificate</key><string>Apple Distribution</string>
-            <key>provisioningProfiles</key>
-            <dict>
-              <key>__BUNDLE_ID__</key><string>__PROFILE_NAME__</string>
-            </dict>
-            <key>compileBitcode</key><false/>
-            <key>stripSwiftSymbols</key><true/>
-            <key>destination</key><string>export</string>
-            <key>uploadSymbols</key><true/>
-          </dict>
-          </plist>
-          EOF
-          /usr/bin/sed -i '' "s/__TEAM_ID__/$PP_TEAM/g" "$EXPORT_PLIST"
-          /usr/bin/sed -i '' "s/__BUNDLE_ID__/$PP_BUNDLE_ID/g" "$EXPORT_PLIST"
-          /usr/bin/sed -i '' "s/__PROFILE_NAME__/$PP_NAME/g" "$EXPORT_PLIST"
-
           set +e
           xcodebuild -exportArchive \
             -archivePath "$ARCHIVE_PATH" \
@@ -176,8 +198,10 @@ jobs:
           EXIT_CODE=${PIPESTATUS[0]}
           set -e
           if [ $EXIT_CODE -ne 0 ]; then
+            echo "------ xcodebuild exportArchive last 200 lines ------"
             tail -n 200 "$LOG_EXPORT" || true
-            /usr/bin/grep -n -i -E "error:|provision|profile|certificate|entitlement|code sign" -n -C 3 "$LOG_EXPORT" || true
+            echo "------ grep 'error:' context ------"
+            /usr/bin/grep -n -i -E "error:|no such file|provision|profile|certificate|entitlement|code sign" -n -C 3 "$LOG_EXPORT" || true
             exit $EXIT_CODE
           fi
 
