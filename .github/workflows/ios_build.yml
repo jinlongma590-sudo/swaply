@@ -10,6 +10,7 @@ jobs:
 
     steps:
       - name: Checkout code
+        # v4 OK
         uses: actions/checkout@v4
 
       - name: Setup Flutter
@@ -20,73 +21,124 @@ jobs:
 
       - name: Install Certificates & Profile
         env:
-          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
-          BUILD_CERTIFICATE_CER_BASE64: ${{ secrets.BUILD_CERTIFICATE_CER_BASE64 }}
-          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }}
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}          # p12 (含私钥)
+          BUILD_CERTIFICATE_CER_BASE64: ${{ secrets.BUILD_CERTIFICATE_CER_BASE64 }}  # 可选 .cer（中级/发行证书链）
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}                                  # p12 密码
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }} # .mobileprovision
           KEYCHAIN_PASSWORD: "temporary_password"
+        shell: bash
         run: |
-          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-          CERTIFICATE_CER_PATH=$RUNNER_TEMP/build_certificate.cer
-          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          set -euo pipefail
 
-          # 1. 解码 Secret 到文件 (确保所有 Base64 都是最新的)
-          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
-          echo -n "$BUILD_CERTIFICATE_CER_BASE64" | base64 --decode -o $CERTIFICATE_CER_PATH
-          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
+          CERTIFICATE_P12_PATH="$RUNNER_TEMP/build_certificate.p12"
+          CERTIFICATE_CER_PATH="$RUNNER_TEMP/build_certificate.cer"
+          PP_PATH="$RUNNER_TEMP/build_pp.mobileprovision"
+          PROFILE_PLIST="$RUNNER_TEMP/profile.plist"
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
 
-          # 2. 创建钥匙串
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          # 0) 还原文件（macOS 用 -D）
+          if [ -n "${BUILD_CERTIFICATE_BASE64:-}" ]; then
+            printf "%s" "$BUILD_CERTIFICATE_BASE64" | base64 -D > "$CERTIFICATE_P12_PATH"
+          fi
+          if [ -n "${BUILD_CERTIFICATE_CER_BASE64:-}" ]; then
+            printf "%s" "$BUILD_CERTIFICATE_CER_BASE64" | base64 -D > "$CERTIFICATE_CER_PATH"
+          fi
+          printf "%s" "$BUILD_PROVISION_PROFILE_BASE64" | base64 -D > "$PP_PATH"
 
-          # 3. 导入 Apple 中级证书 & CER
-          curl -o $RUNNER_TEMP/AppleWWDRCAG3.cer https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
-          security import $RUNNER_TEMP/AppleWWDRCAG3.cer -k $KEYCHAIN_PATH -T /usr/bin/codesign
-          security import $CERTIFICATE_CER_PATH -k $KEYCHAIN_PATH -T /usr/bin/codesign
+          # 1) 创建并设置默认钥匙串 + 搜索列表
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security default-keychain -s "$KEYCHAIN_PATH"
+          # 让搜索列表只包含当前 keychain（最稳）
+          security list-keychains -d user -s "$KEYCHAIN_PATH"
 
-          # 4. 【核心修复】根据 P12_PASSWORD 状态导入 P12
-          if [ -z "$P12_PASSWORD" ]; then
-              echo "P12 password is empty or not set. Importing without password..."
-              security import $CERTIFICATE_PATH -A -f pkcs12 -k $KEYCHAIN_PATH
-          else
-              echo "P12 password exists. Importing with password."
-              security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -f pkcs12 -k $KEYCHAIN_PATH
+          # 2) 导入 Apple WWDR（中间证书，可选）
+          curl -fsSL -o "$RUNNER_TEMP/AppleWWDRCAG3.cer" https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer || true
+          if [ -s "$RUNNER_TEMP/AppleWWDRCAG3.cer" ]; then
+            security import "$RUNNER_TEMP/AppleWWDRCAG3.cer" -k "$KEYCHAIN_PATH" -t cert -f der -T /usr/bin/codesign -T /usr/bin/security || true
           fi
 
-          # 5. 防止签名工具卡住
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          
-          # 验证 (这次必看日志，确保这里显示 1 valid identity)
-          security find-identity -v -p codesigning $KEYCHAIN_PATH
+          # 3) 导入你提供的 .cer（若有）
+          if [ -s "$CERTIFICATE_CER_PATH" ]; then
+            security import "$CERTIFICATE_CER_PATH" -k "$KEYCHAIN_PATH" -t cert -f der -T /usr/bin/codesign -T /usr/bin/security || true
+          fi
 
-          # 6. 安装描述文件
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
+          # 4) 导入 .p12（必须包含私钥）
+          if [ -s "$CERTIFICATE_P12_PATH" ]; then
+            if [ -z "${P12_PASSWORD:-}" ]; then
+              echo "[info] P12_PASSWORD 为空：尝试不带密码导入"
+              security import "$CERTIFICATE_P12_PATH" \
+                -k "$KEYCHAIN_PATH" -f pkcs12 -A \
+                -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/xcodebuild
+            else
+              security import "$CERTIFICATE_P12_PATH" \
+                -k "$KEYCHAIN_PATH" -f pkcs12 -P "$P12_PASSWORD" -A \
+                -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/xcodebuild
+            fi
+          fi
 
-      - name: Fix Xcode Signing Style
+          # 5) 允许 codesign/xcodebuild 访问私钥
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # 6) 验证 identity（应 >= 1）
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
+
+          # 7) 安装描述文件
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$PP_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/"
+
+          # 8) 解析描述文件（用 cms 解包而非 strings/grep）
+          security cms -D -i "$PP_PATH" > "$PROFILE_PLIST"
+          UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' "$PROFILE_PLIST")
+          NAME=$(/usr/libexec/PlistBuddy -c 'Print Name' "$PROFILE_PLIST")
+          TEAM_ID=$(/usr/libexec/PlistBuddy -c 'Print TeamIdentifier:0' "$PROFILE_PLIST")
+          APP_ID=$(/usr/libexec/PlistBuddy -c 'Print Entitlements:application-identifier' "$PROFILE_PLIST")
+          BUNDLE_ID="${APP_ID#${TEAM_ID}.}"
+
+          echo "Profile UUID: $UUID"
+          echo "Profile Name: $NAME"
+          echo "Team ID: $TEAM_ID"
+          echo "Bundle ID (from profile): $BUNDLE_ID"
+
+          # 暴露给后续 step
+          {
+            echo "PP_UUID=$UUID"
+            echo "PP_NAME=$NAME"
+            echo "PP_TEAM=$TEAM_ID"
+            echo "PP_BUNDLE_ID=$BUNDLE_ID"
+          } >> $GITHUB_ENV
+
+      - name: Fix Xcode Signing (Manual + Specifier by Name)
+        shell: bash
         run: |
-          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
-          UUID=$(strings "$PP_PATH" | grep -A1 "<key>UUID</key>" | tail -n1 | sed -e 's/.*<string>//' -e 's/<\/string>.*//')
-          TEAM_ID=$(strings "$PP_PATH" | grep -A1 "<key>TeamIdentifier</key>" | tail -n2 | grep "string" | sed -e 's/.*<string>//' -e 's/<\/string>.*//')
-          echo "Using Official Profile UUID: $UUID"
-          echo "Using Team ID: $TEAM_ID"
-          
+          set -euo pipefail
           PBX_PATH="ios/Runner.xcodeproj/project.pbxproj"
-          
-          # 1. 强制将 Developer 改为 Distribution
-          sed -i '' 's/iPhone Developer/iPhone Distribution/g' "$PBX_PATH"
-          sed -i '' 's/Apple Development/iPhone Distribution/g' "$PBX_PATH"
-          
-          # 2. 强制 Manual 签名
+
+          echo "Using TEAM: $PP_TEAM / PROFILE: $PP_NAME (UUID: $PP_UUID) / BUNDLE: $PP_BUNDLE_ID"
+
+          # 1) 强制 Manual
           sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' "$PBX_PATH"
-          
-          # 3. 指定 UUID & Team ID
-          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = .*/PROVISIONING_PROFILE_SPECIFIER = \"$UUID\";/g" "$PBX_PATH"
-          sed -i '' "/PRODUCT_NAME = .*/a\\
-          PROVISIONING_PROFILE_SPECIFIER = \"$UUID\";" "$PBX_PATH"
-          sed -i '' "s/DEVELOPMENT_TEAM = .*/DEVELOPMENT_TEAM = $TEAM_ID;/g" "$PBX_PATH"
+
+          # 2) 统一签名身份为 Apple Distribution（Xcode 13+）
+          sed -i '' 's/CODE_SIGN_IDENTITY = "[^"]*";/CODE_SIGN_IDENTITY = "Apple Distribution";/g' "$PBX_PATH"
+          sed -i '' 's/CODE_SIGN_IDENTITY\[sdk=iphoneos\*\] = "[^"]*";/CODE_SIGN_IDENTITY[sdk=iphoneos*] = "Apple Distribution";/g' "$PBX_PATH"
+
+          # 3) 设置团队
+          sed -i '' "s/DEVELOPMENT_TEAM = [A-Z0-9]*/DEVELOPMENT_TEAM = $PP_TEAM/g" "$PBX_PATH"
+
+          # 4) 设置 Specifier（用 Name，而非 UUID；兼容已有/未有两种情况）
+          if grep -q 'PROVISIONING_PROFILE_SPECIFIER = ' "$PBX_PATH"; then
+            sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = \".*\";/PROVISIONING_PROFILE_SPECIFIER = \"$PP_NAME\";/g" "$PBX_PATH"
+          else
+            sed -i '' "/PRODUCT_BUNDLE_IDENTIFIER = ${PP_BUNDLE_ID//./\\.}/a\\
+            PROVISIONING_PROFILE_SPECIFIER = \"$PP_NAME\";" "$PBX_PATH"
+          fi
+
+          # （可选）若你项目里还遗留 PROVISIONING_PROFILE（老字段，UUID），同步一下以免冲突
+          if grep -q 'PROVISIONING_PROFILE = ' "$PBX_PATH"; then
+            sed -i '' "s/PROVISIONING_PROFILE = \".*\";/PROVISIONING_PROFILE = \"$PP_UUID\";/g" "$PBX_PATH"
+          fi
 
       - name: Install Dependencies
         run: |
@@ -96,7 +148,7 @@ jobs:
 
       - name: Build IPA
         run: |
-          # 🔥 最终修复：添加强制链接参数 -all_load 和 -ObjC (解决链接器错误)
+          # 如无必要，可移除 OTHER_LDFLAGS；保留是为规避某些 ObjC category 链接问题
           flutter build ipa --release --export-method=app-store --verbose -- \
             -xcode-build-settings="OTHER_LDFLAGS=-all_load -ObjC"
 
