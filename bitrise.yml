@@ -1,0 +1,53 @@
+format_version: "11"
+default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
+
+workflows:
+  ios_release:
+    envs:
+      - BITRISE_PROJECT_PATH: ios/Runner.xcworkspace
+      - BITRISE_SCHEME: Runner
+      - EXPORT_METHOD: app-store-connect
+    steps:
+      - activate-ssh-key@4: {}
+      - git-clone@8: {}
+
+      - script@1:
+          title: Install Flutter (stable)
+          inputs:
+            - content: |
+                set -e
+                git clone https://github.com/flutter/flutter.git --depth 1 -b stable $HOME/flutter
+                echo 'export PATH="$HOME/flutter/bin:$PATH"' >> $BASH_ENV
+                source $BASH_ENV
+                flutter --version
+                flutter precache --ios
+                flutter pub get
+
+      - cocoapods-install@2:
+          inputs:
+            - podfile_path: ios/Podfile
+            - source_root_path: .
+
+      - ios-auto-provision-appstoreconnect@1:
+          inputs:
+            - distribution_type: app-store
+            - project_path: "$BITRISE_PROJECT_PATH"
+            - scheme: "$BITRISE_SCHEME"
+
+      - xcode-archive@5:
+          inputs:
+            - project_path: "$BITRISE_PROJECT_PATH"
+            - scheme: "$BITRISE_SCHEME"
+            - distribution_method: "$EXPORT_METHOD"
+            - compile_bitcode: "no"
+            - upload_bitcode: "no"
+            - automatic_code_signing: api-key
+
+      - deploy-to-itunesconnect-deliver@2:
+          inputs:
+            - api_key_path: "$BITRISEIO_APPLE_SERVICE_CONNECTION_API_KEY_PATH"
+            - password: ""
+            - skip_screenshots: "yes"
+            - skip_metadata: "yes"
+
+      - deploy-to-bitrise-io@2: {}
