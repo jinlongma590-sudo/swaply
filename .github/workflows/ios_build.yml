@@ -97,10 +97,10 @@ jobs:
           EXPIRES=$(/usr/libexec/PlistBuddy -c 'Print ExpirationDate' "$PROFILE_PLIST" 2>/dev/null || true)
           DEVICES=$(/usr/libexec/PlistBuddy -c 'Print ProvisionedDevices' "$PROFILE_PLIST" 2>/dev/null || echo "__NONE__")
 
-          echo "PP_UUID=$UUID"            >> $GITHUB_ENV
-          echo "PP_NAME=$NAME"            >> $GITHUB_ENV
-          echo "PP_TEAM=$TEAM_ID"         >> $GITHUB_ENV
-          echo "PP_BUNDLE_ID=$BUNDLE_ID"  >> $GITHUB_ENV
+          echo "PP_UUID=$UUID"               >> $GITHUB_ENV
+          echo "PP_NAME=$NAME"               >> $GITHUB_ENV
+          echo "PP_TEAM=$TEAM_ID"            >> $GITHUB_ENV
+          echo "PP_BUNDLE_ID=$BUNDLE_ID"     >> $GITHUB_ENV
           echo "SIGN_KEYCHAIN=$KEYCHAIN_PATH" >> $GITHUB_ENV
 
           echo "---- Provisioning Profile Facts ----"
@@ -116,10 +116,8 @@ jobs:
             echo "ProvisionedDevices: 存在设备清单 → 很可能是开发/AdHoc"
           fi
           echo "------------------------------------"
-
-          # 9) 保护：若明显是开发 Profile，但你用的是 app-store 流程，给出警告（不强制退出）
           if [ "$GET_TASK_ALLOW" = "true" ]; then
-            echo "::warning:: 你当前的描述文件看起来是【开发/AdHoc】（get-task-allow=true/包含设备）。用于 app-store 归档可能失败。请确认 Secrets 中是 App Store Profile。"
+            echo "::warning:: 这看起来是开发/AdHoc Profile。用于 app-store 归档可能失败，请确认 Secrets 是 App Store Profile。"
           fi
 
       - name: Install Dependencies
@@ -152,22 +150,20 @@ jobs:
           set -euo pipefail
           ARCHIVE_PATH="$RUNNER_TEMP/Runner.xcarchive"
           LOG_ARCHIVE="$RUNNER_TEMP/xcodebuild-archive.log"
-          echo "Using TEAM=$PP_TEAM, PROFILE=$PP_NAME, BUNDLE=$PP_BUNDLE_ID"
+          echo "Using TEAM=$PP_TEAM, BUNDLE=$PP_BUNDLE_ID"
 
-          # 用 tee 记录完整日志；失败时打印结尾 300 行 + grep error
+          # ❗不再把描述文件/手动签名施加到命令行，避免给 Pods 强行指定 Profile
           set +e
           xcodebuild -workspace ios/Runner.xcworkspace \
             -scheme Runner \
             -configuration Release \
             -destination 'generic/platform=iOS' \
             -archivePath "$ARCHIVE_PATH" \
-            CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM="$PP_TEAM" \
             PRODUCT_BUNDLE_IDENTIFIER="$PP_BUNDLE_ID" \
-            PROVISIONING_PROFILE_SPECIFIER="$PP_NAME" \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
+            DEVELOPMENT_TEAM="$PP_TEAM" \
             OTHER_CODE_SIGN_FLAGS="--keychain $SIGN_KEYCHAIN" \
             CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES \
+            -allowProvisioningUpdates \
             clean archive | tee "$LOG_ARCHIVE"
           EXIT_CODE=${PIPESTATUS[0]}
           set -e
@@ -179,7 +175,7 @@ jobs:
             exit $EXIT_CODE
           fi
 
-          # 生成 ExportOptions.plist（App Store）
+          # 生成 ExportOptions.plist（App Store，自动签名）
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -187,8 +183,7 @@ jobs:
           <dict>
             <key>method</key><string>app-store</string>
             <key>teamID</key><string>__TEAM_ID__</string>
-            <key>signingStyle</key><string>manual</string>
-            <key>signingCertificate</key><string>Apple Distribution</string>
+            <key>signingStyle</key><string>automatic</string>
             <key>provisioningProfiles</key>
             <dict>
               <key>__BUNDLE_ID__</key><string>__PROFILE_NAME__</string>
@@ -221,7 +216,8 @@ jobs:
             -archivePath "$ARCHIVE_PATH" \
             -exportOptionsPlist "$EXPORT_PLIST" \
             -exportPath "$EXPORT_DIR" \
-            OTHER_CODE_SIGN_FLAGS="--keychain $SIGN_KEYCHAIN" | tee "$LOG_EXPORT"
+            OTHER_CODE_SIGN_FLAGS="--keychain $SIGN_KEYCHAIN" \
+            -allowProvisioningUpdates | tee "$LOG_EXPORT"
           EXIT_CODE=${PIPESTATUS[0]}
           set -e
           if [ $EXIT_CODE -ne 0 ]; then
