@@ -31,31 +31,37 @@ jobs:
           PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
-          # 解码 Secret 到文件
+          # 1. 解码 Secret 到文件 (确保所有 Base64 都是最新的)
           echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
           echo -n "$BUILD_CERTIFICATE_CER_BASE64" | base64 --decode -o $CERTIFICATE_CER_PATH
           echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode -o $PP_PATH
 
-          # 创建钥匙串
+          # 2. 创建钥匙串
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
-          # 1. 导入 Apple 中级证书
+          # 3. 导入 Apple 中级证书 & CER
           curl -o $RUNNER_TEMP/AppleWWDRCAG3.cer https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer
           security import $RUNNER_TEMP/AppleWWDRCAG3.cer -k $KEYCHAIN_PATH -T /usr/bin/codesign
-
-          # 2. 导入你的 P12 & CER
-          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -f pkcs12 -k $KEYCHAIN_PATH
           security import $CERTIFICATE_CER_PATH -k $KEYCHAIN_PATH -T /usr/bin/codesign
 
-          # 防止签名工具卡住
+          # 4. 【核心修复】根据 P12_PASSWORD 状态导入 P12
+          if [ -z "$P12_PASSWORD" ]; then
+              echo "P12 password is empty or not set. Importing without password..."
+              security import $CERTIFICATE_PATH -A -f pkcs12 -k $KEYCHAIN_PATH
+          else
+              echo "P12 password exists. Importing with password."
+              security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -f pkcs12 -k $KEYCHAIN_PATH
+          fi
+
+          # 5. 防止签名工具卡住
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           
-          # 验证
+          # 验证 (这次必看日志，确保这里显示 1 valid identity)
           security find-identity -v -p codesigning $KEYCHAIN_PATH
 
-          # 安装描述文件
+          # 6. 安装描述文件
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
 
@@ -90,7 +96,7 @@ jobs:
 
       - name: Build IPA
         run: |
-          # 🔥 最终修复：添加强制链接参数 -all_load 和 -ObjC
+          # 🔥 最终修复：添加强制链接参数 -all_load 和 -ObjC (解决链接器错误)
           flutter build ipa --release --export-method=app-store --verbose -- \
             -xcode-build-settings="OTHER_LDFLAGS=-all_load -ObjC"
 
