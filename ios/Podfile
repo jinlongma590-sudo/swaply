@@ -30,17 +30,16 @@ target 'Runner' do
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 end
 
-# ❗关键：禁止所有 Pods 在编译阶段签名，统一 iOS 13
+# 关键修复：对每个 target 单独调用；并禁止 Pods 在编译期签名，统一 iOS 13
 post_install do |installer|
   installer.pods_project.targets.each do |t|
     t.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
       config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
       config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
-      # 避免 Xcode 默认回落到 Development
       config.build_settings['CODE_SIGN_IDENTITY'] = ''
       config.build_settings['EXPANDED_CODE_SIGN_IDENTITY'] = ''
     end
+    flutter_additional_ios_build_settings(t)
   end
-  flutter_additional_ios_build_settings(installer.pods_project.targets)
 end
