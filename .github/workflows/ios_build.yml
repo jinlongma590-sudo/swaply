@@ -10,7 +10,6 @@ jobs:
 
     steps:
       - name: Checkout code
-        # v4 OK
         uses: actions/checkout@v4
 
       - name: Setup Flutter
@@ -50,7 +49,6 @@ jobs:
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security default-keychain -s "$KEYCHAIN_PATH"
-          # 让搜索列表只包含当前 keychain（最稳）
           security list-keychains -d user -s "$KEYCHAIN_PATH"
 
           # 2) 导入 Apple WWDR（中间证书，可选）
@@ -88,7 +86,7 @@ jobs:
           mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
           cp "$PP_PATH" "$HOME/Library/MobileDevice/Provisioning Profiles/"
 
-          # 8) 解析描述文件（用 cms 解包而非 strings/grep）
+          # 8) 解析描述文件
           security cms -D -i "$PP_PATH" > "$PROFILE_PLIST"
           UUID=$(/usr/libexec/PlistBuddy -c 'Print UUID' "$PROFILE_PLIST")
           NAME=$(/usr/libexec/PlistBuddy -c 'Print Name' "$PROFILE_PLIST")
@@ -101,7 +99,6 @@ jobs:
           echo "Team ID: $TEAM_ID"
           echo "Bundle ID (from profile): $BUNDLE_ID"
 
-          # 暴露给后续 step
           {
             echo "PP_UUID=$UUID"
             echo "PP_NAME=$NAME"
@@ -135,7 +132,7 @@ jobs:
             PROVISIONING_PROFILE_SPECIFIER = \"$PP_NAME\";" "$PBX_PATH"
           fi
 
-          # （可选）若你项目里还遗留 PROVISIONING_PROFILE（老字段，UUID），同步一下以免冲突
+          # （可选）若还遗留 PROVISIONING_PROFILE（老字段，UUID），同步一下
           if grep -q 'PROVISIONING_PROFILE = ' "$PBX_PATH"; then
             sed -i '' "s/PROVISIONING_PROFILE = \".*\";/PROVISIONING_PROFILE = \"$PP_UUID\";/g" "$PBX_PATH"
           fi
@@ -148,9 +145,8 @@ jobs:
 
       - name: Build IPA
         run: |
-          # 如无必要，可移除 OTHER_LDFLAGS；保留是为规避某些 ObjC category 链接问题
-          flutter build ipa --release --export-method=app-store --verbose -- \
-            -xcode-build-settings="OTHER_LDFLAGS=-all_load -ObjC"
+          # ✅ 修复点：去掉不被 Flutter 支持的 -xcode-build-settings 传参
+          flutter build ipa --release --export-method=app-store --verbose
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
