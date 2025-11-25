@@ -20,9 +20,9 @@ jobs:
 
       - name: Install Certificates & Profile
         env:
-          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}          # p12 (含私钥)
-          BUILD_CERTIFICATE_CER_BASE64: ${{ secrets.BUILD_CERTIFICATE_CER_BASE64 }}  # 可选 .cer 链
-          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}                                  # p12 密码
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}            # p12（含私钥）
+          BUILD_CERTIFICATE_CER_BASE64: ${{ secrets.BUILD_CERTIFICATE_CER_BASE64 }}    # 可选 .cer
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
           BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.BUILD_PROVISION_PROFILE_BASE64 }} # .mobileprovision
           KEYCHAIN_PASSWORD: "temporary_password"
         shell: bash
@@ -93,12 +93,34 @@ jobs:
           TEAM_ID=$(/usr/libexec/PlistBuddy -c 'Print TeamIdentifier:0' "$PROFILE_PLIST")
           APP_ID=$(/usr/libexec/PlistBuddy -c 'Print Entitlements:application-identifier' "$PROFILE_PLIST")
           BUNDLE_ID="${APP_ID#${TEAM_ID}.}"
+          GET_TASK_ALLOW=$(/usr/libexec/PlistBuddy -c 'Print Entitlements:get-task-allow' "$PROFILE_PLIST" 2>/dev/null || echo "false")
+          EXPIRES=$(/usr/libexec/PlistBuddy -c 'Print ExpirationDate' "$PROFILE_PLIST" 2>/dev/null || true)
+          DEVICES=$(/usr/libexec/PlistBuddy -c 'Print ProvisionedDevices' "$PROFILE_PLIST" 2>/dev/null || echo "__NONE__")
 
-          echo "PP_UUID=$UUID"        >> $GITHUB_ENV
-          echo "PP_NAME=$NAME"        >> $GITHUB_ENV
-          echo "PP_TEAM=$TEAM_ID"     >> $GITHUB_ENV
-          echo "PP_BUNDLE_ID=$BUNDLE_ID" >> $GITHUB_ENV
+          echo "PP_UUID=$UUID"            >> $GITHUB_ENV
+          echo "PP_NAME=$NAME"            >> $GITHUB_ENV
+          echo "PP_TEAM=$TEAM_ID"         >> $GITHUB_ENV
+          echo "PP_BUNDLE_ID=$BUNDLE_ID"  >> $GITHUB_ENV
           echo "SIGN_KEYCHAIN=$KEYCHAIN_PATH" >> $GITHUB_ENV
+
+          echo "---- Provisioning Profile Facts ----"
+          echo "Name: $NAME"
+          echo "UUID: $UUID"
+          echo "Team: $TEAM_ID"
+          echo "Bundle: $BUNDLE_ID"
+          echo "get-task-allow (true=开发/false=发布): $GET_TASK_ALLOW"
+          echo "Expiration: $EXPIRES"
+          if [ "$DEVICES" = "__NONE__" ]; then
+            echo "ProvisionedDevices: (None) 可能是 App Store 类型（分发）"
+          else
+            echo "ProvisionedDevices: 存在设备清单 → 很可能是开发/AdHoc"
+          fi
+          echo "------------------------------------"
+
+          # 9) 保护：若明显是开发 Profile，但你用的是 app-store 流程，给出警告（不强制退出）
+          if [ "$GET_TASK_ALLOW" = "true" ]; then
+            echo "::warning:: 你当前的描述文件看起来是【开发/AdHoc】（get-task-allow=true/包含设备）。用于 app-store 归档可能失败。请确认 Secrets 中是 App Store Profile。"
+          fi
 
       - name: Install Dependencies
         shell: bash
@@ -109,14 +131,31 @@ jobs:
           cd ios
           pod install --repo-update
 
-      # 用 xcodebuild 归档（显式传入签名&钥匙串）
-      - name: Archive (xcodebuild)
+      - name: Sanity · Schemes & Settings
         shell: bash
         run: |
           set -euo pipefail
+          echo "== List workspace/schemes =="
+          xcodebuild -list -workspace ios/Runner.xcworkspace
+          echo ""
+          echo "== Show key build settings (Release) =="
+          xcodebuild -showBuildSettings \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner -configuration Release | \
+            /usr/bin/grep -E "PRODUCT_BUNDLE_IDENTIFIER|CODE_SIGN_STYLE|DEVELOPMENT_TEAM|PROVISIONING_PROFILE_SPECIFIER|CODE_SIGN_IDENTITY"
+
+      - name: Archive (xcodebuild · full log)
+        shell: bash
+        env:
+          NSUnbufferedIO: "YES"
+        run: |
+          set -euo pipefail
           ARCHIVE_PATH="$RUNNER_TEMP/Runner.xcarchive"
+          LOG_ARCHIVE="$RUNNER_TEMP/xcodebuild-archive.log"
           echo "Using TEAM=$PP_TEAM, PROFILE=$PP_NAME, BUNDLE=$PP_BUNDLE_ID"
 
+          # 用 tee 记录完整日志；失败时打印结尾 300 行 + grep error
+          set +e
           xcodebuild -workspace ios/Runner.xcworkspace \
             -scheme Runner \
             -configuration Release \
@@ -128,7 +167,17 @@ jobs:
             PROVISIONING_PROFILE_SPECIFIER="$PP_NAME" \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             OTHER_CODE_SIGN_FLAGS="--keychain $SIGN_KEYCHAIN" \
-            clean archive | xcpretty || { echo "xcodebuild archive failed"; exit 1; }
+            CODE_SIGNING_ALLOWED=YES CODE_SIGNING_REQUIRED=YES \
+            clean archive | tee "$LOG_ARCHIVE"
+          EXIT_CODE=${PIPESTATUS[0]}
+          set -e
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "------ xcodebuild archive last 300 lines ------"
+            tail -n 300 "$LOG_ARCHIVE" || true
+            echo "------ grep 'error:' context ------"
+            /usr/bin/grep -n -i -E "error:|no such file or directory|provision|profile|certificate|entitlement|code sign" -n -C 3 "$LOG_ARCHIVE" || true
+            exit $EXIT_CODE
+          fi
 
           # 生成 ExportOptions.plist（App Store）
           cat > "$RUNNER_TEMP/ExportOptions.plist" <<'EOF'
@@ -145,8 +194,8 @@ jobs:
               <key>__BUNDLE_ID__</key><string>__PROFILE_NAME__</string>
             </dict>
             <key>compileBitcode</key><false/>
-            <key>destination</key><string>export</string>
             <key>stripSwiftSymbols</key><true/>
+            <key>destination</key><string>export</string>
             <key>uploadSymbols</key><true/>
           </dict>
           </plist>
@@ -157,23 +206,31 @@ jobs:
 
       - name: Export IPA (xcodebuild)
         shell: bash
+        env:
+          NSUnbufferedIO: "YES"
         run: |
           set -euo pipefail
           ARCHIVE_PATH="$RUNNER_TEMP/Runner.xcarchive"
           EXPORT_PLIST="$RUNNER_TEMP/ExportOptions.plist"
           EXPORT_DIR="$GITHUB_WORKSPACE/build/ios/ipa"
+          LOG_EXPORT="$RUNNER_TEMP/xcodebuild-export.log"
           mkdir -p "$EXPORT_DIR"
 
+          set +e
           xcodebuild -exportArchive \
             -archivePath "$ARCHIVE_PATH" \
             -exportOptionsPlist "$EXPORT_PLIST" \
             -exportPath "$EXPORT_DIR" \
-            OTHER_CODE_SIGN_FLAGS="--keychain $SIGN_KEYCHAIN" | xcpretty || { 
-              echo "xcodebuild exportArchive failed"; 
-              # 打印更详细日志
-              tail -n +1 ~/Library/Logs/gym/* 2>/dev/null || true
-              exit 1; 
-            }
+            OTHER_CODE_SIGN_FLAGS="--keychain $SIGN_KEYCHAIN" | tee "$LOG_EXPORT"
+          EXIT_CODE=${PIPESTATUS[0]}
+          set -e
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "------ xcodebuild exportArchive last 200 lines ------"
+            tail -n 200 "$LOG_EXPORT" || true
+            echo "------ grep 'error:' context ------"
+            /usr/bin/grep -n -i -E "error:|no such file or directory|provision|profile|certificate|entitlement|code sign" -n -C 3 "$LOG_EXPORT" || true
+            exit $EXIT_CODE
+          fi
 
           echo "Exported files:"
           ls -lah "$EXPORT_DIR"
