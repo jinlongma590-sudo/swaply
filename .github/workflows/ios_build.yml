@@ -42,25 +42,46 @@ jobs:
           # 导入证书
           security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           
-          # 【新增关键修复】防止签名工具访问钥匙串时卡住
+          # 防止签名工具卡住 (关键)
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH
+          
+          # 打印一下看看有没有导入成功 (调试用)
+          security find-identity -v -p codesigning
 
           # 安装描述文件
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles/
 
-      # 【新增步骤】强制修改 Xcode 项目配置，匹配你的发布证书
-      - name: Fix Signing Settings
+      # 【🔥 核心修复步骤 🔥】
+      # 自动读取描述文件的 UUID，并暴力修改 Xcode 项目配置
+      - name: Force Update Xcode Signing
         run: |
-          # 1. 把 "iPhone Developer" 替换为 "iPhone Distribution"
-          sed -i '' 's/"CODE_SIGN_IDENTITY\[sdk=iphoneos\*\]" = "iPhone Developer";/"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";/g' ios/Runner.xcodeproj/project.pbxproj
+          # 1. 从描述文件中提取 UUID
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          UUID=$(strings "$PP_PATH" | grep -A1 "<key>UUID</key>" | tail -n1 | sed -e 's/.*<string>//' -e 's/<\/string>.*//')
+          echo "Found Provisioning Profile UUID: $UUID"
           
-          # 2. 强制把签名模式从 Automatic 改为 Manual (如果存在)
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' ios/Runner.xcodeproj/project.pbxproj
+          # 2. 暴力替换项目文件中的配置
+          PBX_PATH="ios/Runner.xcodeproj/project.pbxproj"
           
-          # 3. 再次确认替换结果（打印出来看看）
-          grep "CODE_SIGN_IDENTITY" ios/Runner.xcodeproj/project.pbxproj | head -n 5
+          # 把 "iPhone Developer" 替换为 "iPhone Distribution"
+          sed -i '' 's/iPhone Developer/iPhone Distribution/g' "$PBX_PATH"
+          sed -i '' 's/Apple Development/iPhone Distribution/g' "$PBX_PATH"
+          
+          # 强制改为 Manual 签名模式
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic;/CODE_SIGN_STYLE = Manual;/g' "$PBX_PATH"
+          
+          # 强制插入描述文件 UUID (如果没有就替换，如果有一并替换)
+          # 我们直接替换 PROVISIONING_PROFILE_SPECIFIER 的值
+          sed -i '' "s/PROVISIONING_PROFILE_SPECIFIER = .*/PROVISIONING_PROFILE_SPECIFIER = \"$UUID\";/g" "$PBX_PATH"
+          
+          # 如果原本没有 SPECIFIER，我们在 PRODUCT_NAME 下面硬插一行
+          sed -i '' "/PRODUCT_NAME = .*/a\\
+          PROVISIONING_PROFILE_SPECIFIER = \"$UUID\";" "$PBX_PATH"
+
+          # 打印一下看看改没改成功
+          grep "PROVISIONING_PROFILE_SPECIFIER" "$PBX_PATH" | head -n 5
+          grep "CODE_SIGN_IDENTITY" "$PBX_PATH" | head -n 5
 
       - name: Install Dependencies
         run: |
@@ -70,7 +91,8 @@ jobs:
 
       - name: Build IPA
         run: |
-          flutter build ipa --release --export-method=app-store
+          # 这里的 --export-options-plist 可以省略，因为我们在上面已经强制修改了项目文件
+          flutter build ipa --release --export-method=app-store --verbose
 
       - name: Upload IPA
         uses: actions/upload-artifact@v4
