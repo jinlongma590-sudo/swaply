@@ -12,7 +12,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-  # 兼容 Bitrise / 本地不同 SDK：两边都能解（0.18.1～0.20.x）
+  # 兼容 Bitrise / 本地：0.18.1～0.20.x 都可
   intl: ">=0.18.1 <0.21.0"
 
   provider: ^6.1.1
@@ -58,7 +58,6 @@ dev_dependencies:
   flutter_lints: ^3.0.1
   flutter_launcher_icons: ^0.13.1
 
-# meta 用 override 稳定兼容（保持你原有做法）
 dependency_overrides:
   meta: ^1.11.0
 
