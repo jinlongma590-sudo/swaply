@@ -30,16 +30,6 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
 
-            <!-- 自定义 scheme deep link：cc.swaply.app://login-callback -->
-            <intent-filter android:autoVerify="false">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="cc.swaply.app"
-                    android:host="login-callback" />
-            </intent-filter>
-
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
@@ -50,20 +40,34 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- ✅ 统一深链入口（App Links / 自定义 scheme） -->
+            <!-- =============== App Links（https）: 与自定义 scheme 分开 =============== -->
+            <!-- apex 域名 -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <!-- 自定义应用内 scheme：swaply://... -->
-                <data android:scheme="swaply" />
-                <!-- 网站深链（apex） -->
                 <data android:scheme="https" android:host="swaply.cc" />
-                <!-- ✅ 新增：网站深链（www 子域） -->
+                <!-- 如需全路径匹配可加：android:pathPrefix="/" -->
+            </intent-filter>
+
+            <!-- www 子域 -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="www.swaply.cc" />
             </intent-filter>
 
-            <!-- ✅ 出价详情深链：swaply://offer?... -->
+            <!-- =============== 自定义 scheme（与 https 分开） =============== -->
+            <!-- 通用入口：swaply://... -->
+            <intent-filter android:autoVerify="false">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="swaply" />
+            </intent-filter>
+
+            <!-- 出价详情：swaply://offer?... -->
             <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -71,7 +75,7 @@
                 <data android:scheme="swaply" android:host="offer" />
             </intent-filter>
 
-            <!-- ✅ 商品详情深链：swaply://listing?... -->
+            <!-- 商品详情：swaply://listing?... -->
             <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -87,8 +91,8 @@
                 <data android:scheme="io.supabase.flutter" android:host="callback" />
             </intent-filter>
 
-            <!-- 自定义深链（原有） -->
-            <intent-filter>
+            <!-- 自定义回调（合并为一个过滤器，避免重复）：cc.swaply.app://login-callback / reset-password -->
+            <intent-filter android:autoVerify="false">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -98,6 +102,7 @@
 
         </activity>
 
+        <!-- ✅ Flutter V2 Embedding 标记（位置正确） -->
         <meta-data android:name="flutterEmbedding" android:value="2" />
     </application>
 
