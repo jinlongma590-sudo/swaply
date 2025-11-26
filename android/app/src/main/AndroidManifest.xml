@@ -1,4 +1,6 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="cc.swaply.app">
+<!-- android/app/src/main/AndroidManifest.xml -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="cc.swaply.app">
 
     <!-- 网络 / 相机 / 存储权限 -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -9,7 +11,9 @@
     <!-- Android 13+ 读取图片 -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <!-- Android 12 及以下外部存储读取权限 -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 
     <application
         android:label="Swaply"
@@ -20,7 +24,7 @@
         android:requestLegacyExternalStorage="true"
         android:enableOnBackInvokedCallback="true">
 
-        <!-- 入口 Activity -->
+        <!-- 入口 Activity（V2 Embedding） -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -30,6 +34,7 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
 
+            <!-- 与启动页主题联动 -->
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
@@ -40,14 +45,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- =============== App Links（https）: 与自定义 scheme 分开 =============== -->
+            <!-- ================== HTTPS App Links（与自定义 scheme 分开） ================== -->
+
             <!-- apex 域名 -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="swaply.cc" />
-                <!-- 如需全路径匹配可加：android:pathPrefix="/" -->
             </intent-filter>
 
             <!-- www 子域 -->
@@ -58,9 +63,10 @@
                 <data android:scheme="https" android:host="www.swaply.cc" />
             </intent-filter>
 
-            <!-- =============== 自定义 scheme（与 https 分开） =============== -->
-            <!-- 通用入口：swaply://... -->
-            <intent-filter android:autoVerify="false">
+            <!-- ================== 自定义 scheme ================== -->
+
+            <!-- 通用入口：swaply://...（保留以兼容将来路由） -->
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -68,7 +74,7 @@
             </intent-filter>
 
             <!-- 出价详情：swaply://offer?... -->
-            <intent-filter android:autoVerify="false">
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -76,7 +82,7 @@
             </intent-filter>
 
             <!-- 商品详情：swaply://listing?... -->
-            <intent-filter android:autoVerify="false">
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -91,8 +97,8 @@
                 <data android:scheme="io.supabase.flutter" android:host="callback" />
             </intent-filter>
 
-            <!-- 自定义回调（合并为一个过滤器，避免重复）：cc.swaply.app://login-callback / reset-password -->
-            <intent-filter android:autoVerify="false">
+            <!-- 自定义回调：cc.swaply.app://login-callback 与 reset-password -->
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -102,7 +108,7 @@
 
         </activity>
 
-        <!-- ✅ Flutter V2 Embedding 标记（位置正确） -->
+        <!-- ✅ V2 Embedding 标记 -->
         <meta-data android:name="flutterEmbedding" android:value="2" />
     </application>
 
