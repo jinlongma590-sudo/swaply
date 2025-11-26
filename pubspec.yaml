@@ -4,7 +4,6 @@ publish_to: 'none'
 version: 1.0.1+118
 
 environment:
-  # ✅ 关键：放宽 SDK 限制，兼容 Flutter 3.19.6 (Dart 3.3.x)
   sdk: '>=3.2.0 <4.0.0'
 
 dependencies:
@@ -13,53 +12,51 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-  # 基础库 (版本已微调以匹配 Flutter 3.19)
-  intl: ^0.19.0 # 降级到 0.19 以防万一
+  # ✅ 降级：匹配 Flutter 3.19.6 的内置要求
+  intl: ^0.18.1
+
   provider: ^6.1.1
   shared_preferences: ^2.2.2
   flutter_screenutil: ^5.9.0
-  uuid: ^4.3.3 # 3.0.7 太老了，4.x 是主流稳定版
-  flutter_local_notifications: ^16.3.2 # ✅ 降级：17.x 需要新版 Dart
+  uuid: ^4.3.3
+  flutter_local_notifications: ^16.3.2
   url_launcher: ^6.2.5
   path_provider: ^2.1.2
-  path: ^1.9.0 # ✅ 显式指定旧版
+  path: ^1.9.0
   cupertino_icons: ^1.0.6
-  app_links: ^6.3.0 # ✅ 降级适配
+  app_links: ^6.3.0
 
   # 媒体/文件
   image_picker: ^1.0.7
   photo_view: ^0.14.0
-  file_picker: ^8.0.0 # ✅ 降级：10.x 需要 Dart 3.4+
+  file_picker: ^8.0.0
   flutter_image_compress: ^2.1.0
 
-  # 分享与网络 (Plus 系列必须降级)
-  share_plus: ^9.0.0 # ✅ 降级：10+ 需要 Dart 3.4+
+  # 分享与网络
+  share_plus: ^9.0.0
   http: ^1.2.0
-  package_info_plus: ^7.0.0 # ✅ 降级：8.0 需要 Dart 3.4+
+  package_info_plus: ^7.0.0
 
   # Supabase / OAuth
-  # Supabase 降级到 2.5.x 时代，避免 crypto 冲突
   supabase_flutter: ^2.5.0
   supabase: ^2.2.0
   google_sign_in: ^6.2.1
-  sign_in_with_apple: ^6.0.0 # 7.x 有时会有版本要求，6.x 很稳
-  crypto: ^3.0.3 # ✅ 显式指定兼容版
+  sign_in_with_apple: ^6.0.0
+  crypto: ^3.0.3
   flutter_custom_tabs: ^2.0.0
 
   cross_file: any
-  # ✅ 降级 Splash 避免 meta 冲突
   flutter_native_splash: ^2.3.10
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  # ✅ 降级 lints，4.0 需要 Dart 3.4
   flutter_lints: ^3.0.1
   flutter_launcher_icons: ^0.13.1
 
-# 🔥 核武器：版本强制覆盖区
-# 这里列出的包，无论其他插件想要什么版本，都强制使用我们指定的
+# 🔒 强制锁死区 (双重保险)
 dependency_overrides:
+  intl: 0.18.1
   path: 1.9.0
   meta: 1.11.0
   crypto: 3.0.3
@@ -67,7 +64,6 @@ dependency_overrides:
   package_info_plus: 7.0.0
   file_picker: 8.0.0
   flutter_lints: 3.0.1
-  # 这是一个经常导致冲突的底层库，强制锁死
   win32: 5.2.0
   ffi: 2.1.2
 
