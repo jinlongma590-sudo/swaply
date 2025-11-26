@@ -8,9 +8,8 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
-    <!-- Android 13+ 读取图片 -->
+    <!-- 媒体读取权限 -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <!-- Android 12 及以下外部存储读取权限 -->
     <uses-permission
         android:name="android.permission.READ_EXTERNAL_STORAGE"
         android:maxSdkVersion="32" />
@@ -24,7 +23,7 @@
         android:requestLegacyExternalStorage="true"
         android:enableOnBackInvokedCallback="true">
 
-        <!-- 入口 Activity（V2 Embedding） -->
+        <!-- 入口 Activity（Flutter V2 Embedding） -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -45,7 +44,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- ================== HTTPS App Links（与自定义 scheme 分开） ================== -->
+            <!-- ================= HTTPS App Links（与自定义 scheme 分开） ================= -->
 
             <!-- apex 域名 -->
             <intent-filter android:autoVerify="true">
@@ -63,9 +62,9 @@
                 <data android:scheme="https" android:host="www.swaply.cc" />
             </intent-filter>
 
-            <!-- ================== 自定义 scheme ================== -->
+            <!-- ================= 自定义 scheme ================= -->
 
-            <!-- 通用入口：swaply://...（保留以兼容将来路由） -->
+            <!-- 通用入口：swaply://... -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -89,7 +88,7 @@
                 <data android:scheme="swaply" android:host="listing" />
             </intent-filter>
 
-            <!-- Supabase 默认 OAuth 回调：io.supabase.flutter://callback -->
+            <!-- Supabase 默认 OAuth 回调 -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -97,7 +96,7 @@
                 <data android:scheme="io.supabase.flutter" android:host="callback" />
             </intent-filter>
 
-            <!-- 自定义回调：cc.swaply.app://login-callback 与 reset-password -->
+            <!-- 自定义回调：cc.swaply.app://login-callback / reset-password -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -108,7 +107,7 @@
 
         </activity>
 
-        <!-- ✅ V2 Embedding 标记 -->
+        <!-- ✅ Flutter V2 Embedding 标记 -->
         <meta-data android:name="flutterEmbedding" android:value="2" />
     </application>
 
